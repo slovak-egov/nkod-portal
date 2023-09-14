@@ -1,0 +1,92 @@
+$idsk-assets-path: "~/idsk-assets/";
+$govuk-assets-path: "~/idsk-assets/";
+$govuk-link-visited-colour: #0065B3;
+
+@import  '@id-sk/frontend/idsk/all';  
+
+body {
+    margin: 0;
+    padding: 0;
+}
+
+.nkod-search-result-card {
+    display: block;
+    margin-bottom: 10px;
+}
+
+.nkod-entity-detail {
+    h1 {
+        margin-bottom: 20px;
+    }
+
+    .nkod-publisher-name {
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    .nkod-entity-detail-tags {
+        margin-bottom: 30px;
+
+        .nkod-entity-detail-tag {
+            margin-right: 10px;
+            background: #DEE0E2;
+            float: left;
+            padding: 10px;
+            border-bottom: 2px solid black;
+            font-weight: bold;
+            font-size: 20px;
+        }
+    }
+}
+
+.nkod-detail-attribute {
+    margin-bottom: 50px;
+
+    .nkod-detail-attribute-name {
+        font-weight: bold;    
+        color: #2B8CC4;
+        margin: 0 0 10px 0;
+    }
+    
+    .nkod-detail-attribute-value {
+        margin: 0;
+    }
+}
+
+.nkod-detail-distribution-count {
+    font-weight: bold;
+    margin-bottom: 0;
+    font-size: 18px;
+}
+
+.nkod-detail-distribution-row {
+    margin: 0;
+
+    .nkod-detail-distribution-format {
+        img {
+            width: 60px;
+            height: auto;
+            margin-right: 20px;
+            vertical-align: middle;
+        }
+    }
+    
+    .nkod-detail-distribution-url {
+        margin: 0;
+    }
+}
+
+.nkod-search-result-card {
+    padding-top: 10px;
+}
+
+.idsk-search-results .nkod-publisher-name {
+    text-align: right;
+    float: right;
+    font-style: italic;
+}
+
+.nkod-current-page {
+    background-color: #1d70b8;
+    color: white;
+}

@@ -1,0 +1,26 @@
+version: '3.4'
+
+services:
+  documentstorageapi:
+    image: ${DOCKER_REGISTRY-}documentstorageapi
+    build:
+      context: .
+      dockerfile: src/DocumentStorageApi/Dockerfile
+
+  codelistprovider:
+    image: ${DOCKER_REGISTRY-}codelistprovider
+    build:
+      context: .
+      dockerfile: src/CodelistProvider/Dockerfile
+    environment:
+      DocumentStorageUrl: http://documentstorageapi:80
+
+  webapi:
+    image: ${DOCKER_REGISTRY-}webapi
+    build:
+      context: .
+      dockerfile: src/WebApi/Dockerfile
+    environment:
+      DocumentStorageUrl: http://documentstorageapi:80
+      CodelistProviderUrl: http://codelistprovider:80
+

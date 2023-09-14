@@ -1,0 +1,198 @@
+﻿@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix ns0: <http://publications.europa.eu/ontology/authority/table.> .
+@prefix ns1: <http://publications.europa.eu/ontology/authority/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix ns2: <http://publications.europa.eu/resource/authority/> .
+@prefix dc11: <http://purl.org/dc/elements/1.1/> .
+
+<http://publications.europa.eu/resource/authority/data-theme>
+  a skos:ConceptScheme ;
+  ns0:id "data-theme" ;
+  ns0:version.number "20220715-0" ;
+  ns1:prefLabel "Data theme"@en ;
+  rdfs:label "Data theme"@en ;
+  owl:versionInfo "20220715-0" ;
+  skos:prefLabel "Data theme"@en .
+
+<http://publications.europa.eu/resource/authority/data-theme/AGRI>
+  a skos:Concept ;
+  ns1:deprecated "false" ;
+  skos:prefLabel "Селско стопанство, рибарство, горско стопанство и храни"@bg, "Zemědělství, rybolov, lesnictví a výživa"@cs, "Landbrug, fiskeri, skovbrug og fødevarer"@da, "Landwirtschaft, Fischerei, Forstwirtschaft und Nahrungsmittel"@de, "Γεωργία, αλιεία, δασοκομία και τρόφιμα"@el, "Agriculture, fisheries, forestry and food"@en, "Agricultura, pesca, silvicultura y alimentación"@es, "Põllumajandus, kalandus, metsandus ja toiduained"@et, "Maatalous, kalastus, metsätalous ja elintarvikkeet"@fi, "Agriculture, pêche, sylviculture et alimentation"@fr, "Talmhaíocht, iascach, foraoiseacht agus bia"@ga, "Poljoprivreda, ribarstvo, šumarstvo i hrana"@hr, "Mezőgazdaság, halászat, erdészet és élelmiszer"@hu, "Agricoltura, pesca, silvicoltura e prodotti alimentari"@it, "Žemės ūkis, žuvininkystė, miškininkystė ir maistas"@lt, "Lauksaimniecība, zivsaimniecība, mežsaimniecība un pārtika"@lv, "Agrikoltura, sajd, forestrija u ikel"@mt, "Jordbruk, fiskeri, skogbruk og mat"@nb, "Landbouw, visserij, bosbouw en voeding"@nl, "Jordbruk, fiskeri, skogbruk og mat"@nn, "Jordbruk, fiskeri, skogbruk og mat"@no, "Rolnictwo, rybołówstwo, leśnictwo i żywność"@pl, "Agricultura, pesca, silvicultura e alimentação"@pt, "Agricultură, pescuit, silvicultură şi hrană"@ro, "Poľnohospodárstvo, rybné hospodárstvo, lesníctvo a potravinárstvo"@sk, "Kmetijstvo, ribištvo, gozdarstvo in prehrana"@sl, "Jordbruk, fiske, skogsbruk och livsmedel"@sv ;
+  ns1:authority-code "AGRI" ;
+  ns1:op-code "AGRI" ;
+  ns1:start.use "2015-10-01" ;
+  ns2:op-code "AGRI" ;
+  dc11:identifier "AGRI" ;
+  skos:definition "This concept identifies datasets covering such domains as agriculture, fisheries, forestry or food. Agriculture is the science and art of cultivating plants and livestock. Fisheries are activities leading to harvesting of fish; may involve capture of wild fish or raising of fish through aquaculture. Forestry is the science and craft of creating, managing, using, conserving and repairing forests, woodlands and associated resources for human and environmental benefits. Food is any substance consumed to provide nutritional support for an organism. Dataset examples: Agricultural and Vegetable Catalogue; The Community Fishing Fleet Register; Pan-European Map of Forest Biomass Increment; Food composition database for nutrient intake: selected vitamins and minerals in selected European countries."@en ;
+  skos:inScheme ns2:data-theme ;
+  skos:topConceptOf ns2:data-theme .
+
+<http://publications.europa.eu/resource/authority/data-theme/ECON>
+  a skos:Concept ;
+  ns1:deprecated "false" ;
+  skos:prefLabel "Икономика и финанси"@bg, "Hospodářství a finance"@cs, "Økonomi og finanser"@da, "Wirtschaft und Finanzen"@de, "Οικονομία και χρηματοοικονομικά θέματα"@el, "Economy and finance"@en, "Economía y finanzas"@es, "Majandus ja rahandus"@et, "Talous ja raha-asiat"@fi, "Économie et finances"@fr, "Geilleagar agus airgeadas"@ga, "Ekonomija i financije"@hr, "Gazdaság és pénzügy"@hu, "Economia e finanze"@it, "Ekonomika ir finansai"@lt, "Ekonomika un finanses"@lv, "Ekonomija u finanzi"@mt, "Økonomi og finans"@nb, "Economie en financiën"@nl, "Økonomi og finans"@nn, "Økonomi og finans"@no, "Gospodarka i finanse"@pl, "Economia e finanças"@pt, "Economie şi finanţe"@ro, "Hospodárstvo a financie"@sk, "Gospodarstvo in finance"@sl, "Ekonomi och finans"@sv ;
+  ns1:authority-code "ECON" ;
+  ns1:op-code "ECON" ;
+  ns1:start.use "2015-10-01" ;
+  ns2:op-code "ECON" ;
+  dc11:identifier "ECON" ;
+  skos:definition "This concept identifies datasets covering such domains as economy or finance. Economy is the area of the production, distribution and trade, as well as consumption of goods and services by different agents. In its broadest sense, the economy is defined as a social domain that emphasize the practices, discourses and material expressions associated with the production, use, and management of resources. Finance is the study of money and how it is used. Specifically, it deals with the questions of how an individual, company or government acquires the money needed and how they then spend or invest that money. Dataset examples: Tenders Electronic Daily (TED) - public procurement notices from the EU and beyond; General government deficit (-) and surplus (+) - quarterly data."@en ;
+  skos:inScheme ns2:data-theme ;
+  skos:topConceptOf ns2:data-theme .
+
+<http://publications.europa.eu/resource/authority/data-theme/EDUC>
+  a skos:Concept ;
+  ns1:deprecated "false" ;
+  skos:prefLabel "Образование, култура и спорт"@bg, "Vzdělávání, kultura a sport"@cs, "Uddannelse, kultur og sport"@da, "Bildung, Kultur und Sport"@de, "Παιδεία, πολιτιστικά θέματα και αθλητισμός"@el, "Education, culture and sport"@en, "Educación, cultura y deportes"@es, "Haridus, kultuur ja sport"@et, "Koulutus, kulttuuri ja urheilu"@fi, "Éducation, culture et sport"@fr, "Oideachas, cultúr agus spórt"@ga, "Obrazovanje, kultura i sport"@hr, "Oktatás, kultúra és sport"@hu, "Istruzione, cultura e sport"@it, "Švietimas, kultūra ir sportas"@lt, "Izglītība, kultūra un sports"@lv, "Edukazzjoni, kultura u sport"@mt, "Utdanning, kultur og sport"@nb, "Onderwijs, cultuur en sport"@nl, "Utdanning, kultur og sport"@nn, "Utdanning, kultur og sport"@no, "Edukacja, kultura i sport"@pl, "Educação, cultura e desporto"@pt, "Educaţie, cultură şi sport"@ro, "Vzdelávanie, kultúra a šport"@sk, "Izobraževanje, kultura in šport"@sl, "Utbildning, kultur och sport"@sv ;
+  ns1:authority-code "EDUC" ;
+  ns1:op-code "EDUC" ;
+  ns1:start.use "2015-10-01" ;
+  ns2:op-code "EDUC" ;
+  dc11:identifier "EDUC" ;
+  skos:definition "This concept identifies datasets covering such domains as education, culture or sport. Education is the process of facilitating learning, or the acquisition of knowledge, skills, values, beliefs and habits. Culture encompasses the social behavior and norms found in human societies, as well as the knowledge, beliefs, arts, laws, customs, capabilities and habits of the individuals in these groups. Sport includes all forms of competitive physical activity or games which maintain or improve physical ability and skills while providing enjoyment to participants, and in some cases, entertainment for spectators. Dataset examples: European Skills, Competences, Qualifications and Occupations (ESCO); EU Member States and international human rights obligations; Participation in any cultural or sport activities in the last 12 months by sex, age and educational attainment level."@en ;
+  skos:inScheme ns2:data-theme ;
+  skos:topConceptOf ns2:data-theme .
+
+<http://publications.europa.eu/resource/authority/data-theme/ENER>
+  a skos:Concept ;
+  ns1:deprecated "false" ;
+  skos:prefLabel "Енергетика"@bg, "Energie"@cs, "Energi"@da, "Energie"@de, "Ενέργεια"@el, "Energy"@en, "Energía"@es, "Energeetika"@et, "Energia"@fi, "Énergie"@fr, "Fuinneamh"@ga, "Energetika"@hr, "Energia"@hu, "Energia"@it, "Energetika"@lt, "Enerģētika"@lv, "Enerġija"@mt, "Energi"@nb, "Energie"@nl, "Energi"@nn, "Energi"@no, "Energia"@pl, "Energia"@pt, "Energie"@ro, "Energetika"@sk, "Energetika"@sl, "Energi"@sv ;
+  ns1:authority-code "ENER" ;
+  ns1:op-code "ENER" ;
+  ns1:start.use "2015-10-01" ;
+  ns2:op-code "ENER" ;
+  dc11:identifier "ENER" ;
+  skos:definition "This concept identifies datasets covering the domain of energy. Energy is the quantitative property that must be transferred to an object in order to perform work on, or to heat, the object. Living organisms require energy to stay alive; human civilisation requires energy to function. Dataset examples: European gas market reports; Electricity prices by type of user."@en ;
+  skos:inScheme ns2:data-theme ;
+  skos:topConceptOf ns2:data-theme .
+
+<http://publications.europa.eu/resource/authority/data-theme/ENVI>
+  a skos:Concept ;
+  ns1:deprecated "false" ;
+  skos:prefLabel "Околна среда"@bg, "Životní prostředí"@cs, "Miljø"@da, "Umwelt"@de, "Περιβάλλον"@el, "Environment"@en, "Medio ambiente"@es, "Keskkond"@et, "Ympäristö"@fi, "Environnement"@fr, "Comhshaol"@ga, "Okoliš"@hr, "Környezet"@hu, "Ambiente"@it, "Aplinka"@lt, "Vide"@lv, "Ambjent"@mt, "Miljø"@nb, "Milieu"@nl, "Miljø"@nn, "Miljø"@no, "Środowisko"@pl, "Ambiente"@pt, "Mediu"@ro, "Životné prostredie"@sk, "Okolje"@sl, "Miljö"@sv ;
+  ns1:authority-code "ENVI" ;
+  ns1:op-code "ENVI" ;
+  ns1:start.use "2015-10-01" ;
+  ns2:op-code "ENVI" ;
+  dc11:identifier "ENVI" ;
+  skos:definition "This concept identifies datasets covering the domain of environment. The natural environment encompasses the interaction of all living species, climate, weather and natural resources that affect human survival and economic activity. Dataset examples: Attitudes of European citizens towards the environment; Pollutant emissions from transport."@en ;
+  skos:inScheme ns2:data-theme ;
+  skos:topConceptOf ns2:data-theme .
+
+<http://publications.europa.eu/resource/authority/data-theme/GOVE>
+  a skos:Concept ;
+  ns1:deprecated "false" ;
+  skos:prefLabel "Правителство и публичен сектор"@bg, "Vláda a veřejný sektor"@cs, "Regeringen og den offentlige sektor"@da, "Regierung und öffentlicher Sektor"@de, "Κυβέρνηση και δημόσιος τομέας"@el, "Government and public sector"@en, "Gobierno y sector público"@es, "Valitsus ja avalik sektor"@et, "Valtioneuvosto ja julkinen sektori"@fi, "Gouvernement et secteur public"@fr, "Rialtas agus earnáil phoiblí"@ga, "Vlada i javni sektor"@hr, "Kormányzat és közszféra"@hu, "Governo e settore pubblico"@it, "Vyriausybė ir viešasis sektorius"@lt, "Valdība un sabiedriskais sektors"@lv, "Gvern u settur pubbliku"@mt, "Forvaltning og offentlig sektor"@nb, "Overheid en publieke sector"@nl, "Forvaltning og offentleg sektor"@nn, "Forvaltning og offentlig sektor"@no, "Rząd i sektor publiczny"@pl, "Governo e setor público"@pt, "Guvern şi sector public"@ro, "Vláda a verejný sektor"@sk, "Vlada in javni sektor"@sl, "Regeringen och den offentliga sektorn"@sv ;
+  ns1:authority-code "GOVE" ;
+  ns1:op-code "GOVE" ;
+  ns1:start.use "2015-10-01" ;
+  ns2:op-code "GOVE" ;
+  dc11:identifier "GOVE" ;
+  skos:definition "This concept identifies datasets covering such domains as government or public sector. A government is the system or group of people governing an organised community, often a state. The public sector is the part of the economy composed of both public services and public enterprises. Public sector services and enterprises can be controlled by central government, regional or local authorities. Organisations that are not part of the public sector are either a part of the private sector or voluntary sector. Dataset examples: Candidate countries and potential candidates: Government statistics; Transparency Register."@en ;
+  skos:inScheme ns2:data-theme ;
+  skos:topConceptOf ns2:data-theme .
+
+<http://publications.europa.eu/resource/authority/data-theme/HEAL>
+  a skos:Concept ;
+  ns1:deprecated "false" ;
+  skos:prefLabel "Здраве"@bg, "Zdraví"@cs, "Sundhed"@da, "Gesundheit"@de, "Υγεία"@el, "Health"@en, "Salud"@es, "Tervis"@et, "Terveys"@fi, "Santé"@fr, "Sláinte"@ga, "Zdravlje"@hr, "Egészségügy"@hu, "Salute"@it, "Sveikata"@lt, "Veselība"@lv, "Saħħa"@mt, "Helse"@nb, "Gezondheid"@nl, "Helse"@nn, "Helse"@no, "Zdrowie"@pl, "Saúde"@pt, "Sănătate"@ro, "Zdravotníctvo"@sk, "Zdravje"@sl, "Hälsa"@sv ;
+  ns1:authority-code "HEAL" ;
+  ns1:op-code "HEAL" ;
+  ns1:start.use "2015-10-01" ;
+  ns2:op-code "HEAL" ;
+  dc11:identifier "HEAL" ;
+  skos:definition "This concept identifies datasets covering the domain of health. Health is a state of physical, mental and social well-being in which disease and infirmity are absent. Dataset examples: COVID-19 Coronavirus data; European Cancer Information System."@en ;
+  skos:inScheme ns2:data-theme ;
+  skos:topConceptOf ns2:data-theme .
+
+<http://publications.europa.eu/resource/authority/data-theme/INTR>
+  a skos:Concept ;
+  ns1:deprecated "false" ;
+  skos:prefLabel "Международни въпроси"@bg, "Mezinárodní otázky"@cs, "Internationale spørgsmål"@da, "Internationale Themen"@de, "Διεθνή θέματα"@el, "International issues"@en, "Asuntos internacionales"@es, "Rahvusvahelised küsimused"@et, "Kansainväliset kysymykset"@fi, "Questions internationales"@fr, "Saincheisteanna idirnáisiúnta"@ga, "Međunarodni pitanja"@hr, "Nemzetközi ügyek"@hu, "Tematiche internazionali"@it, "Tarptautiniai klausimai"@lt, "Starptautiski jautājumi"@lv, "Kwistjonijiet internazzjonali"@mt, "Internasjonale temaer"@nb, "Internationale vraagstukken"@nl, "Internasjonale tema"@nn, "Internasjonale temaer"@no, "Kwestie międzynarodowe"@pl, "Questões internacionais"@pt, "Chestiuni internaționale"@ro, "Medzinárodné otázky"@sk, "Mednarodna vprašanja"@sl, "Internationella frågor"@sv ;
+  ns1:authority-code "INTR" ;
+  ns1:op-code "INTR" ;
+  ns1:start.use "2015-10-01" ;
+  ns2:op-code "INTR" ;
+  dc11:identifier "INTR" ;
+  skos:definition "This concept identifies datasets covering the domain of international issues. An issue – important topic or problem for debate or discussion – is international when the participants represent at least two countries. Dataset examples: Consolidated list of persons, groups and entities subject to EU financial sanctions; European Commission — DG DEVCO – development and humanitarian assistance to Afghanistan."@en ;
+  skos:inScheme ns2:data-theme ;
+  skos:topConceptOf ns2:data-theme .
+
+<http://publications.europa.eu/resource/authority/data-theme/JUST>
+  a skos:Concept ;
+  ns1:deprecated "false" ;
+  skos:prefLabel "Правосъдие, съдебна система и обществена безопасност"@bg, "Spravedlnost, právní systém a veřejná bezpečnost"@cs, "Retfærdighed, retssystem og offentlig sikkerhed"@da, "Justiz, Rechtssystem und öffentliche Sicherheit"@de, "Δικαιoσύνη, νομικό σύστημα και δημόσια ασφάλεια"@el, "Justice, legal system and public safety"@en, "Justicia, sistema judicial y seguridad pública"@es, "Õigusemõistmine, õigussüsteem ja avalik turvalisus"@et, "Oikeus, oikeusjärjestelmä ja yleinen turvallisuus"@fi, "Justice, système juridique et sécurité publique"@fr, "Ceartas, córas dlí agus sábháilteacht an phobail"@ga, "Pravosuđe, pravni sustav i javna sigurnost"@hr, "Igazságügy, jogrendszer és közbiztonság"@hu, "Giustizia, sistema giuridico e sicurezza pubblica"@it, "Teisingumas, teisės sistema ir visuomenės sauga"@lt, "Tieslietas, tiesību sistēma un sabiedrības drošība"@lv, "Ġustizzja, sistema legali u sigurtà pubblika"@mt, "Justis, rettssystem og allmenn sikkerhet"@nb, "Justitie, rechtsstelsel en openbare veiligheid"@nl, "Justis, rettssystem og allmenn tryggleik"@nn, "Justis, rettssystem og allmenn sikkerhet"@no, "Sprawiedliwość, ustrój sądów i bezpieczeństwo publiczne"@pl, "Justiça, sistema judiciário e segurança pública"@pt, "Justiție, sistem juridic și siguranță publică"@ro, "Spravodlivosť, právny systém a verejná bezpečnosť"@sk, "Pravosodje, pravni sistem in javna varnost"@sl, "Rättvisa, rättsliga system och allmän säkerhet"@sv ;
+  ns1:authority-code "JUST" ;
+  ns1:op-code "JUST" ;
+  ns1:start.use "2015-10-01" ;
+  ns2:op-code "JUST" ;
+  dc11:identifier "JUST" ;
+  skos:definition "This concept identifies datasets covering such domains as justice, legal system or public safety. Justice includes both the attainment of that which is just and the philosophical discussion of that which is just; here it mainly means the procedural justice as found in the study and application of the law. The contemporary legal systems of the world are generally based on one of four basic systems: civil law, common law, statutory law, religious law or combinations of these. Public safety is the function of governments which ensures the protection of citizens, persons in their territory, organisations and institutions against threats to their well-being – and to the prosperity of their communities. Dataset examples: EU case-law; Information on Member States Law; European Data Protection Supervisor register of processing operations."@en ;
+  skos:inScheme ns2:data-theme ;
+  skos:topConceptOf ns2:data-theme .
+
+<http://publications.europa.eu/resource/authority/data-theme/OP_DATPRO>
+  a skos:Concept ;
+  ns1:deprecated "false" ;
+  skos:prefLabel "Неокончателни данни"@bg, "Předběžné údaje"@cs, "Midlertidige data"@da, "Vorläufige Daten"@de, "Προσωρινά δεδομένα"@el, "Provisional data"@en, "Datos provisionales"@es, "Esialgsed andmed"@et, "Alustavat tiedot"@fi, "Données provisoires"@fr, "Sonraí sealadacha"@ga, "Privremeni podaci"@hr, "Ideiglenes adatok"@hu, "Dati provvisori"@it, "Laikinieji duomenys"@lt, "Provizoriski dati"@lv, "Dejta provviżorja"@mt, "Voorlopige gegevens"@nl, "Dane tymczasowe"@pl, "Dados provisórios"@pt, "Date provizorii"@ro, "Predbežné údaje"@sk, "Začasni podatki"@sl, "Tillfälliga uppgifter"@sv ;
+  ns1:authority-code "OP_DATPRO" ;
+  ns1:op-code "OP_DATPRO" ;
+  ns1:start.use "1952-07-23" ;
+  ns2:op-code "OP_DATPRO" ;
+  dc11:identifier "OP_DATPRO" ;
+  skos:inScheme ns2:data-theme ;
+  skos:topConceptOf ns2:data-theme .
+
+<http://publications.europa.eu/resource/authority/data-theme/REGI>
+  a skos:Concept ;
+  ns1:deprecated "false" ;
+  skos:prefLabel "Региони и градове"@bg, "Regiony a města"@cs, "Regioner og byer"@da, "Regionen und Städte"@de, "Περιφέρειες και πόλεις"@el, "Regions and cities"@en, "Regiones y ciudades"@es, "Piirkonnad ja linnad"@et, "Alueet ja kaupungit"@fi, "Régions et villes"@fr, "Réigiúin agus cathracha"@ga, "Regije i gradovi"@hr, "Régiók és városok"@hu, "Regioni e città"@it, "Regionai ir miestai"@lt, "Reģioni un pilsētas"@lv, "Reġjuni u bliet"@mt, "Regioner og byer"@nb, "Regio's en steden"@nl, "Regionar og byar"@nn, "Regioner og byer"@no, "Regiony i miasta"@pl, "Regiões e cidades"@pt, "Regiuni şi orașe"@ro, "Regióny a mestá"@sk, "Regije in mesta"@sl, "Regioner och städer"@sv ;
+  ns1:authority-code "REGI" ;
+  ns1:op-code "REGI" ;
+  ns1:start.use "2015-10-01" ;
+  ns2:op-code "REGI" ;
+  dc11:identifier "REGI" ;
+  skos:definition "This concept identifies datasets covering such domains as regions or cities. In the field of political geography, regions tend to be based on political units such as sovereign states; subnational units such as administrative regions, provinces, states, counties, townships, territories, etc.; and multinational groupings. A city is a large human settlement. Dataset examples: NUTS - Nomenclature of territorial units for statistics classification; UDP - GDP per capita by metro regions, 2000 - 2060."@en ;
+  skos:inScheme ns2:data-theme ;
+  skos:topConceptOf ns2:data-theme .
+
+<http://publications.europa.eu/resource/authority/data-theme/SOCI>
+  a skos:Concept ;
+  ns1:deprecated "false" ;
+  skos:prefLabel "Население и общество"@bg, "Populace a společnost"@cs, "Befolkning og samfund"@da, "Bevölkerung und Gesellschaft"@de, "Πληθυσμός και κοινωνία"@el, "Population and society"@en, "Población y sociedad"@es, "Elanikkond ja ühiskond"@et, "Väestö ja yhteiskunta"@fi, "Population et société"@fr, "Daonra agus sochaí"@ga, "Stanovništvo i društvo"@hr, "Népesség és társadalom"@hu, "Popolazione e società"@it, "Gyventojų skaičius ir visuomenė"@lt, "Iedzīvotāji un sabiedrība"@lv, "Popolazzjoni u soċjetà"@mt, "Befolkning og samfunn"@nb, "Bevolking en samenleving"@nl, "Befolkning og samfunn"@nn, "Befolkning og samfunn"@no, "Ludność i społeczeństwo"@pl, "População e sociedade"@pt, "Populaţie şi societate"@ro, "Obyvateľstvo a spoločnosť"@sk, "Prebivalstvo in družba"@sl, "Befolkning och samhälle"@sv ;
+  ns1:authority-code "SOCI" ;
+  ns1:op-code "SOCI" ;
+  ns1:start.use "2015-10-01" ;
+  ns2:op-code "SOCI" ;
+  dc11:identifier "SOCI" ;
+  skos:definition "This concept identifies datasets covering such domains as population or society. Population is a collection of humans and their entire race; it is the number of people in a city or town, region, country or world. A society is a group of individuals involved in persistent social interaction, or a large social group sharing the same spatial or social territory, typically subject to the same political authority and dominant cultural expectations. Dataset examples: Population density by NUTS 2 region; Violence against Women: An EU-wide survey."@en ;
+  skos:inScheme ns2:data-theme ;
+  skos:topConceptOf ns2:data-theme .
+
+<http://publications.europa.eu/resource/authority/data-theme/TECH>
+  a skos:Concept ;
+  ns1:deprecated "false" ;
+  skos:prefLabel "Наука и tехнологии"@bg, "Věda a technika"@cs, "Videnskab og teknologi"@da, "Wissenschaft und Technologie"@de, "Επιστήμη και τεχνολογία"@el, "Science and technology"@en, "Ciencia y tecnología"@es, "Teadus ja tehnoloogia"@et, "Tiede ja teknologia"@fi, "Science et technologie"@fr, "Eolaíocht agus teicneolaíocht"@ga, "Znanost i tehnologija"@hr, "Tudomány és technológia"@hu, "Scienza e tecnologia"@it, "Mokslas ir technologijos"@lt, "Zinātne un tehnoloģija"@lv, "Xjenza u teknoloġija"@mt, "Vitenskap og teknologi"@nb, "Wetenschap en technologie"@nl, "Vitskap og teknologi"@nn, "Vitenskap og teknologi"@no, "Nauka i technologia"@pl, "Ciência e tecnologia"@pt, "Ştiinţă şi tehnologie"@ro, "Veda a technika"@sk, "Znanost in tehnologija"@sl, "Vetenskap och teknik"@sv ;
+  ns1:authority-code "TECH" ;
+  ns1:op-code "TECH" ;
+  ns1:start.use "2015-10-01" ;
+  ns2:op-code "TECH" ;
+  dc11:identifier "TECH" ;
+  skos:definition "This concept identifies datasets covering such domains as science or technology. Science is a systematic enterprise that builds and organises knowledge in the form of testable explanations and predictions. Modern science is typically divided into three major branches that consist of the natural sciences, which study nature in the broadest sense; the social sciences, which study individuals and societies; and the formal sciences, which study abstract concepts. Technology is the sum of techniques, skills, methods and processes used in the production of goods or services or in the accomplishment of objectives, such as scientific investigation. Dataset examples: CORDIS - EU research projects under Horizon 2020 (2014-2020); Take-up of mobile broadband (subscriptions/100 people)."@en ;
+  skos:inScheme ns2:data-theme ;
+  skos:topConceptOf ns2:data-theme .
+
+<http://publications.europa.eu/resource/authority/data-theme/TRAN>
+  a skos:Concept ;
+  ns1:deprecated "false" ;
+  skos:prefLabel "Транспорт"@bg, "Doprava"@cs, "Transport"@da, "Verkehr"@de, "Μεταφορές"@el, "Transport"@en, "Transporte"@es, "Transport"@et, "Liikenne"@fi, "Transports"@fr, "Iompar"@ga, "Promet"@hr, "Közlekedés"@hu, "Trasporti"@it, "Transportas"@lt, "Transports"@lv, "Trasport"@mt, "Transport"@nb, "Vervoer"@nl, "Transport"@nn, "Transport"@no, "Transport"@pl, "Transportes"@pt, "Transport"@ro, "Doprava"@sk, "Transport"@sl, "Transport"@sv ;
+  ns1:authority-code "TRAN" ;
+  ns1:op-code "TRAN" ;
+  ns1:start.use "2015-10-01" ;
+  ns2:op-code "TRAN" ;
+  dc11:identifier "TRAN" ;
+  skos:definition "This concept identifies datasets covering the domain of transport. Transport is the movement of humans, animals and goods from one location to another. Modes of transport include air, land (rail and road), water, cable, pipeline and space. Dataset examples: Total length of motorways; Airport traffic data by reporting airport and airlines."@en ;
+  skos:inScheme ns2:data-theme ;
+  skos:topConceptOf ns2:data-theme .
+
