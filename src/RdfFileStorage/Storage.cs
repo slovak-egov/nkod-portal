@@ -1,4 +1,6 @@
-﻿using Lucene.Net.QueryParsers.Classic;
+﻿using AngleSharp.Dom;
+using Lucene.Net.QueryParsers.Classic;
+using Lucene.Net.Search;
 using Newtonsoft.Json;
 using NkodSk.Abstractions;
 using System;
@@ -7,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Metadata;
 using System.Runtime;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using static Lucene.Net.Queries.Function.ValueSources.MultiFunction;
@@ -32,11 +35,15 @@ namespace NkodSk.RdfFileStorage
 
         private readonly Dictionary<FileType, HashSet<Guid>> entriesByType;
 
+        private readonly Dictionary<string, HashSet<Guid>> entriesByLanguage;
+
         private readonly Dictionary<string, Dictionary<string, HashSet<Guid>>> additionalFilters;
 
         private readonly ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();
 
         private int disposed;
+
+        private int defaultCapacity;
 
         public Storage(string path, string publicTurtleFolderName = "public", string protectedFolderName = "protected")
         {
@@ -60,13 +67,14 @@ namespace NkodSk.RdfFileStorage
             }
 
             string[] files = GetAllMetadataFiles();
-            int defaultCapacity = files.Length * 2;
+            defaultCapacity = files.Length * 2;
 
             entries = new HashSet<Guid>(defaultCapacity);
             entryProperties = new Dictionary<Guid, Entry>(defaultCapacity);
             dependentEntries = new Dictionary<Guid, HashSet<Guid>>(defaultCapacity);
             entriesByPublisher = new Dictionary<string, HashSet<Guid>>(defaultCapacity);
             entriesByType = new Dictionary<FileType, HashSet<Guid>>(Enum.GetValues<FileType>().Length);
+            entriesByLanguage = new Dictionary<string, HashSet<Guid>>();
             additionalFilters = new Dictionary<string, Dictionary<string, HashSet<Guid>>>();
 
             LoadEntries(files);
@@ -101,7 +109,6 @@ namespace NkodSk.RdfFileStorage
 
                 ClearEntries();
                 
-                int defaultCapacity = files.Length * 2;
                 foreach (FileType fileType in Enum.GetValues<FileType>())
                 {
                     if (!entriesByType.ContainsKey(fileType))
@@ -185,6 +192,18 @@ namespace NkodSk.RdfFileStorage
                 entriesByPublisher[metadata.Publisher].Add(metadata.Id);
             }
 
+            foreach ((string language, string name) in metadata.Name)
+            {
+                if (!string.IsNullOrEmpty(name))
+                {
+                    if (!entriesByLanguage.ContainsKey(language))
+                    {
+                        entriesByLanguage[language] = new HashSet<Guid>(defaultCapacity);
+                    }
+                    entriesByLanguage[language].Add(metadata.Id);
+                }
+            }
+
             if (metadata.AdditionalValues is not null)
             {
                 foreach ((string key, string[] values) in metadata.AdditionalValues)
@@ -227,6 +246,14 @@ namespace NkodSk.RdfFileStorage
                 if (entriesByType.TryGetValue(metadata.Type, out HashSet<Guid>? typeFiles))
                 {
                     typeFiles.Remove(metadata.Id);
+                }
+
+                foreach (string language in metadata.Name.Keys)
+                {
+                    if (entriesByLanguage.TryGetValue(language, out HashSet<Guid>? languageFiles))
+                    {
+                        languageFiles.Remove(metadata.Id);
+                    }
                 }
 
                 if (metadata.AdditionalValues is not null)
@@ -297,6 +324,15 @@ namespace NkodSk.RdfFileStorage
             }
         }
 
+        private static string GetFilterId(string key, string language)
+        {
+            return key switch
+            {
+                "keywords" => key + language,
+                _ => key
+            };
+        }
+
         private List<Entry> GetRelevantEntries(FileStorageQuery query, IFileStorageAccessPolicy accessPolicy)
         {
             List<HashSet<Guid>> sets = new List<HashSet<Guid>>();
@@ -346,13 +382,27 @@ namespace NkodSk.RdfFileStorage
                 sets.Add(new HashSet<Guid>(query.OnlyIds));
             }
 
+            if (entriesByLanguage.TryGetValue(query.Language, out HashSet<Guid>? languageEntries))
+            {
+                sets.Add(languageEntries);
+            }
+
             if (query.AdditionalFilters is not null)
             {
                 foreach ((string key, string[] values) in query.AdditionalFilters)
                 {
-                    if (values.Length > 0 && additionalFilters.TryGetValue(key, out Dictionary<string, HashSet<Guid>>? filterValues) && (query.RequiredFacets == null || !query.RequiredFacets.Contains(key)))
+                    string filterId = GetFilterId(key, query.Language);
+
+                    if (values.Length > 0 && (query.RequiredFacets == null || !query.RequiredFacets.Contains(key)))
                     {
-                        sets.Add(MergeSets(filterValues, values));
+                        if (additionalFilters.TryGetValue(filterId, out Dictionary<string, HashSet<Guid>>? filterValues))
+                        {
+                            sets.Add(MergeSets(filterValues, values));
+                        }
+                        else
+                        {
+                            sets.Add(new HashSet<Guid>());
+                        }
                     }
                 }
             }
@@ -370,6 +420,11 @@ namespace NkodSk.RdfFileStorage
             else
             {
                 set = entries;
+            }
+
+            if (query.ExcludeIds is not null)
+            {
+                set.ExceptWith(query.ExcludeIds);
             }
 
             List<Entry> results = new List<Entry>(set.Count);
@@ -457,7 +512,8 @@ namespace NkodSk.RdfFileStorage
                             default:
                                 foreach (Entry entry in results)
                                 {
-                                    if (entry.Metadata.AdditionalValues is not null && entry.Metadata.AdditionalValues.TryGetValue(facetId, out string[]? values))
+                                    string filterId = GetFilterId(facetId, query.Language);
+                                    if (entry.Metadata.AdditionalValues is not null && entry.Metadata.AdditionalValues.TryGetValue(filterId, out string[]? values))
                                     {
                                         foreach (string value in values)
                                         {
@@ -489,8 +545,9 @@ namespace NkodSk.RdfFileStorage
                         {
                             if (query.AdditionalFilters.TryGetValue(facetId, out string[]? values) && values.Length > 0)
                             {
+                                string filterId = GetFilterId(facetId, query.Language);
                                 HashSet<string> keys = new HashSet<string>(values);
-                                filteredEntries.RemoveWhere(e => e.Metadata.AdditionalValues == null || !e.Metadata.AdditionalValues.TryGetValue(facetId, out string[]? entryValues) || !keys.Overlaps(entryValues));
+                                filteredEntries.RemoveWhere(e => e.Metadata.AdditionalValues == null || !e.Metadata.AdditionalValues.TryGetValue(filterId, out string[]? entryValues) || !keys.Overlaps(entryValues));
                             }                                
                         }
                     }
@@ -498,7 +555,28 @@ namespace NkodSk.RdfFileStorage
                     results = filteredEntries.ToList();
                 }
 
-                results.Sort(CompareEntries);
+                if (orderDefinitions.Count >= 1 && orderDefinitions[0].Property == FileStorageOrderProperty.Revelance && !orderDefinitions[0].ReverseOrder && query.OnlyIds is not null && query.OnlyIds.Count > 0)
+                {
+                    orderDefinitions.RemoveAt(0);
+                    Dictionary<Guid, Entry> indexedEntries = new Dictionary<Guid, Entry>(results.Count);
+                    foreach (Entry entry in results)
+                    {
+                        indexedEntries[entry.Metadata.Id] = entry;
+                    }
+                    results.Clear();
+                    foreach (Guid id in query.OnlyIds)
+                    {
+                        if (indexedEntries.TryGetValue(id, out Entry? entry))
+                        {
+                            results.Add(entry);
+                        }
+                    }
+                }
+
+                if (orderDefinitions.Count > 0)
+                {
+                    results.Sort(CompareEntries);
+                }
 
                 int pageResultsCount = Math.Min(query.MaxResults.GetValueOrDefault(results.Count), int.Max(0, results.Count - query.SkipResults));
 
@@ -570,6 +648,7 @@ namespace NkodSk.RdfFileStorage
 
         public FileStorageGroupResponse GetFileStatesByPublisher(FileStorageQuery query, IFileStorageAccessPolicy accessPolicy)
         {
+            query.OnlyTypes = new List<FileType> { FileType.PublisherRegistration };
             Dictionary<string, int> countByPublisher = new Dictionary<string, int>(100);
             Dictionary<string, Dictionary<string, int>> themesByPublisher = new Dictionary<string, Dictionary<string, int>>(100);
 
@@ -577,6 +656,8 @@ namespace NkodSk.RdfFileStorage
             try
             {
                 CheckDispose();
+
+                HashSet<string>? onlyPublishers = query.OnlyPublishers is not null && query.OnlyPublishers.Count > 0 ? new HashSet<string>(query.OnlyPublishers) : null;
 
                 string themeKey = $"themes_{query.Language}";
 
@@ -593,6 +674,11 @@ namespace NkodSk.RdfFileStorage
                     string? publisherName = entry.Metadata.Publisher;
                     if (!string.IsNullOrEmpty(publisherName))
                     {
+                        if (onlyPublishers is not null && !onlyPublishers.Contains(publisherName))
+                        {
+                            continue;
+                        }
+
                         if (!countByPublisher.TryGetValue(publisherName, out int count))
                         {
                             count = 0;
@@ -627,12 +713,19 @@ namespace NkodSk.RdfFileStorage
                 rwLock.ExitReadLock();
             }
 
-
-            List<FileStorageGroup> groups = new List<FileStorageGroup>(countByPublisher.Count);
-            foreach ((string publisherId, int count) in countByPublisher)
+            List<Entry> publisherEntries = GetRelevantEntries(query, accessPolicy);
+            List<FileStorageGroup> groups = new List<FileStorageGroup>(publisherEntries.Count);
+            foreach (Entry entry in publisherEntries)
             {
-                themesByPublisher.TryGetValue(publisherId, out Dictionary<string, int>? themes);
-                groups.Add(new FileStorageGroup(publisherId, GetPublisherRegistration(publisherId), count, themes));
+                string? fileContent = ReadFileContent(entry.Path);
+                FileState publisherState = new FileState(entry.Metadata, fileContent);
+                string? publisher = publisherState.Metadata.Publisher;
+                if (publisher is not null)
+                {
+                    countByPublisher.TryGetValue(publisher, out int count);
+                    themesByPublisher.TryGetValue(publisher, out Dictionary<string, int>? themes);
+                    groups.Add(new FileStorageGroup(publisher, publisherState, count, themes));
+                }                
             }
 
             List<FileStorageOrderDefinition> orderDefinitions = query.OrderDefinitions?.ToList() ?? new List<FileStorageOrderDefinition>(2);

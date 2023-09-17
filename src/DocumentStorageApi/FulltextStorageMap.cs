@@ -8,10 +8,7 @@ namespace DocumentStorageApi
     {
         public FulltextStorageMap(IFileStorage fileStorage) 
         {
-            FileStorageQuery query = new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.DatasetRegistration, FileType.PublisherRegistration, FileType.LocalCatalogRegistration }, OnlyPublished = true };
-            FileStorageResponse response = fileStorage.GetFileStates(query, new PublicFileAccessPolicy());
-
-            Index(response.Files);
+            Initialize(fileStorage);
         }
     }
 }

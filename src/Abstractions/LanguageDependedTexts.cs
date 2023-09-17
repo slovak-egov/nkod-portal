@@ -1,14 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using VDS.RDF;
 
 namespace NkodSk.Abstractions
 {
     public class LanguageDependedTexts : Dictionary<string, string>
     {
         public LanguageDependedTexts()
+        {
+
+        }
+
+        public LanguageDependedTexts(int capacity) : base(capacity)
         {
 
         }
@@ -36,6 +43,16 @@ namespace NkodSk.Abstractions
         {
             LanguageDependedTexts result = new LanguageDependedTexts();
             result.SetText("sk", text);
+            return result;
+        }
+
+        public static implicit operator LanguageDependedTexts(ILiteralNode[] nodes)
+        {
+            LanguageDependedTexts result = new LanguageDependedTexts(nodes.Length);
+            foreach (ILiteralNode node in nodes)
+            {
+                result.SetText(node.Language, node.Value);
+            }
             return result;
         }
     }

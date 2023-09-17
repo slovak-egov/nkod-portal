@@ -1,10 +1,11 @@
 ﻿using Abstractions;
 using Newtonsoft.Json;
+using NkodSk.Abstractions;
 using System.Web;
 
 namespace CodelistProviderClient
 {
-    public class CodelistProviderClient
+    public class CodelistProviderClient : ICodelistProviderClient
     {
         private readonly IHttpClientFactory httpClientFactory;
 
@@ -55,6 +56,19 @@ namespace CodelistProviderClient
                 return null;
             }
             throw new Exception("Invalid response");
+        }
+
+        public async Task<CodelistItem?> GetCodelistItem(string codelistId, string itemId)
+        {
+            Codelist? codelist = await GetCodelist(codelistId).ConfigureAwait(false);
+            if (codelist is not null)
+            {
+                if (codelist.Items.TryGetValue(itemId, out CodelistItem? codelistItem))
+                {
+                    return codelistItem;
+                }
+            }
+            return null;
         }
     }
 }

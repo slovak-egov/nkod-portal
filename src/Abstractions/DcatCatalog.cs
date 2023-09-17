@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using VDS.RDF;
+using VDS.RDF.Parsing;
 
 namespace NkodSk.Abstractions
 {
@@ -14,10 +15,24 @@ namespace NkodSk.Abstractions
         }
 
         public string? GetTitle(string language) => GetTextFromUriNode("dct:title", language);
+        
+        public void SetTitle(Dictionary<string, string> values)
+        {
+            SetTexts("dct:title", values);
+        }
 
         public string? GetDescription(string language) => GetTextFromUriNode("dct:description", language);
 
-        public Uri? Publisher => GetUriFromUriNode("dct:publisher");
+        public void SetDescription(Dictionary<string, string> values)
+        {
+            SetTexts("dct:description", values);
+        }
+
+        public Uri? Publisher
+        {
+            get => GetUriFromUriNode("dct:publisher");
+            set => SetUriNode("dct:publisher", value);
+        }
 
         public VcardKind? ContactPoint
         {
@@ -36,7 +51,19 @@ namespace NkodSk.Abstractions
             }
         }
 
-        public Uri? HomePage => GetUriFromUriNode("foaf:homepage");
+        public void SetContactPoint(LanguageDependedTexts name, string? email)
+        {
+            RemoveUriNodes("dcat:contactPoint");
+            VcardKind contactPoint = new VcardKind(Graph, CreateSubject("dcat:contactPoint", "vcard:Individual"));
+            contactPoint.SetNames(name);
+            contactPoint.Email = email;
+        }
+
+        public Uri? HomePage
+        {
+            get => GetUriFromUriNode("foaf:homepage");
+            set => SetUriNode("foaf:homepage", value);
+        }
 
         public static DcatCatalog? Parse(string text)
         {
@@ -49,18 +76,32 @@ namespace NkodSk.Abstractions
             return null;
         }
 
+        public static DcatCatalog Create(Uri uri)
+        {
+            IGraph graph = new Graph();
+            RdfDocument.AddDefaultNamespaces(graph);
+            IUriNode subject = graph.CreateUriNode(uri);
+            IUriNode rdfTypeNode = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode targetTypeNode = graph.CreateUriNode("dcat:Catalog");
+            graph.Assert(subject, rdfTypeNode, targetTypeNode);
+            return new DcatCatalog(graph, subject);
+        }
+
         public FileMetadata UpdateMetadata(FileMetadata? metadata = null)
         {
             Guid id = metadata?.Id ?? Guid.NewGuid();
             DateTimeOffset now = DateTimeOffset.UtcNow;
             Dictionary<string, string[]> values = new Dictionary<string, string[]>();
+
+            LanguageDependedTexts names = GetLiteralNodesFromUriNode("dct:title").ToArray();
+
             if (metadata is null)
             {
-                metadata = new FileMetadata(id, id.ToString(), FileType.DatasetRegistration, null, Publisher?.ToString(), true, null, now, now, values);
+                metadata = new FileMetadata(id, names, FileType.LocalCatalogRegistration, null, Publisher?.ToString(), true, null, now, now, values);
             }
             else
             {
-                metadata = metadata with { Publisher = Publisher?.ToString(), IsPublic = true, AdditionalValues = values, LastModified = now };
+                metadata = metadata with { Name = names, Publisher = Publisher?.ToString(), IsPublic = true, AdditionalValues = values, LastModified = now };
             }
             return metadata;
         }

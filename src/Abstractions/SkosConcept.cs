@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using VDS.RDF;
+using VDS.RDF.Parsing;
 
 namespace NkodSk.Abstractions
 {

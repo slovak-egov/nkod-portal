@@ -71,5 +71,16 @@ namespace NkodSk.Abstractions
             }
             return null;
         }
+
+        public static SkosConceptScheme Create(Uri uri)
+        {
+            IGraph graph = new Graph();
+            RdfDocument.AddDefaultNamespaces(graph);
+            IUriNode subject = graph.CreateUriNode(uri);
+            IUriNode rdfTypeNode = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode targetTypeNode = graph.CreateUriNode("skos:ConceptScheme");
+            graph.Assert(subject, rdfTypeNode, targetTypeNode);
+            return new SkosConceptScheme(graph, subject);
+        }
     }
 }

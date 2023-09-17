@@ -36,11 +36,9 @@ namespace WebApi.Test
             using HttpClient client = applicationFactory.CreateClient();
             using HttpResponseMessage response = await client.GetAsync($"/download?id={HttpUtility.UrlEncode(id.ToString())}");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("test.txt", response.Content.Headers.ContentDisposition?.FileName);
             string content = await response.Content.ReadAsStringAsync();
             Assert.Equal("content", content);
-            response.Headers.TryGetValues("Content-Disposition", out IEnumerable<string>? values);
-            Assert.NotNull(values);
-            Assert.Equal(new[] { "attachment; filename=\"test.txt\"" }, values);
         }
 
         [Fact]

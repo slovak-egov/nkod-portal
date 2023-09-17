@@ -1,6 +1,4 @@
-﻿using NkodSk.Abstractions;
-
-namespace DocumentStorageApi
+﻿namespace NkodSk.Abstractions
 {
     public class PublicFileAccessPolicy : IFileStorageAccessPolicy
     {

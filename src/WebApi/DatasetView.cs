@@ -57,10 +57,24 @@ namespace WebApi
 
         public List<DistributionView> Distributions { get; } = new List<DistributionView>();
 
-        public static async Task<DatasetView> MapFromRdf(FileMetadata metadata, DcatDataset datasetRdf, CodelistProviderClient.CodelistProviderClient codelistProviderClient, string language)
+        public static async Task<DatasetView> MapFromRdf(FileMetadata metadata, DcatDataset datasetRdf, ICodelistProviderClient codelistProviderClient, string language)
         {
             VcardKind? contactPoint = datasetRdf.ContactPoint;
             DctTemporal? temporal = datasetRdf.Temporal;
+
+            List<Uri> eurovocThemes = new List<Uri>();
+            List<Uri> nonEurovocThemes = new List<Uri>();
+            foreach (Uri theme in datasetRdf.Themes)
+            {
+                if (theme.ToString().StartsWith("http://publications.europa.eu/resource/dataset/eurovoc/"))
+                {
+                    eurovocThemes.Add(theme);
+                }
+                else
+                {
+                    nonEurovocThemes.Add(theme);
+                }
+            }
 
             DatasetView view = new DatasetView
             {
@@ -69,7 +83,7 @@ namespace WebApi
                 Name = datasetRdf.GetTitle(language),
                 Description = datasetRdf.GetDescription(language),
                 PublisherId = metadata.Publisher,
-                Themes = datasetRdf.GetThemes().ToArray(),
+                Themes = nonEurovocThemes.ToArray(),
                 AccrualPeriodicity = datasetRdf.AccrualPeriodicity,
                 Keywords = datasetRdf.GetKeywords(language).ToArray(),
                 Type = datasetRdf.Type,
@@ -78,16 +92,17 @@ namespace WebApi
                 ContactPoint = contactPoint is not null ? new CardView { Name = contactPoint.GetName(language), Email = contactPoint.Email } : null,
                 Documentation = datasetRdf.Documentation,
                 Specification = datasetRdf.Specification,
-                EuroVocThemes = datasetRdf.EuroVocThemes.ToArray(),
+                EuroVocThemes = eurovocThemes.ToArray(),
                 SpatialResolutionInMeters = datasetRdf.SpatialResolutionInMeters,
                 TemporalResolution = datasetRdf.TemporalResolution,
                 IsPartOf = datasetRdf.IsPartOf
             };
 
-            //view.ThemeValues = await codelistProviderClient.MapCodelistValues("data-theme", view.Themes.Select(u => u.ToString()), language);
-            //view.AccrualPeriodicityValue = await codelistProviderClient.MapCodelistValue("frequency", view.AccrualPeriodicity?.ToString(), language);
-            //view.TypeValue = await codelistProviderClient.MapCodelistValue("dataset-type", view.Type?.ToString(), language);
-            //view.SpatialValues = await codelistProviderClient.MapCodelistValues("spatial", view.Spatial.Select(u => u.ToString()), language);
+            view.ThemeValues = await codelistProviderClient.MapCodelistValues("http://publications.europa.eu/resource/dataset/data-theme", view.Themes.Select(u => u.ToString()), language);
+            view.AccrualPeriodicityValue = await codelistProviderClient.MapCodelistValue("http://publications.europa.eu/resource/dataset/frequency", view.AccrualPeriodicity?.ToString(), language);
+            view.TypeValue = await codelistProviderClient.MapCodelistValue("https://data.gov.sk/set/codelist/dataset-type", view.Type?.ToString(), language);
+            view.SpatialValues = await codelistProviderClient.MapCodelistValues("http://publications.europa.eu/resource/dataset/country", view.Spatial.Select(u => u.ToString()), language);
+            view.EuroVocThemeValues = await codelistProviderClient.MapCodelistValues("http://publications.europa.eu/resource/dataset/eurovoc", view.EuroVocThemes.Select(u => u.ToString()), language);
 
             return view;
         }

@@ -15,6 +15,15 @@ namespace NkodSk.Abstractions
 
         public string? GetName(string language) => GetTextFromUriNode("vcard:fn", language);
 
-        public string? Email => GetTextFromUriNode("vcard:hasEmail");
+        public void SetNames(Dictionary<string, string> values)
+        {
+            SetTexts("vcard:fn", values);
+        }
+
+        public string? Email
+        {
+            get => GetTextFromUriNode("vcard:hasEmail");
+            set => SetTextToUriNode("vcard:hasEmail", value);
+        }
     }
 }

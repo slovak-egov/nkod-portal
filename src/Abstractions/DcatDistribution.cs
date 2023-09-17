@@ -5,6 +5,7 @@ using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using VDS.RDF;
+using VDS.RDF.Parsing;
 
 namespace NkodSk.Abstractions
 {
@@ -31,23 +32,71 @@ namespace NkodSk.Abstractions
             }
         }
 
-        public Uri? DownloadUrl => GetUriFromUriNode("dcat:downloadURL");
+        public void SetTermsOfUse(Uri? authorsWorkType, Uri? originalDatabaseType, Uri? databaseProtectedBySpecialRightsType, Uri? personalDataContainmentType)
+        {
+            RemoveUriNodes("leg:termsOfUse");
+            LegTermsOfUse termsOfUse = new LegTermsOfUse(Graph, CreateSubject("leg:termsOfUse", "leg:TermsOfUse"));
+            termsOfUse.AuthorsWorkType = authorsWorkType;
+            termsOfUse.OriginalDatabaseType = originalDatabaseType;
+            termsOfUse.DatabaseProtectedBySpecialRightsType = databaseProtectedBySpecialRightsType;
+            termsOfUse.PersonalDataContainmentType = personalDataContainmentType;
+        }
 
-        public Uri? AccessUrl => GetUriFromUriNode("dcat:accessURL");
 
-        public Uri? Format => GetUriFromUriNode("dct:format");
+        public Uri? DownloadUrl
+        {
+            get => GetUriFromUriNode("dcat:downloadURL");
+            set => SetUriNode("dcat:downloadURL", value);
+        }
 
-        public Uri? MediaType => GetUriFromUriNode("dcat:mediaType");
+        public Uri? AccessUrl
+        {
+            get => GetUriFromUriNode("dcat:accessURL");
+            set => SetUriNode("dcat:accessURL", value);
+        }
 
-        public Uri? ConformsTo => GetUriFromUriNode("dct:conformsTo");
+        public Uri? Format
+        {
+            get => GetUriFromUriNode("dct:format");
+            set => SetUriNode("dct:format", value);
+        }
 
-        public Uri? CompressFormat => GetUriFromUriNode("dcat:compressFormat");
+        public Uri? MediaType
+        {
+            get => GetUriFromUriNode("dcat:mediaType");
+            set => SetUriNode("dcat:mediaType", value);
+        }
 
-        public Uri? PackageFormat => GetUriFromUriNode("dcat:packageFormat");
+        public Uri? ConformsTo
+        {
+            get => GetUriFromUriNode("dct:conformsTo");
+            set => SetUriNode("dct:conformsTo", value);
+        }
+
+        public Uri? CompressFormat
+        {
+            get => GetUriFromUriNode("dcat:compressFormat");
+            set => SetUriNode("dcat:compressFormat", value);
+        }
+
+        public Uri? PackageFormat
+        {
+            get => GetUriFromUriNode("dcat:packageFormat");
+            set => SetUriNode("dcat:packageFormat", value);
+        }
 
         public string? GetTitle(string language) => GetTextFromUriNode("dct:title", language);
 
-        public Uri? AccessService => GetUriFromUriNode("dcat:accessService");
+        public void SetTitle(Dictionary<string, string> values)
+        {
+            SetTexts("dct:title", values);
+        }
+
+        public Uri? AccessService
+        {
+            get => GetUriFromUriNode("dcat:accessService"); 
+            set => SetUriNode("dcat:accessService", value);
+        }
 
         public static DcatDistribution? Parse(string text)
         {
@@ -60,6 +109,17 @@ namespace NkodSk.Abstractions
             return null;
         }
 
+        public static DcatDistribution Create(Uri uri)
+        {
+            IGraph graph = new Graph();
+            RdfDocument.AddDefaultNamespaces(graph);
+            IUriNode subject = graph.CreateUriNode(uri);
+            IUriNode rdfTypeNode = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode targetTypeNode = graph.CreateUriNode("dcat:Distribution");
+            graph.Assert(subject, rdfTypeNode, targetTypeNode);
+            return new DcatDistribution(graph, subject);
+        }
+
         public FileMetadata UpdateMetadata(FileMetadata datasetMetadata, FileMetadata? metadata = null)
         {
             Guid id = metadata?.Id ?? Guid.NewGuid();
@@ -67,7 +127,7 @@ namespace NkodSk.Abstractions
             Dictionary<string, string[]> values = new Dictionary<string, string[]>();
             if (metadata is null)
             {
-                metadata = new FileMetadata(id, id.ToString(), FileType.DatasetRegistration, null, datasetMetadata.Publisher?.ToString(), datasetMetadata.IsPublic, null, now, now, values);
+                metadata = new FileMetadata(id, id.ToString(), FileType.DistributionRegistration, datasetMetadata.Id, datasetMetadata.Publisher?.ToString(), datasetMetadata.IsPublic, null, now, now, values);
             }
             else
             {

@@ -13,8 +13,16 @@ namespace NkodSk.Abstractions
         {
         }
 
-        public DateOnly? StartDate => GetDateFromUriNode("dcat:startDate");
+        public DateOnly? StartDate
+        {
+            get => GetDateFromUriNode("dcat:startDate");
+            set => SetDateToUriNode("dcat:startDate", value);
+        }
 
-        public DateOnly? EndDate => GetDateFromUriNode("dcat:endDate");
+        public DateOnly? EndDate
+        {
+            get => GetDateFromUriNode("dcat:endDate");
+            set => SetDateToUriNode("dcat:endDate", value);
+        }
     }
 }

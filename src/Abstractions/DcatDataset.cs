@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading.Tasks;
 using VDS.RDF;
 using VDS.RDF.Parsing;
-using static Lucene.Net.Documents.Field;
 
 namespace NkodSk.Abstractions
 {
@@ -26,21 +25,46 @@ namespace NkodSk.Abstractions
 
         public string? GetDescription(string language) => GetTextFromUriNode("dct:description", language);
 
+        public void SetDescription(Dictionary<string, string> values)
+        {
+            SetTexts("dct:description", values);
+        }
+
         public Uri? Publisher
         {
             get => GetUriFromUriNode("dct:publisher");
             set => SetUriNode("dct:publisher", value);
         }
 
-        public IEnumerable<Uri> GetThemes() => GetUrisFromUriNode("dcat:theme");
+        public IEnumerable<Uri> Themes
+        {
+            get => GetUrisFromUriNode("dcat:theme");
+            set => SetUriNodes("dcat:theme", value);
+        }
 
-        public Uri? AccrualPeriodicity => GetUriFromUriNode("dct:accrualPeriodicity");
+        public Uri? AccrualPeriodicity
+        {
+            get => GetUriFromUriNode("dct:accrualPeriodicity");
+            set => SetUriNode("dct:accrualPeriodicity", value);
+        }
+
+        public IDictionary<string, List<string>> Keywords => GetTextsFromUriNode("dcat:keyword");
 
         public IEnumerable<string> GetKeywords(string language) => GetTextsFromUriNode("dcat:keyword", language);
 
-        public Uri? Type => GetUriFromUriNode("dct:type");
+        public void SetKeywords(Dictionary<string, IEnumerable<string>> texts) => SetTexts("dcat:keyword", texts);
 
-        public IEnumerable<Uri> Spatial => GetUrisFromUriNode("dct:spatial");
+        public Uri? Type
+        {
+            get => GetUriFromUriNode("dct:type");
+            set => SetUriNode("dct:type", value);
+        }
+
+        public IEnumerable<Uri> Spatial
+        {
+            get => GetUrisFromUriNode("dct:spatial");
+            set => SetUriNodes("dct:spatial", value);
+        }
 
         public DctTemporal? Temporal
         {
@@ -56,6 +80,18 @@ namespace NkodSk.Abstractions
                     }
                 }
                 return null;
+            }
+        }
+
+        public void SetTemporal(DateOnly? startDate, DateOnly? endDate)
+        {
+            RemoveUriNodes("dct:temporal");
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                DctTemporal temporal = new DctTemporal(Graph, CreateSubject("dct:temporal", "dct:PeriodOfTime"));
+
+                temporal.StartDate = startDate.Value;
+                temporal.EndDate = endDate.Value;
             }
         }
 
@@ -76,17 +112,43 @@ namespace NkodSk.Abstractions
             }
         }
 
-        public Uri? Documentation => GetUriFromUriNode("foaf:page");
+        public void SetContactPoint(LanguageDependedTexts name, string? email)
+        {
+            RemoveUriNodes("dcat:contactPoint");
+            VcardKind contactPoint = new VcardKind(Graph, CreateSubject("dcat:contactPoint", "vcard:Individual"));
+            contactPoint.SetNames(name);
+            contactPoint.Email = email;
+        }
 
-        public Uri? Specification => GetUriFromUriNode("dct:conformsTo");
+        public Uri? Documentation
+        {
+            get => GetUriFromUriNode("foaf:page");
+            set => SetUriNode("foaf:page", value);
+        }
 
-        public IEnumerable<Uri> EuroVocThemes => GetUrisFromUriNode("dcat:theme");
+        public Uri? Specification
+        {
+            get => GetUriFromUriNode("dct:conformsTo");
+            set => SetUriNode("dct:conformsTo", value);
+        }
 
-        public decimal? SpatialResolutionInMeters => GetDecimalFromUriNode("dcat:spatialResolutionInMeters");
+        public decimal? SpatialResolutionInMeters
+        {
+            get => GetDecimalFromUriNode("dcat:spatialResolutionInMeters");
+            set => SetDecimalToUriNode("dcat:spatialResolutionInMeters", value);
+        }
 
-        public string? TemporalResolution => GetTextFromUriNode("dct:temporalResolution");
+        public string? TemporalResolution
+        {
+            get => GetTextFromUriNode("dct:temporalResolution");
+            set => SetTextToUriNode("dct:temporalResolution", value);
+        }
 
-        public Uri? IsPartOf => GetUriFromUriNode("dct:isPartOf");
+        public Uri? IsPartOf
+        {
+            get => GetUriFromUriNode("dct:isPartOf");
+            set => SetUriNode("dct:isPartOf", value);
+        }
 
         public IEnumerable<Uri> Distributions => GetUrisFromUriNode("dcat:distribution");
 
@@ -117,13 +179,26 @@ namespace NkodSk.Abstractions
             Guid id = metadata?.Id ?? Guid.NewGuid();
             DateTimeOffset now = DateTimeOffset.UtcNow;
             Dictionary<string, string[]> values = new Dictionary<string, string[]>();
+
+            Uri? type = Type;
+            if (type is not null)
+            {
+                values["https://data.gov.sk/set/codelist/dataset-type"] = new[] { type.ToString() };
+            }
+
+            foreach ((string language, List<string> texts) in Keywords)
+            {
+                values["keywords" + language] = texts.ToArray();
+            }
+
+            LanguageDependedTexts names = GetLiteralNodesFromUriNode("dct:title").ToArray();
             if (metadata is null)
             {
-                metadata = new FileMetadata(id, id.ToString(), FileType.DatasetRegistration, null, Publisher?.ToString(), isPublic, null, now, now, values);
+                metadata = new FileMetadata(id, names, FileType.DatasetRegistration, null, Publisher?.ToString(), isPublic, null, now, now, values);
             }
             else
             {
-                metadata = metadata with { Publisher = Publisher?.ToString(), IsPublic = isPublic, AdditionalValues = values, LastModified = now };
+                metadata = metadata with { Name = names, Publisher = Publisher?.ToString(), IsPublic = isPublic, AdditionalValues = values, LastModified = now };
             }
             return metadata;
         }

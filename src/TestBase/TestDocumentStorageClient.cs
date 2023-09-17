@@ -1,4 +1,6 @@
-﻿using NkodSk.Abstractions;
+﻿using AngleSharp.Io;
+using NkodSk.Abstractions;
+using NkodSk.RdfFulltextIndex;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,12 +13,16 @@ namespace TestBase
     {
         private readonly IFileStorage fileStorage;
 
+        private readonly FulltextIndex fulltextIndex;
+
         private readonly IFileStorageAccessPolicy accessPolicy;
 
         public TestDocumentStorageClient(IFileStorage fileStorage, IFileStorageAccessPolicy accessPolicy)
         {
             this.fileStorage = fileStorage;
             this.accessPolicy = accessPolicy;
+            fulltextIndex = new FulltextIndex();
+            fulltextIndex.Initialize(fileStorage);
         }
 
         public Task DeleteFile(Guid id)
@@ -42,12 +48,60 @@ namespace TestBase
 
         public Task<FileStorageResponse> GetFileStates(FileStorageQuery query)
         {
-            return Task.FromResult(fileStorage.GetFileStates(query, accessPolicy));
+            if (!string.IsNullOrWhiteSpace(query.QueryText))
+            {
+                FulltextResponse fulltextResponse = fulltextIndex.Search(query);
+                if (fulltextResponse.Documents.Count > 0)
+                {
+                    FileStorageQuery internalQuery = new FileStorageQuery
+                    {
+                        OnlyIds = fulltextResponse.Documents.Select(d => d.Id).ToList(),
+                        QueryText = null,
+                        OnlyPublishers = query.OnlyPublishers,
+                        OnlyPublished = query.OnlyPublished,
+                        RequiredFacets = query.RequiredFacets,
+                    };
+                    return Task.FromResult(fileStorage.GetFileStates(internalQuery, accessPolicy));
+                }
+                else
+                {
+                    return Task.FromResult(new FileStorageResponse(new List<FileState>(), 0, new List<Facet>()));
+                }
+            }
+            else
+            {
+                return Task.FromResult(fileStorage.GetFileStates(query, accessPolicy));
+            }
         }
 
         public Task<FileStorageGroupResponse> GetFileStatesByPublisher(FileStorageQuery query)
         {
-            return Task.FromResult(fileStorage.GetFileStatesByPublisher(query, accessPolicy));
+            query.OnlyTypes = new List<FileType> { FileType.PublisherRegistration };
+            if (!string.IsNullOrWhiteSpace(query.QueryText))
+            {
+                FulltextResponse fulltextResponse = fulltextIndex.Search(query);
+                if (fulltextResponse.Documents.Count > 0)
+                {
+                    FileStorageQuery internalQuery = new FileStorageQuery
+                    {
+                        OnlyIds = fulltextResponse.Documents.Select(d => d.Id).ToList(),
+                        QueryText = null,
+                        OnlyPublishers = query.OnlyPublishers,
+                        OnlyPublished = query.OnlyPublished,
+                        RequiredFacets = query.RequiredFacets,
+                        OrderDefinitions = query.OrderDefinitions,
+                    };
+                    return Task.FromResult(fileStorage.GetFileStatesByPublisher(internalQuery, accessPolicy));
+                }
+                else
+                {
+                    return Task.FromResult(new FileStorageGroupResponse(new List<FileStorageGroup>(), 0));
+                }
+            }
+            else
+            {
+                return Task.FromResult(fileStorage.GetFileStatesByPublisher(query, accessPolicy));
+            }
         }
 
         public Task InsertFile(string content, bool enableOverwrite, FileMetadata metadata)

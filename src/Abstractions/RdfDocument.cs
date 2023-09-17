@@ -30,7 +30,7 @@ namespace NkodSk.Abstractions
                     }
                 }
 
-                datasetTypeNode = graph.GetUriNode("dcat:DataService");
+                datasetTypeNode = graph.GetUriNode("dcat:Catalog");
                 if (datasetTypeNode is not null)
                 {
                     foreach (IUriNode? datasetNode in graph.GetTriplesWithPredicateObject(rdfTypeNode, datasetTypeNode).Select(x => x.Subject).OfType<IUriNode>())

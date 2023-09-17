@@ -16,7 +16,9 @@ namespace NkodSk.Abstractions
 
         public bool OnlyPublished { get; set; }
 
-        public List<Guid>? OnlyIds { get; set; } 
+        public List<Guid>? OnlyIds { get; set; }
+
+        public List<Guid>? ExcludeIds { get; set; }
 
         public bool IncludeDependentFiles { get; set; }
 

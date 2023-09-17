@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using VDS.Common.Tries;
 using VDS.RDF;
 using VDS.RDF.Nodes;
+using VDS.RDF.Parsing;
 using VDS.RDF.Writing;
 
 namespace NkodSk.Abstractions
@@ -36,11 +37,34 @@ namespace NkodSk.Abstractions
 
         protected IUriNode? GetUriNode(string name) => Graph.GetUriNode(name);
 
+        public void RemoveUriNodes(string name)
+        {
+            IUriNode? typeNode = GetUriNode(name);
+            if (typeNode is not null)
+            {
+                foreach (Triple t in Graph.GetTriplesWithSubjectPredicate(Node, typeNode))
+                {
+                    Graph.Retract(t);
+                }
+            }
+        }
+
         public void SetUriNode(string name, Uri? uri)
         {
+            RemoveUriNodes(name);
             if (uri != null)
             {
                 Graph.Assert(Node, GetOrCreateUriNode(name), Graph.CreateUriNode(uri));
+            }
+        }
+
+        public void SetUriNodes(string name, IEnumerable<Uri> uris)
+        {
+            RemoveUriNodes(name);
+            IUriNode predicate = GetOrCreateUriNode(name);
+            foreach (Uri uri in uris)
+            {
+                Graph.Assert(Node, predicate, Graph.CreateUriNode(uri));
             }
         }
 
@@ -59,14 +83,34 @@ namespace NkodSk.Abstractions
             return GetUrisFromUriNode(name).FirstOrDefault();
         }
 
-        public IEnumerable<string> GetTextsFromUriNode(string name, string language)
+        public IEnumerable<ILiteralNode> GetLiteralNodesFromUriNode(string name)
         {
             IUriNode? typeNode = GetUriNode(name);
             if (typeNode is not null)
             {
-                return Graph.GetTriplesWithSubjectPredicate(Node, typeNode).Select(n => n.Object).OfType<ILiteralNode>().Where(n => n.Language == language).Select(n => n.Value);
+                return Graph.GetTriplesWithSubjectPredicate(Node, typeNode).Select(n => n.Object).OfType<ILiteralNode>();
             }
-            return Enumerable.Empty<string>();
+            return Enumerable.Empty<ILiteralNode>();
+        }
+
+        public IDictionary<string, List<string>> GetTextsFromUriNode(string name)
+        {
+            Dictionary<string, List<string>> values = new Dictionary<string, List<string>>(StringComparer.CurrentCultureIgnoreCase);
+            foreach (ILiteralNode node in GetLiteralNodesFromUriNode(name))
+            {
+                if (!values.TryGetValue(node.Language, out List<string>? list))
+                {
+                    list = new List<string>();
+                    values.Add(node.Language, list);
+                }
+                list.Add(node.Value);
+            }
+            return values;
+        }
+
+        public IEnumerable<string> GetTextsFromUriNode(string name, string language)
+        {
+            return GetLiteralNodesFromUriNode(name).Where(n => n.Language == language).Select(n => n.Value);
         }
 
         public string? GetTextFromUriNode(string name, string language)
@@ -84,12 +128,38 @@ namespace NkodSk.Abstractions
             return null;
         }
 
+        public void SetTextToUriNode(string name, string? text)
+        {
+            IUriNode? typeNode = GetOrCreateUriNode(name);
+            if (text is not null)
+            {
+                Graph.Assert(Node, typeNode, Graph.CreateLiteralNode(text));
+            }
+        }
+
+        public void SetDecimalToUriNode(string name, decimal? value)
+        {
+            SetTextToUriNode(name, value?.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+
         public void SetTexts(string name, Dictionary<string, string> values)
         {
             IUriNode? typeNode = GetOrCreateUriNode(name);
             foreach (string language in values.Keys)
             {
                 Graph.Assert(Node, typeNode, Graph.CreateLiteralNode(values[language], language));
+            }
+        }
+
+        public void SetTexts(string name, Dictionary<string, IEnumerable<string>> values)
+        {
+            IUriNode? typeNode = GetOrCreateUriNode(name);
+            foreach (string language in values.Keys)
+            {
+                foreach (string value in values[language])
+                {
+                    Graph.Assert(Node, typeNode, Graph.CreateLiteralNode(value, language));
+                }
             }
         }
 
@@ -106,6 +176,11 @@ namespace NkodSk.Abstractions
             return null;
         }
 
+        public void SetDateToUriNode(string name, DateOnly? value)
+        {
+            SetTextToUriNode(name, value?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+        }
+
         public decimal? GetDecimalFromUriNode(string name)
         {
             string? numberText = GetTextFromUriNode(name);
@@ -119,16 +194,46 @@ namespace NkodSk.Abstractions
             return null;
         }
 
+        public IUriNode CreateSubject(string name, string type)
+        {
+            return CreateSubject(name, type, new Uri($"http://data.gov.sk/temp/{Guid.NewGuid().ToString("N").ToLowerInvariant()}"));
+        }
+
+        public IUriNode CreateSubject(string name, string type, Uri id)
+        {
+            IUriNode subject = Graph.CreateUriNode(id);
+            Graph.Assert(subject, Graph.GetUriNode(new Uri(RdfSpecsHelper.RdfType)), Graph.CreateUriNode(type));
+            Graph.Assert(Node, GetOrCreateUriNode(name), subject);
+            return subject;
+        }
+
         protected static (IGraph, IEnumerable<IUriNode>) Parse(string text, string nodeType)
         {
             return RdfDocument.ParseNode(text, nodeType);
         }
 
+        private static IEnumerable<Triple> GetTriples(IGraph graph, IUriNode node)
+        {
+            foreach (Triple t in graph.GetTriplesWithSubject(node))
+            {
+                yield return t;
+                if (t.Object is IUriNode uriNode)
+                {
+                    foreach (Triple t2 in GetTriples(graph, uriNode))
+                    {
+                        yield return t2;
+                    }
+                }
+            }
+        }
+
+        public IEnumerable<Triple> Triples => GetTriples(Graph, Node);
+
         public override string ToString()
         {
             Graph newGraph = new Graph();
             Graph.NamespaceMap.Import(Graph.NamespaceMap);
-            foreach (Triple t in Graph.GetTriplesWithSubject(Node))
+            foreach (Triple t in Triples)
             {
                 newGraph.Assert(t);
             }

@@ -3,9 +3,9 @@ using Lucene.Net.Util;
 using NkodSk.Abstractions;
 using System.Collections.Immutable;
 
-namespace CodelistProvider
+namespace NkodSk.Abstractions
 {
-    public class InternalCodelistProvider
+    public class InternalCodelistProvider : ICodelistProviderClient
     {
         private readonly IDocumentStorageClient storageClient;
 
@@ -116,6 +116,22 @@ namespace CodelistProvider
             if (codelists is not null && codelists.TryGetValue(id, out Codelist? codelist))
             {
                 return codelist;
+            }
+            return null;
+        }
+
+        public async Task<CodelistItem?> GetCodelistItem(string codelistId, string itemId)
+        {
+            if (codelistId is null) return null;
+
+            await Refresh().ConfigureAwait(false);
+            ImmutableDictionary<string, Codelist>? codelists = this.codelists;
+            if (codelists is not null && codelists.TryGetValue(codelistId, out Codelist? codelist))
+            {
+                if (codelist.Items.TryGetValue(itemId, out CodelistItem? codelistItem))
+                {
+                    return codelistItem;
+                }
             }
             return null;
         }

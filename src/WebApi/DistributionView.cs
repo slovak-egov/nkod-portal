@@ -18,15 +18,23 @@ namespace WebApi
 
         public Uri? MediaType { get; set; }
 
+        public CodelistItemView? MediaTypeValue { get; set; }
+
         public Uri? ConformsTo { get; set; }
 
         public Uri? CompressFormat { get; set; }
 
+        public CodelistItemView? CompressFormatValue { get; set; }
+
         public Uri? PackageFormat { get; set; }
+
+        public CodelistItemView? PackageFormatValue { get; set; }
 
         public string? Title { get; set; }
 
-        public static async Task<DistributionView> MapFromRdf(Guid id, DcatDistribution distributionRdf, CodelistProviderClient.CodelistProviderClient codelistProviderClient, string language)
+        public Uri? AccessService { get; set; }
+
+        public static async Task<DistributionView> MapFromRdf(Guid id, DcatDistribution distributionRdf, ICodelistProviderClient codelistProviderClient, string language)
         {
             LegTermsOfUse? legTermsOfUse = distributionRdf.TermsOfUse;
 
@@ -41,10 +49,14 @@ namespace WebApi
                 ConformsTo = distributionRdf.ConformsTo,
                 CompressFormat = distributionRdf.CompressFormat,
                 PackageFormat = distributionRdf.PackageFormat,
-                Title = distributionRdf.GetTitle(language)
+                Title = distributionRdf.GetTitle(language),
+                AccessService = distributionRdf.AccessService,
             };
 
-            view.FormatValue = await codelistProviderClient.MapCodelistValue("http://publications.europa.eu/resource/authority/file-type", view.Format?.ToString(), language);
+            view.FormatValue = await codelistProviderClient.MapCodelistValue("http://publications.europa.eu/resource/dataset/file-type", view.Format?.ToString(), language);
+            view.MediaTypeValue = await codelistProviderClient.MapCodelistValue("http://www.iana.org/assignments/media-types", view.MediaType?.ToString(), language);
+            view.CompressFormatValue = await codelistProviderClient.MapCodelistValue("http://www.iana.org/assignments/media-types", view.CompressFormat?.ToString(), language);
+            view.PackageFormatValue = await codelistProviderClient.MapCodelistValue("http://www.iana.org/assignments/media-types", view.PackageFormat?.ToString(), language);
 
             return view;
         }

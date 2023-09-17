@@ -65,6 +65,14 @@ namespace NkodSk.RdfFulltextIndex
             taxonomyReader = new DirectoryTaxonomyReader(taxonomyWriter);
         }
 
+        public void Initialize(IFileStorage fileStorage)
+        {
+            FileStorageQuery query = new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.DatasetRegistration, FileType.PublisherRegistration, FileType.LocalCatalogRegistration }, OnlyPublished = true };
+            FileStorageResponse response = fileStorage.GetFileStates(query, new PublicFileAccessPolicy());
+
+            Index(response.Files);
+        }
+
         public void Index(IEnumerable<FileState> states)
         {
             foreach (FileState state in states)

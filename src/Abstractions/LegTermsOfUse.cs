@@ -13,12 +13,28 @@ namespace NkodSk.Abstractions
         {
         }
 
-        public Uri? AuthorsWorkType => GetUriFromUriNode("leg:authorsWorkType");
+        public Uri? AuthorsWorkType
+        {
+            get => GetUriFromUriNode("leg:authorsWorkType");
+            set => SetUriNode("leg:authorsWorkType", value);
+        }
 
-        public Uri? OriginalDatabaseType => GetUriFromUriNode("leg:originalDatabaseType");
+        public Uri? OriginalDatabaseType
+        {
+            get => GetUriFromUriNode("leg:originalDatabaseType");
+            set => SetUriNode("leg:originalDatabaseType", value);
+        }
 
-        public Uri? DatabaseProtectedBySpecialRightsType => GetUriFromUriNode("leg:databaseProtectedBySpecialRightsType");
+        public Uri? DatabaseProtectedBySpecialRightsType
+        {
+            get => GetUriFromUriNode("leg:databaseProtectedBySpecialRightsType");
+            set => SetUriNode("leg:databaseProtectedBySpecialRightsType", value);
+        }
 
-        public Uri? PersonalDataContainmentType => GetUriFromUriNode("leg:personalDataContainmentType");
+        public Uri? PersonalDataContainmentType
+        {
+            get => GetUriFromUriNode("leg:personalDataContainmentType");
+            set => SetUriNode("leg:personalDataContainmentType", value);
+        }
     }
 }

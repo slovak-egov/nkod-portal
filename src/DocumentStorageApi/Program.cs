@@ -142,6 +142,7 @@ app.MapPost("/files/query", [AllowAnonymous] ([FromServices] IFileStorage storag
                 OnlyPublishers = query.OnlyPublishers,
                 OnlyPublished = query.OnlyPublished,
                 RequiredFacets = query.RequiredFacets,
+                OrderDefinitions = query.OrderDefinitions,
             };
             response = storage.GetFileStates(internalQuery, accessPolicy);
         }

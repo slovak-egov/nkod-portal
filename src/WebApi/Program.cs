@@ -23,6 +23,7 @@ using SaveResult = WebApi.SaveResult;
 using System.Web;
 using CodelistProviderClient;
 using Lucene.Net.Search;
+using VDS.RDF.Query.Expressions.Comparison;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,7 +50,7 @@ builder.Services.AddHttpClient(CodelistProviderClient.CodelistProviderClient.Htt
 {
     c.BaseAddress = new Uri(codelistProviderUrl);
 });
-builder.Services.AddTransient<CodelistProviderClient.CodelistProviderClient>();
+builder.Services.AddTransient<ICodelistProviderClient, CodelistProviderClient.CodelistProviderClient>();
 
 builder.Services.AddAuthentication(o =>
 {
@@ -202,6 +203,44 @@ FileStorageQuery MapQuery(AbstractQuery query, string language, bool allowAll = 
             storageQuery.OnlyPublishers = new List<string>(publishers);
             filters.Remove("publishers");
         }
+
+        if (filters.TryGetValue("id", out string[]? ids))
+        {
+            if (ids.Length > 0)
+            {
+                List<Guid> values = new List<Guid>();
+                foreach (string id in ids)
+                {
+                    if (Guid.TryParse(id, out Guid value))
+                    {
+                        values.Add(value);
+                    }
+                    else
+                    {
+                        throw new BadHttpRequestException($"Invalid value: {id}");
+                    }
+                }
+                storageQuery.OnlyIds = values;
+            }
+            filters.Remove("id");
+        }
+
+        if (filters.TryGetValue("parent", out string[]? parents))
+        {
+            if (parents.Length > 0)
+            {
+                if (Guid.TryParse(parents[0], out Guid id))
+                {
+                    storageQuery.ParentFile = id;
+                }
+                else
+                {
+                    throw new BadHttpRequestException($"Invalid value: {parents[0]}");
+                }
+            }
+            filters.Remove("parent");
+        }
+
         storageQuery.AdditionalFilters = filters;
     }
 
@@ -210,53 +249,50 @@ FileStorageQuery MapQuery(AbstractQuery query, string language, bool allowAll = 
 
 async Task<FileStorageResponse> GetStorageResponse(AbstractQuery query, string language, Func<FileStorageQuery, FileStorageQuery> storageQueryDecorator, IDocumentStorageClient client)
 {
-    FileStorageQuery storageQuery = MapQuery(query, language);
+    FileStorageQuery? storageQuery = MapQuery(query, language);
 
     if (storageQuery.AdditionalFilters is not null)
     {
-        if (storageQuery.AdditionalFilters.TryGetValue("id", out string[]? ids) && ids.Length > 0)
+        if (storageQuery.AdditionalFilters.TryGetValue("sibling", out string[]? siblings))
         {
-            List<Guid> values = new List<Guid>();
-            foreach (string id in ids)
+            if (siblings.Length > 0)
             {
-                if (Guid.TryParse(id, out Guid value))
+                if (Guid.TryParse(siblings[0], out Guid id))
                 {
-                    values.Add(value);
+                    FileMetadata? metadata = await client.GetFileMetadata(id).ConfigureAwait(false);
+                    if (metadata is not null && metadata.ParentFile.HasValue)
+                    {
+                        storageQuery.ParentFile = metadata.ParentFile.Value;
+                        storageQuery.ExcludeIds = new List<Guid> { id };
+                    }
+                    else
+                    {
+                        storageQuery = null;
+                    }
                 }
                 else
                 {
-                    throw new BadHttpRequestException($"Invalid value: {id}");
+                    throw new BadHttpRequestException($"Invalid value: {siblings[0]}");
                 }
             }
-            storageQuery.OnlyIds = values;
-            storageQuery.AdditionalFilters.Remove("id");
-        }
 
-        if (storageQuery.AdditionalFilters.TryGetValue("sibling", out string[]? siblings) && siblings.Length > 0)
-        {
-            if (Guid.TryParse(siblings[0], out Guid id))
+            if (storageQuery?.AdditionalFilters is not null)
             {
-                FileMetadata? metadata = await client.GetFileMetadata(id).ConfigureAwait(false);
-                if (metadata != null && metadata.ParentFile.HasValue)
-                {
-                    storageQuery.ParentFile = metadata.ParentFile.Value;
-                }
-                else
-                {
-                    throw new BadHttpRequestException($"Invalid sibling: {siblings[0]}");
-                }
+                storageQuery.AdditionalFilters.Remove("sibling");
             }
-            else
-            {
-                throw new BadHttpRequestException($"Invalid value: {siblings[0]}");
-            }
-            storageQuery.AdditionalFilters.Remove("sibling");
         }
     }
 
-    storageQuery = storageQueryDecorator(storageQuery);
+    if (storageQuery is not null)
+    {
+        storageQuery = storageQueryDecorator(storageQuery);
 
-    return await client.GetFileStates(storageQuery).ConfigureAwait(false);
+        return await client.GetFileStates(storageQuery).ConfigureAwait(false);
+    }
+    else
+    {
+        return new FileStorageResponse(new List<FileState>(), 0, new List<Facet>());
+    }
 }
 
 async Task<Dictionary<string, PublisherView>> FetchPublishers(IDocumentStorageClient client, IEnumerable<string> keys, string language)
@@ -283,6 +319,7 @@ async Task<Dictionary<string, PublisherView>> FetchPublishers(IDocumentStorageCl
                 {
                     Id = fileState.Metadata.Id,
                     Name = agent.GetName(language),
+                    Key = fileState.Metadata.Publisher
                 };
                 publishers[agent.Uri.ToString()] = view;
             }
@@ -296,7 +333,6 @@ app.MapPost("/publishers/search", async ([FromBody] PublisherQuery query, [FromS
     string language = query.Language ?? "sk";
 
     FileStorageQuery groupQuery = MapQuery(query, language, true);
-    groupQuery.OnlyTypes = new List<FileType> { FileType.DatasetRegistration };
 
     FileStorageGroupResponse storageResponse = await client.GetFileStatesByPublisher(groupQuery).ConfigureAwait(false);
 
@@ -328,7 +364,7 @@ app.MapPost("/publishers/search", async ([FromBody] PublisherQuery query, [FromS
     return response;
 });
 
-app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServices] IDocumentStorageClient client, [FromServices] CodelistProviderClient.CodelistProviderClient codelistProviderClient) =>
+app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient) =>
 {
     string language = query.Language ?? "sk";
     FileStorageResponse storageResponse = await GetStorageResponse(query, language, q =>
@@ -430,7 +466,7 @@ app.MapPost("/local-catalogs/search", async ([FromBody] LocalCatalogsQuery query
     return response;
 });
 
-app.MapGet("/codelists", async ([FromQuery(Name = "keys[]")] string[] keys, [FromServices] CodelistProviderClient.CodelistProviderClient codelistProviderClient) =>
+app.MapGet("/codelists", async ([FromQuery(Name = "keys[]")] string[] keys, [FromServices] ICodelistProviderClient codelistProviderClient) =>
 {
     string language = "sk";
     List<CodelistView> codelists = new List<CodelistView>();
@@ -803,7 +839,9 @@ app.MapGet("/download", async ([FromServices] IDocumentStorageClient client, [Fr
                 Stream? stream = await client.DownloadStream(key).ConfigureAwait(false);
                 if (stream is not null)
                 {
-                    return Results.Stream(stream, fileDownloadName: metadata.OriginalFileName ?? metadata.Name.GetText(language) ?? metadata.Id.ToString());
+                    FileStreamHttpResult r = (FileStreamHttpResult)Results.File(stream, fileDownloadName: metadata.OriginalFileName ?? metadata.Name.GetText(language) ?? metadata.Id.ToString());
+
+                    return r;
                 }
             }
         }

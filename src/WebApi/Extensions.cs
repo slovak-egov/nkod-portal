@@ -1,12 +1,13 @@
 ﻿using Abstractions;
 using CodelistProviderClient;
+using NkodSk.Abstractions;
 using static Lucene.Net.Queries.Function.ValueSources.MultiFunction;
 
 namespace WebApi
 {
     public static class Extensions
     {
-        public static async Task<CodelistItemView[]> MapCodelistValues(this CodelistProviderClient.CodelistProviderClient codelistProviderClient, string codelistId, IEnumerable<string> keys, string language)
+        public static async Task<CodelistItemView[]> MapCodelistValues(this ICodelistProviderClient codelistProviderClient, string codelistId, IEnumerable<string> keys, string language)
         {
             Codelist? codelist = await codelistProviderClient.GetCodelist(codelistId);
             if (codelist is not null)
@@ -60,7 +61,7 @@ namespace WebApi
             return codelistItem.Labels.GetLanguageValue(language) ?? codelistItem.Id;
         }
 
-        public static async Task<CodelistItemView?> MapCodelistValue(this CodelistProviderClient.CodelistProviderClient codelistProviderClient, string codelistId, string? key, string language)
+        public static async Task<CodelistItemView?> MapCodelistValue(this ICodelistProviderClient codelistProviderClient, string codelistId, string? key, string language)
         {
             if (key is not null)
             {

@@ -60,6 +60,8 @@ namespace WebApi.Test
             {
                 services.AddSingleton(storage);
                 services.AddSingleton<IDocumentStorageClient, TestDocumentStorageClient>();
+                services.AddSingleton<ILanguagesSource, DefaultLanguagesSource>();
+                services.AddSingleton<ICodelistProviderClient, InternalCodelistProvider>();
                 services.AddTransient<IFileStorageAccessPolicy, DefaultFileAccessPolicy>();
 
                 services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
