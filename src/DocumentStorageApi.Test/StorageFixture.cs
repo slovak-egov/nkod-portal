@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using VDS.RDF;
 using static Lucene.Net.Documents.Field;
 
 namespace DocumentStorageApi.Test
@@ -75,7 +76,17 @@ namespace DocumentStorageApi.Test
                     FileState Create(FileType fileType, Guid? parentFile, string? publisher, bool isPublic)
                     {
                         FileMetadata metadata = new FileMetadata(Guid.NewGuid(), Guid.NewGuid().ToString(), fileType, parentFile, publisher, isPublic, null, DateTimeOffset.UtcNow.AddMinutes(-allIndex * 2), DateTimeOffset.UtcNow.AddMinutes(-allIndex));
-                        string content = $"content {allIndex}";
+                        string content;
+
+                        if (Storage.IsTurtleFile(metadata))
+                        {
+                            content = $"<http://example.com/{metadata.Id}> <http://example.com/title> \"{metadata.Name["sk"]}\"@sk .";
+                        }
+                        else
+                        {
+                            content = $"content {allIndex}";
+                        }
+
                         FileState state = new FileState(metadata, content);
                         CreateFile(state);
                         ExistingStates.Add(state);

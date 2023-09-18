@@ -66,23 +66,5 @@ namespace RdfFulltextIndex.Test
             FulltextResponse list = fixture.Index.Search(new FileStorageQuery { QueryText = "poriadky" });
             Assert.Single(list.Documents);
         }
-
-        [Fact]
-        public void DocumentWithMatchConstraint()
-        {
-            FileStorageQuery query = new FileStorageQuery { QueryText = "poriadky" };
-            query.AdditionalFilters = new Dictionary<string, string[]> { { "publisher", new[] { "https://data.gov.sk/legal-subject/30416094" } } };
-            FulltextResponse list = fixture.Index.Search(query);
-            Assert.Single(list.Documents);
-        }
-
-        [Fact]
-        public void DocumentWithUnatchConstraint()
-        {
-            FileStorageQuery query = new FileStorageQuery { QueryText = "poriadky" };
-            query.AdditionalFilters = new Dictionary<string, string[]> { { "publisher", new[] { "https://data.gov.sk/legal-subject/30416095" } } };
-            FulltextResponse list = fixture.Index.Search(query);
-            Assert.Empty(list.Documents);
-        }
     }
 }

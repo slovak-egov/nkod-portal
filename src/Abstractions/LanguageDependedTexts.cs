@@ -55,5 +55,37 @@ namespace NkodSk.Abstractions
             }
             return result;
         }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is IDictionary<string, string> values)
+            {
+                HashSet<string> keys = new HashSet<string>(Keys);
+                if (keys.SetEquals(values.Keys))
+                {
+                    foreach (string key in keys)
+                    {
+                        if (!string.Equals(this[key], values[key], StringComparison.Ordinal))
+                        {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            HashCode code = new HashCode();
+            List<string> keys = new List<string>(Keys);
+            keys.Sort(StringComparer.Ordinal);
+            foreach (var key in keys)
+            {
+                code.Add(this[key]);
+            }
+            return code.ToHashCode();
+        }
     }
 }

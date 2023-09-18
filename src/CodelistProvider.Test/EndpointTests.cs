@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 using TestBase;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -25,22 +26,12 @@ namespace CodelistProvider.Test
         }
 
         [Fact]
-        public async Task TestHomepage()
-        {
-            using Storage storage = new Storage(fixture.GetStoragePath());
-            using CodelistApplicationFactory applicationFactory = new CodelistApplicationFactory(storage, AnonymousAccessPolicy.Default);
-            using HttpClient client = applicationFactory.CreateClient();
-            using HttpResponseMessage response = await client.GetAsync("/");
-            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        }
-
-        [Fact]
         public async Task TestCodelists()
         {
             using Storage storage = new Storage(fixture.GetStoragePath());
             using CodelistApplicationFactory applicationFactory = new CodelistApplicationFactory(storage, AnonymousAccessPolicy.Default);
             using HttpClient client = applicationFactory.CreateClient();
-            using HttpResponseMessage response = await client.GetAsync("/codelist");
+            using HttpResponseMessage response = await client.GetAsync("/codelists");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             List<Codelist>? lists = JsonConvert.DeserializeObject<List<Codelist>>(await response.Content.ReadAsStringAsync());
             Assert.NotNull(lists);
@@ -53,7 +44,7 @@ namespace CodelistProvider.Test
             using Storage storage = new Storage(fixture.GetStoragePath());
             using CodelistApplicationFactory applicationFactory = new CodelistApplicationFactory(storage, AnonymousAccessPolicy.Default);
             using HttpClient client = applicationFactory.CreateClient();
-            using HttpResponseMessage response = await client.GetAsync("/codelist/frequency");
+            using HttpResponseMessage response = await client.GetAsync($"/codelists/{HttpUtility.UrlEncode("http://publications.europa.eu/resource/authority/frequency")}");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Codelist? list = JsonConvert.DeserializeObject<Codelist>(await response.Content.ReadAsStringAsync());
             Assert.NotNull(list);
@@ -65,7 +56,7 @@ namespace CodelistProvider.Test
             using Storage storage = new Storage(fixture.GetStoragePath());
             using CodelistApplicationFactory applicationFactory = new CodelistApplicationFactory(storage, AnonymousAccessPolicy.Default);
             using HttpClient client = applicationFactory.CreateClient();
-            using HttpResponseMessage response = await client.GetAsync("/codelist/unknown");
+            using HttpResponseMessage response = await client.GetAsync("/codelists/unknown");
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
     }

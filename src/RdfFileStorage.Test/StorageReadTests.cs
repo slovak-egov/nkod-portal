@@ -1764,34 +1764,58 @@ namespace RdfFileStorage.Test
         [Fact]
         public void FilesShouldBeGroupedByPublisher()
         {
-            Storage storage = new Storage(fixture.GetStoragePath());
+            string path = fixture.GetStoragePath();
+
+            Guid p1 = Guid.Parse(fixture.ExistingStates[0].Metadata.Publisher!);
+            Guid p2 = Guid.Parse(fixture.ExistingStates[2].Metadata.Publisher!);
+            FileMetadata publisher1 = new FileMetadata(p1, "Test1", FileType.PublisherRegistration, null, p1.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+            FileMetadata publisher2 = new FileMetadata(p2, "Test2", FileType.PublisherRegistration, null, p2.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+            fixture.CreateFile(new FileState(publisher1, "Test1"));
+            fixture.CreateFile(new FileState(publisher2, "Test2"));
+
+            Storage storage = new Storage(path);
 
             FileStorageQuery query = new FileStorageQuery
             {
-                OrderDefinitions = new List<FileStorageOrderDefinition>()
+                OrderDefinitions = new List<FileStorageOrderDefinition>
+                {
+                    new FileStorageOrderDefinition(FileStorageOrderProperty.Name, false)
+                }
             };
             FileStorageGroupResponse response;
             List<FileStorageGroup> expectedGroups = fixture.ExistingStates.Where(f => !string.IsNullOrEmpty(f.Metadata.Publisher)).GroupBy(f => f.Metadata.Publisher).Select(g => new FileStorageGroup(g.Key!, 
                 storage.GetFileStates(new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.PublisherRegistration }, OnlyPublishers = new List<string> { g.Key! } }, StaticAccessPolicy.Allow).Files.FirstOrDefault(), 
-                g.Count(), new Dictionary<string, int>())).ToList();
+                g.Count(f => f.Metadata.IsPublic && f.Metadata.Type == FileType.DatasetRegistration), new Dictionary<string, int>())).OrderBy(g => g.PublisherFileState!.Metadata.Name["sk"]).ToList();
+
+            void AssertGroups()
+            {
+                for (int i = 0; i < expectedGroups.Count; i++)
+                {
+                    FileStorageGroup expectedGroup = expectedGroups[i];
+                    FileStorageGroup actualGroup = response.Groups[i];
+                    Assert.Equal(expectedGroup.Key, actualGroup.Key);
+                    Assert.Equal(expectedGroup.PublisherFileState, actualGroup.PublisherFileState);
+                    Assert.Equal(expectedGroup.Count, actualGroup.Count);
+                }
+            }
 
             expectedGroups.Sort((a, b) => -a.Count.CompareTo(b.Count));
             response = storage.GetFileStatesByPublisher(query, StaticAccessPolicy.Allow);
             Assert.Equal(expectedGroups.Count, response.TotalCount);
-            Assert.Equal(expectedGroups, response.Groups);
+            AssertGroups();
 
             query.OrderDefinitions.Clear();
             query.OrderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.Revelance, false));
             response = storage.GetFileStatesByPublisher(query, StaticAccessPolicy.Allow);
             Assert.Equal(expectedGroups.Count, response.TotalCount);
-            Assert.Equal(expectedGroups, response.Groups);
+            AssertGroups();
 
             expectedGroups.Sort((a, b) => a.Count.CompareTo(b.Count));
             query.OrderDefinitions.Clear();
             query.OrderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.Revelance, true));
             response = storage.GetFileStatesByPublisher(query, StaticAccessPolicy.Allow);
             Assert.Equal(expectedGroups.Count, response.TotalCount);
-            Assert.Equal(expectedGroups, response.Groups);
+            AssertGroups();
         }
 
         [Fact]

@@ -324,7 +324,7 @@ namespace NkodSk.RdfFileStorage
             }
         }
 
-        private static string GetFilterId(string key, string language)
+        public static string GetFilterId(string key, string language)
         {
             return key switch
             {
@@ -375,6 +375,10 @@ namespace NkodSk.RdfFileStorage
                 {
                     sets.Add(parentSet);
                 }
+                else
+                {
+                    sets.Add(new HashSet<Guid>());
+                }
             }
 
             if (query.OnlyIds is not null && query.OnlyIds.Count > 0)
@@ -385,6 +389,10 @@ namespace NkodSk.RdfFileStorage
             if (entriesByLanguage.TryGetValue(query.Language, out HashSet<Guid>? languageEntries))
             {
                 sets.Add(languageEntries);
+            }
+            else
+            {
+                sets.Add(new HashSet<Guid>());
             }
 
             if (query.AdditionalFilters is not null)

@@ -36,7 +36,7 @@ namespace RdfFileStorage.Test
 
         public FileState NonPublicFile => ExistingStates[2];
 
-        private void CreateFile(FileState state)
+        public void CreateFile(FileState state)
         {
             bool isPublic = Storage.ShouldBePublic(state.Metadata);
             string filePath = Path.Combine(path, isPublic ? "public" : "protected", state.Metadata.Id.ToString("N") + (isPublic ? ".ttl" : string.Empty));

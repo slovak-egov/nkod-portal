@@ -106,6 +106,7 @@ namespace DocumentStorageApi.Test
             using HttpClient client = applicationFactory.CreateClient();
 
             using HttpResponseMessage response = await client.PostAsync($"/files/query", null);
+            string c = await response.Content.ReadAsStringAsync();
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             FileStorageResponse? storageResponse = JsonConvert.DeserializeObject<FileStorageResponse>(await response.Content.ReadAsStringAsync());
             Assert.NotNull(storageResponse);

@@ -35,14 +35,14 @@ namespace CodelistProviderClient.Test
         }
 
         [Fact]
-        public async Task TestSingCodelist()
+        public async Task TestSingleCodelist()
         {
             using Storage storage = new Storage(fixture.GetStoragePath());
             using CodelistApplicationFactory applicationFactory = new CodelistApplicationFactory(storage, AnonymousAccessPolicy.Default);
             HttpClient httpClient = applicationFactory.CreateClient();
             DefaultHttpClientFactory httpClientFactory = new DefaultHttpClientFactory(httpClient);
             CodelistProviderClient client = new CodelistProviderClient(httpClientFactory);
-            Codelist? list = await client.GetCodelist("frequency");
+            Codelist? list = await client.GetCodelist("http://publications.europa.eu/resource/authority/frequency");
             Assert.NotNull(list);
         }
 
