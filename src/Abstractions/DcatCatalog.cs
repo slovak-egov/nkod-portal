@@ -15,13 +15,17 @@ namespace NkodSk.Abstractions
         }
 
         public string? GetTitle(string language) => GetTextFromUriNode("dct:title", language);
-        
+
+        public IDictionary<string, List<string>> Title => GetTextsFromUriNode("dct:title");
+
         public void SetTitle(Dictionary<string, string> values)
         {
             SetTexts("dct:title", values);
         }
 
         public string? GetDescription(string language) => GetTextFromUriNode("dct:description", language);
+
+        public IDictionary<string, List<string>> Description => GetTextsFromUriNode("dct:description");
 
         public void SetDescription(Dictionary<string, string> values)
         {
@@ -51,7 +55,7 @@ namespace NkodSk.Abstractions
             }
         }
 
-        public void SetContactPoint(LanguageDependedTexts name, string? email)
+        public void SetContactPoint(LanguageDependedTexts? name, string? email)
         {
             RemoveUriNodes("dcat:contactPoint");
             VcardKind contactPoint = new VcardKind(Graph, CreateSubject("dcat:contactPoint", "vcard:Individual"));
@@ -63,6 +67,12 @@ namespace NkodSk.Abstractions
         {
             get => GetUriFromUriNode("foaf:homepage");
             set => SetUriNode("foaf:homepage", value);
+        }
+
+        public bool ShouldBePublic
+        {
+            get => GetBooleanFromUriNode("custom:shouldBePublic") ?? true;
+            set => SetBooleanToUriNode("custom:shouldBePublic", value);
         }
 
         public static DcatCatalog? Parse(string text)
@@ -97,11 +107,11 @@ namespace NkodSk.Abstractions
 
             if (metadata is null)
             {
-                metadata = new FileMetadata(id, names, FileType.LocalCatalogRegistration, null, Publisher?.ToString(), true, null, now, now, values);
+                metadata = new FileMetadata(id, names, FileType.LocalCatalogRegistration, null, Publisher?.ToString(), ShouldBePublic, null, now, now, values);
             }
             else
             {
-                metadata = metadata with { Name = names, Publisher = Publisher?.ToString(), IsPublic = true, AdditionalValues = values, LastModified = now };
+                metadata = metadata with { Name = names, Publisher = Publisher?.ToString(), IsPublic = ShouldBePublic, AdditionalValues = values, LastModified = now };
             }
             return metadata;
         }

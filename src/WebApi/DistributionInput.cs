@@ -1,4 +1,5 @@
 ﻿using NkodSk.Abstractions;
+using System.Xml.Linq;
 
 namespace WebApi
 {
@@ -6,7 +7,15 @@ namespace WebApi
     {
         public string? Id { get; set; }
 
-        public TermsOfUseInput? TermsOfUse { get; set; }
+        public string? DatasetId { get; set; }
+
+        public string? AuthorsWorkType { get; set; }
+
+        public string? OriginalDatabaseType { get; set; }
+
+        public string? DatabaseProtectedBySpecialRightsType { get; set; }
+
+        public string? PersonalDataContainmentType { get; set; }
 
         public string? DownloadUrl { get; set; }
 
@@ -26,10 +35,37 @@ namespace WebApi
 
         public string? FileId { get; set; }
 
-        public DcatDistribution? MapToRdf(out Dictionary<string, string>? errors)
+        public async Task<ValidationResults> Validate(string publisher, IDocumentStorageClient documentStorage, ICodelistProviderClient codelistProvider)
         {
-            errors = null;
-            return null;
+            ValidationResults results = new ValidationResults();
+
+            await results.ValidateRequiredCodelistValue(nameof(AuthorsWorkType), AuthorsWorkType, "https://data.gov.sk/def/ontology/law/authorsWorkType", codelistProvider);
+            await results.ValidateRequiredCodelistValue(nameof(OriginalDatabaseType), OriginalDatabaseType, "https://data.gov.sk/def/ontology/law/originalDatabaseType", codelistProvider);
+            await results.ValidateRequiredCodelistValue(nameof(DatabaseProtectedBySpecialRightsType), DatabaseProtectedBySpecialRightsType, "https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType", codelistProvider);
+            await results.ValidateRequiredCodelistValue(nameof(PersonalDataContainmentType), PersonalDataContainmentType, "https://data.gov.sk/def/ontology/law/personalDataContainmentType", codelistProvider);
+            results.ValidateUrl(nameof(DownloadUrl), DownloadUrl, true);
+            results.ValidateUrl(nameof(AccessUrl), AccessUrl, true);
+            await results.ValidateRequiredCodelistValue(nameof(Format), Format, "http://publications.europa.eu/resource/dataset/file-type", codelistProvider);
+            await results.ValidateRequiredCodelistValue(nameof(MediaType), MediaType, "http://www.iana.org/assignments/media-types", codelistProvider);
+            results.ValidateUrl(nameof(ConformsTo), ConformsTo, false);
+            await results.ValidateCodelistValue(nameof(CompressFormat), CompressFormat, "http://www.iana.org/assignments/media-types", codelistProvider);
+            await results.ValidateCodelistValue(nameof(PackageFormat), PackageFormat, "http://www.iana.org/assignments/media-types", codelistProvider);
+            results.ValidateLanguageTexts(nameof(Title), Title, null, false);
+
+            return results;
+        }
+
+        public void MapToRdf(DcatDistribution distribution)
+        {
+            distribution.SetTermsOfUse(AuthorsWorkType.AsUri(), OriginalDatabaseType.AsUri(), DatabaseProtectedBySpecialRightsType.AsUri(), PersonalDataContainmentType.AsUri());
+            distribution.DownloadUrl = DownloadUrl.AsUri();
+            distribution.AccessUrl = AccessUrl.AsUri();
+            distribution.Format = Format.AsUri();
+            distribution.MediaType = MediaType.AsUri();
+            distribution.ConformsTo = ConformsTo.AsUri();
+            distribution.CompressFormat = CompressFormat.AsUri();
+            distribution.PackageFormat = PackageFormat.AsUri();
+            distribution.SetTitle(Title);
         }
     }
 }

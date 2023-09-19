@@ -130,9 +130,10 @@ namespace NkodSk.Abstractions
 
         public void SetTextToUriNode(string name, string? text)
         {
-            IUriNode? typeNode = GetOrCreateUriNode(name);
+            RemoveUriNodes(name);
             if (text is not null)
             {
+                IUriNode? typeNode = GetOrCreateUriNode(name);
                 Graph.Assert(Node, typeNode, Graph.CreateLiteralNode(text));
             }
         }
@@ -142,20 +143,25 @@ namespace NkodSk.Abstractions
             SetTextToUriNode(name, value?.ToString(System.Globalization.CultureInfo.InvariantCulture));
         }
 
-        public void SetTexts(string name, Dictionary<string, string> values)
+        public void SetTexts(string name, Dictionary<string, string>? values)
         {
-            IUriNode? typeNode = GetOrCreateUriNode(name);
-            foreach (string language in values.Keys)
+            RemoveUriNodes(name);
+            if (values is not null)
             {
-                Graph.Assert(Node, typeNode, Graph.CreateLiteralNode(values[language], language));
+                IUriNode? typeNode = GetOrCreateUriNode(name);
+                foreach (string language in values.Keys)
+                {
+                    Graph.Assert(Node, typeNode, Graph.CreateLiteralNode(values[language], language));
+                }
             }
         }
 
         public void SetTexts(string name, Dictionary<string, IEnumerable<string>> values)
         {
-            IUriNode? typeNode = GetOrCreateUriNode(name);
+            RemoveUriNodes(name);
             foreach (string language in values.Keys)
             {
+                IUriNode? typeNode = GetOrCreateUriNode(name);
                 foreach (string value in values[language])
                 {
                     Graph.Assert(Node, typeNode, Graph.CreateLiteralNode(value, language));
@@ -181,6 +187,11 @@ namespace NkodSk.Abstractions
             SetTextToUriNode(name, value?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
         }
 
+        public void SetBooleanToUriNode(string name, bool? value)
+        {
+            SetTextToUriNode(name, value?.ToString());
+        }
+
         public decimal? GetDecimalFromUriNode(string name)
         {
             string? numberText = GetTextFromUriNode(name);
@@ -189,6 +200,19 @@ namespace NkodSk.Abstractions
                 if (decimal.TryParse(numberText, System.Globalization.CultureInfo.InvariantCulture, out decimal number))
                 {
                     return number;
+                }
+            }
+            return null;
+        }
+
+        public bool? GetBooleanFromUriNode(string name)
+        {
+            string? boolText = GetTextFromUriNode(name);
+            if (boolText is not null)
+            {
+                if (bool.TryParse(boolText, out bool value))
+                {
+                    return value;
                 }
             }
             return null;

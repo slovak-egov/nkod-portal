@@ -78,5 +78,7 @@ namespace WebApi
             }
             return null;
         }
+
+        public static Uri? AsUri(this string? value) => value is not null ? new Uri(value, UriKind.Absolute) : null;
     }
 }

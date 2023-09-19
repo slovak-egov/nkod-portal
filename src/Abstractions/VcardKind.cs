@@ -15,7 +15,9 @@ namespace NkodSk.Abstractions
 
         public string? GetName(string language) => GetTextFromUriNode("vcard:fn", language);
 
-        public void SetNames(Dictionary<string, string> values)
+        public IDictionary<string, List<string>> Name => GetTextsFromUriNode("vcard:fn");
+
+        public void SetNames(Dictionary<string, string>? values)
         {
             SetTexts("vcard:fn", values);
         }

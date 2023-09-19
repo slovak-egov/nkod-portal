@@ -87,7 +87,9 @@ namespace NkodSk.Abstractions
 
         public string? GetTitle(string language) => GetTextFromUriNode("dct:title", language);
 
-        public void SetTitle(Dictionary<string, string> values)
+        public IDictionary<string, List<string>> Title => GetTextsFromUriNode("dct:title");
+
+        public void SetTitle(Dictionary<string, string>? values)
         {
             SetTexts("dct:title", values);
         }
@@ -127,11 +129,11 @@ namespace NkodSk.Abstractions
             Dictionary<string, string[]> values = new Dictionary<string, string[]>();
             if (metadata is null)
             {
-                metadata = new FileMetadata(id, id.ToString(), FileType.DistributionRegistration, datasetMetadata.Id, datasetMetadata.Publisher?.ToString(), datasetMetadata.IsPublic, null, now, now, values);
+                metadata = new FileMetadata(id, Format?.ToString() ?? id.ToString(), FileType.DistributionRegistration, datasetMetadata.Id, datasetMetadata.Publisher?.ToString(), true, null, now, now, values);
             }
             else
             {
-                metadata = metadata with { Publisher = datasetMetadata.Publisher?.ToString(), IsPublic = datasetMetadata.IsPublic, AdditionalValues = values, LastModified = now };
+                metadata = metadata with { Publisher = datasetMetadata.Publisher?.ToString(), IsPublic = true, AdditionalValues = values, LastModified = now };
             }
             return metadata;
         }

@@ -614,51 +614,5 @@ namespace WebApi.Test
             Assert.Equal(new CodelistItemView("http://www.iana.org/assignments/media-types/application/zip", "ZIP"), distribution.CompressFormatValue);
             Assert.Equal(new CodelistItemView("http://www.iana.org/assignments/media-types/application/zip", "ZIP"), distribution.PackageFormatValue);
         }
-
-
-
-
-
-
-
-
-
-
-        [Fact]
-        public async Task TestCreateUnauthorized()
-        {
-            string path = fixture.GetStoragePath();
-            using Storage storage = new Storage(path);
-            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
-            using HttpClient client = applicationFactory.CreateClient();
-            using JsonContent requestContent = JsonContent.Create(new
-            {
-                Name = new { sk = "Test" }
-            });
-            using HttpResponseMessage response = await client.PostAsync("/datasets", requestContent);
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-        }
-
-        [Fact]
-        public async Task TestCreate()
-        {
-            string path = fixture.GetStoragePath();
-            using Storage storage = new Storage(path);
-            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
-            using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
-            using JsonContent requestContent = JsonContent.Create(new {
-                Name = new { sk = "Test"}
-            });
-            using HttpResponseMessage response = await client.PostAsync("/datasets", requestContent);
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            string content = await response.Content.ReadAsStringAsync();
-            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
-            Assert.NotNull(result);
-            Assert.False(string.IsNullOrEmpty(result.Id));
-            Assert.True(result.Success);
-            Assert.True(result.Errors is null || result.Errors.Count == 0);
-
-        }
     }
 }

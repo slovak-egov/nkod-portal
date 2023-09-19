@@ -137,16 +137,16 @@ namespace WebApi.Test
             return metatdata.Id;
         }
 
-        public (Guid, Guid, Guid[]) CreateFullDataset()
+        public (Guid, Guid, Guid[]) CreateFullDataset(string? publisher = null)
         {
             DcatDataset dataset = DcatDataset.Create(CreateUri());
 
-            const string publisherKey = "https://data.gov.sk/id/publisher/full";
-            Guid publisherId = CreatePublisher("Ministerstvo hospodárstva SR", id: publisherKey, nameEn: "Ministry of economy");
+            publisher ??= "https://data.gov.sk/id/publisher/full";
+            Guid publisherId = CreatePublisher("Ministerstvo hospodárstva SR", id: publisher, nameEn: "Ministry of economy");
 
             dataset.SetTitle(new Dictionary<string, string> { { "sk", "titleSk" }, { "en", "titleEn" } });
             dataset.SetDescription(new Dictionary<string, string> { { "sk", "descriptionSk" }, { "en", "descriptionEn" } });
-            dataset.Publisher = new Uri(publisherKey);
+            dataset.Publisher = new Uri(publisher);
             dataset.Themes = new[] { 
                 new Uri("http://publications.europa.eu/resource/dataset/data-theme/1"), 
                 new Uri("http://publications.europa.eu/resource/dataset/data-theme/2"),
@@ -187,16 +187,16 @@ namespace WebApi.Test
             return (metatdata.Id, publisherId, new[] { distributionId });
         }
 
-        public (Guid, Guid) CreateFullLocalCatalog()
+        public (Guid, Guid) CreateFullLocalCatalog(string? publisher = null)
         {
             DcatCatalog catalog = DcatCatalog.Create(CreateUri());
 
-            const string publisherKey = "https://data.gov.sk/id/publisher/full";
-            Guid publisherId = CreatePublisher("Ministerstvo hospodárstva SR", id: publisherKey, nameEn: "Ministry of economy");
+            publisher ??= "https://data.gov.sk/id/publisher/full";
+            Guid publisherId = CreatePublisher("Ministerstvo hospodárstva SR", id: publisher, nameEn: "Ministry of economy");
 
             catalog.SetTitle(new Dictionary<string, string> { { "sk", "titleSk" }, { "en", "titleEn" } });
             catalog.SetDescription(new Dictionary<string, string> { { "sk", "descriptionSk" }, { "en", "descriptionEn" } });
-            catalog.Publisher = new Uri(publisherKey);
+            catalog.Publisher = new Uri(publisher);
             catalog.SetContactPoint(new LanguageDependedTexts { { "sk", "nameSk" }, { "en", "nameEn" } }, "test@example.com");
             catalog.HomePage = new Uri("http://data.gov.sk/");
 

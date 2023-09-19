@@ -1,13 +1,12 @@
-﻿using Microsoft.AspNetCore.Http;
-using NkodSk.Abstractions;
+﻿using NkodSk.Abstractions;
 
 namespace NkodSk.Abstractions
 {
     public class DefaultFileAccessPolicy : IFileStorageAccessPolicy
     {
-        private readonly IHttpContextAccessor httpContextAccessor;
+        private readonly IHttpContextValueAccessor httpContextAccessor;
 
-        public DefaultFileAccessPolicy(IHttpContextAccessor httpContextAccessor)
+        public DefaultFileAccessPolicy(IHttpContextValueAccessor httpContextAccessor)
         {
             this.httpContextAccessor = httpContextAccessor;
         }
@@ -24,21 +23,14 @@ namespace NkodSk.Abstractions
 
         public bool HasModifyAccessToFile(FileMetadata metadata)
         {
-            HttpContext? httpContext = httpContextAccessor.HttpContext;
-
-            if (httpContext?.User == null)
-            {
-                return false;
-            }
-
-            if (httpContext.User.IsInRole("Superadmin"))
+            if (httpContextAccessor.HasRole("Superadmin"))
             {
                 return true;
             }
 
-            if (metadata.Publisher != null)
+            if (!string.IsNullOrEmpty(metadata.Publisher))
             {
-                return httpContext.User.HasClaim("Publisher", metadata.Publisher);
+                return httpContextAccessor.Publisher == metadata.Publisher;
             }
 
             return false;

@@ -1,4 +1,5 @@
 using Abstractions;
+using CodelistProvider;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
@@ -21,6 +22,7 @@ builder.Services.AddSingleton<IDocumentStorageClient, DocumentStorageClient.Docu
 builder.Services.AddSingleton<InternalCodelistProvider>();
 builder.Services.AddSingleton<ILanguagesSource, DefaultLanguagesSource>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<IHttpContextValueAccessor, HttpContextValueAccessor>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>

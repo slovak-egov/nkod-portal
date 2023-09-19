@@ -42,5 +42,38 @@ namespace WebApi.Test
             Assert.NotNull(result);
             return result;
         }
+
+        public static void AssertTextsEqual(Dictionary<string, string>? expected, IDictionary<string, List<string>>? actual)
+        {
+            expected ??= new Dictionary<string, string>();
+            actual ??= new Dictionary<string, List<string>>();
+            Assert.Equal(expected.Count, actual.Count);
+            foreach ((string key, string value) in expected)
+            {
+                Assert.True(actual.ContainsKey(key));
+                List<string> values = actual[key];
+                Assert.Single(values);
+                Assert.Equal(value, values[0]);
+            }
+        }
+
+        public static void AssertTextsEqual(Dictionary<string, IEnumerable<string>>? expected, IDictionary<string, List<string>>? actual)
+        {
+            expected ??= new Dictionary<string, IEnumerable<string>>();
+            actual ??= new Dictionary<string, List<string>>();
+            Assert.Equal(expected.Count, actual.Count);
+            foreach ((string key, IEnumerable<string> values) in expected)
+            {
+                HashSet<string> expectedValues = new HashSet<string>(values, StringComparer.Ordinal);
+                Assert.True(actual.ContainsKey(key));
+                Assert.True(expectedValues.SetEquals(actual[key]));
+            }
+        }
+
+        public static void AssertDateEqual(string? expected, DateOnly? actual)
+        {
+            DateOnly? expectedDate = expected is not null ? DateOnly.Parse(expected, System.Globalization.CultureInfo.CurrentCulture) : null;
+            Assert.Equal(expectedDate, actual);
+        }
     }
 }

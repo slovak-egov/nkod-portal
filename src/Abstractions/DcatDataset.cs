@@ -18,12 +18,16 @@ namespace NkodSk.Abstractions
 
         public string? GetTitle(string language) => GetTextFromUriNode("dct:title", language);
 
+        public IDictionary<string, List<string>> Title => GetTextsFromUriNode("dct:title");
+
         public void SetTitle(Dictionary<string, string> values)
         {
             SetTexts("dct:title", values);
         }
 
         public string? GetDescription(string language) => GetTextFromUriNode("dct:description", language);
+
+        public IDictionary<string, List<string>> Description => GetTextsFromUriNode("dct:description");
 
         public void SetDescription(Dictionary<string, string> values)
         {
@@ -112,12 +116,15 @@ namespace NkodSk.Abstractions
             }
         }
 
-        public void SetContactPoint(LanguageDependedTexts name, string? email)
+        public void SetContactPoint(LanguageDependedTexts? name, string? email)
         {
             RemoveUriNodes("dcat:contactPoint");
-            VcardKind contactPoint = new VcardKind(Graph, CreateSubject("dcat:contactPoint", "vcard:Individual"));
-            contactPoint.SetNames(name);
-            contactPoint.Email = email;
+            if (name is not null || email is not null)
+            {
+                VcardKind contactPoint = new VcardKind(Graph, CreateSubject("dcat:contactPoint", "vcard:Individual"));
+                contactPoint.SetNames(name ?? new LanguageDependedTexts());
+                contactPoint.Email = email;
+            }
         }
 
         public Uri? Documentation
@@ -144,10 +151,17 @@ namespace NkodSk.Abstractions
             set => SetTextToUriNode("dct:temporalResolution", value);
         }
 
+
         public Uri? IsPartOf
         {
             get => GetUriFromUriNode("dct:isPartOf");
             set => SetUriNode("dct:isPartOf", value);
+        }
+
+        public bool ShouldBePublic
+        {
+            get => GetBooleanFromUriNode("custom:shouldBePublic") ?? true;
+            set => SetBooleanToUriNode("custom:shouldBePublic", value);
         }
 
         public IEnumerable<Uri> Distributions => GetUrisFromUriNode("dcat:distribution");
@@ -179,6 +193,7 @@ namespace NkodSk.Abstractions
             Guid id = metadata?.Id ?? Guid.NewGuid();
             DateTimeOffset now = DateTimeOffset.UtcNow;
             Dictionary<string, string[]> values = new Dictionary<string, string[]>();
+            isPublic = isPublic && ShouldBePublic;
 
             Uri? type = Type;
             if (type is not null)

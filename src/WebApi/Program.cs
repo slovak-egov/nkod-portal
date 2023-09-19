@@ -24,6 +24,8 @@ using System.Web;
 using CodelistProviderClient;
 using Lucene.Net.Search;
 using VDS.RDF.Query.Expressions.Comparison;
+using System.Security.Policy;
+using System.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +46,7 @@ builder.Services.AddHttpClient(DocumentStorageClient.DocumentStorageClient.HttpC
     c.BaseAddress = new Uri(documentStorageUrl);
 });
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<IHttpContextValueAccessor, HttpContextValueAccessor>();
 builder.Services.AddTransient<IDocumentStorageClient, DocumentStorageClient.DocumentStorageClient>();
 
 builder.Services.AddHttpClient(CodelistProviderClient.CodelistProviderClient.HttpClientName, c =>
@@ -85,6 +88,12 @@ builder.Services.AddAuthentication(o =>
     };
 });
 builder.Services.AddAuthorization();
+
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    string[] supportedCultures = new[] { "sk-Sk" };
+    options.SetDefaultCulture(supportedCultures[0]);
+});
 
 builder.Services.AddCors(options =>
 {
@@ -486,10 +495,10 @@ app.MapGet("/codelists", async ([FromQuery(Name = "keys[]")] string[] keys, [Fro
     return codelists;
 });
 
-app.MapPost("/datasets", [Authorize] async ([FromBody] DatasetInput? dataset, [FromServices] IDocumentStorageClient client, ClaimsPrincipal user) =>
+app.MapPost("/datasets", [Authorize] async ([FromBody] DatasetInput? dataset, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user) =>
 {
     string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
-    if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher))
+    if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
     {
         return Results.Forbid();
     }
@@ -497,48 +506,99 @@ app.MapPost("/datasets", [Authorize] async ([FromBody] DatasetInput? dataset, [F
     SaveResult result = new SaveResult();
     try
     {
-        Dictionary<string, string>? errors = null;
-        DcatDataset? datasetRdf = dataset?.MapToRdf(publisher, out errors);
-        if (datasetRdf is not null && dataset is not null)
-        {         
-            FileMetadata metadata = datasetRdf.UpdateMetadata(dataset.IsPublic);
-            await client.InsertFile(datasetRdf.ToString(), false, metadata).ConfigureAwait(false);
-            result.Id = metadata.Id.ToString();
-            result.Success = true;
-            result.Errors = errors;
+        if (dataset is not null)
+        {
+            ValidationResults validationResults = await dataset.Validate(publisherId, client, codelistProviderClient);
+            if (validationResults.IsValid)
+            {
+                DcatDataset datasetRdf = DcatDataset.Create(new Uri($"http://data.gov.sk/dataset/{Guid.NewGuid()}"));
+                dataset.MapToRdf(publisher, datasetRdf);
+                FileMetadata metadata = datasetRdf.UpdateMetadata(false);
+                await client.InsertFile(datasetRdf.ToString(), false, metadata).ConfigureAwait(false);
+                result.Id = metadata.Id.ToString();
+                result.Success = true;
+            }
+            else
+            {
+                result.Errors = validationResults;
+            }
         }
+        else
+        {
+            result.Errors ??= new Dictionary<string, string>();
+            result.Errors["generic"] = "Bad request";
+        }       
     } 
     catch (Exception)
     {
         result.Errors ??= new Dictionary<string, string>();
         result.Errors["generic"] = "Generic error";
     }
-    return Results.Ok(result);
+    return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapPut("/datasets", [Authorize] async ([FromBody] DatasetInput dataset, [FromServices] IDocumentStorageClient client) =>
+app.MapPut("/datasets", [Authorize] async ([FromBody] DatasetInput? dataset, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user) =>
 {
+    string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
+    if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
+    {
+        return Results.Forbid();
+    }
+
     SaveResult result = new SaveResult();
     try
     {
-        Dictionary<string, string>? errors = null;
-        DcatDataset? datasetRdf = dataset?.MapToRdf(new Uri(""), out errors);
-        if (datasetRdf is not null && dataset is not null && Guid.TryParse(dataset.Id, out Guid id))
+        if (dataset is not null)
         {
-            FileMetadata? metadata = await client.GetFileMetadata(id).ConfigureAwait(false);
-            if (metadata is not null)
+            if (Guid.TryParse(dataset.Id, out Guid id))
             {
-                metadata = datasetRdf.UpdateMetadata(dataset.IsPublic, metadata);
-                await client.InsertFile(datasetRdf.ToString(), true, metadata).ConfigureAwait(false);
-                result.Id = metadata.Id.ToString();
-                result.Success = true;
-                result.Errors = errors;
+                FileState? state = await client.GetFileState(id);
+                if (state?.Content is not null && state.Metadata.Publisher == publisher.ToString())
+                {
+                    FileStorageResponse response = await client.GetFileStates(new FileStorageQuery
+                    {
+                        ParentFile = id,
+                        OnlyTypes = new List<FileType> { FileType.DistributionRegistration },
+                        MaxResults = 0
+                    }).ConfigureAwait(false);
+                    bool hasDistributions = response.TotalCount > 0;
+
+                    DcatDataset? datasetRdf = DcatDataset.Parse(state.Content);
+                    if (datasetRdf is not null)
+                    {
+                        ValidationResults validationResults = await dataset.Validate(publisherId, client, codelistProviderClient);
+                        if (validationResults.IsValid)
+                        {
+                            dataset.MapToRdf(publisher, datasetRdf);
+                            FileMetadata metadata = datasetRdf.UpdateMetadata(hasDistributions, state.Metadata);
+                            await client.InsertFile(datasetRdf.ToString(), true, metadata).ConfigureAwait(false);
+                            result.Id = metadata.Id.ToString();
+                            result.Success = true;
+                        }
+                        else
+                        {
+                            result.Errors = validationResults;
+                        }
+                    }
+                    else
+                    {
+                        return Results.Problem("Source rdf entity is not valid state");
+                    }
+                }
+                else
+                {
+                    return Results.Forbid();
+                }
+            }
+            else
+            {
+                return Results.Forbid();
             }
         }
         else
         {
             result.Errors ??= new Dictionary<string, string>();
-            result.Errors["generic"] = "File not found";
+            result.Errors["generic"] = "Bad request";
         }
     }
     catch (Exception)
@@ -546,7 +606,7 @@ app.MapPut("/datasets", [Authorize] async ([FromBody] DatasetInput dataset, [Fro
         result.Errors ??= new Dictionary<string, string>();
         result.Errors["generic"] = "Generic error";
     }
-    return Results.Ok(result);
+    return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
 });
 
 app.MapDelete("/datasets", [Authorize] async ([FromQuery] string? id, [FromServices] IDocumentStorageClient client) =>
@@ -560,29 +620,93 @@ app.MapDelete("/datasets", [Authorize] async ([FromQuery] string? id, [FromServi
         }
         else
         {
-            return Results.NotFound();
+            return Results.Forbid();
         }
     }
     catch (Exception)
     {
-        return Results.BadRequest();
+        return Results.Forbid();
     }
 });
 
-app.MapPost("/distributions", [Authorize] async ([FromBody] DistributionInput distribution, [FromServices] IDocumentStorageClient client) =>
+app.MapPost("/distributions", [Authorize] async ([FromBody] DistributionInput? distribution, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user) =>
 {
+    string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
+    if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
+    {
+        return Results.Forbid();
+    }
+
     SaveResult result = new SaveResult();
     try
     {
-        Dictionary<string, string>? errors = null;
-        DcatDistribution? rdf = distribution?.MapToRdf(out errors);
-        if (rdf is not null && distribution is not null)
+        if (distribution is not null)
         {
-            FileMetadata metadata = rdf.UpdateMetadata(null!);
-            await client.InsertFile(rdf.ToString(), false, metadata).ConfigureAwait(false);
-            result.Id = metadata.Id.ToString();
-            result.Success = true;
-            result.Errors = errors;
+            if (Guid.TryParse(distribution.DatasetId, out Guid datasetId))
+            {
+                FileState? datasetState = await client.GetFileState(datasetId).ConfigureAwait(false);
+                if (datasetState?.Content is not null && datasetState.Metadata.Publisher == publisher.ToString())
+                {
+                    DcatDataset? dataset = DcatDataset.Parse(datasetState.Content);
+                    if (dataset is not null)
+                    {
+                        FileMetadata? distributionFileMetadata = null;
+                        if (distribution.FileId is not null)
+                        {
+                            if (Guid.TryParse(distribution.FileId, out Guid fileId))
+                            {
+                                distributionFileMetadata = await client.GetFileMetadata(fileId).ConfigureAwait(false);
+                                if (distributionFileMetadata is null || distributionFileMetadata.Type != FileType.DistributionFile || distributionFileMetadata.Publisher != publisher.ToString())
+                                {
+                                    return Results.Forbid();
+                                }
+                            }
+                            else
+                            {
+                                return Results.Forbid();
+                            }
+                        }
+
+                        ValidationResults validationResults = await distribution.Validate(publisherId, client, codelistProviderClient);
+                        if (validationResults.IsValid)
+                        {
+                            DcatDistribution distributionRdf = DcatDistribution.Create(new Uri($"http://data.gov.sk/distribution/{Guid.NewGuid()}"));
+                            distribution.MapToRdf(distributionRdf);
+                            FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata);
+                            await client.InsertFile(distributionRdf.ToString(), false, metadata).ConfigureAwait(false);
+                            await client.UpdateMetadata(dataset.UpdateMetadata(true, datasetState.Metadata)).ConfigureAwait(false);
+                            if (distributionFileMetadata is not null)
+                            {
+                                await client.UpdateMetadata(distributionFileMetadata with { ParentFile = metadata.Id }).ConfigureAwait(false);
+                            }
+
+                            result.Id = metadata.Id.ToString();
+                            result.Success = true;
+                        }
+                        else
+                        {
+                            result.Errors = validationResults;
+                        }
+                    }
+                    else
+                    {
+                        return Results.Problem("Source rdf entity is not valid state");
+                    }
+                }
+                else
+                {
+                    return Results.Forbid();
+                }
+            }
+            else
+            {
+                return Results.Forbid();
+            }            
+        }
+        else
+        {
+            result.Errors ??= new Dictionary<string, string>();
+            result.Errors["generic"] = "Bad request";
         }
     }
     catch (Exception)
@@ -590,32 +714,103 @@ app.MapPost("/distributions", [Authorize] async ([FromBody] DistributionInput di
         result.Errors ??= new Dictionary<string, string>();
         result.Errors["generic"] = "Generic error";
     }
-    return Results.Ok(result);
+    return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapPut("/distributions", [Authorize] async ([FromBody] DistributionInput distribution, [FromServices] IDocumentStorageClient client) =>
+app.MapPut("/distributions", [Authorize] async ([FromBody] DistributionInput distribution, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user) =>
 {
+    string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
+    if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
+    {
+        return Results.Forbid();
+    }
+
     SaveResult result = new SaveResult();
     try
     {
-        Dictionary<string, string>? errors = null;
-        DcatDistribution? rdf = distribution?.MapToRdf(out errors);
-        if (rdf is not null && distribution is not null && Guid.TryParse(distribution.Id, out Guid id))
+        if (distribution is not null)
         {
-            FileMetadata? metadata = await client.GetFileMetadata(id).ConfigureAwait(false);
-            if (metadata is not null)
+            if (Guid.TryParse(distribution.Id, out Guid id))
             {
-                metadata = rdf.UpdateMetadata(metadata);
-                await client.InsertFile(rdf.ToString(), true, metadata).ConfigureAwait(false);
-                result.Id = metadata.Id.ToString();
-                result.Success = true;
-                result.Errors = errors;
+                FileState? state = await client.GetFileState(id);
+                if (state?.Content is not null && state.Metadata.Type == FileType.DistributionRegistration && state.Metadata.Publisher == publisher.ToString() && state.Metadata.ParentFile.HasValue)
+                {
+                    Guid datasetId = state.Metadata.ParentFile.Value;
+
+                    DcatDistribution? distributionRdf = DcatDistribution.Parse(state.Content);
+                    if (distributionRdf is not null)
+                    {
+                        FileState? datasetState = await client.GetFileState(datasetId).ConfigureAwait(false);
+                        if (datasetState?.Content is not null && datasetState.Metadata.Publisher == publisher.ToString())
+                        {
+                            DcatDataset? dataset = DcatDataset.Parse(datasetState.Content);
+                            if (dataset is not null)
+                            {
+                                FileMetadata? distributionFileMetadata = null;
+                                if (distribution.FileId is not null)
+                                {
+                                    if (Guid.TryParse(distribution.FileId, out Guid fileId))
+                                    {
+                                        distributionFileMetadata = await client.GetFileMetadata(fileId).ConfigureAwait(false);
+                                        if (distributionFileMetadata is null || distributionFileMetadata.Type != FileType.DistributionFile || distributionFileMetadata.Publisher != publisher.ToString())
+                                        {
+                                            return Results.Forbid();
+                                        }
+                                    }
+                                    else
+                                    {
+                                        return Results.Forbid();
+                                    }
+                                }
+
+                                ValidationResults validationResults = await distribution.Validate(publisherId, client, codelistProviderClient);
+                                if (validationResults.IsValid)
+                                {
+                                    distribution.MapToRdf(distributionRdf);
+                                    FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata, state.Metadata);
+                                    await client.InsertFile(distributionRdf.ToString(), true, metadata).ConfigureAwait(false);
+                                    if (distributionFileMetadata is not null)
+                                    {
+                                        await client.UpdateMetadata(distributionFileMetadata with { ParentFile = metadata.Id }).ConfigureAwait(false);
+                                    }
+
+                                    result.Id = metadata.Id.ToString();
+                                    result.Success = true;
+                                }
+                                else
+                                {
+                                    result.Errors = validationResults;
+                                }
+                            }
+                            else
+                            {
+                                return Results.Problem("Source rdf entity is not valid state");
+                            }
+                        }
+                        else
+                        {
+                            return Results.Forbid();
+                        }
+                    }
+                    else
+                    {
+                        return Results.Problem("Source rdf entity is not valid state");
+                    }
+                }
+                else
+                {
+                    return Results.Forbid();
+                }
+            }
+            else
+            {
+                return Results.Forbid();
             }
         }
         else
         {
             result.Errors ??= new Dictionary<string, string>();
-            result.Errors["generic"] = "File not found";
+            result.Errors["generic"] = "Bad request";
         }
     }
     catch (Exception)
@@ -623,7 +818,7 @@ app.MapPut("/distributions", [Authorize] async ([FromBody] DistributionInput dis
         result.Errors ??= new Dictionary<string, string>();
         result.Errors["generic"] = "Generic error";
     }
-    return Results.Ok(result);
+    return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
 });
 
 app.MapDelete("/distributions", [Authorize] async ([FromQuery] string? id, [FromServices] IDocumentStorageClient client) =>
@@ -637,62 +832,47 @@ app.MapDelete("/distributions", [Authorize] async ([FromQuery] string? id, [From
         }
         else
         {
-            return Results.NotFound();
+            return Results.Forbid();
         }
     }
     catch (Exception)
     {
-        return Results.BadRequest();
+        return Results.Forbid();
     }
 });
 
-app.MapPost("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput catalog, [FromServices] IDocumentStorageClient client) =>
+app.MapPost("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? catalog, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user) =>
 {
-    SaveResult result = new SaveResult();
-    try
+    string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
+    if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
     {
-        Dictionary<string, string>? errors = null;
-        DcatCatalog? rdf = catalog?.MapToRdf(out errors);
-        if (rdf is not null && catalog is not null)
-        {
-            FileMetadata metadata = rdf.UpdateMetadata();
-            await client.InsertFile(rdf.ToString(), false, metadata).ConfigureAwait(false);
-            result.Id = metadata.Id.ToString();
-            result.Success = true;
-            result.Errors = errors;
-        }
+        return Results.Forbid();
     }
-    catch (Exception)
-    {
-        result.Errors ??= new Dictionary<string, string>();
-        result.Errors["generic"] = "Generic error";
-    }
-    return Results.Ok(result);
-});
 
-app.MapPut("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput catalog, [FromServices] IDocumentStorageClient client) =>
-{
     SaveResult result = new SaveResult();
     try
     {
-        Dictionary<string, string>? errors = null;
-        DcatCatalog? rdf = catalog?.MapToRdf(out errors);
-        if (rdf is not null && catalog is not null && Guid.TryParse(catalog.Id, out Guid id))
+        if (catalog is not null)
         {
-            FileMetadata? metadata = await client.GetFileMetadata(id).ConfigureAwait(false);
-            if (metadata is not null)
+            ValidationResults validationResults = catalog.Validate();
+            if (validationResults.IsValid)
             {
-                metadata = rdf.UpdateMetadata(metadata);
-                await client.InsertFile(rdf.ToString(), true, metadata).ConfigureAwait(false);
+                DcatCatalog catalogRdf = DcatCatalog.Create(new Uri($"http://data.gov.sk/catalog/{Guid.NewGuid()}"));
+                catalog.MapToRdf(publisher, catalogRdf);
+                FileMetadata metadata = catalogRdf.UpdateMetadata();
+                await client.InsertFile(catalogRdf.ToString(), false, metadata).ConfigureAwait(false);
                 result.Id = metadata.Id.ToString();
                 result.Success = true;
-                result.Errors = errors;
+            }
+            else
+            {
+                result.Errors = validationResults;
             }
         }
         else
         {
             result.Errors ??= new Dictionary<string, string>();
-            result.Errors["generic"] = "File not found";
+            result.Errors["generic"] = "Bad request";
         }
     }
     catch (Exception)
@@ -700,7 +880,71 @@ app.MapPut("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput ca
         result.Errors ??= new Dictionary<string, string>();
         result.Errors["generic"] = "Generic error";
     }
-    return Results.Ok(result);
+    return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
+});
+
+app.MapPut("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? catalog, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user) =>
+{
+    string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
+    if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
+    {
+        return Results.Forbid();
+    }
+
+    SaveResult result = new SaveResult();
+    try
+    {
+        if (catalog is not null)
+        {
+            if (Guid.TryParse(catalog.Id, out Guid id))
+            {
+                FileState? state = await client.GetFileState(id);
+                if (state?.Content is not null && state.Metadata.Publisher == publisher.ToString())
+                {
+                    DcatCatalog? catalogRdf = DcatCatalog.Parse(state.Content);
+                    if (catalogRdf is not null)
+                    {
+                        ValidationResults validationResults = catalog.Validate();
+                        if (validationResults.IsValid)
+                        {
+                            catalog.MapToRdf(publisher, catalogRdf);
+                            FileMetadata metadata = catalogRdf.UpdateMetadata(state.Metadata);
+                            await client.InsertFile(catalogRdf.ToString(), true, metadata).ConfigureAwait(false);
+                            result.Id = metadata.Id.ToString();
+                            result.Success = true;
+                        }
+                        else
+                        {
+                            result.Errors = validationResults;
+                        }
+                    }
+                    else
+                    {
+                        return Results.Problem("Source rdf entity is not valid state");
+                    }
+                }
+                else
+                {
+                    return Results.Forbid();
+                }
+            }
+            else
+            {
+                return Results.Forbid();
+            }
+        }
+        else
+        {
+            result.Errors ??= new Dictionary<string, string>();
+            result.Errors["generic"] = "Bad request";
+        }
+    }
+    catch (Exception)
+    {
+        result.Errors ??= new Dictionary<string, string>();
+        result.Errors["generic"] = "Generic error";
+    }
+    return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
 });
 
 app.MapDelete("/local-catalogs", [Authorize] async ([FromQuery] string? id, [FromServices] IDocumentStorageClient client) =>
@@ -714,12 +958,12 @@ app.MapDelete("/local-catalogs", [Authorize] async ([FromQuery] string? id, [Fro
         }
         else
         {
-            return Results.NotFound();
+            return Results.Forbid();
         }
     }
     catch (Exception)
     {
-        return Results.BadRequest();
+        return Results.Forbid();
     }
 });
 

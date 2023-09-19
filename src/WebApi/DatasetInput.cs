@@ -16,15 +16,19 @@ namespace WebApi
 
         public string? AccrualPeriodicity { get; set; }
 
-        public Dictionary<string, string>? Kwywords { get; set; }
+        public Dictionary<string, IEnumerable<string>>? Keywords { get; set; }
 
         public string? Type { get; set; }
 
         public List<string>? Spatial { get; set; }
 
-        public TemporalInput? Temporal { get; set; }
+        public string? StartDate { get; set; }
 
-        public CardInput? ContactPoint { get; set; }
+        public string? EndDate { get; set; }
+
+        public Dictionary<string, string>? ContactName { get; set; }
+
+        public string? ContactEmail { get; set; }
 
         public string? Documentation { get; set; }
 
@@ -38,13 +42,59 @@ namespace WebApi
 
         public string? IsPartOf { get; set; }
 
-        public DcatDataset? MapToRdf(Uri publisher, out Dictionary<string, string>? errors)
+        public async Task<ValidationResults> Validate(string publisher, IDocumentStorageClient documentStorage, ICodelistProviderClient codelistProvider)
         {
-            errors = new Dictionary<string, string>();
-            DcatDataset dataset = DcatDataset.Create(new Uri($"http://data.gov.sk/dataset/{Guid.NewGuid()}"));
+            ValidationResults results = new ValidationResults();
+
+            List<string> languages = Name?.Keys.ToList() ?? new List<string>();
+            if (!languages.Contains("sk"))
+            {
+                languages.Add("sk");
+            }
+
+            results.ValidateLanguageTexts(nameof(Name), Name, languages, true);
+            results.ValidateLanguageTexts(nameof(Description), Description, languages, true);
+            await results.ValidateRequiredCodelistValues(nameof(Themes), Themes, "http://publications.europa.eu/resource/dataset/data-theme", codelistProvider);
+            await results.ValidateRequiredCodelistValue(nameof(AccrualPeriodicity), AccrualPeriodicity, "http://publications.europa.eu/resource/dataset/frequency", codelistProvider);
+            results.ValidateKeywords(nameof(Keywords), Keywords, languages);
+            await results.ValidateCodelistValue(nameof(Type), Type, "https://data.gov.sk/set/codelist/dataset-type", codelistProvider);
+            await results.ValidateCodelistValues(nameof(Spatial), Spatial, "http://publications.europa.eu/resource/dataset/country", codelistProvider);
+            results.ValidateDate(nameof(StartDate), StartDate);
+            results.ValidateDate(nameof(EndDate), EndDate);
+            results.ValidateLanguageTexts(nameof(ContactName), ContactName, languages, false);
+            results.ValidateEmail(nameof(ContactEmail), ContactEmail);
+            results.ValidateUrl(nameof(Documentation), Documentation, false);
+            results.ValidateUrl(nameof(Specification), Specification, false);
+            await results.ValidateCodelistValues(nameof(EuroVocThemes), EuroVocThemes, "http://publications.europa.eu/resource/dataset/eurovoc", codelistProvider);
+            results.ValidateNumber(nameof(SpatialResolutionInMeters), SpatialResolutionInMeters);
+            results.ValidateTemporalResolution(nameof(TemporalResolution), TemporalResolution);
+            await results.ValidateDataset(nameof(IsPartOf), IsPartOf, publisher, documentStorage);
+
+            return results;
+        }
+
+        public void MapToRdf(Uri publisher, DcatDataset dataset)
+        {
             dataset.SetTitle(Name ?? new Dictionary<string, string>());
+            dataset.SetDescription(Description ?? new Dictionary<string, string>());
             dataset.Publisher = publisher;
-            return dataset;
+            dataset.SetKeywords(Keywords ?? new Dictionary<string, IEnumerable<string>>());
+            dataset.AccrualPeriodicity = AccrualPeriodicity is not null ? new Uri(AccrualPeriodicity) : null;
+            dataset.ShouldBePublic = IsPublic;
+            dataset.Themes = (Themes ?? new List<string>()).Union(EuroVocThemes ?? new List<string>()).Select(t => new Uri(t, UriKind.Absolute));
+            dataset.Type = Type is not null ? new Uri(Type) : null;
+            dataset.Spatial = (Spatial ?? new List<string>()).Select(s => new Uri(s, UriKind.Absolute));
+            dataset.SetTemporal(
+                StartDate is not null ? DateOnly.Parse(StartDate, System.Globalization.CultureInfo.CurrentCulture) : null,
+                EndDate is not null ? DateOnly.Parse(EndDate, System.Globalization.CultureInfo.CurrentCulture) : null);
+            dataset.SetContactPoint(
+                ContactName is not null ? new LanguageDependedTexts(ContactName) : null,
+                ContactEmail);
+            dataset.Documentation = Documentation is not null ? new Uri(Documentation) : null;
+            dataset.Specification = Specification is not null ? new Uri(Specification) : null;
+            dataset.SpatialResolutionInMeters = SpatialResolutionInMeters is not null ? decimal.Parse(SpatialResolutionInMeters, System.Globalization.CultureInfo.CurrentCulture) : null;
+            dataset.TemporalResolution = TemporalResolution;
+            dataset.IsPartOf = IsPartOf is not null ? new Uri(IsPartOf) : null;
         }
     }
 }

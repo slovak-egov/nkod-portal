@@ -69,6 +69,7 @@ namespace NkodSk.Abstractions
             graph.NamespaceMap.AddNamespace("xsd", XsdPrefix);
             graph.NamespaceMap.AddNamespace("vcard", VcardPrefix);
             graph.NamespaceMap.AddNamespace("leg", LegPrefix);
+            graph.NamespaceMap.AddNamespace("custom", CustomPrefix);
         }
 
         internal static IGraph ParseGraph(string text)
@@ -139,5 +140,7 @@ namespace NkodSk.Abstractions
         private static Uri VcardPrefix { get; } = new Uri(@"http://www.w3.org/2006/vcard/ns#");
 
         private static Uri LegPrefix { get; } = new Uri(@"https://data.gov.sk/def/ontology/legislation/");
+
+        private static Uri CustomPrefix { get; } = new Uri(@"https://data.gov.sk/custom/");
     }
 }

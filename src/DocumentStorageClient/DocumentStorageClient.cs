@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Primitives;
+﻿using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using NkodSk.Abstractions;
 using System.Net.Http;
@@ -12,11 +11,11 @@ namespace DocumentStorageClient
     {
         private readonly IHttpClientFactory httpClientFactory;
 
-        private readonly IHttpContextAccessor httpContextAccessor;
+        private readonly IHttpContextValueAccessor httpContextAccessor;
 
         public const string HttpClientName = "DocumentStorage";
 
-        public DocumentStorageClient(IHttpClientFactory httpClientFactory, IHttpContextAccessor httpContextAccessor)
+        public DocumentStorageClient(IHttpClientFactory httpClientFactory, IHttpContextValueAccessor httpContextAccessor)
         {
             this.httpClientFactory = httpClientFactory;
             this.httpContextAccessor = httpContextAccessor;
@@ -25,10 +24,10 @@ namespace DocumentStorageClient
         private HttpClient CreateClient()
         {
             HttpClient client = httpClientFactory.CreateClient(HttpClientName);
-            StringValues? authorzationHeaders = httpContextAccessor.HttpContext?.Request.Headers.FirstOrDefault(h => h.Key == "Authorization").Value;
-            if (authorzationHeaders.HasValue && authorzationHeaders.Value.Count > 0)
+            string? token = httpContextAccessor.Token;
+            if (!string.IsNullOrEmpty(token))
             {
-                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authorzationHeaders.Value);
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             }
             return client;
         }
