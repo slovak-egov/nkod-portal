@@ -13,12 +13,24 @@ import { removeDataset, useDatasets, useUserInfo } from "../client";
 import ErrorAlert from "../components/ErrorAlert";
 import { useNavigate } from "react-router";
 import Loading from "../components/Loading";
+import { useEffect } from "react";
 
 export default function DatasetList()
 {
-    const [datasets, query, setQueryParameters, loading, error, refresh] = useDatasets({filters: {publishers: ['https://data.gov.sk/id/legal-subject/00003328']}});
+    const [datasets, query, setQueryParameters, loading, error, refresh] = useDatasets({pageSize: 20, page: 0});
     const navigate = useNavigate();
     const [userInfo] = useUserInfo();
+
+    useEffect(() => {
+        if (userInfo?.publisher) {
+            setQueryParameters({
+                filters: {
+                    publishers: [userInfo.publisher],
+                },
+                page: 1
+            });
+        }
+    }, [userInfo]);
 
     return <>
         <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam datasetov'}]} />

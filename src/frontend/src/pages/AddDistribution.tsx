@@ -7,7 +7,7 @@ import Button from "../components/Button";
 import ValidationSummary from "../components/ValidationSummary";
 import { DatasetForm } from "../components/DatasetForm";
 import { DistributionForm } from "../components/DistributionForm";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 
 
 export default function AddDistribution()
@@ -32,6 +32,7 @@ export default function AddDistribution()
     });
 
     const [userInfo] = useUserInfo();
+    const navigate = useNavigate();
 
     return <>
             <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam distribúcií', link: '/sprava/distributions'}, {title: 'Nová distribúcia'}]} />
@@ -50,7 +51,12 @@ export default function AddDistribution()
 
                     <DistributionForm distribution={distribution} setDistribution={setDistribution} errors={errors} userInfo={userInfo} />
 
-                    <Button style={{marginRight: '20px'}} onClick={save} disabled={saving}>
+                    <Button style={{marginRight: '20px'}} onClick={async () => {
+                        const result = await save();
+                        if (result?.success) {
+                            navigate('/sprava/distribucie/' + datasetId);
+                        }
+                    }} disabled={saving}>
                         Uložiť distribúciu
                     </Button>
                 </div>

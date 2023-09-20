@@ -57,7 +57,7 @@ export default function DistributionList()
                         </TableCell>
                         <TableCell style={{whiteSpace: 'nowrap'}}>
                             {d.downloadUrl ? <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => { if (d.downloadUrl) {window.location.href = d.downloadUrl}}}>Stiahnuť</Button> : null}
-                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/distribucie/' + datasetId + '/' + d.id)}>Upraviť</Button>
+                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/distribucie/' + datasetId + '/upravit/' + d.id)}>Upraviť</Button>
                             <Button className="idsk-button idsk-button--secondary" onClick={async () => {
                                     if (await removeDistribution(d.id)) {
                                         refresh();

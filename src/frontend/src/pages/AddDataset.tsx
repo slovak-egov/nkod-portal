@@ -6,6 +6,7 @@ import MainContent from "../components/MainContent";
 import Button from "../components/Button";
 import ValidationSummary from "../components/ValidationSummary";
 import { DatasetForm } from "../components/DatasetForm";
+import { useNavigate } from "react-router";
 
 
 export default function AddDataset()
@@ -32,6 +33,7 @@ export default function AddDataset()
     });
 
     const [userInfo] = useUserInfo();
+    const navigate = useNavigate();
 
     return <>
             <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam datasetov', link: '/sprava/datasety'}, {title: 'Nový dataset'}]} />
@@ -50,11 +52,21 @@ export default function AddDataset()
 
                     <DatasetForm dataset={dataset} setDataset={setDataset} errors={errors} userInfo={userInfo} />
 
-                    <Button style={{marginRight: '20px'}} onClick={save} disabled={saving}>
+                    <Button style={{marginRight: '20px'}} onClick={async () => {
+                        const result = await save();
+                        if (result?.success) {
+                            navigate('/sprava/datasety');
+                        }
+                    }} disabled={saving}>
                         Uložiť dataset
                     </Button>
                     
-                    <Button>
+                    <Button disabled={saving} onClick={async () => {
+                        const result = await save();
+                        if (result?.success) {
+                            navigate('/sprava/distribucie/' + result?.id + '/pridat');
+                        }
+                    }}>
                         Uložiť dataset a pridať distribúciu
                     </Button>
                 </div>

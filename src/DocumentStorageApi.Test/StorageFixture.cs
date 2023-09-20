@@ -80,7 +80,7 @@ namespace DocumentStorageApi.Test
 
                         if (Storage.IsTurtleFile(metadata))
                         {
-                            content = $"<http://example.com/{metadata.Id}> <http://example.com/title> \"{metadata.Name["sk"]}\"@sk .";
+                            content = $"<http://example.com/> <http://example.com/title> \"\"@sk .";
                         }
                         else
                         {

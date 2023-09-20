@@ -42,9 +42,9 @@ namespace WebApi.Test
                 },
                 IsPublic = true,
                 AccrualPeriodicity = "http://publications.europa.eu/resource/dataset/frequency/1",
-                Keywords = new Dictionary<string, IEnumerable<string>>
+                Keywords = new Dictionary<string, List<string>>
                 {
-                    { "sk", new[]{ "TestKeyword1", "TestKeyword2" } }
+                    { "sk", new List<string>{ "TestKeyword1", "TestKeyword2" } }
                 },
                 Themes = new List<string> { "http://publications.europa.eu/resource/dataset/data-theme/1" }
             };
@@ -53,7 +53,7 @@ namespace WebApi.Test
             {
                 input.Name["en"] = "TestNameEn";
                 input.Description["en"] = "TestNameEn";
-                input.Keywords["en"] = new[] { "TestKeyword1En" };
+                input.Keywords["en"] = new List<string> { "TestKeyword1En" };
                                 
                 input.Type = new List<string> { "https://data.gov.sk/set/codelist/dataset-type/1" };
                 input.Spatial = new List<string> { "http://publications.europa.eu/resource/dataset/country/1" };
@@ -411,7 +411,7 @@ namespace WebApi.Test
             using HttpClient client = applicationFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
             DatasetInput input = CreateInput();
-            input.Keywords!["sk"] = new[] { "" };
+            input.Keywords!["sk"] = new List<string> { "" };
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PostAsync("/datasets", requestContent);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -501,7 +501,7 @@ namespace WebApi.Test
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
             DatasetInput input = CreateInput();
             input.Id = datasetId.ToString();
-            input.Keywords!["sk"] = new[] { "" };
+            input.Keywords!["sk"] = new List<string> { "" };
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PostAsync("/datasets", requestContent);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

@@ -7,27 +7,29 @@ import Button from "../components/Button";
 import ValidationSummary from "../components/ValidationSummary";
 import { DatasetForm } from "../components/DatasetForm";
 import Loading from "../components/Loading";
+import { useNavigate } from "react-router";
 
 const transformEntityForEdit = (entity: Dataset): DatasetInput => {
     return {
-        isPublic: true,
-        name: {'sk': ''},
-        description: {'sk': ''},
-        themes: [],
-        accrualPeriodicity: 'http://publications.europa.eu/resource/authority/frequency/IRREG',
-        keywords: {'sk': []},
-        type: [],
-        spatial: [],
-        startDate: null,
-        endDate: null,
-        contactName: {},
-        contactEmail: null,
-        documentation: null,
-        specification: null,
-        euroVocThemes: [],
-        spatialResolutionInMeters: null,
-        temporalResolution: null,
-        isPartOf: null
+        id: entity.id,
+        isPublic: entity.isPublic,
+        name: {'sk': entity.name ?? ''},
+        description: {'sk': entity.description ?? ''},
+        themes: entity.themes,
+        accrualPeriodicity: entity.accrualPeriodicity,
+        keywords: {'sk': entity.keywords ?? []},
+        type: entity.type,
+        spatial: entity.spatial,
+        startDate: entity.temporal?.startDate ?? null,
+        endDate: entity.temporal?.endDate ?? null,
+        contactName: {'sk': entity.contactPoint?.name ?? ''},
+        contactEmail: entity.contactPoint?.email ?? '',
+        documentation: entity.documentation,
+        specification: entity.specification,
+        euroVocThemes: entity.euroVocThemes,
+        spatialResolutionInMeters: entity.spatialResolutionInMeters,
+        temporalResolution: entity.temporalResolution,
+        isPartOf: entity.isPartOf
     }
 };
 
@@ -36,6 +38,7 @@ export default function EditDataset()
     const [inputs, dataset, loading, setDataset, errors, saving, saveResult, save] = useDatasetEdit(transformEntityForEdit);
 
     const [userInfo] = useUserInfo();
+    const navigate = useNavigate();
 
     return <>
             <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam datasetov', link: '/sprava/datasety'}, {title: 'Upraviť dataset'}]} />
@@ -55,7 +58,12 @@ export default function EditDataset()
                     {
                         !loading && inputs ? <>
                         <DatasetForm dataset={inputs} setDataset={setDataset} errors={errors} userInfo={userInfo} />
-                        <Button style={{marginRight: '20px'}} onClick={save} disabled={saving}>
+                        <Button style={{marginRight: '20px'}} onClick={async () => {
+                        const result = await save();
+                        if (result?.success) {
+                            navigate('/sprava/datasety');
+                        }
+                    }} disabled={saving}>
                             Uložiť dataset
                         </Button></> : <Loading />
                     }

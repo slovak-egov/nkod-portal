@@ -199,7 +199,7 @@ app.MapPost("/files/by-publisher", [AllowAnonymous] (IFileStorage storage, IFile
     return Results.Ok(response);
 });
 
-app.MapPost("/files", [Authorize] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromBody] InsertModel insertData) =>
+app.MapPost("/files", [Authorize] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] FulltextStorageMap fulltext,[FromBody] InsertModel insertData) =>
 {
     if (insertData.Metadata is null)
     {
@@ -211,6 +211,11 @@ app.MapPost("/files", [Authorize] (IFileStorage storage, IFileStorageAccessPolic
         try
         {
             storage.InsertFile(insertData.Content, insertData.Metadata, insertData.EnableOverwrite, accessPolicy);
+            FileState? state = storage.GetFileState(insertData.Metadata.Id, accessPolicy);
+            if (state is not null)
+            {
+                fulltext.Index(new[] { state });
+            }
         } 
         catch (NkodSk.RdfFileStorage.UnauthorizedAccessException)
         {
@@ -253,7 +258,7 @@ app.MapPost("/files/stream", [Authorize] async (IFileStorage storage, IFileStora
     return Results.Ok();
 });
 
-app.MapPost("/files/metadata", [Authorize] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromBody] FileMetadata metadata) =>
+app.MapPost("/files/metadata", [Authorize] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] FulltextStorageMap fulltext, [FromBody] FileMetadata metadata) =>
 {
     if (metadata is null)
     {
@@ -263,6 +268,11 @@ app.MapPost("/files/metadata", [Authorize] (IFileStorage storage, IFileStorageAc
     try
     {
         storage.UpdateMetadata(metadata, accessPolicy);
+        FileState? state = storage.GetFileState(metadata.Id, accessPolicy);
+        if (state is not null)
+        {
+            fulltext.Index(new[] { state });
+        }
     }
     catch (NkodSk.RdfFileStorage.UnauthorizedAccessException)
     {
@@ -272,11 +282,12 @@ app.MapPost("/files/metadata", [Authorize] (IFileStorage storage, IFileStorageAc
     return Results.Ok();
 });
 
-app.MapDelete("/files/{id}", [Authorize] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, Guid id) =>
+app.MapDelete("/files/{id}", [Authorize] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] FulltextStorageMap fulltext, Guid id) =>
 {
     try
     {
         storage.DeleteFile(id, accessPolicy);
+        fulltext.RemoveFromIndex(id);
     }
     catch (NkodSk.RdfFileStorage.UnauthorizedAccessException)
     {

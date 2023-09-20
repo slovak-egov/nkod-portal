@@ -77,7 +77,7 @@ namespace NkodSk.RdfFulltextIndex
         {
             foreach (FileState state in states)
             {
-                if (state.Content is not null)
+                if (state.Metadata.IsPublic && state.Content is not null)
                 {
                     RdfDocument rdfDocument = RdfDocument.Load(state.Content);
 
@@ -144,7 +144,24 @@ namespace NkodSk.RdfFulltextIndex
                         indexWriter.AddDocument(facetsConfig.Build(taxonomyWriter, doc));
                     }
                 }
+                else
+                {
+                    indexWriter.DeleteDocuments(new Term("id", state.Metadata.Id.ToString()));
+                }
             }
+
+            indexWriter.Commit();
+
+            indexReader = indexWriter.GetReader(true);
+            indexSearcher = new IndexSearcher(indexReader);
+
+            taxonomyWriter.Commit();
+            taxonomyReader = new DirectoryTaxonomyReader(taxonomyWriter);
+        }
+
+        public void RemoveFromIndex(Guid id)
+        {
+            indexWriter.DeleteDocuments(new Term("id", id.ToString()));
 
             indexWriter.Commit();
 

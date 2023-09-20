@@ -5,7 +5,7 @@ import { useSearchParams } from "react-router-dom";
 
 const baseUrl = process.env.REACT_APP_API_URL;
 
-let curentToken: string|null = null;
+let curentToken: string|null = process.env.REACT_APP_TOKEN ?? null;
 
 export const knownCodelists = {
     'dataset' : {
@@ -408,14 +408,19 @@ export async function searchCodelistItem(codelistId: string, query: string) {
 }
 
 export async function getCodelistItem(codelistId: string, id: string) {
-    const response: AxiosResponse<CodelistValue> = await axios.get(baseUrl + 'codelists/item', {
-        params: {
-            key: codelistId,
-            id: id
+    try {
+        const response: AxiosResponse<CodelistValue> = await axios.get(baseUrl + 'codelists/item', {
+            params: {
+                key: codelistId,
+                id: id
+            }
+        });
+    } catch (error) {
+        if (error instanceof AxiosError) {
+            if (error.response?.status === 404) {
+                return null;
+            }
         }
-    });
-    if (response.status === 200) {
-        return response.data;
     }
     return null;
 }
@@ -435,7 +440,7 @@ export function useEntityAdd<T>(url: string, initialValue: T) {
                     'Authorization': 'Bearer ' + curentToken
                 } : {}
             });
-            setErrors(response.data.errors);
+            setErrors(response.data.errors ?? {});
             setSaveResult(response.data);
             return response.data;
         } catch (err) {

@@ -62,11 +62,11 @@ namespace NkodSk.Abstractions
             set => SetUriNode("dct:accrualPeriodicity", value);
         }
 
-        public IDictionary<string, List<string>> Keywords => GetTextsFromUriNode("dcat:keyword");
+        public Dictionary<string, List<string>> Keywords => GetTextsFromUriNode("dcat:keyword");
 
         public IEnumerable<string> GetKeywords(string language) => GetTextsFromUriNode("dcat:keyword", language);
 
-        public void SetKeywords(Dictionary<string, IEnumerable<string>> texts) => SetTexts("dcat:keyword", texts);
+        public void SetKeywords(Dictionary<string, List<string>> texts) => SetTexts("dcat:keyword", texts);
 
         public IEnumerable<Uri> Type
         {

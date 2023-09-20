@@ -16,7 +16,7 @@ namespace WebApi
 
         public string? AccrualPeriodicity { get; set; }
 
-        public Dictionary<string, IEnumerable<string>>? Keywords { get; set; }
+        public Dictionary<string, List<string>>? Keywords { get; set; }
 
         public List<string>? Type { get; set; }
 
@@ -78,7 +78,7 @@ namespace WebApi
             dataset.SetTitle(Name ?? new Dictionary<string, string>());
             dataset.SetDescription(Description ?? new Dictionary<string, string>());
             dataset.Publisher = publisher;
-            dataset.SetKeywords(Keywords ?? new Dictionary<string, IEnumerable<string>>());
+            dataset.SetKeywords(Keywords ?? new Dictionary<string, List<string>>());
             dataset.AccrualPeriodicity = AccrualPeriodicity is not null ? new Uri(AccrualPeriodicity) : null;
             dataset.ShouldBePublic = IsPublic;
             dataset.Themes = (Themes ?? new List<string>()).Union(EuroVocThemes ?? new List<string>()).Select(t => new Uri(t, UriKind.Absolute));

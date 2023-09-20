@@ -93,7 +93,7 @@ namespace NkodSk.Abstractions
             return Enumerable.Empty<ILiteralNode>();
         }
 
-        public IDictionary<string, List<string>> GetTextsFromUriNode(string name)
+        public Dictionary<string, List<string>> GetTextsFromUriNode(string name)
         {
             Dictionary<string, List<string>> values = new Dictionary<string, List<string>>(StringComparer.CurrentCultureIgnoreCase);
             foreach (ILiteralNode node in GetLiteralNodesFromUriNode(name))
@@ -156,7 +156,7 @@ namespace NkodSk.Abstractions
             }
         }
 
-        public void SetTexts(string name, Dictionary<string, IEnumerable<string>> values)
+        public void SetTexts(string name, Dictionary<string, List<string>> values)
         {
             RemoveUriNodes(name);
             foreach (string language in values.Keys)

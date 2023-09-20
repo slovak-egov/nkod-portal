@@ -97,7 +97,7 @@ namespace DocumentStorageClient
 
         public async Task DeleteFile(Guid id)
         {
-            HttpClient client = httpClientFactory.CreateClient(HttpClientName);
+            HttpClient client = CreateClient();
             HttpResponseMessage response = await client.DeleteAsync($"files/{id}").ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
         }
@@ -152,7 +152,7 @@ namespace DocumentStorageClient
         public async Task UpdateMetadata(FileMetadata metadata)
         {
             HttpClient client = CreateClient();
-            HttpResponseMessage response = await client.PostAsync($"files/{metadata.Id}", JsonContent.Create(metadata)).ConfigureAwait(false);
+            HttpResponseMessage response = await client.PostAsync($"files/metadata", JsonContent.Create(metadata)).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
         }
     }

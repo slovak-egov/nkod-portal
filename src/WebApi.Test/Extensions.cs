@@ -57,9 +57,9 @@ namespace WebApi.Test
             }
         }
 
-        public static void AssertTextsEqual(Dictionary<string, IEnumerable<string>>? expected, IDictionary<string, List<string>>? actual)
+        public static void AssertTextsEqual(Dictionary<string, List<string>>? expected, Dictionary<string, List<string>>? actual)
         {
-            expected ??= new Dictionary<string, IEnumerable<string>>();
+            expected ??= new Dictionary<string, List<string>>();
             actual ??= new Dictionary<string, List<string>>();
             Assert.Equal(expected.Count, actual.Count);
             foreach ((string key, IEnumerable<string> values) in expected)

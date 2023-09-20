@@ -50,7 +50,7 @@ namespace WebApi.Test
             dataset.SetTitle(names);
             dataset.Type = type is not null ? new[] { type } : Enumerable.Empty<Uri>();
             dataset.Publisher = new Uri(publisher);
-            dataset.SetKeywords(new Dictionary<string, IEnumerable<string>> { { "sk", keywordsSk ?? Array.Empty<string>() }, { "en", keywordsEn ?? Array.Empty<string>() } });
+            dataset.SetKeywords(new Dictionary<string, List<string>> { { "sk", keywordsSk?.ToList() ?? new List<string>() }, { "en", keywordsEn?.ToList() ?? new List<string>() } });
 
             FileMetadata metatdata = dataset.UpdateMetadata(true);
             if (parent is not null)
@@ -153,7 +153,7 @@ namespace WebApi.Test
                 new Uri("http://publications.europa.eu/resource/dataset/eurovoc/1"), 
                 new Uri("http://publications.europa.eu/resource/dataset/eurovoc/2")};
             dataset.AccrualPeriodicity = new Uri("http://publications.europa.eu/resource/dataset/frequency/1");
-            dataset.SetKeywords(new Dictionary<string, IEnumerable<string>> { { "sk", new[] { "keyword1Sk", "keyword2Sk" } }, { "en", new[] { "keyword1En", "keyword2En" } } });
+            dataset.SetKeywords(new Dictionary<string, List<string>> { { "sk", new List<string> { "keyword1Sk", "keyword2Sk" } }, { "en", new List<string> { "keyword1En", "keyword2En" } } });
             dataset.Type = new[] { new Uri("https://data.gov.sk/set/codelist/dataset-type/1") };
             dataset.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") };
             dataset.SetTemporal(new DateOnly(2023, 8, 16), new DateOnly(2023, 9, 10));

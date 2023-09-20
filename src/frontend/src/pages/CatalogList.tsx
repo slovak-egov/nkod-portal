@@ -15,7 +15,7 @@ import { useEffect } from "react";
 
 export default function CatalogList()
 {
-    const [catalogs, query, setQueryParameters, loading, error, refresh] = useLocalCatalogs({pageSize: 100, page: 0});
+    const [catalogs, query, setQueryParameters, loading, error, refresh] = useLocalCatalogs({pageSize: 20, page: 0});
     const navigate = useNavigate();
     const [userInfo] = useUserInfo();
 
@@ -64,7 +64,7 @@ export default function CatalogList()
                             {c.isPublic ? 'publikovaný' : 'nepublikovaný'}
                         </TableCell>
                         <TableCell style={{whiteSpace: 'nowrap'}}>
-                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/lokalne-katalogy/' + c.id)}>Upraviť</Button>
+                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/lokalne-katalogy/upravit/' + c.id)}>Upraviť</Button>
                             <Button className="idsk-button idsk-button--secondary" onClick={async () => {
                                     if (await removeLocalCatalog(c.id)) {
                                         refresh();

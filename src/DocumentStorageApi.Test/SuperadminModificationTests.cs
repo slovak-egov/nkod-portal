@@ -10,6 +10,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.HttpResults;
+using System.Reflection.Metadata;
 
 namespace DocumentStorageApi.Test
 {
@@ -28,7 +29,7 @@ namespace DocumentStorageApi.Test
             using Storage storage = new Storage(fixture.GetStoragePath());
 
             FileMetadata metadata = new FileMetadata(Guid.NewGuid(), "Test", FileType.DatasetRegistration, null, "http://localhost/publisher1", true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
-            string newContent = "new-content";
+            string newContent = $"<http://example.com/> <http://example.com/title> \"\"@sk .";
             InsertModel model = new InsertModel(newContent, metadata, false);
 
             using DocumentStorageApplicationFactory applicationFactory = new DocumentStorageApplicationFactory(storage);
@@ -49,7 +50,7 @@ namespace DocumentStorageApi.Test
             using Storage storage = new Storage(fixture.GetStoragePath());
 
             FileMetadata metadata = new FileMetadata(Guid.NewGuid(), "Test", FileType.DatasetRegistration, null, null, true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
-            string newContent = "new-content";
+            string newContent = $"<http://example.com/> <http://example.com/title> \"\"@sk .";
             InsertModel model = new InsertModel(newContent, metadata, false);
 
             using DocumentStorageApplicationFactory applicationFactory = new DocumentStorageApplicationFactory(storage);
@@ -70,7 +71,7 @@ namespace DocumentStorageApi.Test
             using Storage storage = new Storage(fixture.GetStoragePath());
 
             FileState state = fixture.ExistingStates.First(s => !s.Metadata.IsPublic);
-            string newContent = "new-content";
+            string newContent = $"<http://example.com/> <http://example.com/title> \"\"@sk .";
             InsertModel model = new InsertModel(newContent, state.Metadata, true);
 
             using DocumentStorageApplicationFactory applicationFactory = new DocumentStorageApplicationFactory(storage);
@@ -91,7 +92,7 @@ namespace DocumentStorageApi.Test
             using Storage storage = new Storage(fixture.GetStoragePath());
 
             FileState state = fixture.ExistingStates.First(s => !s.Metadata.IsPublic && s.Metadata.Publisher is null);
-            string newContent = "new-content";
+            string newContent = $"<http://example.com/> <http://example.com/title> \"\"@sk .";
             InsertModel model = new InsertModel(newContent, state.Metadata, true);
 
             using DocumentStorageApplicationFactory applicationFactory = new DocumentStorageApplicationFactory(storage);
@@ -112,7 +113,7 @@ namespace DocumentStorageApi.Test
             using Storage storage = new Storage(fixture.GetStoragePath());
 
             FileState state = fixture.ExistingStates.First(s => !s.Metadata.IsPublic);
-            string newContent = "new-content";
+            string newContent = $"<http://example.com/> <http://example.com/title> \"\"@sk .";
             FileMetadata newMetadata = state.Metadata with { Publisher = "new-publisher" };
             InsertModel model = new InsertModel(newContent, newMetadata, true);
 
@@ -134,7 +135,7 @@ namespace DocumentStorageApi.Test
             using Storage storage = new Storage(fixture.GetStoragePath());
 
             FileState state = fixture.ExistingStates.First(s => !s.Metadata.IsPublic && s.Metadata.Publisher is null);
-            string newContent = "new-content";
+            string newContent = $"<http://example.com/> <http://example.com/title> \"\"@sk .";
             FileMetadata newMetadata = state.Metadata with { Publisher = "new-publisher" };
             InsertModel model = new InsertModel(newContent, newMetadata, true);
 

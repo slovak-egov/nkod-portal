@@ -195,7 +195,6 @@ FileStorageQuery MapQuery(AbstractQuery query, string language, bool allowAll = 
     FileStorageQuery storageQuery = new FileStorageQuery
     {
         QueryText = query.QueryText,
-        OnlyPublished = true,
         IncludeDependentFiles = true,
         SkipResults = pageSize.HasValue ? (page - 1) * pageSize.Value : 0,
         MaxResults = pageSize,

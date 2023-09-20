@@ -8,11 +8,12 @@ import ValidationSummary from "../components/ValidationSummary";
 import { DatasetForm } from "../components/DatasetForm";
 import Loading from "../components/Loading";
 import { LocalCatalogForm } from "../components/LocalCatalogForm";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { DistributionForm } from "../components/DistributionForm";
 
 const transformEntityForEdit = (entity: Distribution): DistributionInput => {
     return {
+        id: entity.id,
         datasetId: entity.datasetId,
         authorsWorkType: entity.termsOfUse?.authorsWorkType ?? null,
         originalDatabaseType: entity.termsOfUse?.originalDatabaseType ?? null,
@@ -37,6 +38,7 @@ export default function EditDistribution()
     const [inputs, distribution, loading, setDistribution, errors, saving, saveResult, save] = useDistributionEdit(transformEntityForEdit);
 
     const [userInfo] = useUserInfo();
+    const navigate = useNavigate();
 
     return <>
             <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam distribúcií', link: '/sprava/distribucie/' + datasetId}, {title: 'Upraviť distribúciu'}]} />
@@ -46,7 +48,7 @@ export default function EditDistribution()
                     {userInfo?.publisherView ? <p className="govuk-body nkod-publisher-name">
                     <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Poskytovateľ dát</span><br />
                         {userInfo.publisherView.name}
-                        
+
                     </p> : null}
 
                     {dataset ? <p className="govuk-body nkod-publisher-name">
@@ -62,7 +64,12 @@ export default function EditDistribution()
                     {
                         !loading && inputs ? <>
                         <DistributionForm distribution={inputs} setDistribution={setDistribution} errors={errors} userInfo={userInfo} />
-                        <Button style={{marginRight: '20px'}} onClick={save} disabled={saving}>
+                        <Button style={{marginRight: '20px'}} onClick={async () => {
+                        const result = await save();
+                        if (result?.success) {
+                            navigate('/sprava/distribucie/' + datasetId);
+                        }
+                    }} disabled={saving}>
                             Uložiť distribúciu
                         </Button></> : <Loading />
                     }

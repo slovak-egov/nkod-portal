@@ -66,6 +66,16 @@ export function DistributionForm(props: Props)
     const formatCodelist = codelists.find(c => c.id === knownCodelists.distribution.format);
     const mediaTypeCodelist = codelists.find(c => c.id === knownCodelists.distribution.mediaType);
 
+    useEffect(() => {
+        if (formatCodelist && formatCodelist.values.length > 0 && distribution.format === null) {
+            setDistribution({format: formatCodelist.values[0].id});
+        }
+
+        if (mediaTypeCodelist && mediaTypeCodelist.values.length > 0 && distribution.mediaType === null) {
+            setDistribution({mediaType: mediaTypeCodelist.values[0].id});
+        }
+    }, [formatCodelist, mediaTypeCodelist, distribution, setDistribution]);
+
     return <>
         {authorsWorkTypeCodelist ? <FormElementGroup label="Typ autorského diela" errorMessage={errors['authorsworktype']} element={id => <SelectElementItems<CodelistValue> 
             id={id} 
@@ -132,6 +142,22 @@ export function DistributionForm(props: Props)
             renderOption={v => v.label} 
             getValue={v => v.id} 
             onChange={v => {setDistribution({mediaType: v}) }} />} /> : null}
+
+        {mediaTypeCodelist ? <FormElementGroup label="Typ média kompresného formátu" errorMessage={errors['compressformat']} element={id => <SelectElementItems<CodelistValue> 
+            id={id} 
+            options={[{id: '', label: 'nie je'}, ...mediaTypeCodelist.values]} 
+            selectedValue={distribution.compressFormat ?? ''} 
+            renderOption={v => v.label} 
+            getValue={v => v.id}  
+            onChange={v => {setDistribution({compressFormat: v}) }} />} /> : null}
+
+        {mediaTypeCodelist ? <FormElementGroup label="Typ média balíčkovacieho formátu" errorMessage={errors['packageformat']} element={id => <SelectElementItems<CodelistValue> 
+            id={id} 
+            options={[{id: '', label: 'nie je'}, ...mediaTypeCodelist.values]} 
+            selectedValue={distribution.packageFormat ?? ''} 
+            renderOption={v => v.label} 
+            getValue={v => v.id} 
+            onChange={v => {setDistribution({packageFormat: v}) }} />} /> : null}
 
                 </>
 }

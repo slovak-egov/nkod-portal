@@ -8,10 +8,12 @@ import ValidationSummary from "../components/ValidationSummary";
 import { DatasetForm } from "../components/DatasetForm";
 import Loading from "../components/Loading";
 import { LocalCatalogForm } from "../components/LocalCatalogForm";
+import { useNavigate } from "react-router";
 
 const transformEntityForEdit = (entity: LocalCatalog): LocalCatalogInput => {
     return {
-        isPublic: true,
+        id: entity.id,
+        isPublic: entity.isPublic,
         name: {'sk': entity.name ?? ''},
         description: {'sk': entity.description ?? ''},
         contactName: {'sk': entity.contactPoint?.name ?? ''},
@@ -25,6 +27,7 @@ export default function EditCatalog()
     const [inputs, catalog, loading, setCatalog, errors, saving, saveResult, save] = useLocalCatalogEdit(transformEntityForEdit);
 
     const [userInfo] = useUserInfo();
+    const navigate = useNavigate();
 
     return <>
             <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam lokálnych katalógov', link: '/sprava/lokalne-katalógy'}, {title: 'Upraviť katalóg'}]} />
@@ -44,7 +47,12 @@ export default function EditCatalog()
                     {
                         !loading && inputs ? <>
                         <LocalCatalogForm catalog={inputs} setCatalog={setCatalog} errors={errors} userInfo={userInfo} />
-                        <Button style={{marginRight: '20px'}} onClick={save} disabled={saving}>
+                        <Button style={{marginRight: '20px'}} onClick={async () => {
+                        const result = await save();
+                        if (result?.success) {
+                            navigate('/sprava/lokalne-katalogy');
+                        }
+                    }} disabled={saving}>
                             Uložiť katalóg
                         </Button></> : <Loading />
                     }

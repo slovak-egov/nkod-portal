@@ -7,6 +7,7 @@ import Button from "../components/Button";
 import ValidationSummary from "../components/ValidationSummary";
 import { DatasetForm } from "../components/DatasetForm";
 import { LocalCatalogForm } from "../components/LocalCatalogForm";
+import { useNavigate } from "react-router";
 
 
 export default function AddCatalog()
@@ -21,6 +22,7 @@ export default function AddCatalog()
     });
 
     const [userInfo] = useUserInfo();
+    const navigate = useNavigate();
 
     return <>
             <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam lokálnych katalógov', link: '/sprava/lokalne-katalogy'}, {title: 'Nový katalóg'}]} />
@@ -39,7 +41,12 @@ export default function AddCatalog()
 
                     <LocalCatalogForm catalog={catalog} setCatalog={setCatalog} errors={errors} userInfo={userInfo} />
 
-                    <Button style={{marginRight: '20px'}} onClick={save} disabled={saving}>
+                    <Button style={{marginRight: '20px'}} onClick={async () => {
+                        const result = await save();
+                        if (result?.success) {
+                            navigate('/sprava/lokalne-katalogy');
+                        }
+                    }} disabled={saving}>
                         Uložiť katalóg
                     </Button>
                 </div>
