@@ -30,10 +30,10 @@ namespace WebApi
                 PersonalDataContainmentType = rdf.PersonalDataContainmentType
             };
 
-            view.AuthorsWorkTypeValue = await codelistProviderClient.MapCodelistValue("https://data.gov.sk/def/ontology/law/authorsWorkType", view.AuthorsWorkType?.ToString(), language);
-            view.OriginalDatabaseTypeValue = await codelistProviderClient.MapCodelistValue("https://data.gov.sk/def/ontology/law/originalDatabaseType", view.OriginalDatabaseType?.ToString(), language);
-            view.DatabaseProtectedBySpecialRightsTypeValue = await codelistProviderClient.MapCodelistValue("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType", view.DatabaseProtectedBySpecialRightsType?.ToString(), language);
-            view.PersonalDataContainmentTypeValue = await codelistProviderClient.MapCodelistValue("https://data.gov.sk/def/ontology/law/personalDataContainmentType", view.PersonalDataContainmentType?.ToString(), language);
+            view.AuthorsWorkTypeValue = await codelistProviderClient.MapCodelistValue(DcatDistribution.AuthorsWorkTypeCodelist, view.AuthorsWorkType?.ToString(), language);
+            view.OriginalDatabaseTypeValue = await codelistProviderClient.MapCodelistValue(DcatDistribution.OriginalDatabaseTypeCodelist, view.OriginalDatabaseType?.ToString(), language);
+            view.DatabaseProtectedBySpecialRightsTypeValue = await codelistProviderClient.MapCodelistValue(DcatDistribution.DatabaseProtectedBySpecialRightsTypeCodelist, view.DatabaseProtectedBySpecialRightsType?.ToString(), language);
+            view.PersonalDataContainmentTypeValue = await codelistProviderClient.MapCodelistValue(DcatDistribution.PersonalDataContainmentTypeCodelist, view.PersonalDataContainmentType?.ToString(), language);
 
             return view;
         }

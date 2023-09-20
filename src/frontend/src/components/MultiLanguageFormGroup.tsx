@@ -9,22 +9,22 @@ interface IProps
     hint?: string;
     languages: Language[]
     element: (id: string, language: Language) => ReactNode;
-    errorMessage?: string;
+    errorMessage?: {[id: string] : string};
 }
 
 export default function MultiLanguageFormGroup(props: IProps)
 {
     const id = useId();
 
-    return <div className={'govuk-form-group ' + (props.errorMessage ? 'govuk-form-group--error' : '')}>
+    return <div className={'govuk-form-group ' + (props.errorMessage && Object.keys(props.errorMessage).length > 0 ? 'govuk-form-group--error' : '')}>
         <GridRow>
             <GridColumn widthUnits={3} totalUnits={4}>
                 {props.languages.map(lang => <div key={lang.id}>
                     <label className="govuk-label" htmlFor={id}>
                         {props.label} ({lang.name})
                     </label>
-                    {props.hint && <span className="govuk-hint">{props.hint}</span>}
-                    {props.errorMessage && <span className="govuk-error-message"><span className="govuk-visually-hidden">Chyba: </span> {props.errorMessage}</span>}
+                    {props.hint ? <span className="govuk-hint">{props.hint}</span> : null}
+                    {props.errorMessage && props.errorMessage[lang.id] && props.errorMessage[lang.id] !== '' ? <span className="govuk-error-message"><span className="govuk-visually-hidden">Chyba: </span> {props.errorMessage[lang.id]}</span> : null}
                     {props.element(id, lang)}
                 </div>)}
             </GridColumn>

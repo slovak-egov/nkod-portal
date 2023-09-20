@@ -10,11 +10,18 @@ import PublicLocalCatalogList from './pages/PublicLocalCatalogList';
 import DetailLocalCatalog from './pages/DetailLocalCatalog';
 import PublicDatasetList from './pages/PublicDatasetList';
 import Alert from './components/Alert';
+import EditDataset from './pages/EditDataset';
+import DistributionList from './pages/DistributionList';
+import AddDistribution from './pages/AddDistribution';
+import CatalogList from './pages/CatalogList';
+import AddCatalog from './pages/AddCatalog';
+import EditCatalog from './pages/EditCatalog';
+import EditDistribution from './pages/EditDistribution';
 
 function App() {
     return <BrowserRouter>
       <Alert type='warning'>
-        Vývojová verzia Národného katalógu otvorených dát (20230913)
+        Vývojová verzia Národného katalógu otvorených dát (20230920)
       </Alert>
       <Header />
       <div className="govuk-width-container">
@@ -30,8 +37,18 @@ function App() {
                 <Route path="/lokalne-katalogy/:id" element={<DetailLocalCatalog />} />
                 <Route path="/lokalne-katalogy" element={<PublicLocalCatalogList />} />
 
-                <Route path="/sprava/datatsety" Component={DatasetList} />
+                <Route path="/sprava/datasety" Component={DatasetList} />
                 <Route path="/sprava/datasety/pridat" Component={AddDataset} />
+                <Route path="/sprava/datasety/upravit/:id" Component={EditDataset} />
+                
+                <Route path="/sprava/distribucie/:datasetId" Component={DistributionList} />
+                <Route path="/sprava/distribucie/:datasetId/pridat" Component={AddDistribution} />
+                <Route path="/sprava/distribucie/:datasetId/pridat" Component={AddDistribution} />
+                <Route path="/sprava/distribucie/:datasetId/upravit/:id" Component={EditDistribution} />
+
+                <Route path="/sprava/lokalne-katalogy" Component={CatalogList} />
+                <Route path="/sprava/lokalne-katalogy/pridat" Component={AddCatalog} />
+                <Route path="/sprava/lokalne-katalogy/upravit/:id" Component={EditCatalog} />
                 
                 
                 {/* <Route path="/kvalita-metadat" Component={Quality} />

@@ -1,8 +1,14 @@
 import { Link } from "react-router-dom";
 import profileImage from '../assets/images/header-web/profile.svg';
+import { useUserInfo } from "../client";
+import GridRow from "./GridRow";
+import IdSkModule from "./IdSkModule";
 
 export default function Header() {
-    return <header className="idsk-header-web " data-module="idsk-header-web">
+    const [ userInfo ] = useUserInfo();
+
+    return <header className="idsk-header-web ">
+        {/* <IdSkModule moduleType="idsk-header-web"> */}
         <div className="idsk-header-web__scrolling-wrapper">
             <div className="idsk-header-web__tricolor"></div>
             <div className="idsk-header-web__brand ">
@@ -164,10 +170,21 @@ export default function Header() {
                     Lokálne katalógy
                   </Link>
                 </li>
+                {userInfo?.publisher ? <><li className="idsk-header-web__nav-list-item">
+                    <Link className="govuk-link idsk-header-web__nav-list-item-link" to="/sprava/datasety"  title="Správa" aria-label="Rozbaliť Správa menu" aria-expanded="false"
+                        data-text-for-hide="Zavrieť Správa menu" data-text-for-show="Rozbaliť Správa menu">
+                        Správa datasetov
+                    </Link></li>
+                    <li className="idsk-header-web__nav-list-item">
+                    <Link className="govuk-link idsk-header-web__nav-list-item-link" to="/sprava/lokalne-katalogy"  title="Správa" aria-label="Rozbaliť Správa menu" aria-expanded="false"
+                        data-text-for-hide="Zavrieť Správa menu" data-text-for-show="Rozbaliť Správa menu">
+                        Správa katalógov
+                    </Link></li>
+                    </>
+                     : null}
             </ul>
         </nav>
       </div>
   </div></div></div>
-
     </header>
 }

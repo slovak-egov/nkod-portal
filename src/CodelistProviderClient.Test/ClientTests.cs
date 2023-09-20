@@ -1,6 +1,7 @@
 ﻿using Abstractions;
 using CodelistProvider.Test;
 using Newtonsoft.Json;
+using NkodSk.Abstractions;
 using NkodSk.RdfFileStorage;
 using System;
 using System.Collections.Generic;
@@ -42,7 +43,7 @@ namespace CodelistProviderClient.Test
             HttpClient httpClient = applicationFactory.CreateClient();
             DefaultHttpClientFactory httpClientFactory = new DefaultHttpClientFactory(httpClient);
             CodelistProviderClient client = new CodelistProviderClient(httpClientFactory);
-            Codelist? list = await client.GetCodelist("http://publications.europa.eu/resource/authority/frequency");
+            Codelist? list = await client.GetCodelist(DcatDataset.AccrualPeriodicityCodelist);
             Assert.NotNull(list);
         }
 

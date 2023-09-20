@@ -18,7 +18,7 @@ namespace WebApi
 
         public Dictionary<string, IEnumerable<string>>? Keywords { get; set; }
 
-        public string? Type { get; set; }
+        public List<string>? Type { get; set; }
 
         public List<string>? Spatial { get; set; }
 
@@ -54,18 +54,18 @@ namespace WebApi
 
             results.ValidateLanguageTexts(nameof(Name), Name, languages, true);
             results.ValidateLanguageTexts(nameof(Description), Description, languages, true);
-            await results.ValidateRequiredCodelistValues(nameof(Themes), Themes, "http://publications.europa.eu/resource/dataset/data-theme", codelistProvider);
-            await results.ValidateRequiredCodelistValue(nameof(AccrualPeriodicity), AccrualPeriodicity, "http://publications.europa.eu/resource/dataset/frequency", codelistProvider);
+            await results.ValidateRequiredCodelistValues(nameof(Themes), Themes, DcatDataset.ThemeCodelist, codelistProvider);
+            await results.ValidateRequiredCodelistValue(nameof(AccrualPeriodicity), AccrualPeriodicity, DcatDataset.AccrualPeriodicityCodelist, codelistProvider);
             results.ValidateKeywords(nameof(Keywords), Keywords, languages);
-            await results.ValidateCodelistValue(nameof(Type), Type, "https://data.gov.sk/set/codelist/dataset-type", codelistProvider);
-            await results.ValidateCodelistValues(nameof(Spatial), Spatial, "http://publications.europa.eu/resource/dataset/country", codelistProvider);
+            await results.ValidateCodelistValues(nameof(Type), Type, DcatDataset.TypeCodelist, codelistProvider);
+            await results.ValidateCodelistValues(nameof(Spatial), Spatial, DcatDataset.SpatialCodelist, codelistProvider);
             results.ValidateDate(nameof(StartDate), StartDate);
             results.ValidateDate(nameof(EndDate), EndDate);
             results.ValidateLanguageTexts(nameof(ContactName), ContactName, languages, false);
             results.ValidateEmail(nameof(ContactEmail), ContactEmail);
             results.ValidateUrl(nameof(Documentation), Documentation, false);
             results.ValidateUrl(nameof(Specification), Specification, false);
-            await results.ValidateCodelistValues(nameof(EuroVocThemes), EuroVocThemes, "http://publications.europa.eu/resource/dataset/eurovoc", codelistProvider);
+            await results.ValidateCodelistValues(nameof(EuroVocThemes), EuroVocThemes, DcatDataset.EuroVocThemeCodelist, codelistProvider);
             results.ValidateNumber(nameof(SpatialResolutionInMeters), SpatialResolutionInMeters);
             results.ValidateTemporalResolution(nameof(TemporalResolution), TemporalResolution);
             await results.ValidateDataset(nameof(IsPartOf), IsPartOf, publisher, documentStorage);
@@ -82,7 +82,7 @@ namespace WebApi
             dataset.AccrualPeriodicity = AccrualPeriodicity is not null ? new Uri(AccrualPeriodicity) : null;
             dataset.ShouldBePublic = IsPublic;
             dataset.Themes = (Themes ?? new List<string>()).Union(EuroVocThemes ?? new List<string>()).Select(t => new Uri(t, UriKind.Absolute));
-            dataset.Type = Type is not null ? new Uri(Type) : null;
+            dataset.Type = (Type ?? new List<string>()).Select(s => new Uri(s, UriKind.Absolute));
             dataset.Spatial = (Spatial ?? new List<string>()).Select(s => new Uri(s, UriKind.Absolute));
             dataset.SetTemporal(
                 StartDate is not null ? DateOnly.Parse(StartDate, System.Globalization.CultureInfo.CurrentCulture) : null,

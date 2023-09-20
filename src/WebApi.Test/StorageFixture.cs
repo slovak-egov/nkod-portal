@@ -48,7 +48,7 @@ namespace WebApi.Test
                 names["en"] = nameEn;
             }
             dataset.SetTitle(names);
-            dataset.Type = type;
+            dataset.Type = type is not null ? new[] { type } : Enumerable.Empty<Uri>();
             dataset.Publisher = new Uri(publisher);
             dataset.SetKeywords(new Dictionary<string, IEnumerable<string>> { { "sk", keywordsSk ?? Array.Empty<string>() }, { "en", keywordsEn ?? Array.Empty<string>() } });
 
@@ -154,7 +154,7 @@ namespace WebApi.Test
                 new Uri("http://publications.europa.eu/resource/dataset/eurovoc/2")};
             dataset.AccrualPeriodicity = new Uri("http://publications.europa.eu/resource/dataset/frequency/1");
             dataset.SetKeywords(new Dictionary<string, IEnumerable<string>> { { "sk", new[] { "keyword1Sk", "keyword2Sk" } }, { "en", new[] { "keyword1En", "keyword2En" } } });
-            dataset.Type = new Uri("https://data.gov.sk/set/codelist/dataset-type/1");
+            dataset.Type = new[] { new Uri("https://data.gov.sk/set/codelist/dataset-type/1") };
             dataset.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") };
             dataset.SetTemporal(new DateOnly(2023, 8, 16), new DateOnly(2023, 9, 10));
             dataset.SetContactPoint(new LanguageDependedTexts { { "sk", "nameSk" }, { "en", "nameEn" } }, "test@example.com");
@@ -222,25 +222,25 @@ namespace WebApi.Test
 
         public void CreateDatasetCodelists()
         {
-            CreateCodelistFile("http://publications.europa.eu/resource/dataset/data-theme", new Dictionary<string, LanguageDependedTexts>
+            CreateCodelistFile(DcatDataset.ThemeCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "http://publications.europa.eu/resource/dataset/data-theme/1", new LanguageDependedTexts{ { "sk", "theme1sk" }, { "en", "theme1en" } } },
                 { "http://publications.europa.eu/resource/dataset/data-theme/2", new LanguageDependedTexts{ { "sk", "theme2sk" }, { "en", "theme2en" } } }
             });
-            CreateCodelistFile("http://publications.europa.eu/resource/dataset/frequency", new Dictionary<string, LanguageDependedTexts>
+            CreateCodelistFile(DcatDataset.AccrualPeriodicityCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "http://publications.europa.eu/resource/dataset/frequency/1", new LanguageDependedTexts{ { "sk", "frequency1sk" }, { "en", "frequency1en" } } }
             });
-            CreateCodelistFile("https://data.gov.sk/set/codelist/dataset-type", new Dictionary<string, LanguageDependedTexts>
+            CreateCodelistFile(DcatDataset.TypeCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "https://data.gov.sk/set/codelist/dataset-type/1", new LanguageDependedTexts{ { "sk", "type1sk" }, { "en", "type1en" } } }
             });
-            CreateCodelistFile("http://publications.europa.eu/resource/dataset/country", new Dictionary<string, LanguageDependedTexts>
+            CreateCodelistFile(DcatDataset.SpatialCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "http://publications.europa.eu/resource/dataset/country/1", new LanguageDependedTexts{ { "sk", "country1sk" }, { "en", "country1en" } } },
                 { "http://publications.europa.eu/resource/dataset/country/2", new LanguageDependedTexts{ { "sk", "country2sk" }, { "en", "country2en" } } }
             });
-            CreateCodelistFile("http://publications.europa.eu/resource/dataset/eurovoc", new Dictionary<string, LanguageDependedTexts>
+            CreateCodelistFile(DcatDataset.EuroVocThemeCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "http://publications.europa.eu/resource/dataset/eurovoc/1", new LanguageDependedTexts{ { "sk", "eurovoc1sk" }, { "en", "eurovoc1en" } } },
                 { "http://publications.europa.eu/resource/dataset/eurovoc/2", new LanguageDependedTexts{ { "sk", "eurovoc2sk" }, { "en", "eurovoc2en" } } }
@@ -249,27 +249,27 @@ namespace WebApi.Test
 
         public void CreateDistributionCodelists()
         {
-            CreateCodelistFile("https://data.gov.sk/def/ontology/law/authorsWorkType", new Dictionary<string, LanguageDependedTexts>
+            CreateCodelistFile(DcatDistribution.AuthorsWorkTypeCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "https://data.gov.sk/def/ontology/law/authorsWorkType/1", new LanguageDependedTexts{ { "sk", "work1sk" }, { "en", "work1en" } } },
             });
-            CreateCodelistFile("https://data.gov.sk/def/ontology/law/originalDatabaseType", new Dictionary<string, LanguageDependedTexts>
+            CreateCodelistFile(DcatDistribution.OriginalDatabaseTypeCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "https://data.gov.sk/def/ontology/law/originalDatabaseType/1", new LanguageDependedTexts{ { "sk", "type1sk" }, { "en", "type1en" } } }
             });
-            CreateCodelistFile("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType", new Dictionary<string, LanguageDependedTexts>
+            CreateCodelistFile(DcatDistribution.DatabaseProtectedBySpecialRightsTypeCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1", new LanguageDependedTexts{ { "sk", "rights1sk" }, { "en", "rights1en" } } }
             });
-            CreateCodelistFile("https://data.gov.sk/def/ontology/law/personalDataContainmentType", new Dictionary<string, LanguageDependedTexts>
+            CreateCodelistFile(DcatDistribution.PersonalDataContainmentTypeCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "https://data.gov.sk/def/ontology/law/personalDataContainmentType/1", new LanguageDependedTexts{ { "sk", "personal1sk" }, { "en", "personal1en" } } },
             });
-            CreateCodelistFile("http://publications.europa.eu/resource/dataset/file-type", new Dictionary<string, LanguageDependedTexts>
+            CreateCodelistFile(DcatDistribution.FormatCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "http://publications.europa.eu/resource/dataset/file-type/1", new LanguageDependedTexts{ { "sk", "fileType1sk" }, { "en", "fileType1en" } } },
             });
-            CreateCodelistFile("http://www.iana.org/assignments/media-types", new Dictionary<string, LanguageDependedTexts>
+            CreateCodelistFile(DcatDistribution.MediaTypeCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "http://www.iana.org/assignments/media-types/text/csv", new LanguageDependedTexts{ { "sk", "CSV" }, { "en", "CSV" } } },
                 { "http://www.iana.org/assignments/media-types/application/zip", new LanguageDependedTexts{ { "sk", "ZIP" }, { "en", "ZIP" } } },

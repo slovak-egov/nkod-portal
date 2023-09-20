@@ -15,7 +15,18 @@ namespace WebApi
 
         public string? Publisher => httpContextAccessor.HttpContext?.User.FindFirstValue("Publisher");
 
-        public string? Token => httpContextAccessor.HttpContext?.Request.Headers.Authorization.FirstOrDefault();
+        public string? Token
+        {
+            get
+            {
+                string? token = httpContextAccessor.HttpContext?.Request.Headers.Authorization.FirstOrDefault();
+                if (!string.IsNullOrEmpty(token) && token.StartsWith("Bearer "))
+                {
+                    return token.Substring(7);
+                }
+                return null;
+            }
+        }
 
         public bool HasRole(string role)
         {

@@ -27,6 +27,7 @@ namespace WebApi
             LocalCatalogView view = new LocalCatalogView
             {
                 Id = metadata.Id,
+                IsPublic = metadata.IsPublic,
                 Name = catalogRdf.GetTitle(language),
                 Description = catalogRdf.GetDescription(language),
                 PublisherId = metadata.Publisher,

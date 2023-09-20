@@ -404,7 +404,7 @@ app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServi
                     DcatDistribution? distributionRdf = dependedState.Content is not null ? DcatDistribution.Parse(dependedState.Content) : null;
                     if (distributionRdf is not null)
                     {
-                        DistributionView distributionView = await DistributionView.MapFromRdf(dependedState.Metadata.Id, distributionRdf, codelistProviderClient, language);
+                        DistributionView distributionView = await DistributionView.MapFromRdf(dependedState.Metadata.Id, fileState.Metadata.Id, distributionRdf, codelistProviderClient, language);
                         datasetView.Distributions.Add(distributionView);
                     }
                 }
@@ -424,6 +424,34 @@ app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServi
         if (view.PublisherId is not null && publishers.TryGetValue(view.PublisherId, out PublisherView? publisher))
         {
             view.Publisher = publisher;
+        }
+    }
+
+    return response;
+});
+
+app.MapPost("/distributions/search", async ([FromBody] DatasetQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient) =>
+{
+    string language = query.Language ?? "sk";
+    FileStorageResponse storageResponse = await GetStorageResponse(query, language, q =>
+    {
+        q.OnlyTypes = new List<FileType> { FileType.DistributionRegistration };
+        return q;
+    }, client).ConfigureAwait(false);
+    AbstractResponse<DistributionView> response = new AbstractResponse<DistributionView>
+    {
+        TotalCount = storageResponse.TotalCount,
+        Facets = storageResponse.Facets
+    };
+
+    foreach (FileState fileState in storageResponse.Files)
+    {
+        DcatDistribution? distributionRdf = fileState.Content is not null ? DcatDistribution.Parse(fileState.Content) : null;
+        if (distributionRdf is not null)
+        {
+            DistributionView view = await DistributionView.MapFromRdf(fileState.Metadata.Id, fileState.Metadata.ParentFile, distributionRdf, codelistProviderClient, language).ConfigureAwait(false);
+
+            response.Items.Add(view);
         }
     }
 
@@ -489,8 +517,42 @@ app.MapGet("/codelists", async ([FromQuery(Name = "keys[]")] string[] keys, [Fro
             {
                 values.Add(new CodelistItemView(item.Id, item.GetCodelistValueLabel(language)));
             }
+            values.Sort((a, b) => StringComparer.CurrentCultureIgnoreCase.Compare(a.Label, b.Label));
             codelists.Add(new CodelistView(codelist.Id, codelist.GetLabel(language), values));
         }
+    }
+    return codelists;
+});
+
+app.MapGet("/codelists/item", async (string key, string id, [FromServices] ICodelistProviderClient codelistProviderClient) =>
+{
+    string language = "sk";
+    CodelistItem? item = await codelistProviderClient.GetCodelistItem(key, id).ConfigureAwait(false);
+    if (item is not null)
+    {
+        return Results.Ok(new CodelistItemView(item.Id, item.GetCodelistValueLabel(language)));
+    }
+    return Results.NotFound();
+});
+
+app.MapPost("/codelists/search", async ([FromQuery] string key, [FromQuery] string query, [FromServices] ICodelistProviderClient codelistProviderClient) =>
+{
+    string language = "sk";
+    List<CodelistView> codelists = new List<CodelistView>();
+    Codelist? codelist = await codelistProviderClient.GetCodelist(key).ConfigureAwait(false);
+    if (codelist is not null)
+    {
+        List<CodelistItemView> values = new List<CodelistItemView>(codelist.Items.Count);
+        foreach (CodelistItem item in codelist.Items.Values)
+        {
+            string label = item.GetCodelistValueLabel(language);
+            if (label.Contains(query))
+            {
+                values.Add(new CodelistItemView(item.Id, label));
+            }
+        }
+        values.Sort((a, b) => StringComparer.CurrentCultureIgnoreCase.Compare(a.Label, b.Label));
+        codelists.Add(new CodelistView(codelist.Id, codelist.GetLabel(language), values));
     }
     return codelists;
 });
@@ -992,9 +1054,20 @@ app.MapDelete("publishers", [Authorize] async ([FromQuery] string? id, [FromServ
     }
 });
 
-app.MapPost("user-info", [Authorize] async ([FromServices] IIdentityAccessManagementClient client) =>
+app.MapPost("user-info", [Authorize] async ([FromServices] IDocumentStorageClient documentStorageClient, ClaimsPrincipal user) =>
 {
-    return new UserInfo();
+    string? publisherId = user.FindFirst("Publisher")?.Value;
+    PublisherView? publisherView = null;
+    if (!string.IsNullOrEmpty(publisherId))
+    {
+       Dictionary<string, PublisherView> publishers = await FetchPublishers(documentStorageClient, new[] { publisherId }, "sk");
+       publishers.TryGetValue(publisherId, out publisherView);
+    }
+    return new WebApi.UserInfo
+    {
+        Publisher = publisherId,
+        PublisherView = publisherView
+    };
 });
 
 app.MapPost("login", [Authorize] async ([FromServices] IIdentityAccessManagementClient client) =>
@@ -1019,7 +1092,7 @@ app.MapPut("/codelists", [Authorize] async ([FromServices] IDocumentStorageClien
 
 app.MapGet("/users", [Authorize] async ([FromServices] IIdentityAccessManagementClient client) =>
 {
-    return new List<UserInfo>();
+    return new List<WebApi.UserInfo>();
 });
 
 app.MapPost("/users", [Authorize] async ([FromServices] IIdentityAccessManagementClient client, NewUserInput input) =>

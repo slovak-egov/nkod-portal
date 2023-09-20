@@ -12,6 +12,16 @@ namespace NkodSk.Abstractions
 {
     public class DcatDataset : RdfObject
     {
+        public const string AccrualPeriodicityCodelist = "http://publications.europa.eu/resource/authority/frequency";
+
+        public const string ThemeCodelist = "http://publications.europa.eu/resource/authority/data-theme";
+
+        public const string TypeCodelist = "https://data.gov.sk/set/codelist/dataset-type";
+
+        public const string SpatialCodelist = "http://publications.europa.eu/resource/authority/place";
+
+        public const string EuroVocThemeCodelist = "http://eurovoc.europa.eu/100141";
+
         public DcatDataset(IGraph graph, IUriNode node) : base(graph, node)
         {
         }
@@ -58,10 +68,10 @@ namespace NkodSk.Abstractions
 
         public void SetKeywords(Dictionary<string, IEnumerable<string>> texts) => SetTexts("dcat:keyword", texts);
 
-        public Uri? Type
+        public IEnumerable<Uri> Type
         {
-            get => GetUriFromUriNode("dct:type");
-            set => SetUriNode("dct:type", value);
+            get => GetUrisFromUriNode("dct:type");
+            set => SetUriNodes("dct:type", value);
         }
 
         public IEnumerable<Uri> Spatial
@@ -195,11 +205,7 @@ namespace NkodSk.Abstractions
             Dictionary<string, string[]> values = new Dictionary<string, string[]>();
             isPublic = isPublic && ShouldBePublic;
 
-            Uri? type = Type;
-            if (type is not null)
-            {
-                values["https://data.gov.sk/set/codelist/dataset-type"] = new[] { type.ToString() };
-            }
+            values["https://data.gov.sk/set/codelist/dataset-type"] = Type.Select(v => v.ToString()).ToArray();
 
             foreach ((string language, List<string> texts) in Keywords)
             {

@@ -170,11 +170,11 @@ export default function SearchResults(props: Props) {
                   options={props.orderOptions}
                   renderOption={(e) => e.name}
                   getValue={(e) => e.value}
-                  selectedOption={
-                    props.orderOptions.find((p) => p.value === props.query.orderBy) ??
-                    props.orderOptions[0]
+                  selectedValue={
+                    props.query.orderBy ??
+                    props.orderOptions[0].value
                   }
-                  onChange={(o) => props.setQueryParameters({ orderBy: o.value })}
+                  onChange={(o) => props.setQueryParameters({ orderBy: o })}
                 />
               )}
             />
@@ -243,8 +243,8 @@ export default function SearchResults(props: Props) {
                       options={[10, 20, 50]}
                       renderOption={(e) => e.toString()}
                       getValue={(e) => e.toString()}
-                      selectedOption={props.query.pageSize}
-                      onChange={(e) => props.setQueryParameters({ pageSize: e })}
+                      selectedValue={props.query.pageSize.toString()}
+                      onChange={(e) => props.setQueryParameters({ pageSize: Number(e) })}
                     />
                   </div>
                 </div>
@@ -259,11 +259,11 @@ export default function SearchResults(props: Props) {
                         options={props.orderOptions}
                         renderOption={(e) => e.name}
                         getValue={(e) => e.value}
-                        selectedOption={
-                            props.orderOptions.find((p) => p.value === props.query.orderBy) ??
-                            props.orderOptions[0]
+                        selectedValue={
+                            props.query.orderBy ??
+                            props.orderOptions[0].value
                         }
-                        onChange={(o) => props.setQueryParameters({ orderBy: o.value })}
+                        onChange={(o) => props.setQueryParameters({ orderBy: o })}
                         />
                     )}
                     />

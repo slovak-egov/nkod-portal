@@ -55,7 +55,7 @@ namespace WebApi.Test
                 input.Description["en"] = "TestNameEn";
                 input.Keywords["en"] = new[] { "TestKeyword1En" };
                                 
-                input.Type = "https://data.gov.sk/set/codelist/dataset-type/1";
+                input.Type = new List<string> { "https://data.gov.sk/set/codelist/dataset-type/1" };
                 input.Spatial = new List<string> { "http://publications.europa.eu/resource/dataset/country/1" };
                 input.StartDate = "2.8.2023";
                 input.EndDate = "14.8.2023";
@@ -93,7 +93,7 @@ namespace WebApi.Test
             Extensions.AssertTextsEqual(input.Keywords, dataset.Keywords);
             Assert.Equal(input.IsPublic, dataset.ShouldBePublic);
             Assert.Equivalent((input.Themes ?? new List<string>()).Union(input.EuroVocThemes ?? new List<string>()) , dataset.Themes.Select(v => v.ToString()));
-            Assert.Equal(input.Type, dataset.Type?.ToString());
+            Assert.Equal(input.Type ?? new List<string>(), dataset.Type.Select(u => u.ToString()));
             Assert.Equivalent(input.Spatial ?? new List<string>(), dataset.Spatial.Select(v => v.ToString()));
             Extensions.AssertDateEqual(input.StartDate, dataset.Temporal?.StartDate);
             Extensions.AssertDateEqual(input.EndDate, dataset.Temporal?.EndDate);

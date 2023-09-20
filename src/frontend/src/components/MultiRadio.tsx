@@ -23,8 +23,8 @@ export default function MultiRadio<T>(props: IProps<T>)
             <legend className="govuk-fieldset__legend">
                 {label}
             </legend>
-            {hint && <span className="govuk-hint">{hint}</span>}
-            {errorMessage && <span className="govuk-error-message"><span className="govuk-visually-hidden">Chyba: </span> {errorMessage}</span>}
+            {hint ? <span className="govuk-hint">{hint}</span> : null}
+            {errorMessage ? <span className="govuk-error-message"><span className="govuk-visually-hidden">Chyba: </span> {errorMessage}</span> : null}
             <div className={'govuk-radios ' + (inline === true ? 'govuk-radios--inline' : '')}>
                 {options.map((item, index) => <Radio label={renderOption(item)} key={index} checked={selectedOption ? getValue(selectedOption) === getValue(item) : false} {...inputProperties} onChange={e => {
                     if (e.target.checked)

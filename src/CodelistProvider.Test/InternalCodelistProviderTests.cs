@@ -56,7 +56,7 @@ namespace CodelistProvider.Test
             TestDocumentStorageClient storageClient = new TestDocumentStorageClient(storage, AnonymousAccessPolicy.Default);
             InternalCodelistProvider provider = new InternalCodelistProvider(storageClient, new DefaultLanguagesSource());
 
-            Codelist? list = await provider.GetCodelist("http://publications.europa.eu/resource/authority/frequency");
+            Codelist? list = await provider.GetCodelist(DcatDataset.AccrualPeriodicityCodelist);
             Assert.NotNull(list);
             Assert.NotEmpty(list.Id);
             Assert.NotEmpty(list.Labels);

@@ -11,6 +11,18 @@ namespace NkodSk.Abstractions
 {
     public class DcatDistribution : RdfObject
     {
+        public const string AuthorsWorkTypeCodelist = "https://data.gov.sk/set/codelist/authors-work-type";
+
+        public const string OriginalDatabaseTypeCodelist = "https://data.gov.sk/set/codelist/original-database-type";
+
+        public const string DatabaseProtectedBySpecialRightsTypeCodelist = "https://data.gov.sk/set/codelist/database-creator-special-rights-type";
+
+        public const string PersonalDataContainmentTypeCodelist = "https://data.gov.sk/set/codelist/personal-data-occurence-type";
+
+        public const string FormatCodelist = "http://publications.europa.eu/resource/authority/file-type";
+
+        public const string MediaTypeCodelist = "http://www.iana.org/assignments/media-types";
+
         public DcatDistribution(IGraph graph, IUriNode node) : base(graph, node)
         {
         }

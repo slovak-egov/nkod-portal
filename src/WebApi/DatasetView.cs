@@ -29,9 +29,9 @@ namespace WebApi
 
         public CodelistItemView[] KeywordValues { get; set; } = Array.Empty<CodelistItemView>();
 
-        public Uri? Type { get; set; }
+        public Uri[] Type { get; set; } = Array.Empty<Uri>();
 
-        public CodelistItemView? TypeValue { get; set; }
+        public CodelistItemView[] TypeValues { get; set; } = Array.Empty<CodelistItemView>();
 
         public Uri[] Spatial { get; set; } = Array.Empty<Uri>();
 
@@ -86,7 +86,7 @@ namespace WebApi
                 Themes = nonEurovocThemes.ToArray(),
                 AccrualPeriodicity = datasetRdf.AccrualPeriodicity,
                 Keywords = datasetRdf.GetKeywords(language).ToArray(),
-                Type = datasetRdf.Type,
+                Type = datasetRdf.Type.ToArray(),
                 Spatial = datasetRdf.Spatial.ToArray(),
                 Temporal = temporal is not null ? new TemporalView { StartDate = temporal.StartDate, EndDate = temporal.EndDate } : null,
                 ContactPoint = contactPoint is not null ? new CardView { Name = contactPoint.GetName(language), Email = contactPoint.Email } : null,
@@ -98,11 +98,11 @@ namespace WebApi
                 IsPartOf = datasetRdf.IsPartOf
             };
 
-            view.ThemeValues = await codelistProviderClient.MapCodelistValues("http://publications.europa.eu/resource/dataset/data-theme", view.Themes.Select(u => u.ToString()), language);
-            view.AccrualPeriodicityValue = await codelistProviderClient.MapCodelistValue("http://publications.europa.eu/resource/dataset/frequency", view.AccrualPeriodicity?.ToString(), language);
-            view.TypeValue = await codelistProviderClient.MapCodelistValue("https://data.gov.sk/set/codelist/dataset-type", view.Type?.ToString(), language);
-            view.SpatialValues = await codelistProviderClient.MapCodelistValues("http://publications.europa.eu/resource/dataset/country", view.Spatial.Select(u => u.ToString()), language);
-            view.EuroVocThemeValues = await codelistProviderClient.MapCodelistValues("http://publications.europa.eu/resource/dataset/eurovoc", view.EuroVocThemes.Select(u => u.ToString()), language);
+            view.ThemeValues = await codelistProviderClient.MapCodelistValues(DcatDataset.ThemeCodelist, view.Themes.Select(u => u.ToString()), language);
+            view.AccrualPeriodicityValue = await codelistProviderClient.MapCodelistValue(DcatDataset.AccrualPeriodicityCodelist, view.AccrualPeriodicity?.ToString(), language);
+            view.TypeValues = await codelistProviderClient.MapCodelistValues(DcatDataset.TypeCodelist, view.Type.Select(u => u.ToString()), language);
+            view.SpatialValues = await codelistProviderClient.MapCodelistValues(DcatDataset.SpatialCodelist, view.Spatial.Select(u => u.ToString()), language);
+            view.EuroVocThemeValues = await codelistProviderClient.MapCodelistValues(DcatDataset.EuroVocThemeCodelist, view.EuroVocThemes.Select(u => u.ToString()), language);
 
             return view;
         }

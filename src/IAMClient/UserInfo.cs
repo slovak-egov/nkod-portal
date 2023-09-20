@@ -10,6 +10,8 @@
 
         public string Email { get; set; } = string.Empty;
 
+        public string? Publisher { get; set; }
+
         public string? Role { get; set; }
     }
 }

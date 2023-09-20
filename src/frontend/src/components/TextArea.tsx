@@ -1,6 +1,6 @@
-import { HTMLAttributes } from "react";
+import { TextareaHTMLAttributes } from "react";
 
-interface IProps extends HTMLAttributes<HTMLTextAreaElement>
+interface IProps extends TextareaHTMLAttributes<HTMLTextAreaElement>
 {
     
 }

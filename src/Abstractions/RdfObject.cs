@@ -236,30 +236,38 @@ namespace NkodSk.Abstractions
             return RdfDocument.ParseNode(text, nodeType);
         }
 
-        private static IEnumerable<Triple> GetTriples(IGraph graph, IUriNode node)
+        private static IEnumerable<Triple> GetTriples(IGraph graph, IUriNode node, ISet<INode> visited)
         {
             foreach (Triple t in graph.GetTriplesWithSubject(node))
             {
                 yield return t;
                 if (t.Object is IUriNode uriNode)
                 {
-                    foreach (Triple t2 in GetTriples(graph, uriNode))
+                    if (visited.Add(uriNode))
                     {
-                        yield return t2;
+                        foreach (Triple t2 in GetTriples(graph, uriNode, visited))
+                        {
+                            yield return t2;
+                        }
                     }
                 }
             }
         }
 
-        public IEnumerable<Triple> Triples => GetTriples(Graph, Node);
+        public IEnumerable<Triple> Triples => GetTriples(Graph, Node, new HashSet<INode>());
+
+        public virtual IEnumerable<RdfObject> RootObjects => new[] { this };
 
         public override string ToString()
         {
             Graph newGraph = new Graph();
             Graph.NamespaceMap.Import(Graph.NamespaceMap);
-            foreach (Triple t in Triples)
+            foreach (RdfObject obj in RootObjects)
             {
-                newGraph.Assert(t);
+                foreach (Triple t in obj.Triples)
+                {
+                    newGraph.Assert(t);
+                }
             }
             using System.IO.StringWriter writer = new System.IO.StringWriter();
             newGraph.SaveToStream(writer, new CompressingTurtleWriter());

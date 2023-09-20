@@ -9,31 +9,43 @@ import TableCell from "../components/TableCell";
 import Pagination from "../components/Pagination";
 import Breadcrumbs from "../components/Breadcrumbs";
 import MainContent from "../components/MainContent";
+import { removeLocalCatalog, useLocalCatalogs, useUserInfo } from "../client";
+import { useNavigate } from "react-router";
+import { useEffect } from "react";
 
 export default function CatalogList()
 {
+    const [catalogs, query, setQueryParameters, loading, error, refresh] = useLocalCatalogs({pageSize: 100, page: 0});
+    const navigate = useNavigate();
+    const [userInfo] = useUserInfo();
+
+    useEffect(() => {
+        if (userInfo?.publisher) {
+            setQueryParameters({
+                filters: {
+                    publishers: [userInfo.publisher],
+                },
+                page: 1
+            });
+        }
+    }, [userInfo]);
+
     return <>
     <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam lokálnych katalógov'}]} />
             <MainContent>
             <PageHeader>Zoznam lokálnych katalógov</PageHeader>
-            <p className="govuk-body nkod-publisher-name">
+            {userInfo?.publisherView ? <p className="govuk-body nkod-publisher-name">
                     <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Poskytovateľ dát</span><br />
-                        Ministerstvo investícií, regionálneho rozvoja a informatizácie Slovenskej republiky 
-                    </p>
+                        {userInfo.publisherView.name}
+                    </p> : null}
             <p>
-                <Button>Nový lokálny katalóg</Button>
+                <Button onClick={() => navigate('/sprava/lokalne-katalogy/pridat')}>Nový lokálny katalóg</Button>
             </p>
-            <Table>
+            {catalogs ? <><Table>
                 <TableHead>
                     <TableRow>
                         <TableHeaderCell>
                             Názov
-                        </TableHeaderCell>
-                        <TableHeaderCell>
-                            Dátum vytvorenia
-                        </TableHeaderCell>
-                        <TableHeaderCell>
-                            Dátum poslednej aktualizácie
                         </TableHeaderCell>
                         <TableHeaderCell>
                             Stav
@@ -44,27 +56,25 @@ export default function CatalogList()
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    <TableRow>
+                    {catalogs.items.map(c => <TableRow key={c.id}>
                         <TableCell>
-                            Open data portál
+                            {c.name}
                         </TableCell>
                         <TableCell>
-                            21. 7. 2023 14:32
-                        </TableCell>
-                        <TableCell>
-                            24. 7. 2023 10:12
-                        </TableCell>
-                        <TableCell>
-                            Zverejnený
+                            {c.isPublic ? 'publikovaný' : 'nepublikovaný'}
                         </TableCell>
                         <TableCell style={{whiteSpace: 'nowrap'}}>
-                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}}>Upraviť</Button>
-                            <Button className="idsk-button idsk-button--secondary" >Odstrániť</Button>
+                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/lokalne-katalogy/' + c.id)}>Upraviť</Button>
+                            <Button className="idsk-button idsk-button--secondary" onClick={async () => {
+                                    if (await removeLocalCatalog(c.id)) {
+                                        refresh();
+                                    }
+                                }}>Odstrániť</Button>
                         </TableCell>
-                    </TableRow>
+                    </TableRow>)}
                 </TableBody>
             </Table>
-            <Pagination totalItems={81} pageSize={10} currentPage={1} onPageChange={() => {}} />
+            <Pagination totalItems={catalogs.totalCount} pageSize={query.pageSize} currentPage={query.page} onPageChange={p => setQueryParameters({page: p})} /></> : <div>No catalogs found</div>}
             </MainContent>
         </>;
 }

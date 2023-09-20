@@ -39,17 +39,17 @@ namespace WebApi
         {
             ValidationResults results = new ValidationResults();
 
-            await results.ValidateRequiredCodelistValue(nameof(AuthorsWorkType), AuthorsWorkType, "https://data.gov.sk/def/ontology/law/authorsWorkType", codelistProvider);
-            await results.ValidateRequiredCodelistValue(nameof(OriginalDatabaseType), OriginalDatabaseType, "https://data.gov.sk/def/ontology/law/originalDatabaseType", codelistProvider);
-            await results.ValidateRequiredCodelistValue(nameof(DatabaseProtectedBySpecialRightsType), DatabaseProtectedBySpecialRightsType, "https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType", codelistProvider);
-            await results.ValidateRequiredCodelistValue(nameof(PersonalDataContainmentType), PersonalDataContainmentType, "https://data.gov.sk/def/ontology/law/personalDataContainmentType", codelistProvider);
+            await results.ValidateRequiredCodelistValue(nameof(AuthorsWorkType), AuthorsWorkType, DcatDistribution.AuthorsWorkTypeCodelist, codelistProvider);
+            await results.ValidateRequiredCodelistValue(nameof(OriginalDatabaseType), OriginalDatabaseType, DcatDistribution.OriginalDatabaseTypeCodelist, codelistProvider);
+            await results.ValidateRequiredCodelistValue(nameof(DatabaseProtectedBySpecialRightsType), DatabaseProtectedBySpecialRightsType, DcatDistribution.DatabaseProtectedBySpecialRightsTypeCodelist, codelistProvider);
+            await results.ValidateRequiredCodelistValue(nameof(PersonalDataContainmentType), PersonalDataContainmentType, DcatDistribution.PersonalDataContainmentTypeCodelist, codelistProvider);
             results.ValidateUrl(nameof(DownloadUrl), DownloadUrl, true);
             results.ValidateUrl(nameof(AccessUrl), AccessUrl, true);
-            await results.ValidateRequiredCodelistValue(nameof(Format), Format, "http://publications.europa.eu/resource/dataset/file-type", codelistProvider);
-            await results.ValidateRequiredCodelistValue(nameof(MediaType), MediaType, "http://www.iana.org/assignments/media-types", codelistProvider);
+            await results.ValidateRequiredCodelistValue(nameof(Format), Format, DcatDistribution.FormatCodelist, codelistProvider);
+            await results.ValidateRequiredCodelistValue(nameof(MediaType), MediaType, DcatDistribution.MediaTypeCodelist, codelistProvider);
             results.ValidateUrl(nameof(ConformsTo), ConformsTo, false);
-            await results.ValidateCodelistValue(nameof(CompressFormat), CompressFormat, "http://www.iana.org/assignments/media-types", codelistProvider);
-            await results.ValidateCodelistValue(nameof(PackageFormat), PackageFormat, "http://www.iana.org/assignments/media-types", codelistProvider);
+            await results.ValidateCodelistValue(nameof(CompressFormat), CompressFormat, DcatDistribution.MediaTypeCodelist, codelistProvider);
+            await results.ValidateCodelistValue(nameof(PackageFormat), PackageFormat, DcatDistribution.MediaTypeCodelist, codelistProvider);
             results.ValidateLanguageTexts(nameof(Title), Title, null, false);
 
             return results;

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.VisualStudio.TestPlatform.TestHost;
 using Newtonsoft.Json;
+using NkodSk.Abstractions;
 using NkodSk.RdfFileStorage;
 using System;
 using System.Collections.Generic;
@@ -44,7 +45,7 @@ namespace CodelistProvider.Test
             using Storage storage = new Storage(fixture.GetStoragePath());
             using CodelistApplicationFactory applicationFactory = new CodelistApplicationFactory(storage, AnonymousAccessPolicy.Default);
             using HttpClient client = applicationFactory.CreateClient();
-            using HttpResponseMessage response = await client.GetAsync($"/codelists/{HttpUtility.UrlEncode("http://publications.europa.eu/resource/authority/frequency")}");
+            using HttpResponseMessage response = await client.GetAsync($"/codelists/{HttpUtility.UrlEncode(DcatDataset.AccrualPeriodicityCodelist)}");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Codelist? list = JsonConvert.DeserializeObject<Codelist>(await response.Content.ReadAsStringAsync());
             Assert.NotNull(list);

@@ -1,4 +1,4 @@
-import { useDatasetAdd, useUserInfo } from "../client";
+import { Dataset, DatasetInput, useDatasetAdd, useDatasetEdit, useUserInfo } from "../client";
 
 import PageHeader from "../components/PageHeader";
 import Breadcrumbs from "../components/Breadcrumbs";
@@ -6,11 +6,10 @@ import MainContent from "../components/MainContent";
 import Button from "../components/Button";
 import ValidationSummary from "../components/ValidationSummary";
 import { DatasetForm } from "../components/DatasetForm";
+import Loading from "../components/Loading";
 
-
-export default function AddDataset()
-{
-    const [dataset, setDataset, errors, saving, saveResult, save] = useDatasetAdd({
+const transformEntityForEdit = (entity: Dataset): DatasetInput => {
+    return {
         isPublic: true,
         name: {'sk': ''},
         description: {'sk': ''},
@@ -29,15 +28,20 @@ export default function AddDataset()
         spatialResolutionInMeters: null,
         temporalResolution: null,
         isPartOf: null
-    });
+    }
+};
+
+export default function EditDataset()
+{
+    const [inputs, dataset, loading, setDataset, errors, saving, saveResult, save] = useDatasetEdit(transformEntityForEdit);
 
     const [userInfo] = useUserInfo();
 
     return <>
-            <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam datasetov', link: '/sprava/datasety'}, {title: 'Nový dataset'}]} />
+            <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam datasetov', link: '/sprava/datasety'}, {title: 'Upraviť dataset'}]} />
             <MainContent>
                 <div className="nkod-form-page">
-                    <PageHeader>Nový dataset</PageHeader>
+                    <PageHeader>Upraviť dataset</PageHeader>
                     {userInfo?.publisherView ? <p className="govuk-body nkod-publisher-name">
                     <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Poskytovateľ dát</span><br />
                         {userInfo.publisherView.name}
@@ -48,15 +52,13 @@ export default function AddDataset()
                         message: k[1]
                     }))} /> : null}
 
-                    <DatasetForm dataset={dataset} setDataset={setDataset} errors={errors} userInfo={userInfo} />
-
-                    <Button style={{marginRight: '20px'}} onClick={save} disabled={saving}>
-                        Uložiť dataset
-                    </Button>
-                    
-                    <Button>
-                        Uložiť dataset a pridať distribúciu
-                    </Button>
+                    {
+                        !loading && inputs ? <>
+                        <DatasetForm dataset={inputs} setDataset={setDataset} errors={errors} userInfo={userInfo} />
+                        <Button style={{marginRight: '20px'}} onClick={save} disabled={saving}>
+                            Uložiť dataset
+                        </Button></> : <Loading />
+                    }
                 </div>
             </MainContent>
         </>;

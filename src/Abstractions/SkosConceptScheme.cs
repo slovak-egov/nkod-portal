@@ -44,6 +44,8 @@ namespace NkodSk.Abstractions
 
         public string? GetLabel(string language) => GetTextFromUriNode("ns1:prefLabel", language);
 
+        public void SetLabel(Dictionary<string, string> texts) => SetTexts("ns1:prefLabel", texts);
+
         public IEnumerable<SkosConcept> Concepts => concepts.Values;
 
         public SkosConcept? GetConcept(string code)
@@ -55,14 +57,26 @@ namespace NkodSk.Abstractions
             return null;
         }
 
-        public static SkosConceptScheme? Parse(string text)
+        public SkosConcept CreateConcept(Uri id)
         {
-            IGraph graph = new Graph();
+            IUriNode subject = Graph.CreateUriNode(id);
+            Graph.Assert(subject, Graph.GetUriNode(new Uri(RdfSpecsHelper.RdfType)), Graph.CreateUriNode("skos:Concept"));
+            SkosConcept concept = new SkosConcept(Graph, subject);
+            concepts[id.ToString()] = concept;
+            return concept;
+        }
 
+        public static void AddDefaultNamespaces(IGraph graph)
+        {
             graph.NamespaceMap.AddNamespace("skos", SkosUri);
             graph.NamespaceMap.AddNamespace("ns0", OntologyAuthorityTable);
             graph.NamespaceMap.AddNamespace("ns1", OntologyAuthority);
+        }
 
+        public static SkosConceptScheme? Parse(string text)
+        {
+            IGraph graph = new Graph();
+            AddDefaultNamespaces(graph);
             IEnumerable<IUriNode> nodes = RdfDocument.ParseNode(graph, text, "skos:ConceptScheme");
             IUriNode? node = nodes.FirstOrDefault();
             if (node is not null)
@@ -72,10 +86,12 @@ namespace NkodSk.Abstractions
             return null;
         }
 
+        public override IEnumerable<RdfObject> RootObjects => base.RootObjects.Union(concepts.Values);
+
         public static SkosConceptScheme Create(Uri uri)
         {
             IGraph graph = new Graph();
-            RdfDocument.AddDefaultNamespaces(graph);
+            AddDefaultNamespaces(graph);
             IUriNode subject = graph.CreateUriNode(uri);
             IUriNode rdfTypeNode = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
             IUriNode targetTypeNode = graph.CreateUriNode("skos:ConceptScheme");

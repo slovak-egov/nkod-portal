@@ -18,6 +18,8 @@ namespace NkodSk.Abstractions
 
         public string? GetLabel(string language) => GetTextFromUriNode("skos:prefLabel", language);
 
+        public void SetLabel(Dictionary<string, string> texts) => SetTexts("skos:prefLabel", texts);
+
         public bool IsDeprecated => false;
     }
 }
