@@ -1,8 +1,9 @@
-﻿using NkodSk.Abstractions;
+﻿using Microsoft.AspNetCore.Mvc;
+using NkodSk.Abstractions;
 
 namespace DocumentStorageApi
 {
-    public record StreamInsertModel(FileMetadata Metadata, bool EnableOverwrite, IFormFile File)
+    public record StreamInsertModel(string Metadata, bool EnableOverwrite, [FromForm] IFormFile File)
     {
     }
 }

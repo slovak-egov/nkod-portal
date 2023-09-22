@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using VDS.RDF;
 using VDS.RDF.Parsing;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace NkodSk.Abstractions
 {
@@ -92,6 +93,14 @@ namespace NkodSk.Abstractions
         internal static IEnumerable<IUriNode> ParseNode(IGraph graph, string text, string nodeType)
         {
             ParseTextIntoGraph(graph, text);
+            return ParseNode(graph, nodeType);
+        }
+
+        internal static IEnumerable<IUriNode> ParseNode(IGraph graph, Stream stream, string nodeType)
+        {
+            using StreamReader reader = new StreamReader(stream, leaveOpen: true);
+            TurtleParser parser = new TurtleParser();
+            parser.Load(graph, reader);
             return ParseNode(graph, nodeType);
         }
 

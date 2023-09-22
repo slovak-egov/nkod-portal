@@ -141,8 +141,8 @@ namespace DocumentStorageClient
             using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, $"files/stream");
             request.Content = new MultipartFormDataContent
             {
-                { JsonContent.Create(metadata), "metadata" },
-                { new StreamContent(source), "file" },
+                { new StringContent(JsonConvert.SerializeObject(metadata)), "metadata" },
+                { new StreamContent(source), "file", "source" },
                 { new StringContent(enableOverwrite.ToString()), "enableOverwrite" }
             };
             using HttpResponseMessage response = await client.SendAsync(request).ConfigureAwait(false);

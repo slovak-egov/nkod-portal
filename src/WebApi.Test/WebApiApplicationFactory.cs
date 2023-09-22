@@ -16,7 +16,7 @@ using TestBase;
 
 namespace WebApi.Test
 {
-    class WebApiApplicationFactory : WebApplicationFactory<Program>
+    class WebApiApplicationFactory : WebApplicationFactory<Program>, ITokenService
     {
         private readonly IFileStorage storage;
 
@@ -26,12 +26,14 @@ namespace WebApi.Test
 
         private readonly byte[] defaultKey = RandomNumberGenerator.GetBytes(32);
 
+        private TestIdentityAccessManagementClient? testIdentityAccessManagementClient;
+
         public WebApiApplicationFactory(IFileStorage storage)
         {
             this.storage = storage;
         }
 
-        public string CreateToken(string? role, string? publisher = null, string name = "Test User", int lifetimeMinutes = 15)
+        public string CreateToken(string? role, string? publisher = null, string name = "Test User", int lifetimeMinutes = 15, string? companyName = null)
         {
             List<Claim> claims = new List<Claim>();
             if (!string.IsNullOrEmpty(role))
@@ -41,6 +43,10 @@ namespace WebApi.Test
             if (!string.IsNullOrEmpty(publisher))
             {
                 claims.Add(new Claim("Publisher", publisher));
+            }
+            if (!string.IsNullOrEmpty(companyName))
+            {
+                claims.Add(new Claim("CompanyName", companyName));
             }
             claims.Add(new Claim(ClaimTypes.Name, name));
 
@@ -63,6 +69,8 @@ namespace WebApi.Test
                 services.AddSingleton<ILanguagesSource, DefaultLanguagesSource>();
                 services.AddSingleton<ICodelistProviderClient, InternalCodelistProvider>();
                 services.AddTransient<IFileStorageAccessPolicy, DefaultFileAccessPolicy>();
+                services.AddTransient(s => testIdentityAccessManagementClient ??= new TestIdentityAccessManagementClient(s.GetRequiredService<IHttpContextValueAccessor>(), this));
+                services.AddTransient<IIdentityAccessManagementClient>(s => s.GetRequiredService<TestIdentityAccessManagementClient>());
 
                 services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
                 {
@@ -81,6 +89,31 @@ namespace WebApi.Test
             });
 
             return base.CreateHost(builder);
+        }
+
+        public Task<TokenResult> RefreshToken(string token, string refreshToken)
+        {
+            return Task.FromResult(new TokenResult
+            {
+                Token = token,
+                RefreshToken = refreshToken
+            });
+        }
+
+        public Task<TokenResult> DelegateToken(IHttpContextValueAccessor httpContextValueAccessor, string publisherId)
+        {
+            if (httpContextValueAccessor.HasRole("Superadmin"))
+            {
+                return Task.FromResult(new TokenResult
+                {
+                    Token = CreateToken("Superadmin", publisherId),
+                    RefreshToken = "12345"
+                });
+            }
+            else
+            {
+                throw new HttpRequestException("Forbidden", null, System.Net.HttpStatusCode.Forbidden);
+            }
         }
     }
 }

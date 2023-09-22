@@ -61,7 +61,7 @@ namespace WebApi.Test
             return metatdata.Id;
         }
 
-        public Guid CreatePublisher(string nameSk, string? id = null, string? nameEn = null)
+        public Guid CreatePublisher(string nameSk, string? id = null, string? nameEn = null, bool isPublic = true)
         {
             FoafAgent agent = FoafAgent.Create(id is not null ? new Uri(id) : CreateUri());
 
@@ -72,7 +72,8 @@ namespace WebApi.Test
             }
             agent.SetNames(names);
 
-            FileMetadata metatdata = agent.UpdateMetadata(true);
+            FileMetadata metatdata = agent.UpdateMetadata();
+            metatdata = metatdata with { IsPublic = isPublic };
             CreateFile(new FileState(metatdata, agent.ToString()));
             return metatdata.Id;
         }

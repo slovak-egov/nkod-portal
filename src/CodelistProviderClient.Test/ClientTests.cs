@@ -29,7 +29,7 @@ namespace CodelistProviderClient.Test
             using CodelistApplicationFactory applicationFactory = new CodelistApplicationFactory(storage, AnonymousAccessPolicy.Default);
             HttpClient httpClient = applicationFactory.CreateClient();
             DefaultHttpClientFactory httpClientFactory = new DefaultHttpClientFactory(httpClient);
-            CodelistProviderClient client = new CodelistProviderClient(httpClientFactory);
+            CodelistProviderClient client = new CodelistProviderClient(httpClientFactory, new AnonymousHttpContextValueAccessor());
             List<Codelist>? lists = await client.GetCodelists();
             Assert.NotNull(lists);
             Assert.Equal(2, lists.Count);
@@ -42,7 +42,7 @@ namespace CodelistProviderClient.Test
             using CodelistApplicationFactory applicationFactory = new CodelistApplicationFactory(storage, AnonymousAccessPolicy.Default);
             HttpClient httpClient = applicationFactory.CreateClient();
             DefaultHttpClientFactory httpClientFactory = new DefaultHttpClientFactory(httpClient);
-            CodelistProviderClient client = new CodelistProviderClient(httpClientFactory);
+            CodelistProviderClient client = new CodelistProviderClient(httpClientFactory, new AnonymousHttpContextValueAccessor());
             Codelist? list = await client.GetCodelist(DcatDataset.AccrualPeriodicityCodelist);
             Assert.NotNull(list);
         }
@@ -54,7 +54,7 @@ namespace CodelistProviderClient.Test
             using CodelistApplicationFactory applicationFactory = new CodelistApplicationFactory(storage, AnonymousAccessPolicy.Default);
             HttpClient httpClient = applicationFactory.CreateClient();
             DefaultHttpClientFactory httpClientFactory = new DefaultHttpClientFactory(httpClient);
-            CodelistProviderClient client = new CodelistProviderClient(httpClientFactory);
+            CodelistProviderClient client = new CodelistProviderClient(httpClientFactory, new AnonymousHttpContextValueAccessor());
             Codelist? list = await client.GetCodelist("unknown");
             Assert.Null(list);
         }

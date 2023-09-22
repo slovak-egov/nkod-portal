@@ -1,9 +1,7 @@
-﻿namespace IAMClient
+﻿namespace NkodSk.Abstractions
 {
     public class NewUserInput
     {
-        public string? Id { get; set; }
-
         public string FirstName { get; set; } = string.Empty;
 
         public string LastName { get; set; } = string.Empty;

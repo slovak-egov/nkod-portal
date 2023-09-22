@@ -32,7 +32,7 @@ namespace WebApi
             results.ValidateLanguageTexts(nameof(Name), Name, languages, true);
             results.ValidateLanguageTexts(nameof(Description), Description, languages, true);
             results.ValidateLanguageTexts(nameof(ContactName), ContactName, languages, false);
-            results.ValidateEmail(nameof(ContactEmail), ContactEmail);
+            results.ValidateEmail(nameof(ContactEmail), ContactEmail, false);
             results.ValidateUrl(nameof(HomePage), HomePage, false);
 
             return results;

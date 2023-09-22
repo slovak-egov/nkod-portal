@@ -15,6 +15,8 @@ namespace DocumentStorageApi
 
         public string? Publisher => httpContextAccessor.HttpContext?.User.FindFirstValue("Publisher");
 
+        public string? UserId => httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
         public string? Token
         {
             get

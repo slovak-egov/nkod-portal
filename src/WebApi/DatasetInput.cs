@@ -62,7 +62,7 @@ namespace WebApi
             results.ValidateDate(nameof(StartDate), StartDate);
             results.ValidateDate(nameof(EndDate), EndDate);
             results.ValidateLanguageTexts(nameof(ContactName), ContactName, languages, false);
-            results.ValidateEmail(nameof(ContactEmail), ContactEmail);
+            results.ValidateEmail(nameof(ContactEmail), ContactEmail, false);
             results.ValidateUrl(nameof(Documentation), Documentation, false);
             results.ValidateUrl(nameof(Specification), Specification, false);
             await results.ValidateCodelistValues(nameof(EuroVocThemes), EuroVocThemes, DcatDataset.EuroVocThemeCodelist, codelistProvider);

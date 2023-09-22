@@ -2,8 +2,10 @@ using DocumentStorageApi;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Newtonsoft.Json;
 using NkodSk.Abstractions;
 using NkodSk.RdfFileStorage;
 using NkodSk.RdfFulltextIndex;
@@ -230,19 +232,44 @@ app.MapPost("/files", [Authorize] (IFileStorage storage, IFileStorageAccessPolic
     return Results.Ok();
 });
 
-app.MapPost("/files/stream", [Authorize] async (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromBody] StreamInsertModel insertData) =>
+app.MapPost("/files/stream", [Authorize] async (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, HttpRequest request, IFormFile file) =>
 {
-    if (insertData.Metadata is null)
+    IFormCollection form = await request.ReadFormAsync();
+
+    string? metadataEncoded = form.ContainsKey("metadata") ? form["metadata"].FirstOrDefault() : null;
+    if (metadataEncoded == null)
     {
-        return Results.BadRequest("Metadata is required");
+        return Results.BadRequest();
     }
 
-    if (insertData.File is not null)
+    bool enableOverwrite;
+    if (!form.TryGetValue("enableOverwrite", out StringValues strings) || strings.Count == 0 || !bool.TryParse(strings[0], out enableOverwrite))
     {
+        enableOverwrite = false;
+    }
+
+    if (file is not null)
+    {
+        FileMetadata? metadata;
+
         try
         {
-            Stream sourceStream = insertData.File.OpenReadStream();
-            Stream writeStream = storage.OpenWriteStream(insertData.Metadata, insertData.EnableOverwrite, accessPolicy);
+            metadata = JsonConvert.DeserializeObject<FileMetadata>(metadataEncoded);
+
+            if (metadata == null)
+            {
+                return Results.BadRequest();
+            }
+        }
+        catch
+        {
+            return Results.BadRequest();
+        }
+
+        try
+        {
+            using Stream sourceStream = file.OpenReadStream();
+            using Stream writeStream = storage.OpenWriteStream(metadata, enableOverwrite, accessPolicy);
             await sourceStream.CopyToAsync(writeStream).ConfigureAwait(false);
         }
         catch (NkodSk.RdfFileStorage.UnauthorizedAccessException)

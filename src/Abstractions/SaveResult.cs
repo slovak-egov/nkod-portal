@@ -1,4 +1,4 @@
-﻿namespace WebApi
+﻿namespace NkodSk.Abstractions
 {
     public class SaveResult
     {

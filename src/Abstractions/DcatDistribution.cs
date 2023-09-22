@@ -99,7 +99,7 @@ namespace NkodSk.Abstractions
 
         public string? GetTitle(string language) => GetTextFromUriNode("dct:title", language);
 
-        public IDictionary<string, List<string>> Title => GetTextsFromUriNode("dct:title");
+        public Dictionary<string, string> Title => GetTextsFromUriNode("dct:title");
 
         public void SetTitle(Dictionary<string, string>? values)
         {

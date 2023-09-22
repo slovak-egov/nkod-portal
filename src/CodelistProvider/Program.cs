@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
 using NkodSk.Abstractions;
+using System.Security.Claims;
 using System.Web;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -91,9 +92,19 @@ app.MapGet("/codelists/{id}", async (InternalCodelistProvider provider, string? 
 });
 
 
-app.MapPut("/codelists", async (InternalCodelistProvider provider, [FromServices] IDocumentStorageClient client, string? id) =>
+app.MapPut("/codelists", async (InternalCodelistProvider provider, [FromServices] IDocumentStorageClient client, IFormFile file) =>
 {
-    return Results.Ok();
+    if (file is not null)
+    {
+        using (Stream stream = file.OpenReadStream())
+        {
+            return await provider.UpdateCodelist(stream) ? Results.Ok() : Results.Problem();
+        }
+    }
+    else
+    {
+        return Results.BadRequest();
+    }
 });
 
 

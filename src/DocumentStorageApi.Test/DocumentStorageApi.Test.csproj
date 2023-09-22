@@ -27,6 +27,7 @@
     <ProjectReference Include="..\Abstractions\Abstractions.csproj" />
     <ProjectReference Include="..\DocumentStorageApi\DocumentStorageApi.csproj" />
     <ProjectReference Include="..\RdfFileStorage.Test\RdfFileStorage.Test.csproj" />
+    <ProjectReference Include="..\TestBase\TestBase.csproj" />
   </ItemGroup>
 
 </Project>

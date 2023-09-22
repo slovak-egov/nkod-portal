@@ -13,5 +13,7 @@ namespace NkodSk.Abstractions
         string? Publisher { get; }
 
         string? Token { get; }
+
+        string? UserId { get; }
     }
 }

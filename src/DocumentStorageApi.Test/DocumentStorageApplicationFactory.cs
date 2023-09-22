@@ -15,6 +15,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using TestBase;
 
 namespace DocumentStorageApi.Test
 {
@@ -31,6 +32,16 @@ namespace DocumentStorageApi.Test
         public DocumentStorageApplicationFactory(IFileStorage storage)
         {
             this.storage = storage;
+        }
+
+        public IHttpContextValueAccessor CreateAccessor(string? role = null, string? publisher = null, string? id = null)
+        {
+            string? token = null;
+            if (!string.IsNullOrEmpty(role))
+            {
+                token = CreateToken(role, publisher);
+            }
+            return new StaticHttpContextValueAccessor(publisher, token, role, id);
         }
 
         public string CreateToken(string? role, string? publisher = null, string name = "Test User", int lifetimeMinutes = 15)

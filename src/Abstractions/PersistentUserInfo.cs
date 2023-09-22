@@ -1,6 +1,12 @@
-﻿namespace IAMClient
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace NkodSk.Abstractions
 {
-    public class UserInfo
+    public class PersistentUserInfo
     {
         public string Id { get; set; } = string.Empty;
 
@@ -9,8 +15,6 @@
         public string LastName { get; set; } = string.Empty;
 
         public string Email { get; set; } = string.Empty;
-
-        public string? Publisher { get; set; }
 
         public string? Role { get; set; }
     }

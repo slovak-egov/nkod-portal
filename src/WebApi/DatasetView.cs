@@ -11,7 +11,11 @@ namespace WebApi
 
         public string? Name { get; set; }
 
+        public Dictionary<string, string>? NameAll { get; set; }
+
         public string? Description { get; set; }
+
+        public Dictionary<string, string>? DescriptionAll { get; set; }
 
         public string? PublisherId { get; set; }
 
@@ -27,7 +31,7 @@ namespace WebApi
 
         public string[] Keywords { get; set; } = Array.Empty<string>();
 
-        public CodelistItemView[] KeywordValues { get; set; } = Array.Empty<CodelistItemView>();
+        public Dictionary<string, List<string>>? KeywordsAll { get; set; }
 
         public Uri[] Type { get; set; } = Array.Empty<Uri>();
 
@@ -57,7 +61,7 @@ namespace WebApi
 
         public List<DistributionView> Distributions { get; } = new List<DistributionView>();
 
-        public static async Task<DatasetView> MapFromRdf(FileMetadata metadata, DcatDataset datasetRdf, ICodelistProviderClient codelistProviderClient, string language)
+        public static async Task<DatasetView> MapFromRdf(FileMetadata metadata, DcatDataset datasetRdf, ICodelistProviderClient codelistProviderClient, string language, bool fetchAllLanguages)
         {
             VcardKind? contactPoint = datasetRdf.ContactPoint;
             DctTemporal? temporal = datasetRdf.Temporal;
@@ -89,7 +93,7 @@ namespace WebApi
                 Type = datasetRdf.Type.ToArray(),
                 Spatial = datasetRdf.Spatial.ToArray(),
                 Temporal = temporal is not null ? new TemporalView { StartDate = temporal.StartDate, EndDate = temporal.EndDate } : null,
-                ContactPoint = contactPoint is not null ? new CardView { Name = contactPoint.GetName(language), Email = contactPoint.Email } : null,
+                ContactPoint = contactPoint is not null ? CardView.MapFromRdf(contactPoint, language, fetchAllLanguages) : null,
                 Documentation = datasetRdf.Documentation,
                 Specification = datasetRdf.Specification,
                 EuroVocThemes = eurovocThemes.ToArray(),
@@ -97,6 +101,12 @@ namespace WebApi
                 TemporalResolution = datasetRdf.TemporalResolution,
                 IsPartOf = datasetRdf.IsPartOf
             };
+
+            if (fetchAllLanguages)
+            {
+                view.NameAll = datasetRdf.Title;
+                view.DescriptionAll = datasetRdf.Description;
+            }
 
             view.ThemeValues = await codelistProviderClient.MapCodelistValues(DcatDataset.ThemeCodelist, view.Themes.Select(u => u.ToString()), language);
             view.AccrualPeriodicityValue = await codelistProviderClient.MapCodelistValue(DcatDataset.AccrualPeriodicityCodelist, view.AccrualPeriodicity?.ToString(), language);

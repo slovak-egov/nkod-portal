@@ -16,7 +16,7 @@ namespace NkodSk.Abstractions
 
         public string? GetTitle(string language) => GetTextFromUriNode("dct:title", language);
 
-        public IDictionary<string, List<string>> Title => GetTextsFromUriNode("dct:title");
+        public Dictionary<string, string> Title => GetTextsFromUriNode("dct:title");
 
         public void SetTitle(Dictionary<string, string> values)
         {
@@ -25,7 +25,7 @@ namespace NkodSk.Abstractions
 
         public string? GetDescription(string language) => GetTextFromUriNode("dct:description", language);
 
-        public IDictionary<string, List<string>> Description => GetTextsFromUriNode("dct:description");
+        public Dictionary<string, string> Description => GetTextsFromUriNode("dct:description");
 
         public void SetDescription(Dictionary<string, string> values)
         {

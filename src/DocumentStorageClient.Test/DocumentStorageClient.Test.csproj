@@ -22,4 +22,10 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DocumentStorageApi.Test\DocumentStorageApi.Test.csproj" />
+    <ProjectReference Include="..\DocumentStorageApi\DocumentStorageApi.csproj" />
+    <ProjectReference Include="..\DocumentStorageClient\DocumentStorageClient.csproj" />
+  </ItemGroup>
+
 </Project>

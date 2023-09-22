@@ -43,17 +43,15 @@ namespace WebApi.Test
             return result;
         }
 
-        public static void AssertTextsEqual(Dictionary<string, string>? expected, IDictionary<string, List<string>>? actual)
+        public static void AssertTextsEqual(Dictionary<string, string>? expected, IDictionary<string, string>? actual)
         {
             expected ??= new Dictionary<string, string>();
-            actual ??= new Dictionary<string, List<string>>();
+            actual ??= new Dictionary<string, string>();
             Assert.Equal(expected.Count, actual.Count);
             foreach ((string key, string value) in expected)
             {
                 Assert.True(actual.ContainsKey(key));
-                List<string> values = actual[key];
-                Assert.Single(values);
-                Assert.Equal(value, values[0]);
+                Assert.Equal(value, actual[key]);
             }
         }
 

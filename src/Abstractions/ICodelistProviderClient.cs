@@ -14,5 +14,7 @@ namespace NkodSk.Abstractions
         Task<Codelist?> GetCodelist(string id);
 
         Task<CodelistItem?> GetCodelistItem(string codelistId, string itemId);
+
+        Task<bool> UpdateCodelist(Stream stream);
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace IAMClient
+﻿namespace NkodSk.Abstractions
 {
     public class TokenResult
     {

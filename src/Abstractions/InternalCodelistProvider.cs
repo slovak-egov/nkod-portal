@@ -1,4 +1,5 @@
 ﻿using Abstractions;
+using AngleSharp.Dom;
 using Lucene.Net.Util;
 using NkodSk.Abstractions;
 using System.Collections.Immutable;
@@ -42,44 +43,38 @@ namespace NkodSk.Abstractions
                         Dictionary<string, Codelist> newCodelists = new Dictionary<string, Codelist>();
                         foreach (FileState state in response.Files)
                         {
-                            if (state.Content is not null)
+                            try
                             {
-                                SkosConceptScheme? conceptScheme = SkosConceptScheme.Parse(state.Content);
+                                SkosConceptScheme? conceptScheme;
+
+                                if (state.Content is not null)
+                                {
+                                    conceptScheme = SkosConceptScheme.Parse(state.Content);
+                                }
+                                else
+                                {
+                                    using (Stream? stream = await storageClient.DownloadStream(state.Metadata.Id).ConfigureAwait(false))
+                                    {
+                                        if (stream is not null)
+                                        {
+                                            conceptScheme = SkosConceptScheme.Parse(stream);
+                                        }
+                                        else
+                                        {
+                                            conceptScheme = null;
+                                        }
+                                    }
+                                }
+
                                 if (conceptScheme?.Id is not null)
                                 {
-                                    Codelist codelist = new Codelist(conceptScheme.Id);
-
-                                    foreach (string lang in languages)
-                                    {
-                                        string? text = conceptScheme.GetLabel(lang);
-                                        if (text is not null)
-                                        {
-                                            codelist.Labels[lang] = text;
-                                        }
-                                    }
-
-                                    foreach (SkosConcept concept in conceptScheme.Concepts)
-                                    {
-                                        if (concept?.Id is not null)
-                                        {
-                                            CodelistItem codelistItem = new CodelistItem(concept.Id);
-                                            codelistItem.IsDeprecated = concept.IsDeprecated;
-
-                                            foreach (string lang in languages)
-                                            {
-                                                string? text = concept.GetLabel(lang);
-                                                if (text is not null)
-                                                {
-                                                    codelistItem.Labels[lang] = text;
-                                                }
-                                            }
-
-                                            codelist.Items[codelistItem.Id] = codelistItem;
-                                        }
-                                    }
-
+                                    Codelist codelist = CreateCodelist(conceptScheme, state.Metadata);
                                     newCodelists[codelist.Id] = codelist;
                                 }
+                            }
+                            catch (Exception e)
+                            {
+
                             }
                         }
 
@@ -90,6 +85,61 @@ namespace NkodSk.Abstractions
                 {
                     semaphore.Release();
                 }
+            }
+        }
+
+        private Codelist CreateCodelist(SkosConceptScheme conceptScheme, FileMetadata metadata)
+        {
+            Codelist codelist = new Codelist(conceptScheme.Id);
+
+            codelist.FileId = metadata.Id;
+
+            foreach (string lang in languages)
+            {
+                string? text = conceptScheme.GetLabel(lang);
+                if (text is not null)
+                {
+                    codelist.Labels[lang] = text;
+                }
+            }
+
+            foreach (SkosConcept concept in conceptScheme.Concepts)
+            {
+                if (concept?.Id is not null)
+                {
+                    CodelistItem codelistItem = new CodelistItem(concept.Id);
+                    codelistItem.IsDeprecated = concept.IsDeprecated;
+
+                    foreach (string lang in languages)
+                    {
+                        string? text = concept.GetLabel(lang);
+                        if (text is not null)
+                        {
+                            codelistItem.Labels[lang] = text;
+                        }
+                    }
+
+                    codelist.Items[codelistItem.Id] = codelistItem;
+                }
+            }
+
+            return codelist;
+        }
+
+        public async Task LoadCodelist(SkosConceptScheme conceptScheme, FileMetadata metadata)
+        {
+            Codelist codelist = CreateCodelist(conceptScheme, metadata);
+            await semaphore.WaitAsync();
+            try
+            {
+                if (codelists is not null)
+                {
+                    codelists = codelists.SetItem(codelist.Id, codelist);
+                }
+            }
+            finally
+            {
+                semaphore.Release();
             }
         }
 
@@ -134,6 +184,59 @@ namespace NkodSk.Abstractions
                 }
             }
             return null;
+        }
+
+        public async Task<bool> UpdateCodelist(Stream stream)
+        {
+            string path = Path.GetTempFileName();
+            try
+            {
+                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                {
+                    using (stream)
+                    {
+                        await stream.CopyToAsync(fs).ConfigureAwait(false);
+                    }
+
+                    fs.Seek(0, SeekOrigin.Begin);
+
+                    await Refresh();
+
+                    SkosConceptScheme? conceptScheme;
+                    conceptScheme = SkosConceptScheme.Parse(fs);
+                    if (conceptScheme is not null)
+                    {
+                        fs.Seek(0, SeekOrigin.Begin);
+
+                        Codelist? existing = await GetCodelist(conceptScheme.Id);
+
+                        FileMetadata metadata = new FileMetadata(existing?.FileId ?? Guid.NewGuid(), conceptScheme.Id, FileType.Codelist, null, null, true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+                        await storageClient.UploadStream(fs, metadata, true);
+
+                        await LoadCodelist(conceptScheme, metadata);
+
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(path))
+                    {
+                        File.Delete(path);
+                    }
+                }
+                catch
+                {
+                    //ignore
+                }
+            }
         }
     }
 }

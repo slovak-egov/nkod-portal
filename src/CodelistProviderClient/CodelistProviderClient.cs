@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using NkodSk.Abstractions;
 using System.Web;
+using static Lucene.Net.Search.FieldCache;
 
 namespace CodelistProviderClient
 {
@@ -9,18 +10,32 @@ namespace CodelistProviderClient
     {
         private readonly IHttpClientFactory httpClientFactory;
 
+        private readonly IHttpContextValueAccessor httpContextAccessor;
+
         private readonly Dictionary<string, Codelist> codelists = new Dictionary<string, Codelist>();
 
         public const string HttpClientName = "CodelistProvider";
 
-        public CodelistProviderClient(IHttpClientFactory httpClientFactory)
+        public CodelistProviderClient(IHttpClientFactory httpClientFactory, IHttpContextValueAccessor httpContextAccessor)
         {
             this.httpClientFactory = httpClientFactory;
+            this.httpContextAccessor = httpContextAccessor;
+        }
+
+        private HttpClient CreateClient()
+        {
+            HttpClient client = httpClientFactory.CreateClient(HttpClientName);
+            string? token = httpContextAccessor.Token;
+            if (!string.IsNullOrEmpty(token))
+            {
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+            return client;
         }
 
         public async Task<List<Codelist>> GetCodelists()
         {
-            HttpClient client = httpClientFactory.CreateClient(HttpClientName);
+            HttpClient client = CreateClient();
             using HttpResponseMessage response = await client.GetAsync("codelists");
             response.EnsureSuccessStatusCode();
             List<Codelist> codelists = JsonConvert.DeserializeObject<List<Codelist>>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
@@ -40,7 +55,7 @@ namespace CodelistProviderClient
                 return codelist;
             }
 
-            HttpClient client = httpClientFactory.CreateClient(HttpClientName);
+            HttpClient client = CreateClient();
             using HttpResponseMessage response = await client.GetAsync($"codelists/{HttpUtility.UrlEncode(id)}");
             if (response.IsSuccessStatusCode)
             {
@@ -69,6 +84,22 @@ namespace CodelistProviderClient
                 }
             }
             return null;
+        }
+
+        public async Task<bool> UpdateCodelist(Stream stream)
+        {
+            codelists.Clear();
+
+            HttpClient client = CreateClient();
+
+            using MultipartFormDataContent requestContent = new MultipartFormDataContent
+            {
+                { new StreamContent(stream), "file", "codelist.ttl" }
+            };
+
+            using HttpResponseMessage response = await client.PutAsync("codelists", requestContent);
+            response.EnsureSuccessStatusCode();
+            return true;
         }
     }
 }

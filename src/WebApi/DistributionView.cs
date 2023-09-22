@@ -34,9 +34,11 @@ namespace WebApi
 
         public string? Title { get; set; }
 
+        public Dictionary<string, string>? TitleAll { get; set; }
+
         public Uri? AccessService { get; set; }
 
-        public static async Task<DistributionView> MapFromRdf(Guid id, Guid? datasetId, DcatDistribution distributionRdf, ICodelistProviderClient codelistProviderClient, string language)
+        public static async Task<DistributionView> MapFromRdf(Guid id, Guid? datasetId, DcatDistribution distributionRdf, ICodelistProviderClient codelistProviderClient, string language, bool fetchAllLanguages)
         {
             LegTermsOfUse? legTermsOfUse = distributionRdf.TermsOfUse;
 
@@ -55,6 +57,11 @@ namespace WebApi
                 Title = distributionRdf.GetTitle(language),
                 AccessService = distributionRdf.AccessService,
             };
+
+            if (fetchAllLanguages)
+            {
+                view.TitleAll = distributionRdf.Title;
+            }
 
             view.FormatValue = await codelistProviderClient.MapCodelistValue("http://publications.europa.eu/resource/authority/file-type", view.Format?.ToString(), language);
             view.MediaTypeValue = await codelistProviderClient.MapCodelistValue("http://www.iana.org/assignments/media-types", view.MediaType?.ToString(), language);

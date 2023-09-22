@@ -23,6 +23,24 @@ namespace NkodSk.Abstractions
             SetTexts("foaf:name", values);
         }
 
+        public Uri? HomePage
+        {
+            get => GetUriFromUriNode("foaf:homepage");
+            set => SetUriNode("foaf:homepage", value);
+        }
+
+        public string? EmailAddress
+        {
+            get => GetTextFromUriNode("foaf:mbox");
+            set => SetTextToUriNode("foaf:mbox", value);
+        }
+
+        public string? Phone
+        {
+            get => GetTextFromUriNode("foaf:phone");
+            set => SetTextToUriNode("foaf:phone", value);
+        }
+
         public static FoafAgent? Parse(string text)
         {
             (IGraph graph, IEnumerable<IUriNode> nodes) = Parse(text, "foaf:Agent");
@@ -45,7 +63,7 @@ namespace NkodSk.Abstractions
             return new FoafAgent(graph, subject);
         }
 
-        public FileMetadata UpdateMetadata(bool isPublic, FileMetadata? metadata = null)
+        public FileMetadata UpdateMetadata(FileMetadata? metadata = null)
         {
             Guid id = metadata?.Id ?? Guid.NewGuid();
             DateTimeOffset now = DateTimeOffset.UtcNow;
@@ -54,11 +72,11 @@ namespace NkodSk.Abstractions
             LanguageDependedTexts names = GetLiteralNodesFromUriNode("foaf:name").ToArray();
             if (metadata is null)
             {
-                metadata = new FileMetadata(id, names, FileType.PublisherRegistration, null, Uri.ToString(), isPublic, null, now, now, values);
+                metadata = new FileMetadata(id, names, FileType.PublisherRegistration, null, Uri.ToString(), false, null, now, now, values);
             }
             else
             {
-                metadata = metadata with { Name = names, Publisher = Uri.ToString(), IsPublic = isPublic, AdditionalValues = values, LastModified = now };
+                metadata = metadata with { Name = names, Publisher = Uri.ToString(), AdditionalValues = values, LastModified = now };
             }
             return metadata;
         }

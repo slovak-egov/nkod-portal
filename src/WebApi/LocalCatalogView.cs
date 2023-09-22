@@ -10,7 +10,11 @@ namespace WebApi
 
         public string? Name { get; set; }
 
+        public Dictionary<string, string>? NameAll { get; set; }
+
         public string? Description { get; set; }
+
+        public Dictionary<string, string>? DescriptionAll { get; set; }
 
         public string? PublisherId { get; set; }
 
@@ -20,7 +24,7 @@ namespace WebApi
 
         public Uri? HomePage { get; set; }
 
-        public static async Task<LocalCatalogView> MapFromRdf(FileMetadata metadata, DcatCatalog catalogRdf, string language)
+        public static async Task<LocalCatalogView> MapFromRdf(FileMetadata metadata, DcatCatalog catalogRdf, string language, bool fetchAllLanguages)
         {
             VcardKind? contactPoint = catalogRdf.ContactPoint;
 
@@ -31,9 +35,15 @@ namespace WebApi
                 Name = catalogRdf.GetTitle(language),
                 Description = catalogRdf.GetDescription(language),
                 PublisherId = metadata.Publisher,
-                ContactPoint = contactPoint is not null ? new CardView { Name = contactPoint.GetName(language), Email = contactPoint.Email } : null,
+                ContactPoint = contactPoint is not null ? CardView.MapFromRdf(contactPoint, language, fetchAllLanguages) : null,
                 HomePage = catalogRdf.HomePage
             };
+
+            if (fetchAllLanguages)
+            {
+                view.NameAll = catalogRdf.Title;
+                view.DescriptionAll = catalogRdf.Description;
+            }
 
             return view;
         }

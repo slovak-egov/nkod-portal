@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using VDS.RDF;
 using VDS.RDF.Parsing;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace NkodSk.Abstractions
 {
@@ -78,6 +79,19 @@ namespace NkodSk.Abstractions
             IGraph graph = new Graph();
             AddDefaultNamespaces(graph);
             IEnumerable<IUriNode> nodes = RdfDocument.ParseNode(graph, text, "skos:ConceptScheme");
+            IUriNode? node = nodes.FirstOrDefault();
+            if (node is not null)
+            {
+                return new SkosConceptScheme(graph, node);
+            }
+            return null;
+        }
+
+        public static SkosConceptScheme? Parse(Stream stream)
+        {
+            IGraph graph = new Graph();
+            AddDefaultNamespaces(graph);
+            IEnumerable<IUriNode> nodes = RdfDocument.ParseNode(graph, stream, "skos:ConceptScheme");
             IUriNode? node = nodes.FirstOrDefault();
             if (node is not null)
             {
