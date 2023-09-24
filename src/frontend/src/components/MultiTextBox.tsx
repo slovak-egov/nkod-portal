@@ -1,5 +1,4 @@
-import { ReactNode, useState } from "react";
-import SelectElementItems from "./SelectElementItems";
+import { useState } from "react";
 import Button from "./Button";
 import BaseInput from "./BaseInput";
 import GridRow from "./GridRow";

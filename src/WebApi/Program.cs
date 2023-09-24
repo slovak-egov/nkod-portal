@@ -28,6 +28,7 @@ using System.Data;
 using AngleSharp.Io;
 using System.Reflection.Metadata;
 using UserInfo = NkodSk.Abstractions.UserInfo;
+using Newtonsoft.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,6 +44,12 @@ if (!Uri.IsWellFormedUriString(codelistProviderUrl, UriKind.Absolute))
     throw new Exception("Unable to get CodelistProviderUrl");
 }
 
+string? iamClientUrl = builder.Configuration["IAMUrl"];
+if (!Uri.IsWellFormedUriString(iamClientUrl, UriKind.Absolute))
+{
+    throw new Exception("Unable to get IAMUrl");
+}
+
 builder.Services.AddHttpClient(DocumentStorageClient.DocumentStorageClient.HttpClientName, c =>
 {
     c.BaseAddress = new Uri(documentStorageUrl);
@@ -56,6 +63,12 @@ builder.Services.AddHttpClient(CodelistProviderClient.CodelistProviderClient.Htt
     c.BaseAddress = new Uri(codelistProviderUrl);
 });
 builder.Services.AddTransient<ICodelistProviderClient, CodelistProviderClient.CodelistProviderClient>();
+
+builder.Services.AddHttpClient(IdentityAccessManagementClient.HttpClientName, c =>
+{
+    c.BaseAddress = new Uri(iamClientUrl);
+});
+builder.Services.AddTransient<IIdentityAccessManagementClient, IdentityAccessManagementClient>();
 
 builder.Services.AddAuthentication(o =>
 {
@@ -135,6 +148,11 @@ builder.Services.AddSwaggerGen(options =>
             Array.Empty<string>()
         }
     });
+});
+
+builder.Services.AddApplicationInsightsTelemetry(options =>
+{
+    options.ConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
 });
 
 var app = builder.Build();
@@ -325,13 +343,7 @@ async Task<Dictionary<string, PublisherView>> FetchPublishers(IDocumentStorageCl
             FoafAgent? agent = FoafAgent.Parse(fileState.Content);
             if (agent is not null)
             {
-                PublisherView view = new PublisherView
-                {
-                    Id = fileState.Metadata.Id,
-                    Name = agent.GetName(language),
-                    Key = fileState.Metadata.Publisher
-                };
-                publishers[agent.Uri.ToString()] = view;
+                publishers[agent.Uri.ToString()] = PublisherView.MapFromRdf(fileState.Metadata.Id, fileState.Metadata.IsPublic, agent, language);
             }
         }
     }
@@ -362,6 +374,7 @@ app.MapPost("/publishers/search", async ([FromBody] PublisherQuery query, [FromS
                 {
                     Id = group.PublisherFileState.Metadata.Id,
                     Key = group.Key,
+                    IsPublic = true,
                     Name = agent.GetName(language),
                     DatasetCount = group?.Count ?? 0,
                     Themes = group?.Themes
@@ -1088,11 +1101,24 @@ app.MapDelete("publishers", [Authorize] async ([FromQuery] string? id, [FromServ
 app.MapPost("user-info", [Authorize] async ([FromServices] IDocumentStorageClient documentStorageClient, [FromServices] IIdentityAccessManagementClient client) =>
 {
     UserInfo userInfo = await client.GetUserInfo().ConfigureAwait(false);
+    FoafAgent? agent = null;
     PublisherView? publisherView = null;
-    if (!string.IsNullOrEmpty(userInfo.Publisher))
+    bool publisherActive = false;
+    if (userInfo.Publisher is not null)
     {
-       Dictionary<string, PublisherView> publishers = await FetchPublishers(documentStorageClient, new[] { userInfo.Publisher }, "sk");
-       publishers.TryGetValue(userInfo.Publisher, out publisherView);
+        FileState? state = await documentStorageClient.GetPublisherFileState(userInfo.Publisher).ConfigureAwait(false);
+        if (state is not null)
+        {
+            publisherActive = state.Metadata.IsPublic;
+            if (state.Content is not null)
+            {
+                agent = FoafAgent.Parse(state.Content);
+                if (agent is not null)
+                {
+                    publisherView = PublisherView.MapFromRdf(state.Metadata.Id, state.Metadata.IsPublic, agent, "sk");
+                }
+            }
+        }
     }
     return new WebApi.UserInfo
     {
@@ -1102,7 +1128,11 @@ app.MapPost("user-info", [Authorize] async ([FromServices] IDocumentStorageClien
         Email = userInfo.Email,
         Role = userInfo.Role,
         Publisher = userInfo.Publisher,
-        PublisherView = publisherView
+        PublisherView = publisherView,
+        PublisherEmail = agent?.EmailAddress,
+        PublisherHomePage = agent?.HomePage?.ToString(),
+        PublisherPhone = agent?.Phone,
+        PublisherActive = publisherActive
     };
 });
 
@@ -1152,6 +1182,32 @@ app.MapPost("publishers/impersonate", [Authorize] async ([FromQuery] string? id,
         {
             return Results.Forbid();
         }
+    }
+    catch (HttpRequestException e)
+    {
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        return Results.Problem();
+    }
+});
+
+app.MapPost("/codelists/search", [Authorize] async ([FromServices] ICodelistProviderClient client) =>
+{
+    try
+    {
+        List<CodelistAdminView> items = new List<CodelistAdminView>();
+        foreach (Codelist codelist in await client.GetCodelists().ConfigureAwait(false))
+        {
+            items.Add(new CodelistAdminView(codelist.Id, codelist.GetLabel("sk"), codelist.ItemsCount));
+        }
+        return Results.Ok(items);
     }
     catch (HttpRequestException e)
     {
@@ -1353,7 +1409,7 @@ app.MapPost("/registration", [Authorize] async ([FromServices] IDocumentStorageC
     return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapPost("/profile", [Authorize] async ([FromServices] IDocumentStorageClient documentStorageClient, RegistrationInput? input, ClaimsPrincipal user) =>
+app.MapPut("/profile", [Authorize] async ([FromServices] IDocumentStorageClient documentStorageClient, RegistrationInput? input, ClaimsPrincipal user) =>
 {
     string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
     if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
@@ -1475,9 +1531,45 @@ app.MapPost("/refresh", async ([FromServices] IIdentityAccessManagementClient cl
     }
 });
 
-app.MapGet("/quality", async ([FromServices] IDocumentStorageClient client) =>
+app.MapGet("/saml/login", async ([FromServices] IIdentityAccessManagementClient client) =>
 {
-    return new QualityResult();
+    return await client.GetLogin();
+});
+
+app.MapGet("/saml/logout", async ([FromServices] IIdentityAccessManagementClient client) =>
+{
+    await client.Logout();
+    return Results.Ok();
+});
+
+app.MapPost("/saml/consume", async ([FromServices] IIdentityAccessManagementClient client, HttpRequest request) =>
+{
+    try
+    {
+        using StreamReader reader = new StreamReader(request.Body);
+        TokenResult token = await client.Consume(await reader.ReadToEndAsync()).ConfigureAwait(false);
+        const string mainPage = "wwwroot/index.html";
+        string content = string.Empty;
+        if (File.Exists(mainPage))
+        {
+            content = File.ReadAllText(mainPage);
+            content = content.Replace("<script>var externalToken=null</script>", $"<script>var externalToken = {JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() })};</script>");
+        }
+        return Results.Content(content, new Microsoft.Net.Http.Headers.MediaTypeHeaderValue("text/html"));
+    }
+    catch (HttpRequestException e)
+    {
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        return Results.Problem();
+    }
 });
 
 app.UseSpa(config =>

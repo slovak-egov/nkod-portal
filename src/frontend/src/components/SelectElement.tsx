@@ -1,11 +1,8 @@
 import { SelectHTMLAttributes } from "react";
 
-interface IProps extends SelectHTMLAttributes<HTMLSelectElement>
-{
+type Props = SelectHTMLAttributes<HTMLSelectElement>
 
-}
-
-export default function SelectElement(props: IProps)
+export default function SelectElement(props: Props)
 {
     return <select className="govuk-select" {...props}>
         {props.children}

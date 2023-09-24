@@ -59,6 +59,7 @@ namespace IAMClient
         {
             int? limit = query.PageSize;
             int? offset = query.Page.HasValue && query.PageSize.HasValue ? (query.Page.Value - 1) * query.PageSize.Value : 0;
+            string? id = query.Id;
 
             Dictionary<string, string> parameters = new Dictionary<string, string>();
             if (limit.HasValue)
@@ -68,6 +69,10 @@ namespace IAMClient
             if (offset.HasValue)
             {
                 parameters["offset"] = offset.Value.ToString(CultureInfo.InvariantCulture);
+            }
+            if (id is not null)
+            {
+                parameters["id"] = id;
             }
 
             HttpClient client = CreateClient();
@@ -119,6 +124,25 @@ namespace IAMClient
             using HttpResponseMessage response = await client.GetAsync($"/user-info");
             response.EnsureSuccessStatusCode();
             return JsonConvert.DeserializeObject<UserInfo>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
+                ?? throw new HttpRequestException("Invalid response");
+        }
+
+        public async Task<DelegationAuthorizationResult> GetLogin()
+        {
+            HttpClient client = CreateClient();
+            using HttpResponseMessage response = await client.GetAsync($"/login");
+            response.EnsureSuccessStatusCode();
+            return JsonConvert.DeserializeObject<DelegationAuthorizationResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
+                ?? throw new HttpRequestException("Invalid response");
+        }
+
+        public async Task<TokenResult> Consume(string content)
+        {
+            HttpClient client = CreateClient();
+            using StringContent requestContent = new StringContent(content, Encoding.UTF8, "application/x-www-form-urlencoded");
+            using HttpResponseMessage response = await client.PostAsync($"/consume", requestContent);
+            response.EnsureSuccessStatusCode();
+            return JsonConvert.DeserializeObject<TokenResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
                 ?? throw new HttpRequestException("Invalid response");
         }
     }

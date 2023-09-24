@@ -1,11 +1,11 @@
-import { PropsWithChildren } from "react";
+import { HTMLAttributes } from "react";
 
-interface IProps extends PropsWithChildren
+type Props = 
 {
     type: 'info' | 'warning'
-}
+} & HTMLAttributes<HTMLDivElement>
 
-export default function Alert(props: IProps)
+export default function Alert(props: Props)
 {
     return <div className={'idsk-warning-text ' + (props.type === 'info' && 'idsk-warning-text--info')} {...props}>
         <div className="govuk-width-container">

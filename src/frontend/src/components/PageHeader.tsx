@@ -1,10 +1,7 @@
 import { PropsWithChildren } from "react";
 
-interface IProps extends PropsWithChildren
-{
+type Props = PropsWithChildren
 
-}
-
-export default function PageHeader(props: IProps) {
+export default function PageHeader(props: Props) {
     return <h1 className="govuk-heading-xl">{props.children}</h1>;
 }

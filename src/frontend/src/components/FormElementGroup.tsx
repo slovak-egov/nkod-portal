@@ -1,6 +1,6 @@
 import { ReactNode, useId } from "react";
 
-interface IProps 
+type Props =
 {
     label: string;
     hint?: string;
@@ -8,7 +8,7 @@ interface IProps
     errorMessage?: string;
 }
 
-export default function FormElementGroup(props: IProps)
+export default function FormElementGroup(props: Props)
 {
     const id = useId();
 

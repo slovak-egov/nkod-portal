@@ -1,13 +1,13 @@
 import { ReactNode } from "react"
 
-interface IProps<T>
+type Props<T> =
 {
     items: T[];
     renderer: (item: T) => ReactNode;
     noItemsContent: ReactNode;
 }
 
-export default function ContentList<T>(props: IProps<T>)
+export default function ContentList<T>(props: Props<T>)
 {
     return <>{props.items.length > 0 ? <div>
         {props.items.map((item, index) => <div key={index}>

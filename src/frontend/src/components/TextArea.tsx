@@ -1,11 +1,8 @@
 import { TextareaHTMLAttributes } from "react";
 
-interface IProps extends TextareaHTMLAttributes<HTMLTextAreaElement>
-{
-    
-}
+type Props = TextareaHTMLAttributes<HTMLTextAreaElement>
 
-export default function TextArea(props: IProps)
+export default function TextArea(props: Props)
 {
     return <textarea className="govuk-textarea" {...props} />;
 }

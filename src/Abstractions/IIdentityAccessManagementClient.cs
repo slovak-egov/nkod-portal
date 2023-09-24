@@ -23,5 +23,9 @@ namespace NkodSk.Abstractions
         Task<TokenResult> DelegatePublisher(string publisherId);
 
         Task<UserInfo> GetUserInfo();
+
+        Task<DelegationAuthorizationResult> GetLogin();
+
+        Task<TokenResult> Consume(string content);
     }
 }

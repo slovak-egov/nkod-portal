@@ -1,0 +1,244 @@
+{
+  "type": "sparql-queries",
+  "version": 1,
+  "content": [
+    {
+      "name": {
+        "de": "Datensätze auswählen",
+        "en": "100 datasets and their publishers",
+        "hu": "Válassza ki az adatkészleteket",
+        "sk": "100 datasetov a ich poskytovateľov",
+        "uk": "Виберіть набори даних"
+      },
+      "description": {
+        "de": "Namen von Datensätzen",
+        "en": "100 datasets and their publishers",
+        "hu": "Adatkészletek nevei",
+        "sk": "100 datasetov a ich poskytovateľov",
+        "uk": "Назви наборів даних"
+      },
+      "query": "PREFIX dcat: <http://www.w3.org/ns/dcat#>\nPREFIX dct: <http://purl.org/dc/terms/>\nPREFIX foaf: <http://xmlns.com/foaf/0.1/>\n\nSELECT DISTINCT ?dataset ?názov ?poskytovateľ WHERE {\n  GRAPH ?g {\n    ?dataset a dcat:Dataset;\n      dct:title ?názov;\n      dct:publisher/foaf:name ?poskytovateľ.\n      FILTER(langMatches(LANG(?názov), \"sk\"))\n      FILTER(langMatches(LANG(?poskytovateľ), \"sk\"))\n  }\n}\nORDER BY ?názov\nLIMIT 100\n"
+    },
+    {
+      "name": {
+        "de": "Liste der lokalen Datenkataloge",
+        "en": "List of local data catalogs",
+        "hu": "Helyi adatkatalógusok listája",
+        "sk": "Zoznam lokálnych katalógov údajov",
+        "uk": "Список локальних каталогів даних"
+      },
+      "description": {
+        "de": "Liste der lokalen Datenkataloge und Anzahl der darin enthaltenen Datensätze",
+        "en": "List of local data catalogs and numbers of datasets in them",
+        "hu": "A helyi adatkatalógusok listája és a bennük lévő adatkészletek száma",
+        "sk": "Zoznam lokálnych dátových katalógov a počty dátových sád v nich",
+        "uk": "Список локальних каталогів даних і номери наборів даних у них"
+      },
+      "query": "PREFIX dcat: <http://www.w3.org/ns/dcat#>\nPREFIX dct: <http://purl.org/dc/terms/>\nPREFIX foaf: <http://xmlns.com/foaf/0.1/>\n\nSELECT DISTINCT ?katalóg ?názov (COUNT(DISTINCT ?dataset) AS ?počet)\nWHERE {\n  ?katalóg a dcat:Catalog ;\n    dct:title ?názov;\n    dcat:dataset ?dataset .\n  FILTER(langMatches(LANG(?názov), \"sk\"))\n# okrem NKOD\n  FILTER(?katalóg != <https://data.gov.sk/set/catalog/nkod>)\n}\nGROUP BY ?katalóg ?názov\nORDER BY DESC(?počet)\n"
+    },
+    {
+      "name": {
+        "de": "Anzahl der Datensätze pro Herausgeber",
+        "en": "Numbers of datasets per publisher",
+        "hu": "Adatkészletek száma kiadónként",
+        "sk": "Počet datasetov podľa poskytovateľa",
+        "uk": "Кількість наборів даних на видавця"
+      },
+      "description": {
+        "de": "Anzahl der Datensätze pro Herausgeber",
+        "en": "Numbers of datasets per publisher",
+        "hu": "Adatkészletek száma kiadónként",
+        "sk": "Počet datasetov podľa poskytovateľa",
+        "uk": "Кількість наборів даних на видавця"
+      },
+      "query": "PREFIX dcat: <http://www.w3.org/ns/dcat#>\nPREFIX dct: <http://purl.org/dc/terms/>\nPREFIX foaf: <http://xmlns.com/foaf/0.1/>\n\nSELECT ?poskytovateľ (COUNT(DISTINCT ?dataset) AS ?počet) WHERE {\n  GRAPH ?g {\n    ?dataset a dcat:Dataset;\n      dct:publisher/foaf:name ?poskytovateľ.\n    FILTER(langMatches(LANG(?poskytovateľ), \"sk\"))\n  }\n}\nGROUP BY ?poskytovateľ      \nORDER BY DESC(?počet)\n"
+    },
+    {
+      "name": {
+        "de": "Daten in CSV",
+        "en": "Data in CSV",
+        "hu": "Adatok az CSV-ben",
+        "sk": "Dáta v CSV",
+        "uk": "Дані в CSV"
+      },
+      "description": {
+        "de": "Datensätze mit Verteilungen in CSV",
+        "en": "Datasets with distributions in CSV",
+        "hu": "Adatkészletek terjesztésekkel az CSV-ben",
+        "sk": "Datasety s distribúciami v CSV",
+        "uk": "Набори даних із дистрибутивами в CSV"
+      },
+      "query": "PREFIX dcterms: <http://purl.org/dc/terms/>\nPREFIX dcat: <http://www.w3.org/ns/dcat#>\nPREFIX dct: <http://purl.org/dc/terms/>\nPREFIX foaf: <http://xmlns.com/foaf/0.1/>\nPREFIX format: <http://publications.europa.eu/resource/authority/file-type/>\n\nSELECT ?dataset ?názov ?poskytovateľ ?downloadURL WHERE {\n  GRAPH ?g {\n    ?dataset a dcat:Dataset;\n      dcterms:title ?názov ;\n      dct:publisher/foaf:name ?poskytovateľ ;\n      dcat:distribution ?distribúcia .\n    ?distribúcia a dcat:Distribution ;\n      dcat:downloadURL ?downloadURL ;\n      dcterms:format format:CSV .\n    FILTER(langMatches(LANG(?poskytovateľ), \"sk\"))\n    FILTER(langMatches(LANG(?názov), \"sk\"))\n  }\n}\nORDER BY ?názov\nLIMIT 10\n"
+    },
+    {
+      "name": {
+        "de": "Nichtverfügbarkeit von herunterladbaren Dateien",
+        "en": "Unavailability of downloadable files",
+        "hu": "A letölthető fájlok elérhetetlensége",
+        "sk": "Nedostupnosť stiahnuteľných súborov",
+        "uk": "Недоступність файлів для завантаження"
+      },
+      "description": {
+        "de": "Nichtverfügbarkeit herunterladbarer Dateien basierend auf Qualitätsmessungen",
+        "en": "Unavailability of downloadable files based on quality measurements",
+        "hu": "A letölthető fájlok elérhetetlensége minőségi mérések alapján",
+        "sk": "Nedostupnosť stiahnuteľných súborov na základe meraní kvality",
+        "uk": "Недоступність файлів для завантаження на основі вимірювань якості"
+      },
+      "query": "PREFIX dcterms: <http://purl.org/dc/terms/>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\nPREFIX foaf: <http://xmlns.com/foaf/0.1/>\nPREFIX skos: <http://www.w3.org/2004/02/skos/core#>\nPREFIX dqv: <http://www.w3.org/ns/dqv#>\nPREFIX qb: <http://purl.org/linked-data/cube#>\nPREFIX sdmx-dimension: <http://purl.org/linked-data/sdmx/2009/dimension#>\nPREFIX : <https://data.gov.sk/def/observation/data-quality/metrics/>\n\nSELECT ?meno_poskytovateľa (MAX(?percento_distribúcií_nedostupných_0) AS ?percento_distribúcií_nedostupných) (MAX(?počet_distribúcií_so_súborom_nedostupných_0) AS ?počet_distribúcií_so_súborom_nedostupných) (MAX(?počet_distribúcií_so_súborom_celkom_0) AS ?počet_distribúcií_so_súborom_celkom)\nWHERE \n{\n  <https://data.gov.sk/set/catalog/nkod> dcterms:modified ?date .\n  BIND(\"http://reference.data.gov.uk/id/gregorian-day/\" as ?datePrefix)\n  BIND(IRI(CONCAT(?datePrefix, STR(?date))) AS ?perióda)\n  \n  OPTIONAL {?poskytovateľ foaf:name ?meno_poskytovateľa . }\n  FILTER(BOUND(?meno_poskytovateľa) && langMatches(LANG(?meno_poskytovateľa), \"sk\"))\n\n  {\n    SELECT ?poskytovateľ ?perióda (0 AS ?počet_distribúcií_so_súborom_celkom_0) (0 AS ?počet_distribúcií_so_súborom_nedostupných_0) ?percento_distribúcií_nedostupných_0\n    WHERE {\n      [] a qb:Observation, dqv:QualityMeasurement ;\n                          dqv:computedOn ?poskytovateľ ;\n                          sdmx-dimension:refPeriod ?perióda ;\n                          dqv:isMeasurementOf :ProcentoDistribucíDatovýchSadSNedostupnýmSouboremKeStažení ;\n                          dqv:value ?percento_distribúcií_nedostupných_0 .\n    }\n  } UNION {\n    SELECT ?poskytovateľ ?perióda (0 AS ?počet_distribúcií_so_súborom_celkom_0) ?počet_distribúcií_so_súborom_nedostupných_0 (0 AS ?percento_distribúcií_nedostupných_0)\n    WHERE {\n      [] a qb:Observation, dqv:QualityMeasurement ;\n                          dqv:computedOn ?poskytovateľ ;\n                          sdmx-dimension:refPeriod ?perióda ;\n                          dqv:isMeasurementOf :PočetDistribucíDatovýchSadSNedostupnýmSouboremKeStažení ;\n                          dqv:value ?počet_distribúcií_so_súborom_nedostupných_0 .\n    }\n  } UNION {\n    SELECT ?poskytovateľ ?perióda ?počet_distribúcií_so_súborom_celkom_0 (0 AS ?počet_distribúcií_so_súborom_nedostupných_0) (0 AS ?percento_distribúcií_nedostupných_0)\n    WHERE {\n      [] a qb:Observation, dqv:QualityMeasurement ;\n                          dqv:computedOn ?poskytovateľ ;\n                          sdmx-dimension:refPeriod ?perióda ;\n                          dqv:isMeasurementOf :PočetDistribucíDatovýchSadSouborKeStažení ;\n                          dqv:value ?počet_distribúcií_so_súborom_celkom_0 .\n    }\n  }  \n}\nGROUP BY ?meno_poskytovateľa\nHAVING(?počet_distribúcií_so_súborom_nedostupných > 0)\nORDER BY DESC(?percento_distribúcií_nedostupných) DESC(?počet_distribúcií_so_súborom_nedostupných) ?meno_poskytovateľa\n"
+    },
+    {
+      "name": {
+        "de": "Anzahl der Datensätze in NKOD",
+        "en": "Number of datasets in NKOD",
+        "hu": "Adatkészletek száma az NKOD-ban",
+        "sk": "Počet datasetov v NKOD",
+        "uk": "Кількість наборів даних у НКОД"
+      },
+      "description": {
+        "de": "Anzahl der Datensätze in NKOD",
+        "en": "Number of datasets in NKOD",
+        "hu": "Adatkészletek száma az NKOD-ban",
+        "sk": "Počet datasetov v NKOD",
+        "uk": "Кількість наборів даних у НКОД"
+      },
+      "query": "PREFIX dcat: <http://www.w3.org/ns/dcat#>\nSELECT (COUNT (*) AS ?počet)\nWHERE {\n  ?dataset a dcat:Dataset\n}\n"
+    },
+    {
+      "name": {
+        "de": "Anzahl der Ausschüttungen ohne Angabe von Nutzungsbedingungen durch Anbieter",
+        "en": "Number of distributions without terms of use specified by provider",
+        "hu": "A disztribúciók száma a szolgáltató általi felhasználási feltételek megadása nélkül",
+        "sk": "Počet distribúcií bez uvedenia podmienok použitia podľa poskytovateľa",
+        "uk": "Кількість дистрибутивів без зазначення умов використання постачальником"
+      },
+      "description": {
+        "de": "Anzahl der Ausschüttungen ohne Angabe von Nutzungsbedingungen durch Anbieter",
+        "en": "Number of distributions without terms of use specified by provider",
+        "hu": "A disztribúciók száma a szolgáltató általi felhasználási feltételek megadása nélkül",
+        "sk": "Počet distribúcií bez uvedenia podmienok použitia podľa poskytovateľa",
+        "uk": "Кількість дистрибутивів без зазначення умов використання постачальником"
+      },
+      "query": "PREFIX dcterms: <http://purl.org/dc/terms/>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\nPREFIX foaf: <http://xmlns.com/foaf/0.1/>\nPREFIX skos: <http://www.w3.org/2004/02/skos/core#>\nPREFIX dqv: <http://www.w3.org/ns/dqv#>\nPREFIX qb: <http://purl.org/linked-data/cube#>\nPREFIX sdmx-dimension: <http://purl.org/linked-data/sdmx/2009/dimension#>\n\nPREFIX : <https://data.gov.sk/def/observation/data-quality/metrics/>\n\nSELECT ?meno_poskytovateľa ((100 - MAX(?percento_distribúcií_s_podmienkami_0)) AS ?percento) (MAX(?počet_distribúcií_bez_podmienok_0) AS ?počet_distribúcií_bez_podmienok) (MAX(?počet_distribúcií_celkom_0) AS ?počet_distribúcií_celkom)\nWHERE \n{\n  <https://data.gov.sk/set/catalog/nkod> dcterms:modified ?date .\n  BIND(\"http://reference.data.gov.uk/id/gregorian-day/\" as ?datePrefix)\n  BIND(IRI(CONCAT(?datePrefix, STR(?date))) AS ?perióda)\n  \n  OPTIONAL {?poskytovateľ foaf:name ?meno_poskytovateľa . }\n  FILTER(BOUND(?meno_poskytovateľa) && langMatches(LANG(?meno_poskytovateľa), \"sk\"))\n\n  {\n    SELECT ?poskytovateľ ?perióda ?percento_distribúcií_s_podmienkami_0 (0 AS ?počet_distribúcií_bez_podmienok_0) (0 AS ?počet_distribúcií_celkom_0)\n    WHERE {\n      ?pozorováníProcento a qb:Observation, dqv:QualityMeasurement ;\n                          dqv:computedOn ?poskytovateľ ;\n                          sdmx-dimension:refPeriod ?perióda ;\n                          dqv:isMeasurementOf :ProcentoDistribucíDatovýchSadSPodmínkamiUžití ;\n                          dqv:value ?percento_distribúcií_s_podmienkami_0 .\n\n    }\n\n  } UNION {\n    SELECT ?poskytovateľ ?perióda (0 AS ?percento_distribúcií_s_podmienkami_0) ?počet_distribúcií_bez_podmienok_0 (0 AS ?počet_distribúcií_celkom_0)\n    WHERE {\n      ?pozorováníBezPodmínek a qb:Observation, dqv:QualityMeasurement ;\n                          dqv:computedOn ?poskytovateľ ;\n                          sdmx-dimension:refPeriod ?perióda ;\n                          dqv:isMeasurementOf :PočetDistribucíDatovýchSadBezPodmínekUžití ;\n                          dqv:value ?počet_distribúcií_bez_podmienok_0 .\n\n    }\n\n  } UNION {\n    SELECT ?poskytovateľ ?perióda (0 AS ?percento_distribúcií_s_podmienkami_0) (0 AS ?počet_distribúcií_bez_podmienok_0) ?počet_distribúcií_celkom_0\n    WHERE {\n      ?pozorovanieCelkom a qb:Observation, dqv:QualityMeasurement ;\n                          dqv:computedOn ?poskytovateľ ;\n                          sdmx-dimension:refPeriod ?perióda ;\n                          dqv:isMeasurementOf :PočetDistribucíDatovýchSad ;\n                          dqv:value ?počet_distribúcií_celkom_0 .\n\n    }\n\n  }\n\n}\nGROUP BY ?meno_poskytovateľa\nHAVING (?počet_distribúcií_bez_podmienok > 0)\nORDER BY DESC(?percento) DESC(?počet_distribúcií_bez_podmienok) ?meno_poskytovateľa\n"
+    },
+    {
+      "name": {
+        "de": "Anzahl der Datensätze mit Verteilungen ohne Angabe einer Nutzungslizenz durch Anbieter",
+        "en": "Number of datasets with distributions without terms of use specified by provider",
+        "hu": "Azon adatkészletek száma, amelyek disztribúciókkal rendelkeznek szolgáltatónkénti használati licenc megadása nélkül",
+        "sk": "Počet datasetov s distribúciami bez uvedenia licencie použitia podľa poskytovateľa",
+        "uk": "Кількість наборів даних із розповсюдженням без зазначення ліцензії на використання за постачальником"
+      },
+      "description": {
+        "de": "Anzahl der Datensätze mit Verteilungen ohne Angabe einer Nutzungslizenz durch Anbieter",
+        "en": "Number of datasets with distributions without terms of use specified by provider",
+        "hu": "Azon adatkészletek száma, amelyek disztribúciókkal rendelkeznek szolgáltatónkénti használati licenc megadása nélkül",
+        "sk": "Počet datasetov s distribúciami bez uvedenia licencie použitia podľa poskytovateľa",
+        "uk": "Кількість наборів даних із розповсюдженням без зазначення ліцензії на використання за постачальником"
+      },
+      "query": "PREFIX dcterms: <http://purl.org/dc/terms/>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\nPREFIX foaf: <http://xmlns.com/foaf/0.1/>\nPREFIX skos: <http://www.w3.org/2004/02/skos/core#>\nPREFIX dqv: <http://www.w3.org/ns/dqv#>\nPREFIX qb: <http://purl.org/linked-data/cube#>\nPREFIX sdmx-dimension: <http://purl.org/linked-data/sdmx/2009/dimension#>\n\nPREFIX : <https://data.gov.sk/def/observation/data-quality/metrics/>\n\nSELECT ?meno_poskytovateľa ((100 - MAX(?percento_datasetov_s_podmienkami_0)) AS ?percento) (MAX(?počet_datasetov_bez_podmienok_0) AS ?počet_datasetov_bez_podmienok) (MAX(?počet_datasetov_celkom_0) AS ?počet_datasetov_celkom)\nWHERE \n{\n  <https://data.gov.sk/set/catalog/nkod> dcterms:modified ?date .\n  BIND(\"http://reference.data.gov.uk/id/gregorian-day/\" as ?datePrefix)\n  BIND(IRI(CONCAT(?datePrefix, STR(?date))) AS ?perióda)\n\n  OPTIONAL {?poskytovateľ foaf:name ?meno_poskytovateľa . }\n  FILTER(BOUND(?meno_poskytovateľa) && langMatches(LANG(?meno_poskytovateľa), \"sk\"))\n\n  {\n    SELECT ?poskytovateľ ?perióda ?percento_datasetov_s_podmienkami_0 (0 AS ?počet_datasetov_bez_podmienok_0) (0 AS ?počet_datasetov_celkom_0)\n    WHERE {\n      ?pozorováníProcento a qb:Observation, dqv:QualityMeasurement ;\n                          dqv:computedOn ?poskytovateľ ;\n                          sdmx-dimension:refPeriod ?perióda ;\n                          dqv:isMeasurementOf :ProcentoDatovýchSadSDistribucemiSPodmínkamiUžití ;\n                          dqv:value ?percento_datasetov_s_podmienkami_0 .\n\n    }\n\n  } UNION {\n    SELECT ?poskytovateľ ?perióda (0 AS ?percento_datasetov_s_podmienkami_0) ?počet_datasetov_bez_podmienok_0 (0 AS ?počet_datasetov_celkom_0)\n    WHERE {\n      ?pozorováníBezPodmínek a qb:Observation, dqv:QualityMeasurement ;\n                          dqv:computedOn ?poskytovateľ ;\n                          sdmx-dimension:refPeriod ?perióda ;\n                          dqv:isMeasurementOf :PočetDatovýchSadSDistribucíBezPodmínekUžití ;\n                          dqv:value ?počet_datasetov_bez_podmienok_0 .\n    }\n\n  } UNION {\n    SELECT ?poskytovateľ ?perióda (0 AS ?percento_datasetov_s_podmienkami_0) (0 AS ?počet_datasetov_bez_podmienok_0) ?počet_datasetov_celkom_0\n    WHERE {\n      ?pozorovanieCelkom a qb:Observation, dqv:QualityMeasurement ;\n                          dqv:computedOn ?poskytovateľ ;\n                          sdmx-dimension:refPeriod ?perióda ;\n                          dqv:isMeasurementOf :PočetDatovýchSad ;\n                          dqv:value ?počet_datasetov_celkom_0 .\n\n    }\n\n  }\n\n}\nGROUP BY ?meno_poskytovateľa\nHAVING (?počet_datasetov_bez_podmienok > 0)\nORDER BY DESC(?percento) DESC(?počet_datasetov_bez_podmienok) ?meno_poskytovateľa\n"
+    },
+    {
+      "name": {
+        "de": "Anzahl der Datensätze, die die obligatorischen Attribute des Anbieters nicht erfüllen",
+        "en": "Number of datasets missing mandatory attributes by provider",
+        "hu": "A kötelező attribútumoknak nem megfelelő adatkészletek száma szolgáltatónként",
+        "sk": "Počet datasetov nespĺňajúcich povinné atribúty podľa poskytovateľa",
+        "uk": "Кількість наборів даних, які не відповідають обов’язковим атрибутам за постачальником"
+      },
+      "description": {
+        "de": "Anzahl der Datensätze, die die obligatorischen Attribute des Anbieters nicht erfüllen",
+        "en": "Number of datasets missing mandatory attributes by provider",
+        "hu": "A kötelező attribútumoknak nem megfelelő adatkészletek száma szolgáltatónként",
+        "sk": "Počet datasetov nespĺňajúcich povinné atribúty podľa poskytovateľa",
+        "uk": "Кількість наборів даних, які не відповідають обов’язковим атрибутам за постачальником"
+      },
+      "query": "PREFIX dcterms: <http://purl.org/dc/terms/>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\nPREFIX foaf: <http://xmlns.com/foaf/0.1/>\nPREFIX skos: <http://www.w3.org/2004/02/skos/core#>\nPREFIX dqv: <http://www.w3.org/ns/dqv#>\nPREFIX qb: <http://purl.org/linked-data/cube#>\nPREFIX sdmx-dimension: <http://purl.org/linked-data/sdmx/2009/dimension#>\n\nPREFIX : <https://data.gov.sk/def/observation/data-quality/metrics/>\n\nSELECT DISTINCT ?meno_poskytovateľa ?počet_datasetov_nespĺňajúcich\nWHERE \n{\n  <https://data.gov.sk/set/catalog/nkod> dcterms:modified ?date .\n  BIND(\"http://reference.data.gov.uk/id/gregorian-day/\" as ?datePrefix)\n  BIND(IRI(CONCAT(?datePrefix, STR(?date))) AS ?perióda)\n      \n  ?pozorovanie a qb:Observation, dqv:QualityMeasurement ;\n    dqv:computedOn ?poskytovateľ ;\n    sdmx-dimension:refPeriod ?perióda ;\n    dqv:isMeasurementOf :PočetZáznamůDatovýchSadNesplňujícíchPovinnéAtributy ;\n    dqv:value ?počet_datasetov_nespĺňajúcich .\n  \n  ?poskytovateľ foaf:name ?meno_poskytovateľa .\n  FILTER(?počet_datasetov_nespĺňajúcich > 0)\n}\nORDER BY DESC(?počet_datasetov_nespĺňajúcich) ?meno_poskytovateľa\n"
+    },
+    {
+      "name": {
+        "de": "Gesamtverteilungsdatenformate",
+        "en": "Data formats of distributions in total",
+        "hu": "Összes terjesztési adatformátumok",
+        "sk": "Formáty dát distribúcií celkom",
+        "uk": "Загальні формати даних розподілу"
+      },
+      "description": {
+        "de": "Gesamtverteilungsdatenformate",
+        "en": "Data formats of distributions in total",
+        "hu": "Összes terjesztési adatformátumok",
+        "sk": "Formáty dát distribúcií celkom",
+        "uk": "Загальні формати даних розподілу"
+      },
+      "query": "PREFIX dcterms: <http://purl.org/dc/terms/>\nPREFIX dcat:    <http://www.w3.org/ns/dcat#>\nPREFIX foaf:    <http://xmlns.com/foaf/0.1/>\n\nSELECT ?mime_type (count (distinct ?distribúcia) as ?počet_distribúcií)\nWHERE \n{\n  ?dataset a dcat:Dataset ; \n  dcat:distribution ?distribúcia . \n\n  ?distribúcia dcat:mediaType ?mime_type.\n}\nGROUP BY ?mime_type \nORDER BY DESC(?počet_distribúcií)\n"
+    },
+    {
+      "name": {
+        "de": "Datenformate der Distributionen nach Anbieter",
+        "en": "Data formats of distributions by provider",
+        "hu": "A disztribúciók adatformátumai szolgáltatók szerint",
+        "sk": "Formáty dát distribúcií podľa poskytovateľa",
+        "uk": "Формати даних розповсюдження за провайдером"
+      },
+      "description": {
+        "de": "Datenformate der Distributionen nach Anbieter",
+        "en": "Data formats of distributions by provider",
+        "hu": "A disztribúciók adatformátumai szolgáltatók szerint",
+        "sk": "Formáty dát distribúcií podľa poskytovateľa",
+        "uk": "Формати даних розповсюдження за провайдером"
+      },
+      "query": "PREFIX dcterms: <http://purl.org/dc/terms/>\nPREFIX dcat:    <http://www.w3.org/ns/dcat#>\nPREFIX foaf:    <http://xmlns.com/foaf/0.1/>\n\nSELECT ?meno_poskytovateľa (count (distinct ?distribúcia) as ?počet_distribúcií) ?mime_type\nWHERE \n{\n  GRAPH ?g { ?dataset a dcat:Dataset ; \n  dcterms:publisher ?poskytovateľ ;\n  dcat:distribution ?distribúcia . \n\n    ?distribúcia dcat:mediaType ?mime_type.\n\n    ?poskytovateľ foaf:name ?meno_poskytovateľa .\n  }\n  FILTER(langMatches(LANG(?meno_poskytovateľa), \"sk\"))\n}\nGROUP BY ?poskytovateľ ?meno_poskytovateľa ?mime_type\nORDER BY DESC(?počet_distribúcií) ?mime_type\n"
+    },
+    {
+      "name": {
+        "de": "Anzahl der Daten mit einem bestimmten Schlüsselwort",
+        "en": "Numbers of datasets with a given keyword",
+        "hu": "Egy adott kulcsszóhoz tartozó adatok száma",
+        "sk": "Počty dát s daným kľúčovým slovom",
+        "uk": "Підрахунок даних із заданим ключовим словом"
+      },
+      "description": {
+        "de": "Anzahl der Daten mit einem bestimmten Schlüsselwort",
+        "en": "Numbers of datasets with a given keyword",
+        "hu": "Egy adott kulcsszóhoz tartozó adatok száma",
+        "sk": "Počty dát s daným kľúčovým slovom",
+        "uk": "Підрахунок даних із заданим ключовим словом"
+      },
+      "query": "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>\nPREFIX dqv: <http://www.w3.org/ns/dqv#>\nPREFIX qb: <http://purl.org/linked-data/cube#>\nPREFIX dcterms: <http://purl.org/dc/terms/>\nPREFIX dcat:    <http://www.w3.org/ns/dcat#>\n\nPREFIX : <https://data.gov.sk/def/observation/data-quality/metrics/>\n\nSELECT ?kľúčové_slovo (SUM(?výsledok) AS ?počet_datasetov)\nWHERE \n{\n  <https://data.gov.sk/set/catalog/nkod> dcterms:modified ?date .\n  BIND(\"http://reference.data.gov.uk/id/gregorian-day/\" as ?datePrefix)\n  BIND(IRI(CONCAT(?datePrefix, STR(?date))) AS ?perióda)\n\n  ?pozorovanie a qb:Observation, dqv:QualityMeasurement ;\n      dqv:isMeasurementOf :PočetDatovýchSadSDanýmKlíčovýmSlovem ;\n\n      skos:note ?kľúčové_slovo ;\n      dqv:value ?výsledok .\n}\nGROUP BY ?kľúčové_slovo\nORDER BY DESC(?počet_datasetov)\n"
+    },
+    {
+      "name": {
+        "de": "Nutzungsbedingungen der Distributionen insgesamt",
+        "en": "Terms of use of distributions in total",
+        "hu": "A disztribúciók használati feltételei összesen",
+        "sk": "Podmienky použitia distribúcií celkom",
+        "uk": "Умови використання дистрибутивів в цілому"
+      },
+      "description": {
+        "de": "Nutzungsbedingungen der Distributionen insgesamt",
+        "en": "Terms of use of distributions in total",
+        "hu": "A disztribúciók használati feltételei összesen",
+        "sk": "Podmienky použitia distribúcií celkom",
+        "uk": "Умови використання дистрибутивів в цілому"
+      },
+      "query": "PREFIX dcterms: <http://purl.org/dc/terms/>\nPREFIX dcat:    <http://www.w3.org/ns/dcat#>\n\nPREFIX law: <https://data.gov.sk/def/ontology/law/>\n\nSELECT (count (distinct ?distribúcia) as ?počet_distribúcií) ?autorskéDielo ?databáza ?zvláštnePrávo ?osobné_údaje\nWHERE \n{\n  ?dataset a dcat:Dataset ; \n  dcat:distribution ?distribúcia . \n\n?distribúcia law:termsOfUse ?pu .\n\n    ?pu a law:TermsOfUse ;\n                law:authorsWorkType ?autorskéDielo ;\n                law:originalDatabaseType ?databáza ;\n                law:databaseProtectedBySpecialRightsType ?zvláštnePrávo ;\n                law:personalDataContainmentType ?osobné_údaje .\n}\nGROUP BY ?autorskéDielo ?databáza ?zvláštnePrávo ?osobné_údaje\nORDER BY DESC(?počet_distribúcií) ?autorskéDielo ?databáza ?zvláštnePrávo ?osobné_údaje\n"
+    },
+    {
+      "name": {
+        "de": "Liste hochwertiger Datensätze (HVD)",
+        "en": "List of High Value Datasets (HVD)",
+        "hu": "A nagy értékű adatkészletek listája (HVD)",
+        "sk": "Zoznam datasetov s vysokou hodnotou (HVD)",
+        "uk": "Список високоцінних наборів даних (HVD)"
+      },
+      "description": {
+        "de": "Liste hochwertiger Datensätze (HVD)",
+        "en": "List of High Value Datasets (HVD)",
+        "hu": "A nagy értékű adatkészletek listája (HVD)",
+        "sk": "Zoznam datasetov s vysokou hodnotou (HVD)",
+        "uk": "Список високоцінних наборів даних (HVD)"
+      },
+      "query": "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\nPREFIX dcterms: <http://purl.org/dc/terms/>\nPREFIX dcat: <http://www.w3.org/ns/dcat#>\nPREFIX type: <http://publications.europa.eu/resource/authority/dataset-type/>\n\nSELECT DISTINCT ?názov_datasetu ?meno_poskytovateľa\nWHERE {\n  ?dataset a dcat:Dataset ;\n    dcterms:title ?názov_datasetu ;\n    dcterms:type type:HVD ;\n    dcterms:publisher ?poskytovateľ .\n  ?poskytovateľ foaf:name ?meno_poskytovateľa .\n  FILTER(langMatches(LANG(?názov_datasetu), \"sk\"))\n  FILTER(langMatches(LANG(?meno_poskytovateľa), \"sk\"))\n}\nLIMIT 100\n"
+    }
+  ]
+}

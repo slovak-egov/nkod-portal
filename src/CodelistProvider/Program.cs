@@ -57,6 +57,11 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+builder.Services.AddApplicationInsightsTelemetry(options =>
+{
+    options.ConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())

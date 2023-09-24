@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
@@ -18,6 +17,7 @@ using Google.Protobuf.WellKnownTypes;
 using J2N.Collections.Generic.Extensions;
 using NkodSk.Abstractions;
 using TestBase;
+using Microsoft.Extensions.Hosting;
 
 namespace IAM.Test
 {
@@ -128,14 +128,18 @@ namespace IAM.Test
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll(s => s.ServiceType == typeof(ApplicationDbContext));
+                services.RemoveAll(s => s.ServiceType == typeof(DbContextOptions));
+                services.RemoveAll(s => s.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
                 services.RemoveAll(s => s.ServiceType == typeof(SigningCredentials));
 
                 services.AddSingleton(signingCredentials);
 
+                string name = Guid.NewGuid().ToString();
+
                 services.AddDbContext<ApplicationDbContext>(options =>
                 {
-                    options.UseInMemoryDatabase(Guid.NewGuid().ToString());
-                }, ServiceLifetime.Singleton);
+                    options.UseInMemoryDatabase(name);
+                });
             });
 
             builder.ConfigureServices(services =>

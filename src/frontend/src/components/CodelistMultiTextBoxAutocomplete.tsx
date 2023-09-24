@@ -1,9 +1,4 @@
-import { ReactNode, useCallback, useEffect, useState } from "react";
-import SelectElementItems from "./SelectElementItems";
-import Button from "./Button";
-import GridColumn from "./GridColumn";
-import GridRow from "./GridRow";
-import BaseInput from "./BaseInput";
+import { useCallback, useEffect, useState } from "react";
 import { CodelistValue, getCodelistItem, searchCodelistItem } from "../client";
 import MultiTextBoxAutocomplete from "./MultiTextBoxAutocomplete";
 

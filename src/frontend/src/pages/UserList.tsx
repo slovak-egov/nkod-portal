@@ -9,28 +9,33 @@ import TableCell from "../components/TableCell";
 import Pagination from "../components/Pagination";
 import Breadcrumbs from "../components/Breadcrumbs";
 import MainContent from "../components/MainContent";
+import { removeUser, useDefaultHeaders, useUserInfo, useUsers } from "../client";
+import { useNavigate } from "react-router";
+import RoleName from "../components/RoleName";
 
 export default function UserList()
 {
+    const [users, query, setQueryParameters, loading, error, refresh] = useUsers();
+    const [userInfo] = useUserInfo();
+    const navigate = useNavigate();
+    const headers = useDefaultHeaders();
+
     return <>
-    <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Lokálne katalógy'}]} />
+        <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Lokálne katalógy'}]} />
             <MainContent>
             <PageHeader>Zoznam používateľov</PageHeader>
-            <p className="govuk-body nkod-publisher-name">
+            {userInfo?.publisherView ? <p className="govuk-body nkod-publisher-name">
                     <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Poskytovateľ dát</span><br />
-                        Ministerstvo investícií, regionálneho rozvoja a informatizácie Slovenskej republiky 
-                    </p>
-                    <p>
-                <Button>Nový používateľ</Button>
+                        {userInfo.publisherView.name}
+                    </p> : null}
+            <p>
+                <Button onClick={() => navigate('/sprava/pouzivatelia/pridat')}>Nový používateľ</Button>
             </p>
-            <Table>
+            {users?.items && users.items.length > 0 ? <><Table>
                 <TableHead>
                     <TableRow>
                         <TableHeaderCell>
                             Meno a priezvisko
-                        </TableHeaderCell>
-                        <TableHeaderCell>
-                            Dátum registrácie
                         </TableHeaderCell>
                         <TableHeaderCell>
                             Rola
@@ -41,39 +46,26 @@ export default function UserList()
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    <TableRow>
+                    {users.items.map(u => <TableRow key={u.id}>
                         <TableCell>
-                            Miroslav Ivan 
+                            {u.firstName} {u.lastName}
                         </TableCell>
                         <TableCell>
-                            21. 7. 2023 14:32
-                        </TableCell>
-                        <TableCell>
-                            Zverejňovateľ
+                            <RoleName role={u.role} />
                         </TableCell>
                         <TableCell style={{whiteSpace: 'nowrap'}}>
-                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}}>Upraviť</Button>
-                            <Button className="idsk-button idsk-button--secondary" >Odstrániť</Button>
+                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/pouzivatelia/upravit/' + u.id)}>Upraviť</Button>
+                            <Button className="idsk-button idsk-button--secondary" onClick={async () => {
+                                    if (await removeUser(u.id, headers)) {
+                                        refresh();
+                                    }
+                                }}>Odstrániť</Button>
                         </TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell>
-                             Peter Kráľ
-                        </TableCell>
-                        <TableCell>
-                            22. 6. 2023 11:10
-                        </TableCell>
-                        <TableCell>
-                            Administrátor poskytovateľa
-                        </TableCell>
-                        <TableCell style={{whiteSpace: 'nowrap'}}>
-                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}}>Upraviť</Button>
-                            <Button className="idsk-button idsk-button--secondary" >Odstrániť</Button>
-                        </TableCell>
-                    </TableRow>
+                    </TableRow>)}
                 </TableBody>
             </Table>
-            <Pagination totalItems={81} pageSize={10} currentPage={1} onPageChange={() => {}} />
+            <Pagination totalItems={users.totalCount} pageSize={query.pageSize} currentPage={query.page} onPageChange={p => setQueryParameters({page: p})} />
+            </> : <div>No users found</div>}
             </MainContent>
         </>;
 }

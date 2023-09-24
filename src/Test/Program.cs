@@ -26,7 +26,7 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Agent"
     Guid id = Guid.NewGuid();
 
     storage.InsertFile(
-      content, new FileMetadata(id, catalog?.GetName("sk") ?? id.ToString(), FileType.PublisherRegistration, null, catalog.Uri.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy
+      content, new FileMetadata(id, catalog.GetName("sk") ?? id.ToString(), FileType.PublisherRegistration, null, catalog.Uri.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy
   );
 }
 
@@ -47,12 +47,12 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Datase
     Dictionary<string, string[]> additionalValues = new Dictionary<string, string[]>();
     if (catalog.Type is not null)
     {
-        additionalValues["https://data.gov.sk/def/ontology/egov/DatasetType"] = new[] { catalog.Type.ToString() };
+        additionalValues[DcatDataset.TypeCodelist] = new string[] { catalog.Type.ToString()! };
     }
     additionalValues["themes_sk"] = catalog.GetKeywords("sk").ToArray();
 
     storage.InsertFile(
-        content, new FileMetadata(id, catalog?.GetTitle("sk") ?? id.ToString(), FileType.DatasetRegistration, null, catalog.Publisher!.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, additionalValues), true, accessPolicy
+        content, new FileMetadata(id, catalog.GetTitle("sk") ?? id.ToString(), FileType.DatasetRegistration, null, catalog.Publisher!.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, additionalValues), true, accessPolicy
     );
 }
 
@@ -66,7 +66,7 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Distri
     (Guid parentId, DcatDataset dataset) = datasets[catalog.Uri];
 
     storage.InsertFile(
-        content, new FileMetadata(id, catalog.GetTitle("sk") ?? id.ToString(), FileType.DistributionRegistration, parentId, dataset.Publisher.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy
+        content, new FileMetadata(id, catalog.GetTitle("sk") ?? id.ToString(), FileType.DistributionRegistration, parentId, dataset.Publisher!.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy
     );
 }
 
@@ -78,7 +78,7 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Catalo
     Guid id = Guid.NewGuid();
 
     storage.InsertFile(
-        content, new FileMetadata(id, catalog.GetTitle("sk") ?? id.ToString(), FileType.LocalCatalogRegistration, null, catalog.Publisher?.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy
+        content, new FileMetadata(id, catalog.GetTitle("sk") ?? id.ToString(), FileType.LocalCatalogRegistration, null, catalog.Publisher!.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy
     );
 }
 

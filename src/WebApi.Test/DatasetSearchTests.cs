@@ -480,7 +480,8 @@ namespace WebApi.Test
                 Id = publisherId,
                 DatasetCount = 0,
                 Key = "https://data.gov.sk/id/publisher/full",
-                Themes = null
+                Themes = null,
+                IsPublic = true
             }, view.Publisher);
 
             Assert.Single(view.Distributions);
@@ -583,7 +584,8 @@ namespace WebApi.Test
                 Id = publisherId,
                 DatasetCount = 0,
                 Key = "https://data.gov.sk/id/publisher/full",
-                Themes = null
+                Themes = null,
+                IsPublic = true
             }, view.Publisher);
 
             Assert.Single(view.Distributions);

@@ -4,7 +4,7 @@ import { ReactNode, useCallback } from "react";
 import Checkbox from "./Checkbox";
 import IdSkModule from "./IdSkModule";
 
-interface IProps<T>
+type Props<T> =
 {
     title: ReactNode;
     searchElementTitle: string;
@@ -15,7 +15,7 @@ interface IProps<T>
     onSelectionChange: (items: T[]) => void;
 }
 
-export default function SearchFilter<T>(props: IProps<T>) 
+export default function SearchFilter<T>(props: Props<T>) 
 {
     const selectedItems = props.selectedItems;
     const selectedValues = selectedItems.map(props.getValue);

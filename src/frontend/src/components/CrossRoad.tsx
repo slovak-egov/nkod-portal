@@ -1,20 +1,20 @@
 import { Link } from "react-router-dom";
 import IdSkModule from "./IdSkModule";
 
-interface IProps 
+type Props =
 {
     items: CrossRoadItem[];
     variant: 1 | 2;
 }
 
-interface CrossRoadItem
+type CrossRoadItem =
 {
     target: string;
     title: string;
     subTitle: string;
 }
 
-export default function Radio(props: IProps)
+export default function Radio(props: Props)
 {
     return <>
         {props.items.length > 0 && <IdSkModule moduleType="idsk-crossroad">

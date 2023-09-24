@@ -1,6 +1,6 @@
 import Button from "./Button";
 
-interface IProps 
+type Props =
 {
     currentPage: number;
     onPageChange: (page: number) => void;
@@ -8,7 +8,7 @@ interface IProps
     totalItems: number;
 }
 
-export default function Pagination(props: IProps) 
+export default function Pagination(props: Props) 
 {
     const currentPage = props.currentPage;
     const totalPages = props.pageSize > 0 ? Math.ceil(props.totalItems / props.pageSize) : 0;

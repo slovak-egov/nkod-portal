@@ -1,11 +1,8 @@
 import { InputHTMLAttributes } from "react";
 
-interface IProps extends InputHTMLAttributes<HTMLInputElement>
-{
-    
-}
+type Props = InputHTMLAttributes<HTMLInputElement>
 
-export default function BaseInput(props: IProps)
+export default function BaseInput(props: Props)
 {
     return <input className="govuk-input" {...props} />;
 }

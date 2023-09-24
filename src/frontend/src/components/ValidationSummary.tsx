@@ -1,7 +1,7 @@
 import { useId } from "react";
 import IdSkModule from "./IdSkModule";
 
-interface IProps
+interface Props
 {
     title?: string;
     description?: string;
@@ -14,7 +14,7 @@ interface IErrorElementReference
     message: string;
 }
 
-export default function ValidationSummary(props: IProps)
+export default function ValidationSummary(props: Props)
 {
     const id = useId();
 

@@ -1,11 +1,11 @@
 import { InputHTMLAttributes, useId } from "react";
 
-interface IProps extends InputHTMLAttributes<HTMLInputElement>
+type Props = 
 {
     label: string;
-}
+} & InputHTMLAttributes<HTMLInputElement>
 
-export default function Radio(props: IProps)
+export default function Radio(props: Props)
 {
     const id = useId();
 

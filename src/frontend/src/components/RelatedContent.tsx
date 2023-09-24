@@ -1,18 +1,18 @@
 import IdSkModule from "./IdSkModule"
 
-interface IProps
+type Props =
 {
     header: string
     links: ILink[]
 }
 
-interface ILink
+type ILink =
 {
     title: string
     url: string
 }
 
-export default function RelatedContent(props: IProps)
+export default function RelatedContent(props: Props)
 {
     return <IdSkModule className="idsk-related-content" moduleType="idsk-related-content">
         <hr className="idsk-related-content__line" aria-hidden="true" />

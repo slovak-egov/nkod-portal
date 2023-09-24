@@ -1,15 +1,9 @@
-import { useEffect, useState } from "react"
 import FormElementGroup from "./FormElementGroup"
 import MultiLanguageFormGroup from "./MultiLanguageFormGroup"
 import MultiRadio from "./MultiRadio"
-import { CodelistValue, Dataset, DatasetInput, LocalCatalogInput, UserInfo, extractLanguageErrors, knownCodelists, supportedLanguages, useCodelists, useDatasets } from "../client"
+import { LocalCatalogInput, UserInfo, extractLanguageErrors, supportedLanguages, useCodelists } from "../client"
 import BaseInput from "./BaseInput"
 import TextArea from "./TextArea"
-import MultiSelectElementItems from "./MultiSelecteElementItems"
-import SelectElementItems from "./SelectElementItems"
-import CodelistMultiTextBoxAutocomplete from "./CodelistMultiTextBoxAutocomplete"
-import MultiTextBox from "./MultiTextBox"
-import MultiCheckbox from "./MultiCheckbox"
 
 type Props = {
     catalog: LocalCatalogInput;

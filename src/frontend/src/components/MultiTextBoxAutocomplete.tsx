@@ -1,6 +1,4 @@
 import { ReactNode, useEffect, useState } from "react";
-import SelectElementItems from "./SelectElementItems";
-import Button from "./Button";
 import GridColumn from "./GridColumn";
 import GridRow from "./GridRow";
 import BaseInput from "./BaseInput";
@@ -13,11 +11,6 @@ type Props<T> =
     renderOption: (item: T) => ReactNode;
     getValue: (item: T) => string;
     id: string;
-}
-
-type OptionalValue = {
-    id: string,
-    label: ReactNode
 }
 
 export default function MultiTextBoxAutocomplete<T>(props: Props<T>)

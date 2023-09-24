@@ -1,11 +1,8 @@
 import { HTMLAttributes } from "react";
 
-interface IProps extends HTMLAttributes<HTMLTableRowElement>
-{
-    
-}
+type Props = HTMLAttributes<HTMLTableRowElement>
 
-export default function TableRow(props: IProps)
+export default function TableRow(props: Props)
 {
     return <tr className="idsk-table__row">
         {props.children}

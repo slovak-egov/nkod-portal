@@ -1,6 +1,6 @@
 import Radio from "./Radio";
 
-interface IProps<T>
+type Props<T> =
 {
     options: T[];
     selectedOption: T;
@@ -14,7 +14,7 @@ interface IProps<T>
     inline?: boolean;
 }
 
-export default function MultiRadio<T>(props: IProps<T>)
+export default function MultiRadio<T>(props: Props<T>)
 {
     const {options, inline, selectedOption, onChange, renderOption, getValue, label, hint, errorMessage, ...inputProperties} = props;
 

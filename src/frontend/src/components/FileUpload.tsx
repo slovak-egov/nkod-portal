@@ -1,11 +1,8 @@
-import { HTMLAttributes, InputHTMLAttributes } from "react";
+import { InputHTMLAttributes } from "react";
 
-interface IProps extends InputHTMLAttributes<HTMLInputElement>
-{
-    
-}
+type Props = InputHTMLAttributes<HTMLInputElement>
 
-export default function FileUpload(props: IProps)
+export default function FileUpload(props: Props)
 {
     return <input className="govuk-file-upload" type="file" {...props} />
 }

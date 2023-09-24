@@ -1,11 +1,8 @@
 import { HTMLAttributes } from "react";
 
-interface IProps extends HTMLAttributes<HTMLTableSectionElement>
-{
-    
-}
+type Props = HTMLAttributes<HTMLTableSectionElement>
 
-export default function TableHead(props: IProps)
+export default function TableHead(props: Props)
 {
     return <thead className="idsk-table__head">
         {props.children}

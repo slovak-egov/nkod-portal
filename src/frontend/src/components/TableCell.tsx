@@ -1,11 +1,8 @@
 import { HTMLAttributes } from "react";
 
-interface IProps extends HTMLAttributes<HTMLTableCellElement>
-{
-    
-}
+type Props = HTMLAttributes<HTMLTableCellElement>
 
-export default function TableCell(props: IProps)
+export default function TableCell(props: Props)
 {
     return <td className="idsk-table__cell" {...props}>
         {props.children}

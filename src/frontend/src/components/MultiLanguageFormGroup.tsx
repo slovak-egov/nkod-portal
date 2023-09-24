@@ -3,7 +3,7 @@ import GridRow from "./GridRow";
 import GridColumn from "./GridColumn";
 import { Language } from "../client";
 
-interface IProps 
+type Props =
 {
     label: string;
     hint?: string;
@@ -12,7 +12,7 @@ interface IProps
     errorMessage?: {[id: string] : string};
 }
 
-export default function MultiLanguageFormGroup(props: IProps)
+export default function MultiLanguageFormGroup(props: Props)
 {
     const id = useId();
 

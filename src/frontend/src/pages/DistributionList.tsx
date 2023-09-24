@@ -1,8 +1,4 @@
-import { useState } from "react";
-
 import PageHeader from "../components/PageHeader";
-import Radio from "../components/Radio";
-import MultiCheckbox from "../components/MultiCheckbox";
 import Button from "../components/Button";
 import Table from "../components/Table";
 import TableHead from "../components/TableHead";
@@ -14,7 +10,7 @@ import Pagination from "../components/Pagination";
 import Breadcrumbs from "../components/Breadcrumbs";
 import MainContent from "../components/MainContent";
 import { useNavigate, useParams } from "react-router";
-import { removeDistribution, useDataset, useDistributions, useUserInfo } from "../client";
+import { removeDistribution, useDataset, useDefaultHeaders, useDistributions, useUserInfo } from "../client";
 
 export default function DistributionList()
 {
@@ -23,6 +19,7 @@ export default function DistributionList()
     const [userInfo] = useUserInfo();
     const [dataset] = useDataset(datasetId);
     const navigate = useNavigate();
+    const headers = useDefaultHeaders();
 
     return <>
             <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'},{title: 'Zoznam datasetov', link: '/admin/datasets'}, {title: 'Organizačná štruktúra júl 2023', link: '/admin/datasets'}, {title: 'Distribúcie'}]} />
@@ -59,7 +56,7 @@ export default function DistributionList()
                             {d.downloadUrl ? <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => { if (d.downloadUrl) {window.location.href = d.downloadUrl}}}>Stiahnuť</Button> : null}
                             <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/distribucie/' + datasetId + '/upravit/' + d.id)}>Upraviť</Button>
                             <Button className="idsk-button idsk-button--secondary" onClick={async () => {
-                                    if (await removeDistribution(d.id)) {
+                                    if (await removeDistribution(d.id, headers)) {
                                         refresh();
                                     }
                                 }}>Odstrániť</Button>

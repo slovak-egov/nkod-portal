@@ -1,12 +1,12 @@
 import { HTMLAttributes } from "react";
 
-interface IProps extends HTMLAttributes<HTMLDivElement>
+type Props = 
 {
     widthUnits: number;
     totalUnits: number;
-}
+} & HTMLAttributes<HTMLDivElement>
 
-export default function GridColumn(props: IProps)
+export default function GridColumn(props: Props)
 {
     let autoClassName = 'govuk-grid-column-';
 

@@ -1,11 +1,17 @@
-import axios, { AxiosError, AxiosResponse } from "axios";
-import { useCallback, useEffect, useState } from "react";
+import axios, { AxiosError, AxiosResponse, RawAxiosRequestHeaders } from "axios";
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import { useSearchParams } from "react-router-dom";
 
 const baseUrl = process.env.REACT_APP_API_URL;
 
-let curentToken: string|null = process.env.REACT_APP_TOKEN ?? null;
+export const TokenContext = React.createContext<TokenResult|null>(null);
+
+export type TokenResult = {
+    token: string;
+    refreshToken: string;
+    redirectUrl: string|null;
+}
 
 export const knownCodelists = {
     'dataset' : {
@@ -28,9 +34,16 @@ export const knownCodelists = {
 export type Publisher = {
     id: string;
     key: string;
+    isPublic: boolean;
     name: string;
     datasetCount: number;
     themes: { [id: string] : number }|null
+}
+
+export type NewPublisher = {
+    website: string;
+    email: string;
+    phone: string;
 }
 
 type Temporal = {
@@ -43,7 +56,7 @@ type CardView = {
     email: string|null;
 }
 
-type SaveResult = {
+export type SaveResult = {
     id: string;
     success: boolean;
     errors: { [id: string] : string }
@@ -70,6 +83,16 @@ export type Language = {
 export type UserInfo = {
     publisher: string|null;
     publisherView: Publisher;
+    publisherEmail: string|null;
+    publisherHomePage: string|null;
+    publisherPhone: string|null;
+    publisherActive : boolean;
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string|null;
+    role: string|null;
+    companyName: string|null;
 }
 
 export type DatasetInput = {
@@ -209,6 +232,36 @@ export type RequestQuery = {
     requiredFacets: string[];
 }
 
+type User = {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string|null;
+    role: string | null;
+}
+
+type CodelistAdminView = {
+    id: string;
+    name: string;
+    count: number;
+}
+
+export type NewUser = {
+    firstName: string;
+    lastName: string;
+    email: string|null;
+    role: string|null;
+    identificationNumber: string;
+}
+
+export type EditUser = {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string|null;
+    role: string|null;
+}
+
 export function useDelay<T>(initialValue: T, delay: number, callback: (value: T) => void) {
     const [value, setValue] = useState<T>(initialValue);
 
@@ -257,15 +310,14 @@ export function useEntities<T>(url: string, initialQuery?: Partial<RequestQuery>
     const [items, setItems] = useState<Response<T>|null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
+    const headers = useDefaultHeaders();
 
     const refresh = useCallback(async () => {
         setLoading(true);
         if (query.page > 0) {
             try{
                 const response: AxiosResponse<Response<T>> = await axios.post(url, query, {
-                    headers: curentToken ? {
-                        'Authorization': 'Bearer ' + curentToken
-                    } : {}
+                    headers: headers
                 });
                 setItems(response.data);
             } catch (err) {
@@ -277,7 +329,7 @@ export function useEntities<T>(url: string, initialQuery?: Partial<RequestQuery>
                 setLoading(false);
             }
         }
-    }, [query, url]);
+    }, [query, url, headers]);
 
     useEffect(() => {
         refresh();
@@ -295,6 +347,7 @@ export function useEntity<T>(url: string, sourceId?: string) {
     const [item, setItem] = useState<T|null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
+    const headers = useDefaultHeaders();
 
     const targetId = sourceId ?? id;
 
@@ -316,9 +369,7 @@ export function useEntity<T>(url: string, sourceId?: string) {
                 setItem(null);
                 try{
                     const response: AxiosResponse<Response<T>> = await axios.post(url, query, {
-                        headers: curentToken ? {
-                            'Authorization': 'Bearer ' + curentToken
-                        } : {}
+                        headers: headers
                     });
                     if (response.data.items.length > 0) {
                         setItem(response.data.items[0]);
@@ -334,7 +385,7 @@ export function useEntity<T>(url: string, sourceId?: string) {
         }
 
         load();
-    }, [id, url]);
+    }, [targetId, url, headers]);
 
     return [ item, loading, error ] as const;
 }
@@ -361,6 +412,51 @@ export function usePublishers(initialQuery?: Partial<RequestQuery>) {
 
 export function useDistributions(initialQuery?: Partial<RequestQuery>) {
     return useEntities<Distribution>(baseUrl + 'distributions/search', {orderBy: 'relevance', ...initialQuery});
+}
+
+export function useUsers() {
+    type Query = {
+        page: number;
+        pageSize: number;
+    }
+
+    const [query, setQuery] = useState<Query>({
+        page: 1,
+        pageSize: 10
+    });
+    const [items, setItems] = useState<Response<User>|null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const headers = useDefaultHeaders();
+
+    const refresh = useCallback(async () => {
+        setLoading(true);
+        if (query.page > 0) {
+            try{
+                const response: AxiosResponse<Response<User>> = await axios.post('users/search', query, {
+                    headers: headers
+                });
+                setItems(response.data);
+            } catch (err) {
+                if (err instanceof Error) {
+                    setError(err);
+                }
+                setItems(null);
+            } finally {
+                setLoading(false);
+            }
+        }
+    }, [query, headers]);
+
+    useEffect(() => {
+        refresh();
+    }, [refresh]);
+
+    const setQueryParameters = useCallback((query: Partial<Query>) => {
+        setQuery(q => ({...q, ...query}));
+    }, []);
+
+    return [items, query, setQueryParameters, loading, error, refresh] as const;
 }
 
 export function useCodelists(keys: string[]) {
@@ -415,6 +511,7 @@ export async function getCodelistItem(codelistId: string, id: string) {
                 id: id
             }
         });
+        return response.data;
     } catch (error) {
         if (error instanceof AxiosError) {
             if (error.response?.status === 404) {
@@ -430,15 +527,14 @@ export function useEntityAdd<T>(url: string, initialValue: T) {
     const [errors, setErrors] = useState<{[id: string]: string}>({});
     const [saving, setSaving] = useState(false);
     const [saveResult, setSaveResult] = useState<SaveResult|null>(null);
+    const headers = useDefaultHeaders();
 
     const save = useCallback(async () => {
         setSaving(true);
         setErrors({});
         try {
             const response: AxiosResponse<SaveResult> = await axios.post(url, entity, {
-                headers: curentToken ? {
-                    'Authorization': 'Bearer ' + curentToken
-                } : {}
+                headers: headers
             });
             setErrors(response.data.errors ?? {});
             setSaveResult(response.data);
@@ -455,7 +551,7 @@ export function useEntityAdd<T>(url: string, initialValue: T) {
             setSaving(false);
         }
         return null;
-    }, [entity, url]);
+    }, [entity, url, headers]);
 
     const setEntityProperties = useCallback((properties: Partial<T>) => {
         setEntity({...entity, ...properties});
@@ -464,12 +560,43 @@ export function useEntityAdd<T>(url: string, initialValue: T) {
     return [ entity, setEntityProperties, errors, saving, saveResult, save ] as const;
 }
 
+export function useDefaultHeaders() {
+    const token = useContext(TokenContext);
+    const headers = useMemo(() => {
+        const headers: RawAxiosRequestHeaders = {};
+        if (token?.token) {
+            headers['Authorization'] = 'Bearer ' + token.token;
+        }
+        return headers;
+    }, [token]);
+    return headers;
+}
+
+export async function sendGet(url: string, headers: RawAxiosRequestHeaders) {
+    return await axios.get(url, {
+        headers: headers
+    });
+}
+
+export async function sendPost<TInput>(url: string, input: TInput, headers: RawAxiosRequestHeaders) {
+    return await axios.post(url, input, {
+        headers: headers
+    });
+}
+
+export async function sendPut<TInput>(url: string, input: TInput, headers: RawAxiosRequestHeaders) {
+    return await axios.put(url, input, {
+        headers: headers
+    });
+}
+
 export function useEntityEdit<TEntity, TInput>(url: string, loadUrl: string, initialValue: (entity: TEntity) => TInput) {
     const [entity, setEntity] = useState<TInput|null>(null);
     const [errors, setErrors] = useState<{[id: string]: string}>({});
     const [saving, setSaving] = useState(false);
     const [saveResult, setSaveResult] = useState<SaveResult|null>(null);
     const [item, loading, error] = useEntity<TEntity>(loadUrl);
+    const headers = useDefaultHeaders();
 
     useEffect(() => {
         if (item) {
@@ -481,11 +608,7 @@ export function useEntityEdit<TEntity, TInput>(url: string, loadUrl: string, ini
         setSaving(true);
         setErrors({});
         try {
-            const response: AxiosResponse<SaveResult> = await axios.put(url, entity, {
-                headers: curentToken ? {
-                    'Authorization': 'Bearer ' + curentToken
-                } : {}
-            });
+            const response: AxiosResponse<SaveResult> = await sendPut(url, entity, headers)
             setErrors(response.data.errors);
             setSaveResult(response.data);
             return response.data;
@@ -501,7 +624,7 @@ export function useEntityEdit<TEntity, TInput>(url: string, loadUrl: string, ini
             setSaving(false);
         }
         return null;
-    }, [entity, url]);
+    }, [entity, url, headers]);
 
     const setEntityProperties = useCallback((properties: Partial<TInput>) => {
         if (entity) {
@@ -547,32 +670,29 @@ export function useUserInfo() {
     const [userInfo, setUserInfo] = useState<UserInfo|null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
+    const headers = useDefaultHeaders();
 
     useEffect(() => {
         async function load() {
-            if (userInfo === null) {
-                setLoading(true);
-                setError(null);
-                setUserInfo(null);
-                try{
-                    const response: AxiosResponse<UserInfo> = await axios.post(baseUrl + 'user-info', {}, {
-                        headers: curentToken ? {
-                            'Authorization': 'Bearer ' + curentToken
-                        } : {}
-                    });
-                    setUserInfo(response.data);
-                } catch (err) {
-                    if (err instanceof Error) {
-                        setError(err);
-                    }
-                } finally {
-                    setLoading(false);
+            setLoading(true);
+            setError(null);
+            setUserInfo(null);
+            try{
+                const response: AxiosResponse<UserInfo> = await axios.post(baseUrl + 'user-info', {}, {
+                    headers: headers
+                });
+                setUserInfo(response.data);
+            } catch (err) {
+                if (err instanceof Error) {
+                    setError(err);
                 }
+            } finally {
+                setLoading(false);
             }
         }
 
         load();
-    }, [userInfo]);
+    }, [headers]);
 
     return [userInfo, loading, error] as const;
 }
@@ -587,13 +707,11 @@ export function extractLanguageErrors(errors: {[id: string]: string}, key: strin
     return filtered;
 }
 
-export async function removeEntity(url: string, id: string) {
+export async function removeEntity(url: string, id: string, headers: RawAxiosRequestHeaders) {
     if (window.confirm('Skutočne chcete odstrániť záznam?')) {
         try{
             await axios.delete(url, {
-                headers: curentToken ? {
-                    'Authorization': 'Bearer ' + curentToken
-                } : {},
+                headers: headers,
                 params: {
                     id: id
                 }
@@ -611,30 +729,33 @@ type FileUploadResult = {
     url: string;
 }
 
-export function removeDataset(id: string) {
-    return removeEntity(baseUrl + 'datasets', id);
+export function removeDataset(id: string, headers: RawAxiosRequestHeaders) {
+    return removeEntity(baseUrl + 'datasets', id, headers);
 }
 
-export function removeDistribution(id: string) {
-    return removeEntity(baseUrl + 'distributions', id);
+export function removeDistribution(id: string, headers: RawAxiosRequestHeaders) {
+    return removeEntity(baseUrl + 'distributions', id, headers);
 }
 
-export function removeLocalCatalog(id: string) {
-    return removeEntity(baseUrl + 'local-catalogs', id);
+export function removeLocalCatalog(id: string, headers: RawAxiosRequestHeaders) {
+    return removeEntity(baseUrl + 'local-catalogs', id, headers);
 }
 
-export function useSingleFileUpload() {
+export function removeUser(id: string, headers: RawAxiosRequestHeaders) {
+    return removeEntity(baseUrl + 'users', id, headers);
+}
+
+export function useSingleFileUpload(url: string) {
     const [uploading, setUploading] = useState(false);
+    const headers = useDefaultHeaders();
 
     const upload = useCallback(async (file: File) => {
         const formData = new FormData();
         formData.append('file', file, file.name);
         setUploading(true);
         try{
-            const response: AxiosResponse<FileUploadResult> =  await axios.post(baseUrl + 'upload', formData, {
-                headers: {
-                    'Authorization': 'Bearer ' + process.env.REACT_APP_TOKEN
-                }
+            const response: AxiosResponse<FileUploadResult> =  await axios.post(baseUrl + url, formData, {
+                headers: headers
             });
             return response.data;
         } finally {
@@ -643,4 +764,104 @@ export function useSingleFileUpload() {
     }, []);
 
     return [ uploading, upload ] as const;
+}
+
+export function useDistributionFileUpload() {
+    return useSingleFileUpload('upload');
+}
+
+export function useCodelistFileUpload() {
+    return useSingleFileUpload('codelists');
+}
+
+export function useCodelistAdmin() {
+    const [items, setItems] = useState<CodelistAdminView[]|null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const headers = useDefaultHeaders();
+
+    const refresh = useCallback(async () => {
+        setLoading(true);
+        try{
+            const response: AxiosResponse<CodelistAdminView[]> = await axios.post('codelists/search', {}, {
+                headers: headers
+            });
+            setItems(response.data);
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err);
+            }
+            setItems(null);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        refresh();
+    }, [refresh]);
+
+    return [items, loading, error, refresh] as const;
+}
+
+export async function doLogin(headers: RawAxiosRequestHeaders) {
+    type DelegationAuthorizationResult = { redirectUrl: string };
+    const response: AxiosResponse<DelegationAuthorizationResult> = await sendGet('saml/login', headers);
+    return response.data.redirectUrl;
+}
+
+export function doLogout(headers: RawAxiosRequestHeaders) {
+    return sendPost('saml/logout', {}, headers);
+}
+
+export function useUserAdd(initialValue: NewUser) {
+    return useEntityAdd<NewUser>(baseUrl + 'users', initialValue);
+}
+
+export function useUser() {
+    const { id } = useParams();
+    const [item, setItem] = useState<User|null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const headers = useDefaultHeaders();
+
+    useEffect(() => {
+        async function load() {
+            if (id) {   
+                setLoading(true);
+                setError(null);
+                setItem(null);
+                try{
+                    const response: AxiosResponse<User> = await axios.get('users/' + encodeURIComponent(id), {
+                        headers: headers
+                    });
+                    setItem(response.data);
+                } catch (err) {
+                    if (err instanceof Error) {
+                        setError(err);
+                    }
+                } finally {
+                    setLoading(false);
+                }
+            }
+        }
+
+        load();
+    }, [id, headers]);
+
+    return [ item, loading, error ] as const;
+}
+
+export function useUserEdit() {
+    return useEntityEdit<User, EditUser>('users', 'users/search', (entity: User) => ({
+        id: entity.id,
+        firstName: entity.firstName,
+        lastName: entity.lastName,
+        email: entity.email,
+        role: entity.role,
+    }));
+}
+
+export function usePublisherAdd(initialValue: NewPublisher) {
+    return useEntityAdd<NewPublisher>(baseUrl + 'registration', initialValue);
 }

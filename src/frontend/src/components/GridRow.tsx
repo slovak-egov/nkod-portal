@@ -1,11 +1,8 @@
 import { PropsWithChildren } from "react";
 
-interface IProps extends PropsWithChildren
-{
-    
-}
+type Props = PropsWithChildren
 
-export default function GridRow(props: IProps)
+export default function GridRow(props: Props)
 {
     return <div className="govuk-grid-row">
         {props.children}

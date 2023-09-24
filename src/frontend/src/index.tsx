@@ -2,12 +2,15 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import './index.scss';
+import { TokenResult } from './client';
+
+declare let externalToken: TokenResult|null;
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
-  <App />
+  <App extenalToken={externalToken} />
 );
 
 // If you want to start measuring performance in your app, pass a function

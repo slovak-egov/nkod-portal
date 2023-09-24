@@ -9,7 +9,7 @@ import TableCell from "../components/TableCell";
 import Pagination from "../components/Pagination";
 import Breadcrumbs from "../components/Breadcrumbs";
 import MainContent from "../components/MainContent";
-import { removeLocalCatalog, useLocalCatalogs, useUserInfo } from "../client";
+import { removeLocalCatalog, useDefaultHeaders, useLocalCatalogs, useUserInfo } from "../client";
 import { useNavigate } from "react-router";
 import { useEffect } from "react";
 
@@ -18,6 +18,7 @@ export default function CatalogList()
     const [catalogs, query, setQueryParameters, loading, error, refresh] = useLocalCatalogs({pageSize: 20, page: 0});
     const navigate = useNavigate();
     const [userInfo] = useUserInfo();
+    const headers = useDefaultHeaders();
 
     useEffect(() => {
         if (userInfo?.publisher) {
@@ -66,7 +67,7 @@ export default function CatalogList()
                         <TableCell style={{whiteSpace: 'nowrap'}}>
                             <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/lokalne-katalogy/upravit/' + c.id)}>Upraviť</Button>
                             <Button className="idsk-button idsk-button--secondary" onClick={async () => {
-                                    if (await removeLocalCatalog(c.id)) {
+                                    if (await removeLocalCatalog(c.id, headers)) {
                                         refresh();
                                     }
                                 }}>Odstrániť</Button>

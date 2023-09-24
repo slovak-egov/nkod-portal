@@ -1,13 +1,13 @@
 import { HTMLAttributes, useId } from "react";
 
-interface IProps extends HTMLAttributes<HTMLInputElement>
+type Props = 
 {
     label: string;
     checked: boolean;
     onCheckedChange: (checked: boolean) => void;
-}
+} & HTMLAttributes<HTMLInputElement>
 
-export default function Checkbox(props: IProps)
+export default function Checkbox(props: Props)
 {
     const id = useId();
 

@@ -9,24 +9,34 @@ import TableCell from "../components/TableCell";
 import Pagination from "../components/Pagination";
 import Breadcrumbs from "../components/Breadcrumbs";
 import MainContent from "../components/MainContent";
-import { usePublishers } from "../client";
+import { sendPut, removeEntity, usePublishers, useDefaultHeaders } from "../client";
 
 export default function PublisherList()
 {
-    const [publishers, loading, error] = usePublishers();
+    const [publishers, query, setQueryParameters, loading, error, refresh] = usePublishers();
+    const headers = useDefaultHeaders();
+
+    async function updatePublisherStatus(publisherId: string, isEnabled: boolean) {
+        try {
+            await sendPut('publishers', {
+                publisherId: publisherId,
+                isEnabled: isEnabled
+            }, headers);
+            refresh();
+        } catch (e) {
+
+        }
+    }
 
     return <>
     <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Poskytovatelia dát'}]} />
             <MainContent>
             <PageHeader>Poskytovatelia dát</PageHeader>
-            <Table>
+            {publishers && publishers.items.length > 0 ? <><Table>
                 <TableHead>
                     <TableRow>
                         <TableHeaderCell>
                             Názov
-                        </TableHeaderCell>
-                        <TableHeaderCell>
-                            Dátum vytvorenia
                         </TableHeaderCell>
                         <TableHeaderCell>
                             Stav
@@ -37,25 +47,27 @@ export default function PublisherList()
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    <TableRow>
+                    {publishers.items.map(p => <TableRow key={p.id}>
                         <TableCell>
-                        Ministerstvo investícií, regionálneho rozvoja a informatizácie Slovenskej republiky 
+                            {p.name}
                         </TableCell>
                         <TableCell>
-                            21. 7. 2023
-                        </TableCell>
-                        <TableCell>
-                            Zverejnený
+                            {p.isPublic ? 'publikovaný' : 'nepublikovaný'}
                         </TableCell>
                         <TableCell >
-                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}}>Deaktivovať</Button>
+                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => updatePublisherStatus(p.id, !p.isPublic)}>{p.isPublic ? 'Deaktivovať' : 'Aktivovať'}</Button>
                             <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}}>Impersonovať</Button>
-                            <Button className="idsk-button idsk-button--secondary" >Odstrániť</Button>
+                            <Button className="idsk-button idsk-button--secondary" onClick={async () => {
+                                await removeEntity('publishers', p.id, headers);
+                                refresh();
+                            }} >Odstrániť</Button>
                         </TableCell>
-                    </TableRow>
+                    </TableRow>)}
                 </TableBody>
             </Table>
-            <Pagination totalItems={81} pageSize={10} currentPage={1} onPageChange={() => {}} />
+            <Pagination totalItems={publishers.totalCount} pageSize={query.pageSize} currentPage={query.page} onPageChange={p => setQueryParameters({page: p})} />
+            </> 
+            : <div>No publishers found</div>}
             </MainContent>
         </>;
 }

@@ -183,5 +183,15 @@ namespace TestBase
             }
             throw new HttpRequestException("Forbidden", null, System.Net.HttpStatusCode.Forbidden);
         }
+
+        public Task<DelegationAuthorizationResult> GetLogin()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<TokenResult> Consume(string content)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -15,6 +15,12 @@ services:
     environment:
       DocumentStorageUrl: http://documentstorageapi:80
 
+  iam:
+    image: ${DOCKER_REGISTRY-}iam
+    build:
+      context: .
+      dockerfile: src/CodelistProvider/Dockerfile
+
   webapi:
     image: ${DOCKER_REGISTRY-}webapi
     build:
@@ -23,4 +29,4 @@ services:
     environment:
       DocumentStorageUrl: http://documentstorageapi:80
       CodelistProviderUrl: http://codelistprovider:80
-
+      IAMUrl: http://iam:80

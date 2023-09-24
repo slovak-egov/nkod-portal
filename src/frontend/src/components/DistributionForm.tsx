@@ -1,15 +1,9 @@
 import { useEffect, useState } from "react"
 import FormElementGroup from "./FormElementGroup"
-import MultiLanguageFormGroup from "./MultiLanguageFormGroup"
 import MultiRadio from "./MultiRadio"
-import { CodelistValue, DistributionInput, UserInfo, extractLanguageErrors, knownCodelists, supportedLanguages, useCodelists, useDatasets, useSingleFileUpload } from "../client"
+import { CodelistValue, DistributionInput, UserInfo, knownCodelists, useCodelists, useDistributionFileUpload } from "../client"
 import BaseInput from "./BaseInput"
-import TextArea from "./TextArea"
-import MultiSelectElementItems from "./MultiSelecteElementItems"
 import SelectElementItems from "./SelectElementItems"
-import CodelistMultiTextBoxAutocomplete from "./CodelistMultiTextBoxAutocomplete"
-import MultiTextBox from "./MultiTextBox"
-import MultiCheckbox from "./MultiCheckbox"
 import FileUpload from "./FileUpload"
 import Alert from "./Alert"
 
@@ -55,7 +49,7 @@ export function DistributionForm(props: Props)
 {
     const [codelists, loadingCodelists, errorCodelists] = useCodelists(requiredCodelists);
     const [uploadSetting, setUploadSetting] = useState<UploadSetting>(uploadSettings[0]);
-    const [ uploading, upload ] = useSingleFileUpload();
+    const [ uploading, upload ] = useDistributionFileUpload();
 
     const { distribution, setDistribution, userInfo, errors } = props;
 

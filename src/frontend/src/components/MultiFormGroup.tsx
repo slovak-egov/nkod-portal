@@ -2,7 +2,7 @@ import { ReactNode, useId } from "react";
 import GridRow from "./GridRow";
 import GridColumn from "./GridColumn";
 
-interface IProps 
+type Props =
 {
     label: string;
     hint?: string;
@@ -10,7 +10,7 @@ interface IProps
     errorMessage?: string;
 }
 
-export default function MultiFormGroup(props: IProps)
+export default function MultiFormGroup(props: Props)
 {
     const id = useId();
 

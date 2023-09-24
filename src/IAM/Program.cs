@@ -1,16 +1,8 @@
 using IAM;
-using ITfoxtec.Identity.Saml2.Schemas.Metadata;
-using ITfoxtec.Identity.Saml2.Util;
-using ITfoxtec.Identity.Saml2;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.StaticFiles.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using ITfoxtec.Identity.Saml2.MvcCore;
-using ITfoxtec.Identity.Saml2.MvcCore.Configuration;
-using System.Security.Cryptography.X509Certificates;
-using ITfoxtec.Identity.Saml2.Schemas;
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc;
@@ -27,20 +19,30 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using ITfoxtec.Identity.Saml2;
+using ITfoxtec.Identity.Saml2.Util;
+using ITfoxtec.Identity.Saml2.Schemas.Metadata;
+using System.Security.Cryptography.X509Certificates;
+using ITfoxtec.Identity.Saml2.MvcCore.Configuration;
+using ITfoxtec.Identity.Saml2.Schemas;
+using Microsoft.AspNetCore.Http;
+using ITfoxtec.Identity.Saml2.MvcCore;
+using Microsoft.IdentityModel.Tokens.Saml2;
+using Newtonsoft.Json;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-//builder.Services.AddDbContext<ApplicationDbContext>(options =>
-//{
-//    string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-//    if (string.IsNullOrEmpty(connectionString))
-//    {
-//        throw new Exception("Connection string not found.");
-//    }
+    if (string.IsNullOrEmpty(connectionString))
+    {
+        throw new Exception("Connection string not found.");
+    }
 
-//    options.UseMySQL(connectionString);
-//});
+    options.UseMySQL(connectionString);
+});
 
 builder.Services.AddHttpClient();
 
@@ -73,46 +75,49 @@ builder.Services.AddAuthentication(o =>
 });
 builder.Services.AddAuthorization();
 
-//builder.Services.AddSingleton(services =>
-//{
-//    Saml2Configuration saml2Configuration = new Saml2Configuration();
-//    builder.Configuration.Bind("Saml2", saml2Configuration);
+builder.Services.AddSingleton(services =>
+{
+    Saml2Configuration saml2Configuration = new Saml2Configuration();
+    builder.Configuration.Bind("Saml2", saml2Configuration);
 
-//    saml2Configuration.SigningCertificate = CertificateUtil.Load(builder.Configuration["Saml2:SigningCertificateFile"], builder.Configuration["Saml2:SigningCertificatePassword"], X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet);
-//    saml2Configuration.AllowedAudienceUris.Add(saml2Configuration.Issuer);
+    saml2Configuration.SigningCertificate = CertificateUtil.Load(builder.Configuration["Saml2:SigningCertificateFile"], builder.Configuration["Saml2:SigningCertificatePassword"], X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet);
+    saml2Configuration.DecryptionCertificate = CertificateUtil.Load(builder.Configuration["Saml2:DecryptionCertificateFile"], builder.Configuration["Saml2:DecryptionCertificatePassword"], X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet);
 
-//    var httpClientFactory = services.GetService<IHttpClientFactory>();
-//    var entityDescriptor = new EntityDescriptor();
-//    entityDescriptor.ReadIdPSsoDescriptorFromUrlAsync(httpClientFactory, new Uri(builder.Configuration["Saml2:IdPMetadata"])).GetAwaiter().GetResult();
-//    if (entityDescriptor.IdPSsoDescriptor != null)
-//    {
-//        saml2Configuration.AllowedIssuer = entityDescriptor.EntityId;
-//        saml2Configuration.SingleSignOnDestination = entityDescriptor.IdPSsoDescriptor.SingleSignOnServices.First().Location;
-//        saml2Configuration.SingleLogoutDestination = entityDescriptor.IdPSsoDescriptor.SingleLogoutServices.First().Location;
-//        foreach (var signingCertificate in entityDescriptor.IdPSsoDescriptor.SigningCertificates)
-//        {
-//            if (signingCertificate.IsValidLocalTime())
-//            {
-//                saml2Configuration.SignatureValidationCertificates.Add(signingCertificate);
-//            }
-//        }
-//        if (saml2Configuration.SignatureValidationCertificates.Count <= 0)
-//        {
-//            throw new Exception("The IdP signing certificates has expired.");
-//        }
-//        if (entityDescriptor.IdPSsoDescriptor.WantAuthnRequestsSigned.HasValue)
-//        {
-//            saml2Configuration.SignAuthnRequest = entityDescriptor.IdPSsoDescriptor.WantAuthnRequestsSigned.Value;
-//        }
-//    }
-//    else
-//    {
-//        throw new Exception("IdPSsoDescriptor not loaded from metadata.");
-//    }
-//    return saml2Configuration;
-//});
+    saml2Configuration.AudienceRestricted = false;
 
-//builder.Services.AddSaml2(slidingExpiration: true);
+    IHttpClientFactory? httpClientFactory = services.GetService<IHttpClientFactory>();
+    EntityDescriptor entityDescriptor = new EntityDescriptor();
+    entityDescriptor.ReadIdPSsoDescriptorFromUrlAsync(httpClientFactory, new Uri(builder.Configuration["Saml2:IdPMetadata"])).GetAwaiter().GetResult();
+    if (entityDescriptor.IdPSsoDescriptor != null)
+    {
+        saml2Configuration.AllowedIssuer = entityDescriptor.EntityId;
+        saml2Configuration.SingleSignOnDestination = entityDescriptor.IdPSsoDescriptor.SingleSignOnServices.First().Location;
+        saml2Configuration.SingleLogoutDestination = entityDescriptor.IdPSsoDescriptor.SingleLogoutServices.First().Location;
+        foreach (X509Certificate2 signingCertificate in entityDescriptor.IdPSsoDescriptor.SigningCertificates)
+        {
+            if (signingCertificate.IsValidLocalTime())
+            {
+                saml2Configuration.SignatureValidationCertificates.Add(signingCertificate);
+            }
+        }
+        if (saml2Configuration.SignatureValidationCertificates.Count <= 0)
+        {
+            throw new Exception("The IdP signing certificates has expired.");
+        }
+        if (entityDescriptor.IdPSsoDescriptor.WantAuthnRequestsSigned.HasValue)
+        {
+            saml2Configuration.SignAuthnRequest = entityDescriptor.IdPSsoDescriptor.WantAuthnRequestsSigned.Value;
+        }
+    }
+    else
+    {
+        throw new Exception("IdPSsoDescriptor not loaded from metadata.");
+    }
+
+    return saml2Configuration;
+});
+
+builder.Services.AddSaml2(slidingExpiration: true);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -146,7 +151,12 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-var app = builder.Build();
+builder.Services.AddApplicationInsightsTelemetry(options =>
+{
+    options.ConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+});
+
+WebApplication app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
@@ -158,24 +168,35 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-//app.UseSaml2();
+app.UseSaml2();
 app.UseAuthentication();
 app.UseAuthorization();
 
-async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord user, IConfiguration configuration, SigningCredentials signingCredentials, ClaimsPrincipal claimsPrincipal, string? publisher = null)
-{    
+async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord user, IConfiguration configuration, SigningCredentials signingCredentials, bool hasExplicitDelegation, string? publisher = null, string? companyName = null)
+{
     List<Claim> claims = new List<Claim>
     {
         new Claim(ClaimTypes.NameIdentifier, user.Id),
-        new Claim(ClaimTypes.Email, user.Email),
-        new Claim(ClaimTypes.GivenName, claimsPrincipal.FindFirstValue(ClaimTypes.GivenName) ?? user.FirstName),
-        new Claim(ClaimTypes.Surname, claimsPrincipal.FindFirstValue(ClaimTypes.Surname) ?? user.LastName),
+        new Claim(ClaimTypes.GivenName, user.FirstName),
+        new Claim(ClaimTypes.Surname, user.LastName),
         new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
     };
 
+    if (user.Email is not null)
+    {
+        claims.Add(new Claim(ClaimTypes.Email, user.Email));
+    }
+
     if (user.Role is not null)
     {
-        claims.Add(new Claim(ClaimTypes.Role, user.Role));
+        string effectiveRole = user.Role;
+
+        if (effectiveRole == "PublisherAdmin" && !hasExplicitDelegation)
+        {
+            effectiveRole = "Publisher";
+        }
+
+        claims.Add(new Claim(ClaimTypes.Role, effectiveRole));
     }
 
     publisher ??= user.Publisher;
@@ -183,6 +204,11 @@ async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord use
     if (publisher is not null)
     {
         claims.Add(new Claim("Publisher", publisher));
+    }
+
+    if (companyName is not null)
+    {
+        claims.Add(new Claim("CompanyName", companyName));
     }
 
     JwtSecurityToken jwtToken = new JwtSecurityToken(
@@ -214,7 +240,7 @@ async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord use
     };
 }
 
-app.MapGet("/users", [Authorize] async ([FromServices] ApplicationDbContext context, ClaimsPrincipal user, int? limit, int? offset) =>
+app.MapGet("/users", [Authorize] async ([FromServices] ApplicationDbContext context, ClaimsPrincipal user, int? limit, int? offset, string? id) =>
 {
     offset ??= 0;
 
@@ -223,6 +249,11 @@ app.MapGet("/users", [Authorize] async ([FromServices] ApplicationDbContext cont
     if (!string.IsNullOrEmpty(publisherId))
     {
         IQueryable<UserRecord> query = context.Users.Where(u => u.Publisher == publisherId);
+
+        if (!string.IsNullOrEmpty(id))
+        {
+            query = query.Where(u => u.Id == id);
+        }
 
         int total = query.Count();
 
@@ -389,6 +420,7 @@ app.MapGet("/user-info", [Authorize] async ([FromServices] ApplicationDbContext 
                 FirstName = firstName ?? record.FirstName,
                 LastName = lastName ?? record.LastName,
                 Email = record.Email,
+                CompanyName = user.FindFirstValue("CompanyName"),
             });
         }
         else
@@ -400,16 +432,6 @@ app.MapGet("/user-info", [Authorize] async ([FromServices] ApplicationDbContext 
     {
         return Results.NotFound();
     }
-});
-
-app.MapGet("/login", async ([FromServices] Saml2Configuration saml2Configuration) =>
-{
-    
-});
-
-app.MapPost("/consume", ([FromServices] Saml2Configuration saml2Configuration, IHttpContextAccessor httpContextAccessor) =>
-{
-    
 });
 
 app.MapPost("/refresh", async ([FromServices] ApplicationDbContext context, [FromBody] RefreshTokenRequest? request, [FromServices] SigningCredentials signingCredentials, [FromServices] IConfiguration configuration, HttpContext httpContext) =>
@@ -452,9 +474,11 @@ app.MapPost("/refresh", async ([FromServices] ApplicationDbContext context, [Fro
                             }
                         }
 
+                        bool hasExplicitDelegation = principal.IsInRole("PublisherAdmin");
+
                         if (areEqual && request.RefreshToken.Length == refreshTokenLen)
                         {
-                            return Results.Ok(await CreateToken(context, record, configuration, signingCredentials, principal));
+                            return Results.Ok(await CreateToken(context, record, configuration, signingCredentials, hasExplicitDelegation));
                         }
                     }
                 }
@@ -497,7 +521,7 @@ app.MapPost("/delegate-publisher", [Authorize] async ([FromServices] Application
             UserRecord? record = await context.Users.FindAsync(id);
             if (record is not null)
             {
-                return Results.Ok(await CreateToken(context, record, configuration, signingCredentials, user, publisher));
+                return Results.Ok(await CreateToken(context, record, configuration, signingCredentials, false, publisher));
             }
             else
             {
@@ -507,7 +531,76 @@ app.MapPost("/delegate-publisher", [Authorize] async ([FromServices] Application
         else
         {
             return Results.Forbid();
-        }        
+        }
+    }
+    else
+    {
+        return Results.Forbid();
+    }
+});
+
+app.MapGet("/login", async ([FromServices] Saml2Configuration saml2Configuration, IConfiguration configuration) =>
+{
+    string? returnUrl = configuration["Saml2:ReturnUrl"];
+    if (string.IsNullOrEmpty(returnUrl))
+    { 
+        return Results.Problem("Invalid configuration (A)");
+    }
+
+    Saml2RedirectBinding binding = new Saml2RedirectBinding();
+    binding.SetRelayStateQuery(new Dictionary<string, string> { { "ReturnUrl", returnUrl } });
+
+    Saml2AuthnRequest request = new Saml2AuthnRequest(saml2Configuration);
+    request.Issuer = configuration["Saml2:EntityId"];
+
+    Saml2RedirectBinding redirectBinding = binding.Bind(request);
+    return Results.Ok(new DelegationAuthorizationResult
+    {
+        RedirectUrl = redirectBinding.RedirectLocation.OriginalString
+    });
+});
+
+app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configuration, [FromServices] ApplicationDbContext context, HttpRequest request, [FromServices] SigningCredentials signingCredentials, IConfiguration configuration) =>
+{
+    Saml2PostBinding binding = new Saml2PostBinding();
+    Saml2AuthnResponse saml2AuthnResponse = new Saml2AuthnResponse(saml2Configuration);
+
+    ITfoxtec.Identity.Saml2.Http.HttpRequest genericRequest = request.ToGenericHttpRequest();
+
+    binding.ReadSamlResponse(genericRequest, saml2AuthnResponse);
+    if (saml2AuthnResponse.Status != Saml2StatusCodes.Success)
+    {
+        return Results.BadRequest($"SAML Response status: {saml2AuthnResponse.Status}");
+    }
+    binding.Unbind(genericRequest, saml2AuthnResponse);
+
+
+    string? id = saml2AuthnResponse.ClaimsIdentity.FindFirst("Actor.UPVSIdentityID")?.Value;
+    string? firstName = saml2AuthnResponse.ClaimsIdentity.FindFirst("Actor.FirstName")?.Value;
+    string? lastName = saml2AuthnResponse.ClaimsIdentity.FindFirst("Actor.LastName")?.Value;
+    string? email = saml2AuthnResponse.ClaimsIdentity.FindFirst("Actor.Email")?.Value;
+    string? ico = saml2AuthnResponse.ClaimsIdentity.FindFirst("Subject.ICO")?.Value;
+    string? companyName = saml2AuthnResponse.ClaimsIdentity.FindFirst("Subject.FormattedName")?.Value;
+
+    string? publisher = null;
+    bool hasExplicitDelegation = false;
+    if (!string.IsNullOrEmpty(ico))
+    {
+        publisher = $"https://data.gov.sk/id/legal-subject/{ico}";
+        hasExplicitDelegation = true;
+    }
+
+    if (!string.IsNullOrEmpty(id))
+    {
+        UserRecord? user = await context.GetOrCreateUser(id, firstName, lastName, email, publisher).ConfigureAwait(false);
+        if (user is not null)
+        {
+            return Results.Ok(await CreateToken(context, user, configuration, signingCredentials, hasExplicitDelegation, companyName: companyName));
+        }
+        else
+        {
+            return Results.Forbid();
+        }
     }
     else
     {

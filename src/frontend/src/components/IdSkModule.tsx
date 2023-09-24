@@ -11,12 +11,12 @@ export function initializeNode<T extends HTMLElement>(node: T)
     });
 }
 
-interface IProps extends HTMLAttributes<HTMLDivElement>
+type Props = 
 {
     moduleType: string;
-}
+} & HTMLAttributes<HTMLDivElement>
 
-export default function IdSkModule(props: IProps) 
+export default function IdSkModule(props: Props) 
 {
     const initialize = useCallback((node: HTMLDivElement) => {
         initializeNode(node);

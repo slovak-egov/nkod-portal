@@ -1,16 +1,15 @@
-
-interface IProps 
+type Props =
 {
     items: IItem[]
 }
 
-interface IItem
+type IItem =
 {
     title: string;
     link?: string;
 }
 
-export default function Breadcrumbs(props: IProps)
+export default function Breadcrumbs(props: Props)
 {
     return <div className="govuk-breadcrumbs">
         <ol className="govuk-breadcrumbs__list">

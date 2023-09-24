@@ -45,7 +45,7 @@ namespace WebApi.Test
             using HttpClient client = applicationFactory.CreateClient();
             RegistrationInput input = CreateInput();
             using JsonContent requestContent = JsonContent.Create(input);
-            using HttpResponseMessage response = await client.PostAsync("/profile", requestContent);
+            using HttpResponseMessage response = await client.PutAsync("/profile", requestContent);
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
 
@@ -59,7 +59,7 @@ namespace WebApi.Test
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken(null, null));
             RegistrationInput input = CreateInput();
             using JsonContent requestContent = JsonContent.Create(input);
-            using HttpResponseMessage response = await client.PostAsync("/profile", requestContent);
+            using HttpResponseMessage response = await client.PutAsync("/profile", requestContent);
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
 
@@ -76,7 +76,7 @@ namespace WebApi.Test
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
             RegistrationInput input = CreateInput();
             using JsonContent requestContent = JsonContent.Create(input);
-            using HttpResponseMessage response = await client.PostAsync("/profile", requestContent);
+            using HttpResponseMessage response = await client.PutAsync("/profile", requestContent);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             string content = await response.Content.ReadAsStringAsync();
             SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
@@ -113,7 +113,7 @@ namespace WebApi.Test
             RegistrationInput input = CreateInput();
             input.Website = string.Empty;
             using JsonContent requestContent = JsonContent.Create(input);
-            using HttpResponseMessage response = await client.PostAsync("/profile", requestContent);
+            using HttpResponseMessage response = await client.PutAsync("/profile", requestContent);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             string content = await response.Content.ReadAsStringAsync();
             SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
@@ -136,7 +136,7 @@ namespace WebApi.Test
             RegistrationInput input = CreateInput();
             input.Email = string.Empty;
             using JsonContent requestContent = JsonContent.Create(input);
-            using HttpResponseMessage response = await client.PostAsync("/profile", requestContent);
+            using HttpResponseMessage response = await client.PutAsync("/profile", requestContent);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             string content = await response.Content.ReadAsStringAsync();
             SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
@@ -159,7 +159,7 @@ namespace WebApi.Test
             RegistrationInput input = CreateInput();
             input.Phone = string.Empty;
             using JsonContent requestContent = JsonContent.Create(input);
-            using HttpResponseMessage response = await client.PostAsync("/profile", requestContent);
+            using HttpResponseMessage response = await client.PutAsync("/profile", requestContent);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             string content = await response.Content.ReadAsStringAsync();
             SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);

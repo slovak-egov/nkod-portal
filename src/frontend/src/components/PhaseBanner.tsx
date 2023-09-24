@@ -1,10 +1,10 @@
-interface IProps
+type Props =
 {
     tag: string;
     description: string;
 }
 
-export default function PhaseBanner(props: IProps)
+export default function PhaseBanner(props: Props)
 {
     return <div className="govuk-phase-banner">
         <p className="govuk-phase-banner__content">

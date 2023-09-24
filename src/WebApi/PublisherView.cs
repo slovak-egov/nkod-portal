@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
+using NkodSk.Abstractions;
+using System.IO;
 
 namespace WebApi
 {
@@ -10,8 +12,21 @@ namespace WebApi
 
         public string? Name { get; set; }
 
+        public bool IsPublic { get; set; }
+
         public int DatasetCount { get; set; }
 
         public Dictionary<string, int>? Themes { get; set; }
+
+        internal static PublisherView MapFromRdf(Guid id, bool isPublic, FoafAgent agent, string language)
+        {
+            return new PublisherView
+            {
+                Id = id,
+                Name = agent.GetName(language),
+                Key = agent.Uri.ToString(),
+                IsPublic = isPublic,
+            };
+        }
     }
 }

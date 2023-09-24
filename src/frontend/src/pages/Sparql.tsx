@@ -7,37 +7,31 @@ import PageSubheader from "../components/PageSubHeader";
 
 import Yasgui from "@triply/yasgui";
 import "@triply/yasgui/build/yasgui.min.css";
+import storedQueries from '../sparql-queries.json';
 
 //@ts-ignore
 import { initAll } from  '@id-sk/frontend/idsk/all';
 
-const defaultLanguage = "sk";
-
 const defaultSparqlQuery = `PREFIX dcat: <http://www.w3.org/ns/dcat#>
-PREFIX dct: <http://purl.org/dc/terms/>
-PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-
-SELECT ?poskytovateľ (COUNT(DISTINCT ?dataset) AS ?počet) WHERE {
-  GRAPH ?g {
-    ?dataset a dcat:Dataset;
-      dct:publisher/foaf:name ?poskytovateľ.
-    FILTER(langMatches(LANG(?poskytovateľ), "sk"))
-  }
+SELECT (COUNT (*) AS ?count)
+WHERE {
+  ?dataset a dcat:Dataset
 }
-GROUP BY ?poskytovateľ      
-ORDER BY DESC(?počet)
 `;
+
+let yasgui: Yasgui;
 
 export default function Sparql()
 {
-    useEffect(() => {
-        const yasgui = new Yasgui(document.getElementById("yasgui")!, {
+      useEffect(() => {
+        yasgui = new Yasgui(document.getElementById("yasgui")!, {
             "requestConfig": {
               "endpoint": () => "https://opendata.mirri.tech/api/sparql",
               "method": "GET"
             },
-            "copyEndpointOnNewTab": false,
+            "copyEndpointOnNewTab": true,
           });
+          yasgui.getTab()?.setQuery(defaultSparqlQuery);
           initAll();
         return () => {};
       }, []);
@@ -48,31 +42,20 @@ export default function Sparql()
                 <PageHeader>SPARQL Endpoint pre Národný katalóg otvorených dát</PageHeader>
                 <PageSubheader style={{color: '#2B8CC4', margin: '30px 0 20px 0'}}>Príklady dotazov</PageSubheader>
 
-                <div style={{marginBottom: '20px'}}>
+                {storedQueries.content.map((query: any) =><div style={{marginBottom: '20px'}}>
                     <div className="govuk-body" style={{margin: 0}}>
-                        <a href="#" className="govuk-link">100 datasetov a ich poskytovateľov</a>
+                        <span style={{color: '#2B8CC4', cursor: 'pointer'}} onClick={e => {
+                          e.preventDefault();
+                          const tab = yasgui.addTab(true);
+                          if (tab) {
+                            tab.setQuery(query.query);
+                          }
+                        }} className="govuk-link">{query.name.sk}</span>
                     </div>
                     <div className="govuk-body">
-                        100 datasetov a ich poskytovateľov
+                      {query.description.sk}
                     </div>
-                </div>
-                <div style={{marginBottom: '20px'}}>
-                    <div className="govuk-body" style={{margin: 0}}>
-                        <a href="#" className="govuk-link">Zoznam lokálnych katalógov údajov</a>
-                    </div>
-                    <div className="govuk-body">
-                    Zoznam lokálnych dátových katalógov a počty dátových sád v nich
-                    </div>
-                </div>
-                <div style={{marginBottom: '20px'}}>
-                    <div className="govuk-body" style={{margin: 0}}>
-                        <a href="#" className="govuk-link">Počet datasetov podľa poskytovateľa</a>
-                    </div>
-                    <div className="govuk-body">
-                    Počet datasetov podľa poskytovateľa
-                    </div>
-                </div>
-
+                </div>)}
 
                 <PageSubheader style={{color: '#2B8CC4', margin: '30px 0 20px 0'}}>Zadaj SPARQL dopyt</PageSubheader>
                 <div id="yasgui" />

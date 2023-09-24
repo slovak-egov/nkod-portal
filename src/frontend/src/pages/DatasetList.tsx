@@ -9,7 +9,7 @@ import TableCell from "../components/TableCell";
 import Pagination from "../components/Pagination";
 import Breadcrumbs from "../components/Breadcrumbs";
 import MainContent from "../components/MainContent";
-import { removeDataset, useDatasets, useUserInfo } from "../client";
+import { removeDataset, useDatasets, useDefaultHeaders, useUserInfo } from "../client";
 import ErrorAlert from "../components/ErrorAlert";
 import { useNavigate } from "react-router";
 import Loading from "../components/Loading";
@@ -20,6 +20,7 @@ export default function DatasetList()
     const [datasets, query, setQueryParameters, loading, error, refresh] = useDatasets({pageSize: 20, page: 0});
     const navigate = useNavigate();
     const [userInfo] = useUserInfo();
+    const headers = useDefaultHeaders();
 
     useEffect(() => {
         if (userInfo?.publisher) {
@@ -87,7 +88,7 @@ export default function DatasetList()
                             <TableCell>
                                 <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px', marginTop: '10px', marginBottom: '10px'}} onClick={() => navigate('/sprava/datasety/upravit/' + d.id)}>Upraviť</Button>
                                 <Button className="idsk-button idsk-button--secondary" style={{marginTop: '10px', marginBottom: '10px'}} onClick={async () => {
-                                    if (await removeDataset(d.id)) {
+                                    if (await removeDataset(d.id, headers)) {
                                         refresh();
                                     }
                                 }}>Odstrániť</Button>

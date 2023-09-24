@@ -1,10 +1,5 @@
 import { Link } from "react-router-dom";
 
-export interface IProps
-{
-
-}
-
 export function Footer()
 {
     return <div data-module="idsk-footer-extended">

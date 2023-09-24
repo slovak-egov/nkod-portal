@@ -1,13 +1,13 @@
 import { HTMLAttributes } from "react";
 
-interface IProps extends HTMLAttributes<HTMLTableCellElement>
+type Props = 
 {
     enableSorting: boolean;
     sortingDirection: "asc" | "desc" | null;
     toggleSortingDirection?: () => void;
-}
+} & HTMLAttributes<HTMLTableCellElement>
 
-export default function TableHeaderCell(props: IProps)
+export default function TableHeaderCell(props: Props)
 {
     let directionClass = '';
     if (props.sortingDirection === "asc") directionClass = "aes";

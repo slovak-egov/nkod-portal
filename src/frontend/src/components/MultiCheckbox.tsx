@@ -1,6 +1,5 @@
-import { HTMLAttributes, ReactNode } from "react";
+import { HTMLAttributes } from "react";
 import Checkbox from "./Checkbox";
-import { getValue } from "@testing-library/user-event/dist/utils";
 
 interface IProps<T> extends HTMLAttributes<HTMLInputElement>
 {
