@@ -1,17 +1,20 @@
 import { useEffect, useState } from "react"
 import FormElementGroup from "./FormElementGroup"
 import MultiRadio from "./MultiRadio"
-import { CodelistValue, DistributionInput, UserInfo, knownCodelists, useCodelists, useDistributionFileUpload } from "../client"
+import { CodelistValue, DistributionInput, knownCodelists, useCodelists, useDistributionFileUpload } from "../client"
 import BaseInput from "./BaseInput"
 import SelectElementItems from "./SelectElementItems"
 import FileUpload from "./FileUpload"
 import Alert from "./Alert"
+import Loading from "./Loading"
+import ErrorAlert from "./ErrorAlert"
+import { useTranslation } from "react-i18next"
 
 type Props = {
     distribution: DistributionInput;
     setDistribution: (properties: Partial<DistributionInput>) => void;
-    userInfo: UserInfo|null;
-    errors: {[id: string]: string}
+    errors: {[id: string]: string};
+    saving: boolean;
 }
 
 const requiredCodelists = [
@@ -28,30 +31,31 @@ type UploadSetting = {
     enableUpload: boolean;
     enableUrl: boolean;
 }
-
-const uploadSettings: UploadSetting[] = [
-    {
-        name: 'Súbor je prístupný na adrese',
-        id: 'url',
-        enableUpload: false,
-        enableUrl: true,
-    },
-    {
-        name: 'Nahratie súboru do NKOD',
-        id: 'upload',
-        enableUpload: true,
-        enableUrl: false,
-    }
-];
     
 
 export function DistributionForm(props: Props)
 {
+    const {t} = useTranslation();
+    const uploadSettings: UploadSetting[] = [
+        {
+            name: t('fileIsAvailableOnAddress'),
+            id: 'url',
+            enableUpload: false,
+            enableUrl: true,
+        },
+        {
+            name: t('uploadFileToNkod'),
+            id: 'upload',
+            enableUpload: true,
+            enableUrl: false,
+        }
+    ];
+
     const [codelists, loadingCodelists, errorCodelists] = useCodelists(requiredCodelists);
     const [uploadSetting, setUploadSetting] = useState<UploadSetting>(uploadSettings[0]);
     const [ uploading, upload ] = useDistributionFileUpload();
 
-    const { distribution, setDistribution, userInfo, errors } = props;
+    const { distribution, setDistribution, errors } = props;
 
     const authorsWorkTypeCodelist = codelists.find(c => c.id === knownCodelists.distribution.authorsWorkType);
     const originalDatabaseTypeCodelist = codelists.find(c => c.id === knownCodelists.distribution.originalDatabaseType);
@@ -70,43 +74,54 @@ export function DistributionForm(props: Props)
         }
     }, [formatCodelist, mediaTypeCodelist, distribution, setDistribution]);
 
+    const loading = loadingCodelists;
+    const error = errorCodelists;
+    const saving = props.saving;
+
     return <>
-        {authorsWorkTypeCodelist ? <FormElementGroup label="Typ autorského diela" errorMessage={errors['authorsworktype']} element={id => <SelectElementItems<CodelistValue> 
+        {loading ? <Loading /> : null}
+        {error ? <ErrorAlert error={error} /> : null}
+
+        {authorsWorkTypeCodelist ? <FormElementGroup label={t('authorWorkType')} errorMessage={errors['authorsworktype']} element={id => <SelectElementItems<CodelistValue> 
             id={id} 
+            disabled={saving}
             options={authorsWorkTypeCodelist.values} 
             selectedValue={distribution.authorsWorkType ?? ''} 
             renderOption={v => v.label} 
             getValue={v => v.id} 
             onChange={v => {setDistribution({authorsWorkType: v}) }} />} /> : null}
 
-        {originalDatabaseTypeCodelist ? <FormElementGroup label="Typ originálnej databázy" errorMessage={errors['originaldatabasetype']} element={id => <SelectElementItems<CodelistValue> 
+        {originalDatabaseTypeCodelist ? <FormElementGroup label={t('originalDatabaseType')} errorMessage={errors['originaldatabasetype']} element={id => <SelectElementItems<CodelistValue> 
             id={id} 
+            disabled={saving}
             options={originalDatabaseTypeCodelist.values} 
             selectedValue={distribution.originalDatabaseType ?? ''} 
             renderOption={v => v.label} 
             getValue={v => v.id} 
             onChange={v => {setDistribution({originalDatabaseType: v}) }} />} /> : null}
 
-        {databaseProtectedBySpecialRightsTypeCodelist ? <FormElementGroup label="Typ špeciálnej právnej ochrany databázy" errorMessage={errors['databaseprotectedbyspecialrightstype']} element={id => <SelectElementItems<CodelistValue> 
+        {databaseProtectedBySpecialRightsTypeCodelist ? <FormElementGroup label={t('specialDatabaseRights')} errorMessage={errors['databaseprotectedbyspecialrightstype']} element={id => <SelectElementItems<CodelistValue> 
             id={id} 
+            disabled={saving}
             options={databaseProtectedBySpecialRightsTypeCodelist.values} 
             selectedValue={distribution.databaseProtectedBySpecialRightsType ?? ''} 
             renderOption={v => v.label} 
             getValue={v => v.id} 
             onChange={v => {setDistribution({databaseProtectedBySpecialRightsType: v}) }} />} /> : null}
 
-        {personalDataContainmentTypeCodelist ? <FormElementGroup label="Typ výskytu osobných údajov" errorMessage={errors['personaldatacontainmenttype']} element={id => <SelectElementItems<CodelistValue> 
+        {personalDataContainmentTypeCodelist ? <FormElementGroup label={t('personalDataType')} errorMessage={errors['personaldatacontainmenttype']} element={id => <SelectElementItems<CodelistValue> 
             id={id} 
+            disabled={saving}
             options={personalDataContainmentTypeCodelist.values} 
             selectedValue={distribution.personalDataContainmentType ?? ''} 
             renderOption={v => v.label} 
             getValue={v => v.id} 
             onChange={v => {setDistribution({personalDataContainmentType: v}) }} />} /> : null}
 
-        <MultiRadio<UploadSetting> label="Súbor distribúcie" options={uploadSettings} onChange={setUploadSetting} selectedOption={uploadSetting} id="upload-settings" getValue={v => v.id} renderOption={v => v.name} />
+        <MultiRadio<UploadSetting> label={t('distributionFile')} options={uploadSettings} onChange={setUploadSetting} selectedOption={uploadSetting} id="upload-settings" getValue={v => v.id} renderOption={v => v.name} />
 
-        {uploadSetting.enableUrl ? <FormElementGroup label="URL súboru na stiahnutie" errorMessage={errors['downloadurl']} element={id => <BaseInput id={id} value={distribution.downloadUrl ?? ''} onChange={e => setDistribution({downloadUrl: e.target.value})} />} /> : null}
-        {uploadSetting.enableUpload ? <FormElementGroup label="Upload súboru" errorMessage={errors['downloadurl']} element={id => <FileUpload id={id} onChange={async e => {
+        {uploadSetting.enableUrl ? <FormElementGroup label={t('fileDownloadUrl')} errorMessage={errors['downloadurl']} element={id => <BaseInput id={id} disabled={saving} value={distribution.downloadUrl ?? ''} onChange={e => setDistribution({downloadUrl: e.target.value})} />} /> : null}
+        {uploadSetting.enableUpload ? <FormElementGroup label={t('fileUpload')} errorMessage={errors['downloadurl']} element={id => <FileUpload id={id} disabled={saving} onChange={async e => {
             const files = e.target.files ?? [];
             if (files.length > 0) {
                 const file = await upload(files[0]);
@@ -121,32 +136,36 @@ export function DistributionForm(props: Props)
             Prebieha upload súboru
         </Alert> : null}
 
-        {formatCodelist ? <FormElementGroup label="Formát súboru na stiahnutie" errorMessage={errors['format']} element={id => <SelectElementItems<CodelistValue> 
+        {formatCodelist ? <FormElementGroup label={t('downloadFormat')} errorMessage={errors['format']} element={id => <SelectElementItems<CodelistValue> 
             id={id} 
+            disabled={saving}
             options={formatCodelist.values} 
             selectedValue={distribution.format ?? ''} 
             renderOption={v => v.label} 
             getValue={v => v.id} 
             onChange={v => {setDistribution({format: v}) }} />} /> : null}
 
-        {mediaTypeCodelist ? <FormElementGroup label="Typ média súboru na stiahnutie" errorMessage={errors['mediatype']} element={id => <SelectElementItems<CodelistValue> 
+        {mediaTypeCodelist ? <FormElementGroup label={t('mediaType')} errorMessage={errors['mediatype']} element={id => <SelectElementItems<CodelistValue> 
             id={id} 
+            disabled={saving}
             options={mediaTypeCodelist.values} 
             selectedValue={distribution.mediaType ?? ''} 
             renderOption={v => v.label} 
             getValue={v => v.id} 
             onChange={v => {setDistribution({mediaType: v}) }} />} /> : null}
 
-        {mediaTypeCodelist ? <FormElementGroup label="Typ média kompresného formátu" errorMessage={errors['compressformat']} element={id => <SelectElementItems<CodelistValue> 
+        {mediaTypeCodelist ? <FormElementGroup label={t('compressionMediaType')} errorMessage={errors['compressformat']} element={id => <SelectElementItems<CodelistValue> 
             id={id} 
+            disabled={saving}
             options={[{id: '', label: 'nie je'}, ...mediaTypeCodelist.values]} 
             selectedValue={distribution.compressFormat ?? ''} 
             renderOption={v => v.label} 
             getValue={v => v.id}  
             onChange={v => {setDistribution({compressFormat: v}) }} />} /> : null}
 
-        {mediaTypeCodelist ? <FormElementGroup label="Typ média balíčkovacieho formátu" errorMessage={errors['packageformat']} element={id => <SelectElementItems<CodelistValue> 
+        {mediaTypeCodelist ? <FormElementGroup label={t('packageMediaType')} errorMessage={errors['packageformat']} element={id => <SelectElementItems<CodelistValue> 
             id={id} 
+            disabled={saving}
             options={[{id: '', label: 'nie je'}, ...mediaTypeCodelist.values]} 
             selectedValue={distribution.packageFormat ?? ''} 
             renderOption={v => v.label} 

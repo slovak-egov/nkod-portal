@@ -1,4 +1,4 @@
-import { useDatasetAdd, useUserInfo } from "../client";
+import { useDatasetAdd, useDocumentTitle, useUserInfo } from "../client";
 
 import PageHeader from "../components/PageHeader";
 import Breadcrumbs from "../components/Breadcrumbs";
@@ -7,11 +7,12 @@ import Button from "../components/Button";
 import ValidationSummary from "../components/ValidationSummary";
 import { DatasetForm } from "../components/DatasetForm";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 
 
 export default function AddDataset()
 {
-    const [dataset, setDataset, errors, saving, saveResult, save] = useDatasetAdd({
+    const [dataset, setDataset, errors, saving, save] = useDatasetAdd({
         isPublic: true,
         name: {'sk': ''},
         description: {'sk': ''},
@@ -34,14 +35,16 @@ export default function AddDataset()
 
     const [userInfo] = useUserInfo();
     const navigate = useNavigate();
+    const {t} = useTranslation();
+    useDocumentTitle(t('newDataset'));
 
     return <>
-            <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam datasetov', link: '/sprava/datasety'}, {title: 'Nový dataset'}]} />
+            <Breadcrumbs items={[{title: t('nkod'), link: '/'}, {title: t('newDataset'), link: '/sprava/datasety'}, {title: 'Nový dataset'}]} />
             <MainContent>
                 <div className="nkod-form-page">
-                    <PageHeader>Nový dataset</PageHeader>
+                    <PageHeader>{t('newDataset')}</PageHeader>
                     {userInfo?.publisherView ? <p className="govuk-body nkod-publisher-name">
-                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Poskytovateľ dát</span><br />
+                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>{t('publisher')}</span><br />
                         {userInfo.publisherView.name}
                     </p> : null}
 
@@ -50,7 +53,11 @@ export default function AddDataset()
                         message: k[1]
                     }))} /> : null}
 
-                    <DatasetForm dataset={dataset} setDataset={setDataset} errors={errors} userInfo={userInfo} />
+                    <DatasetForm dataset={dataset} 
+                                 setDataset={setDataset} 
+                                 errors={errors}
+                                 userInfo={userInfo}
+                                 saving={saving} />
 
                     <Button style={{marginRight: '20px'}} onClick={async () => {
                         const result = await save();
@@ -58,7 +65,7 @@ export default function AddDataset()
                             navigate('/sprava/datasety');
                         }
                     }} disabled={saving}>
-                        Uložiť dataset
+                        {t('saveDataset')}
                     </Button>
                     
                     <Button disabled={saving} onClick={async () => {
@@ -67,7 +74,7 @@ export default function AddDataset()
                             navigate('/sprava/distribucie/' + result?.id + '/pridat');
                         }
                     }}>
-                        Uložiť dataset a pridať distribúciu
+                        {t('saveAndAddDistribution')}
                     </Button>
                 </div>
             </MainContent>

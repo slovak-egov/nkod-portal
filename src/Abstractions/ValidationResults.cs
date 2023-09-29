@@ -1,11 +1,10 @@
 ﻿using Abstractions;
-using Microsoft.IdentityModel.Tokens;
 using NkodSk.Abstractions;
 using System.Collections;
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 
-namespace WebApi
+namespace NkodSk.Abstractions
 {
     public class ValidationResults : Dictionary<string, string>
     {

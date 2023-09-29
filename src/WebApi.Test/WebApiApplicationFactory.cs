@@ -16,7 +16,7 @@ using TestBase;
 
 namespace WebApi.Test
 {
-    class WebApiApplicationFactory : WebApplicationFactory<Program>, ITokenService
+    public class WebApiApplicationFactory : WebApplicationFactory<Program>, ITokenService
     {
         private readonly IFileStorage storage;
 

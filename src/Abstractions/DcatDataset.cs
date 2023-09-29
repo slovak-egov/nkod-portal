@@ -205,7 +205,7 @@ namespace NkodSk.Abstractions
             Dictionary<string, string[]> values = new Dictionary<string, string[]>();
             isPublic = isPublic && ShouldBePublic;
 
-            values["https://data.gov.sk/set/codelist/dataset-type"] = Type.Select(v => v.ToString()).ToArray();
+            values[TypeCodelist] = Type.Select(v => v.ToString()).ToArray();
 
             foreach ((string language, List<string> texts) in Keywords)
             {

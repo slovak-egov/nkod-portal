@@ -1,4 +1,4 @@
-import { Distribution, DistributionInput, useDataset, useDistributionEdit, useUserInfo } from "../client";
+import { Distribution, DistributionInput, useDataset, useDistributionEdit, useDocumentTitle, useUserInfo } from "../client";
 
 import PageHeader from "../components/PageHeader";
 import Breadcrumbs from "../components/Breadcrumbs";
@@ -8,6 +8,7 @@ import ValidationSummary from "../components/ValidationSummary";
 import Loading from "../components/Loading";
 import { useNavigate, useParams } from "react-router";
 import { DistributionForm } from "../components/DistributionForm";
+import { useTranslation } from "react-i18next";
 
 const transformEntityForEdit = (entity: Distribution): DistributionInput => {
     return {
@@ -24,7 +25,7 @@ const transformEntityForEdit = (entity: Distribution): DistributionInput => {
         compressFormat: entity.compressFormat ?? null,
         packageFormat: entity.packageFormat ?? null,
         conformsTo: entity.conformsTo ?? null,
-        title: entity.title ? {'sk': entity.title} : null,
+        title: entity.titleAll ?? {},
         fileId: null
     }
 };
@@ -33,24 +34,26 @@ export default function EditDistribution()
 {
     const { datasetId } = useParams();
     const [dataset] = useDataset(datasetId);
-    const [inputs, distribution, loading, setDistribution, errors, saving, saveResult, save] = useDistributionEdit(transformEntityForEdit);
+    const [inputs, , loading, setDistribution, errors, saving, save] = useDistributionEdit(transformEntityForEdit);
 
     const [userInfo] = useUserInfo();
     const navigate = useNavigate();
+    const {t} = useTranslation();
+    useDocumentTitle(t('editDistribution'));
 
     return <>
-            <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam distribúcií', link: '/sprava/distribucie/' + datasetId}, {title: 'Upraviť distribúciu'}]} />
+            <Breadcrumbs items={[{title: t('nkod'), link: '/'}, {title: t('distributionList'), link: '/sprava/distribucie/' + datasetId}, {title: t('editDistribution')}]} />
             <MainContent>
                 <div className="nkod-form-page">
-                    <PageHeader>Upraviť distribúciu</PageHeader>
+                    <PageHeader>{t('editDistribution')}</PageHeader>
                     {userInfo?.publisherView ? <p className="govuk-body nkod-publisher-name">
-                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Poskytovateľ dát</span><br />
+                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>{t('publisher')}</span><br />
                         {userInfo.publisherView.name}
 
                     </p> : null}
 
                     {dataset ? <p className="govuk-body nkod-publisher-name">
-                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Dataset</span><br />
+                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>{t('dataset')}</span><br />
                     {dataset.name}
                     </p> : null}
 
@@ -61,14 +64,18 @@ export default function EditDistribution()
 
                     {
                         !loading && inputs ? <>
-                        <DistributionForm distribution={inputs} setDistribution={setDistribution} errors={errors} userInfo={userInfo} />
+                        <DistributionForm distribution={inputs} 
+                                          setDistribution={setDistribution} 
+                                          errors={errors}
+                                          saving={saving} />
+                                          
                         <Button style={{marginRight: '20px'}} onClick={async () => {
                         const result = await save();
                         if (result?.success) {
                             navigate('/sprava/distribucie/' + datasetId);
                         }
                     }} disabled={saving}>
-                            Uložiť distribúciu
+                            {t('save')}
                         </Button></> : <Loading />
                     }
                 </div>

@@ -300,6 +300,8 @@ namespace IAM.Test
                 Id = record.Id,
                 Email = "test@example.com",
                 Role = "Publisher",
+                FirstName = "Meno",
+                LastName = "Priezvisko"
             };
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PutAsync("/users", requestContent);
@@ -443,6 +445,8 @@ namespace IAM.Test
                 Id = record.Id,
                 Email = "test@example.com",
                 Role = "Publisher",
+                FirstName = "Meno",
+                LastName = "Priezvisko"
             };
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PutAsync("/users", requestContent);

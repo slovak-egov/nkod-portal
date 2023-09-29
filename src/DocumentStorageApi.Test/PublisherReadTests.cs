@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Data;
+using TestBase;
 
 namespace DocumentStorageApi.Test
 {
@@ -228,7 +229,7 @@ namespace DocumentStorageApi.Test
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             FileStorageResponse? storageResponse = JsonConvert.DeserializeObject<FileStorageResponse>(await response.Content.ReadAsStringAsync());
             Assert.NotNull(storageResponse);
-            FileStorageResponse expected = fixture.ExistingStates.GetResponse(new FileStorageQuery(), new PublisherAccessPolicy(publisher));
+            FileStorageResponse expected = fixture.ExistingStates.GetResponse(new FileStorageQuery(), new PublisherFileAccessPolicy(publisher));
             Assert.Equal(expected.TotalCount, storageResponse.TotalCount);
             Assert.Equal(expected.Files, storageResponse.Files);
         }
@@ -261,7 +262,7 @@ namespace DocumentStorageApi.Test
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             FileStorageResponse? storageResponse = JsonConvert.DeserializeObject<FileStorageResponse>(await response.Content.ReadAsStringAsync());
             Assert.NotNull(storageResponse);
-            FileStorageResponse expected = fixture.ExistingStates.GetResponse(query, new PublisherAccessPolicy(publisher));
+            FileStorageResponse expected = fixture.ExistingStates.GetResponse(query, new PublisherFileAccessPolicy(publisher));
             Assert.Equal(expected.TotalCount, storageResponse.TotalCount);
             Assert.Equal(expected.Files, storageResponse.Files);
             Assert.All(expected.Files, f => Assert.True(f.Metadata.IsPublic));

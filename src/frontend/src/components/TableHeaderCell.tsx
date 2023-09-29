@@ -15,8 +15,10 @@ export default function TableHeaderCell(props: Props)
 
     return <th className="idsk-table__header">
         <span className="th-span">
+            <>
             {props.children}
             {props.enableSorting ? <><button className={"arrowBtn " + directionClass} onClick={props.toggleSortingDirection}><span className="sr-only">Nezoradený stĺpec - použije vzostupné zoradenie.</span></button></> : null }
+            </>
         </span>
     </th>
 }

@@ -4,32 +4,38 @@ import Breadcrumbs from "../components/Breadcrumbs";
 import MainContent from "../components/MainContent";
 import FormElementGroup from "../components/FormElementGroup";
 import BaseInput from "../components/BaseInput";
-import { usePublisherAdd, useUserInfo } from "../client";
+import { useDocumentTitle, usePublisherAdd, useUserInfo } from "../client";
+import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 
 export default function AddPublisher()
 {
     const [userInfo] = useUserInfo();
-    const [publisher, setPublisher, errors, saving, saveResult, save] = usePublisherAdd({
+    const [publisher, setPublisher, errors, saving, save] = usePublisherAdd({
         website: '',
         email: '',
         phone: ''
     });
+    const navigate = useNavigate();
+    const {t} = useTranslation();
+    useDocumentTitle(t('publisherRegistration'));
 
     return <>
-    <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'},{title: 'Registrácia poskytovateľa dát'}]} />
+    <Breadcrumbs items={[{title: t('nkod'), link: '/'},{title: t('publisherRegistration')}]} />
             <MainContent>
-            <PageHeader>Registrácia poskytovateľa dát</PageHeader>
-                    {userInfo?.companyName ? <p className="govuk-body nkod-publisher-name">
-                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Poskytovateľ dát</span><br />
-                        {userInfo.companyName}
-                    </p> : null}
+            <PageHeader>{t('publisherRegistration')}</PageHeader>
 
-                    <FormElementGroup label="Adresa webového sídla" element={id => <BaseInput id={id} value={publisher.website} onChange={e => setPublisher({website: e.target.value})} />} />
-                    <FormElementGroup label="E-mailová adresa kontaktnej osoby" element={id => <BaseInput id={id} value={publisher.email} onChange={e => setPublisher({email: e.target.value})} />} />
-                    <FormElementGroup label="Telefónne číslo kontaktnej osoby" element={id => <BaseInput id={id} value={publisher.phone} onChange={e => setPublisher({phone: e.target.value})} />} />
+                    <FormElementGroup label={t('websiteAddress')} errorMessage={errors['website']} element={id => <BaseInput id={id} disabled={saving} value={publisher.website} onChange={e => setPublisher({website: e.target.value})} />} />
+                    <FormElementGroup label={t('contantEmailAddress')} errorMessage={errors['email']} element={id => <BaseInput id={id} disabled={saving} value={publisher.email} onChange={e => setPublisher({email: e.target.value})} />} />
+                    <FormElementGroup label={t('contactPhoneNumber')} errorMessage={errors['phone']} element={id => <BaseInput id={id} disabled={saving} value={publisher.phone} onChange={e => setPublisher({phone: e.target.value})} />} />
                     
-                    <Button style={{marginRight: '20px'}} onClick={save}>
-                        Registrovať 
+                    <Button style={{marginRight: '20px'}} onClick={async () => {
+                        const result = await save();
+                        if (result?.success) {
+                            navigate('/sprava/caka-na-schvalenie');
+                        }
+                    }} disabled={saving}>
+                        {t('register')}
                     </Button>
             </MainContent>
         </>;

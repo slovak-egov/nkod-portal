@@ -19,7 +19,7 @@ namespace CodelistProvider.Test
         {
             Storage storage = new Storage(fixture.GetStoragePath(false));
             TestDocumentStorageClient storageClient = new TestDocumentStorageClient(storage, AnonymousAccessPolicy.Default);
-            InternalCodelistProvider provider = new InternalCodelistProvider(storageClient, new DefaultLanguagesSource());
+            InternalCodelistProvider provider = new InternalCodelistProvider(storageClient, new DefaultLanguagesSource(), null);
 
             List<Codelist> lists = await provider.GetCodelists();
             Assert.Empty(lists);
@@ -30,7 +30,7 @@ namespace CodelistProvider.Test
         {
             Storage storage = new Storage(fixture.GetStoragePath());
             TestDocumentStorageClient storageClient = new TestDocumentStorageClient(storage, AnonymousAccessPolicy.Default);
-            InternalCodelistProvider provider = new InternalCodelistProvider(storageClient, new DefaultLanguagesSource());
+            InternalCodelistProvider provider = new InternalCodelistProvider(storageClient, new DefaultLanguagesSource(), null);
 
             List<Codelist> lists = await provider.GetCodelists();
             Assert.Equal(2, lists.Count);
@@ -54,7 +54,7 @@ namespace CodelistProvider.Test
         {
             Storage storage = new Storage(fixture.GetStoragePath());
             TestDocumentStorageClient storageClient = new TestDocumentStorageClient(storage, AnonymousAccessPolicy.Default);
-            InternalCodelistProvider provider = new InternalCodelistProvider(storageClient, new DefaultLanguagesSource());
+            InternalCodelistProvider provider = new InternalCodelistProvider(storageClient, new DefaultLanguagesSource(), null);
 
             Codelist? list = await provider.GetCodelist(DcatDataset.AccrualPeriodicityCodelist);
             Assert.NotNull(list);
@@ -75,7 +75,7 @@ namespace CodelistProvider.Test
         {
             Storage storage = new Storage(fixture.GetStoragePath());
             TestDocumentStorageClient storageClient = new TestDocumentStorageClient(storage, AnonymousAccessPolicy.Default);
-            InternalCodelistProvider provider = new InternalCodelistProvider(storageClient, new DefaultLanguagesSource());
+            InternalCodelistProvider provider = new InternalCodelistProvider(storageClient, new DefaultLanguagesSource(), null);
 
             Codelist? list = await provider.GetCodelist("unknown");
             Assert.Null(list);

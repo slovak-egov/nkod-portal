@@ -90,6 +90,7 @@ namespace WebApi
                 Themes = nonEurovocThemes.ToArray(),
                 AccrualPeriodicity = datasetRdf.AccrualPeriodicity,
                 Keywords = datasetRdf.GetKeywords(language).ToArray(),
+                KeywordsAll = datasetRdf.Keywords,
                 Type = datasetRdf.Type.ToArray(),
                 Spatial = datasetRdf.Spatial.ToArray(),
                 Temporal = temporal is not null ? new TemporalView { StartDate = temporal.StartDate, EndDate = temporal.EndDate } : null,

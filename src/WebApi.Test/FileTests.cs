@@ -75,7 +75,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             using MultipartFormDataContent requestContent = new MultipartFormDataContent();
             requestContent.Add(new ByteArrayContent(bytes, 0, bytes.Length), "file", name);
             using HttpResponseMessage response = await client.PostAsync("/upload", requestContent);

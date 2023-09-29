@@ -9,11 +9,12 @@ import TableCell from "../components/TableCell";
 import Pagination from "../components/Pagination";
 import Breadcrumbs from "../components/Breadcrumbs";
 import MainContent from "../components/MainContent";
-import { removeDataset, useDatasets, useDefaultHeaders, useUserInfo } from "../client";
+import { removeDataset, useDatasets, useDefaultHeaders, useDocumentTitle, useUserInfo } from "../client";
 import ErrorAlert from "../components/ErrorAlert";
 import { useNavigate } from "react-router";
 import Loading from "../components/Loading";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 export default function DatasetList()
 {
@@ -31,36 +32,42 @@ export default function DatasetList()
                 page: 1
             });
         }
-    }, [userInfo]);
+    }, [userInfo, setQueryParameters]);
+    const {t} = useTranslation();
+    useDocumentTitle(t('datasetList'));
 
     return <>
-        <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam datasetov'}]} />
+        <Breadcrumbs items={[{title: t('nkod'), link: '/'}, {title: t('datasetList')}]} />
         <MainContent>
-            <PageHeader>Zoznam datasetov</PageHeader>
+            <PageHeader>{t('datasetList')}</PageHeader>
 
             {userInfo?.publisherView ? <p className="govuk-body nkod-publisher-name">
-                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Poskytovateľ dát</span><br />
+                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>{t('publisher')}</span><br />
                         {userInfo.publisherView.name}
                     </p> : null}
+                    
             <p>
-                <Button onClick={() => navigate('/sprava/datasety/pridat')}>Nový dataset</Button>
+                <Button onClick={() => navigate('/sprava/datasety/pridat')}>{t('newDataset')}</Button>
             </p>
 
-            {loading ? <Loading /> : error ? <ErrorAlert error={error} /> : datasets ? <>
+            {loading ? <Loading /> : null}
+            {error ? <ErrorAlert error={error} /> : null}
+
+            {datasets ? <>
                 {datasets.items.length > 0 ? <><Table>
                     <TableHead>
                         <TableRow>
                             <TableHeaderCell>
-                                Názov
+                                {t('name')}
                             </TableHeaderCell>
                             <TableHeaderCell>
-                                Stav
+                                {t('state')}
                             </TableHeaderCell>
                             <TableHeaderCell>
-                                Distribúcie
+                                {t('distributions')}
                             </TableHeaderCell>
                             <TableHeaderCell>
-                                Nástroje
+                                {t('tools')}
                             </TableHeaderCell>
                         </TableRow>
                     </TableHead>
@@ -70,7 +77,7 @@ export default function DatasetList()
                                 {d.name}
                             </TableCell>
                             <TableCell>
-                                {d.isPublic ? 'publikovaný' : 'nepublikovaný'}
+                                {d.isPublic ? t('published') : t('notPublished')}
                             </TableCell>
                             <TableCell>
                                 <div>
@@ -83,20 +90,20 @@ export default function DatasetList()
                                         return null;
                                     })}
                                 </div>
-                                <Button className="idsk-button idsk-button--secondary" style={{marginTop: '10px', marginBottom: '10px'}} onClick={() => navigate('/sprava/distribucie/' + d.id)}>Zmeniť distribúcie</Button>
+                                <Button className="idsk-button idsk-button--secondary" style={{marginTop: '10px', marginBottom: '10px'}} onClick={() => navigate('/sprava/distribucie/' + d.id)}>{t('editDistributions')}</Button>
                             </TableCell>
                             <TableCell>
-                                <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px', marginTop: '10px', marginBottom: '10px'}} onClick={() => navigate('/sprava/datasety/upravit/' + d.id)}>Upraviť</Button>
+                                <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px', marginTop: '10px', marginBottom: '10px'}} onClick={() => navigate('/sprava/datasety/upravit/' + d.id)}>{t('edit')}</Button>
                                 <Button className="idsk-button idsk-button--secondary" style={{marginTop: '10px', marginBottom: '10px'}} onClick={async () => {
                                     if (await removeDataset(d.id, headers)) {
                                         refresh();
                                     }
-                                }}>Odstrániť</Button>
+                                }}>{t('remove')}</Button>
                             </TableCell>
                         </TableRow>)}
                     </TableBody>
                 </Table>
-                <Pagination totalItems={datasets.totalCount} pageSize={query.pageSize} currentPage={query.page} onPageChange={p => setQueryParameters({page: p})} /></> : <div>No datasets found</div>}
+                <Pagination totalItems={datasets.totalCount} pageSize={query.pageSize} currentPage={query.page} onPageChange={p => setQueryParameters({page: p})} /></> : <div className="govuk-body">V zozname sa nenachádzajú žiadne datasety.</div>}
             </> : null}
         </MainContent>
         </>;

@@ -9,6 +9,7 @@ type Props<T> =
     renderOption: (item: T) => ReactNode;
     getValue: (item: T) => string;
     id: string;
+    disabled?: boolean;
 }
 
 export default function SelectElementItems<T>(props: Props<T>)

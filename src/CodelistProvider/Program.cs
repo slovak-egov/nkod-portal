@@ -19,6 +19,7 @@ builder.Services.AddHttpClient(DocumentStorageClient.DocumentStorageClient.HttpC
 {
     c.BaseAddress = new Uri(documentStorageUrl);
 });
+
 builder.Services.AddSingleton<IDocumentStorageClient, DocumentStorageClient.DocumentStorageClient>();
 builder.Services.AddSingleton<InternalCodelistProvider>();
 builder.Services.AddSingleton<ILanguagesSource, DefaultLanguagesSource>();

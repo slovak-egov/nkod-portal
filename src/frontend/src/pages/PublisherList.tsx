@@ -9,12 +9,22 @@ import TableCell from "../components/TableCell";
 import Pagination from "../components/Pagination";
 import Breadcrumbs from "../components/Breadcrumbs";
 import MainContent from "../components/MainContent";
-import { sendPut, removeEntity, usePublishers, useDefaultHeaders } from "../client";
+import { sendPut, removeEntity, usePublishers, useDefaultHeaders, TokenContext, sendPost, TokenResult, useDocumentTitle } from "../client";
+import Loading from "../components/Loading";
+import ErrorAlert from "../components/ErrorAlert";
+import { useContext } from "react";
+import { AxiosResponse } from "axios";
+import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 
 export default function PublisherList()
 {
     const [publishers, query, setQueryParameters, loading, error, refresh] = usePublishers();
     const headers = useDefaultHeaders();
+    const tokenContext = useContext(TokenContext);
+    const navigate = useNavigate();
+    const {t} = useTranslation();
+    useDocumentTitle(t('publishers'));
 
     async function updatePublisherStatus(publisherId: string, isEnabled: boolean) {
         try {
@@ -29,20 +39,24 @@ export default function PublisherList()
     }
 
     return <>
-    <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Poskytovatelia dát'}]} />
+    <Breadcrumbs items={[{title: t('nkod'), link: '/'}, {title: t('publishers')}]} />
             <MainContent>
-            <PageHeader>Poskytovatelia dát</PageHeader>
+            <PageHeader>{t('publishers')}</PageHeader>
+
+            {loading ? <Loading /> : null}
+            {error ? <ErrorAlert error={error} /> : null}
+
             {publishers && publishers.items.length > 0 ? <><Table>
                 <TableHead>
                     <TableRow>
                         <TableHeaderCell>
-                            Názov
+                            {t('name')}
                         </TableHeaderCell>
                         <TableHeaderCell>
-                            Stav
+                            {t('state')}
                         </TableHeaderCell>
                         <TableHeaderCell>
-                            Nástroje
+                            {t('tools')}
                         </TableHeaderCell>
                     </TableRow>
                 </TableHead>
@@ -52,22 +66,26 @@ export default function PublisherList()
                             {p.name}
                         </TableCell>
                         <TableCell>
-                            {p.isPublic ? 'publikovaný' : 'nepublikovaný'}
+                            {p.isPublic ? t('published') : t('notPublished')}
                         </TableCell>
                         <TableCell >
-                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => updatePublisherStatus(p.id, !p.isPublic)}>{p.isPublic ? 'Deaktivovať' : 'Aktivovať'}</Button>
-                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}}>Impersonovať</Button>
+                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => updatePublisherStatus(p.id, !p.isPublic)}>{p.isPublic ? t('deactivate') : t('activate')}</Button>
+                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={async () => {
+                                const response: AxiosResponse<TokenResult> = await sendPost('publishers/impersonate?id=' + encodeURIComponent(p.id), {}, headers);
+                                tokenContext?.setToken(response.data);
+                                navigate('/');
+                            }} >{t('impersonate')}</Button>
                             <Button className="idsk-button idsk-button--secondary" onClick={async () => {
                                 await removeEntity('publishers', p.id, headers);
                                 refresh();
-                            }} >Odstrániť</Button>
+                            }} >{t('remove')}</Button>
                         </TableCell>
                     </TableRow>)}
                 </TableBody>
             </Table>
             <Pagination totalItems={publishers.totalCount} pageSize={query.pageSize} currentPage={query.page} onPageChange={p => setQueryParameters({page: p})} />
             </> 
-            : <div>No publishers found</div>}
+            : <div className="govuk-body">{t('publisherListEmpty')}</div>}
             </MainContent>
         </>;
 }

@@ -11,5 +11,7 @@ namespace NkodSk.Abstractions
         bool HasReadAccessToFile(FileMetadata metadata);
 
         bool HasModifyAccessToFile(FileMetadata metadata);
+
+        bool HasDeleteAccessToFile(FileMetadata metadata);
     }
 }

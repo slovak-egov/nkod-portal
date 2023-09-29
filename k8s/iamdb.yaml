@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iamdb
+  namespace: nodc
+  labels:
+    role: iamdb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: iamdb
+  template:
+    metadata:
+      labels:
+        role: iamdb
+    spec:
+      containers:
+        - name: iamdb
+          image: mysql:8.1
+          imagePullPolicy: Always
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: MysqlPassword
+            - name: MYSQL_DATABASE
+              value: ""
+          ports:
+            - name: mysql
+              containerPort: 3306
+              protocol: TCP
+      imagePullSecrets:
+        - name: oci-registry-secret
+      volumes:
+        - name: iamdb-pvc
+          persistentVolumeClaim:
+            claimName: iamdb-pvc

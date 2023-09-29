@@ -1,4 +1,4 @@
-import { LocalCatalog, LocalCatalogInput, useLocalCatalogEdit, useUserInfo } from "../client";
+import { LocalCatalog, LocalCatalogInput, useDocumentTitle, useLocalCatalogEdit, useUserInfo } from "../client";
 
 import PageHeader from "../components/PageHeader";
 import Breadcrumbs from "../components/Breadcrumbs";
@@ -8,14 +8,15 @@ import ValidationSummary from "../components/ValidationSummary";
 import Loading from "../components/Loading";
 import { LocalCatalogForm } from "../components/LocalCatalogForm";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 
 const transformEntityForEdit = (entity: LocalCatalog): LocalCatalogInput => {
     return {
         id: entity.id,
         isPublic: entity.isPublic,
-        name: {'sk': entity.name ?? ''},
-        description: {'sk': entity.description ?? ''},
-        contactName: {'sk': entity.contactPoint?.name ?? ''},
+        name: entity.nameAll ?? {},
+        description: entity.descriptionAll ?? {},
+        contactName: entity?.contactPoint?.nameAll ?? {},
         contactEmail: entity.contactPoint?.email ?? '',
         homePage: entity.homePage,
     }
@@ -23,18 +24,20 @@ const transformEntityForEdit = (entity: LocalCatalog): LocalCatalogInput => {
 
 export default function EditCatalog()
 {
-    const [inputs, catalog, loading, setCatalog, errors, saving, saveResult, save] = useLocalCatalogEdit(transformEntityForEdit);
+    const [inputs, , loading, setCatalog, errors, saving, save] = useLocalCatalogEdit(transformEntityForEdit);
 
     const [userInfo] = useUserInfo();
     const navigate = useNavigate();
+    const {t} = useTranslation();
+    useDocumentTitle(t('editCatalog'));
 
     return <>
-            <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam lokálnych katalógov', link: '/sprava/lokalne-katalógy'}, {title: 'Upraviť katalóg'}]} />
+            <Breadcrumbs items={[{title: t('nkod'), link: '/'}, {title: t('localCatalogList'), link: '/sprava/lokalne-katalógy'}, {title: t('editCatalog')}]} />
             <MainContent>
                 <div className="nkod-form-page">
-                    <PageHeader>Upraviť katalóg</PageHeader>
+                    <PageHeader>{t('editCatalog')}</PageHeader>
                     {userInfo?.publisherView ? <p className="govuk-body nkod-publisher-name">
-                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Poskytovateľ dát</span><br />
+                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>{t('publisher')}</span><br />
                         {userInfo.publisherView.name}
                     </p> : null}
 
@@ -45,14 +48,17 @@ export default function EditCatalog()
 
                     {
                         !loading && inputs ? <>
-                        <LocalCatalogForm catalog={inputs} setCatalog={setCatalog} errors={errors} userInfo={userInfo} />
+                        <LocalCatalogForm catalog={inputs} 
+                                          setCatalog={setCatalog} 
+                                          errors={errors}
+                                          saving={saving} />
                         <Button style={{marginRight: '20px'}} onClick={async () => {
                         const result = await save();
                         if (result?.success) {
                             navigate('/sprava/lokalne-katalogy');
                         }
                     }} disabled={saving}>
-                            Uložiť katalóg
+                            {t('save')}
                         </Button></> : <Loading />
                     }
                 </div>

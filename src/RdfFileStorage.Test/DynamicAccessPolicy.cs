@@ -25,5 +25,10 @@ namespace RdfFileStorage.Test
         {
             return resultFunc(metadata);
         }
+
+        public bool HasDeleteAccessToFile(FileMetadata metadata)
+        {
+            return resultFunc(metadata);
+        }
     }
 }

@@ -19,7 +19,7 @@ namespace WebApi.Test
 
         private const string PublisherId = "http://example.com/publisher";
 
-        private readonly IFileStorageAccessPolicy accessPolicy = new PublisherAccessPolicy(PublisherId);
+        private readonly IFileStorageAccessPolicy accessPolicy = new PublisherFileAccessPolicy(PublisherId);
 
         public RegistrationTests(StorageFixture fixture)
         {
@@ -70,7 +70,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken(null, PublisherId, companyName: "Test Company"));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId, companyName: "Test Company"));
             RegistrationInput input = CreateInput();
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PostAsync("/registration", requestContent);
@@ -109,7 +109,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken(null, PublisherId, companyName: "Test Company"));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId, companyName: "Test Company"));
             RegistrationInput input = CreateInput();
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PostAsync("/registration", requestContent);
@@ -131,7 +131,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken(null, PublisherId, companyName: "Test Company"));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId, companyName: "Test Company"));
             RegistrationInput input = CreateInput();
             input.Website = string.Empty;
             using JsonContent requestContent = JsonContent.Create(input);
@@ -154,7 +154,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken(null, PublisherId, companyName: "Test Company"));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId, companyName: "Test Company"));
             RegistrationInput input = CreateInput();
             input.Email = string.Empty;
             using JsonContent requestContent = JsonContent.Create(input);
@@ -177,7 +177,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken(null, PublisherId, companyName: "Test Company"));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId, companyName: "Test Company"));
             RegistrationInput input = CreateInput();
             input.Phone = string.Empty;
             using JsonContent requestContent = JsonContent.Create(input);

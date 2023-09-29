@@ -5,8 +5,9 @@ import MainContent from '../components/MainContent';
 import GridRow from '../components/GridRow';
 import GridColumn from '../components/GridColumn';
 import { Link } from 'react-router-dom';
-import { useLocalCatalogs } from '../client';
+import { useDocumentTitle, useLocalCatalogs } from '../client';
 import SearchResults from '../components/SearchResults';
+import { useTranslation } from 'react-i18next';
 
 type OrderOption = {
     name: string;
@@ -21,13 +22,15 @@ export default function PublicDatasetList() {
     const [catalogs, query, setQueryParameters, loading, error] = useLocalCatalogs({
         orderBy: 'name'
     });
+    const {t} = useTranslation();
+    useDocumentTitle(t('localCatalogs'));
 
     return (
         <>
-            <Breadcrumbs items={[{ title: 'Národný katalóg otvorených dát', link: '/' }, { title: 'Lokálne katalógy' }]} />
+            <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title: t('localCatalogs') }]} />
             <MainContent>
                 <SearchResults
-                    header="Lokálne katalógy"
+                    header={t('localCatalogs')}
                     query={query}
                     setQueryParameters={setQueryParameters}
                     loading={loading}

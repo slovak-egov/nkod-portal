@@ -12,7 +12,8 @@ import TableCell from "../components/TableCell";
 import PageSubheader from "../components/PageSubHeader";
 import axios, { AxiosResponse } from "axios";
 import Pagination from "../components/Pagination";
-import { knownCodelists, useCodelists } from "../client";
+import { knownCodelists, useCodelists, useDocumentTitle } from "../client";
+import { useTranslation } from "react-i18next";
 
 type Response = {
     results: {
@@ -249,8 +250,8 @@ function QualityTable(props: QualityTableProps) {
             {r.values.map((v, j) => <TableCell key={j}>{v}</TableCell>)}
         </TableRow>)}
     </TableBody>
-    <Pagination currentPage={page} totalItems={props.rows.length} pageSize={pageSize} onPageChange={setPage} />
-</Table></>
+</Table>
+<Pagination currentPage={page} totalItems={props.rows.length} pageSize={pageSize} onPageChange={setPage} /></>
 }
 
 const requiredCodelists = [knownCodelists.distribution.mediaType];
@@ -264,6 +265,8 @@ export default function Quality()
 
     const [codelists, loadingCodelists, errorCodelists] = useCodelists(requiredCodelists);
     const formatCodelist = codelists.find(c => c.id === knownCodelists.distribution.mediaType);
+    const {t} = useTranslation();
+    useDocumentTitle(t('metadataQuality'));
 
     useEffect(() => {
         async function load() {
@@ -277,9 +280,9 @@ export default function Quality()
     }, []);
 
     return <>
-            <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Kvalita metadát'}]} />
+            <Breadcrumbs items={[{title: t('nkod'), link: '/'}, {title: t('metadataQuality')}]} />
             <MainContent>
-                <PageHeader>Kvalita metadát</PageHeader>
+                <PageHeader>{t('metadataQuality')}</PageHeader>
 
                 {results1 ? <QualityTable header="Počet distribúcií bez uvedenia licencie použitia podľa poskytovateľa"
                                           headerCells={['Poskytovateľ', 'Distribúcie bez licencií', 'Celkový počet distribúcií']}

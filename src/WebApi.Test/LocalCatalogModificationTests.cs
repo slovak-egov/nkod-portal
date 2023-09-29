@@ -20,7 +20,7 @@ namespace WebApi.Test
 
         private const string PublisherId = "http://example.com/publisher";
 
-        private readonly IFileStorageAccessPolicy accessPolicy = new PublisherAccessPolicy(PublisherId);
+        private readonly IFileStorageAccessPolicy accessPolicy = new PublisherFileAccessPolicy(PublisherId);
 
         public LocalCatalogModificationTests(StorageFixture fixture)
         {
@@ -86,6 +86,7 @@ namespace WebApi.Test
         public async Task TestCreateUnauthorized()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisher("Test", PublisherId);
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -98,10 +99,11 @@ namespace WebApi.Test
         public async Task TestCreateMinimal()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisher("Test", PublisherId);
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             LocalCatalogInput input = CreateInput();
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PostAsync("/local-catalogs", requestContent);
@@ -119,10 +121,11 @@ namespace WebApi.Test
         public async Task TestCreateMinimalNonPublic()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisher("Test", PublisherId);
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             LocalCatalogInput input = CreateInput();
             input.IsPublic = false;
             using JsonContent requestContent = JsonContent.Create(input);
@@ -141,10 +144,11 @@ namespace WebApi.Test
         public async Task TestCreateExtended()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisher("Test", PublisherId);
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             LocalCatalogInput input = CreateInput(true);
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PostAsync("/local-catalogs", requestContent);
@@ -181,7 +185,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             LocalCatalogInput input = CreateInput(true);
             input.Id = catalogId.ToString();
             using JsonContent requestContent = JsonContent.Create(input);
@@ -204,7 +208,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             LocalCatalogInput input = CreateInput(true);
             input.Id = catalogId.ToString();
             input.IsPublic = false;
@@ -224,11 +228,12 @@ namespace WebApi.Test
         public async Task TestModifyOtherPublisher()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisher("Test", PublisherId);
             (Guid catalogId, Guid publisherId) = fixture.CreateFullLocalCatalog(PublisherId + "1");
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             LocalCatalogInput input = CreateInput();
             input.Id = catalogId.ToString();
             using JsonContent requestContent = JsonContent.Create(input);
@@ -258,7 +263,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             using HttpResponseMessage response = await client.DeleteAsync($"/local-catalogs?id={HttpUtility.UrlEncode(catalogId.ToString())}");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -273,7 +278,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             using HttpResponseMessage response = await client.DeleteAsync($"/local-catalogs?id={HttpUtility.UrlEncode(catalogId.ToString())}");
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 

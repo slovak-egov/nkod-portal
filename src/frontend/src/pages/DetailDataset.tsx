@@ -21,16 +21,19 @@ import xmlIcon from '../icons/xml.png';
 
 import Loading from "../components/Loading";
 import ErrorAlert from "../components/ErrorAlert";
-import { useDataset, useDatasets } from "../client";
+import { useDataset, useDatasets, useDocumentTitle } from "../client";
 import { useParams } from "react-router";
+import { useTranslation } from "react-i18next";
 
 export default function DetailDataset()
 {
     const [dataset, loading, error] = useDataset();
     const { id } = useParams();
     const [datasets] = useDatasets(id ? {filters: {sibling: [id]}} : {pageSize: 0});
+    const {t} = useTranslation();
+    useDocumentTitle(dataset?.name ?? '');
 
-    const path = [{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Vyhľadávanie', link: '/datasety'}];
+    const path = [{title: t('nkod'), link: '/'}, {title: t('search'), link: '/datasety'}];
     if (dataset?.name) {
         path.push({title: dataset.name, link: '/datasety/' + dataset.id});
     }
@@ -55,37 +58,37 @@ export default function DetailDataset()
                     {dataset.themeValues.length > 0 ? <GridColumn widthUnits={1} totalUnits={4}>
                         <div className="nkod-detail-attribute">
                             <div className="govuk-body nkod-detail-attribute-name">
-                                Téma
+                                {t('theme')}
                             </div>
                             <div className="govuk-body nkod-detail-attribute-value">
-                                {dataset.themeValues.map(l => <span key={l.label}>{l.label}</span>).join(', ')}
+                                {dataset.themeValues.map(l => <span key={l.label}>{l.label}</span>)}
                             </div>
                         </div>                        
                     </GridColumn> : null}          
                     {dataset.documentation ? <GridColumn widthUnits={1} totalUnits={4}>
                         <div className="nkod-detail-attribute">
                             <div className="govuk-body nkod-detail-attribute-name">
-                                Dokumentácia
+                                {t('documentation')}
                             </div>
                             <div className="govuk-body nkod-detail-attribute-value">
-                                <a href={dataset.documentation} className="govuk-link">Zobraziť dokumentáciu</a>
+                                <a href={dataset.documentation} className="govuk-link">{t('show')}</a>
                             </div>
                         </div>                        
                     </GridColumn> : null}          
                     {dataset.accrualPeriodicityValue ? <GridColumn widthUnits={1} totalUnits={4}>
                         <div className="nkod-detail-attribute">
                             <div className="govuk-body nkod-detail-attribute-name">
-                                Periodicita aktualizácie
+                                {t('updateFrequency')}
                             </div>
                             <div className="govuk-body nkod-detail-attribute-value">
-                                mesačná
+                                {dataset.accrualPeriodicityValue.label}
                             </div>
                         </div>
                     </GridColumn> : null}
                     {dataset.contactPoint?.name || dataset.contactPoint?.email ? <GridColumn widthUnits={1} totalUnits={4}>
                         <div className="nkod-detail-attribute">
                             <div className="govuk-body nkod-detail-attribute-name">
-                                Kontaktný bod
+                                {t('contactPoint')}
                             </div>
                             <div className="govuk-body nkod-detail-attribute-value">
                                 {dataset.contactPoint?.name ? <div>
@@ -102,15 +105,15 @@ export default function DetailDataset()
                     <GridColumn widthUnits={1} totalUnits={4}>
                         {dataset.spatialValues.length > 0 ? <div className="nkod-detail-attribute">
                             <div className="govuk-body nkod-detail-attribute-name">
-                                Územná platnosť
+                                {t('spatialValidity')}
                             </div>
                             <div className="govuk-body nkod-detail-attribute-value">
-                                {dataset.spatialValues.map(l => <span key={l.label}>{l.label}</span>).join(', ')}
+                                {dataset.spatialValues.map(l => <span key={l.label}>{l.label}</span>)}
                             </div>
                         </div> : null}
                         {dataset.temporal?.startDate || dataset.temporal?.endDate ? <div className="nkod-detail-attribute">
                             <div className="govuk-body nkod-detail-attribute-name">
-                                Časová platnosť
+                                {t('timeValidity')}
                             </div>
                             <div className="govuk-body nkod-detail-attribute-value">
                                 {dataset.temporal?.startDate ? <div>
@@ -156,7 +159,7 @@ export default function DetailDataset()
                 </GridRow>
                 {(datasets && datasets.items.length > 0) ? <GridRow>
                     <GridColumn widthUnits={1} totalUnits={1}>
-                        <RelatedContent header="Dalšie datasety z tejto série" links={datasets.items.map(d => ({
+                        <RelatedContent header={t('otherDatasetsFromList')} links={datasets.items.map(d => ({
                             title: d.name ?? 'Bez názvu',
                             url: '/datasety/' + d.id
                         }))}  />

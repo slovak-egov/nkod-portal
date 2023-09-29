@@ -4,8 +4,9 @@ import MainContent from '../components/MainContent';
 import GridRow from '../components/GridRow';
 import GridColumn from '../components/GridColumn';
 import { Link } from 'react-router-dom';
-import { useDatasets } from '../client';
+import { useDatasets, useDocumentTitle } from '../client';
 import SearchResults from '../components/SearchResults';
+import { useTranslation } from 'react-i18next';
 
 type OrderOption = {
     name: string;
@@ -14,24 +15,26 @@ type OrderOption = {
 
 const codelistsKeys = ['publishers', 'https://data.gov.sk/def/ontology/egov/DatasetType'];
 
-const orderByOptions: OrderOption[] = [{ name: 'Dátumu vytvorenia', value: 'created' }, { name: 'Názvu', value: 'name' }];
-
 export default function PublicDatasetList() {
     const [datasets, query, setQueryParameters, loading, error] = useDatasets({
         requiredFacets: codelistsKeys
     });
+    const {t} = useTranslation();
+    useDocumentTitle(t('search'));
+
+    const orderByOptions: OrderOption[] = [{ name: t('byDateCreated'), value: 'created' }, { name: t('byName'), value: 'name' }];
 
     return (
         <>
             <Breadcrumbs
                 items={[
-                    { title: 'Národný katalóg otvorených dát', link: '/' },
-                    { title: 'Vyhľadávanie' }
+                    { title: t('nkod'), link: '/' },
+                    { title: t('search') }
                 ]}
             />
             <MainContent>
                 <SearchResults
-                    header="Vyhľadávanie"
+                    header={t('search')}
                     query={query}
                     setQueryParameters={setQueryParameters}
                     loading={loading}

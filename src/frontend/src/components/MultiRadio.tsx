@@ -12,6 +12,7 @@ type Props<T> =
     hint?: string;
     errorMessage?: string;
     inline?: boolean;
+    disabled?: boolean;
 }
 
 export default function MultiRadio<T>(props: Props<T>)

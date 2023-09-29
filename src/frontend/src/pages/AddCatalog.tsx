@@ -1,4 +1,4 @@
-import { useLocalCatalogAdd, useUserInfo } from "../client";
+import { useDocumentTitle, useLocalCatalogAdd, useUserInfo } from "../client";
 
 import PageHeader from "../components/PageHeader";
 import Breadcrumbs from "../components/Breadcrumbs";
@@ -7,11 +7,12 @@ import Button from "../components/Button";
 import ValidationSummary from "../components/ValidationSummary";
 import { LocalCatalogForm } from "../components/LocalCatalogForm";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 
 
 export default function AddCatalog()
 {
-    const [catalog, setCatalog, errors, saving, saveResult, save] = useLocalCatalogAdd({
+    const [catalog, setCatalog, errors, saving, save] = useLocalCatalogAdd({
         isPublic: true,
         name: {'sk': ''},
         description: {'sk': ''},
@@ -22,14 +23,16 @@ export default function AddCatalog()
 
     const [userInfo] = useUserInfo();
     const navigate = useNavigate();
+    const {t} = useTranslation();
+    useDocumentTitle(t('newCatalog'));
 
     return <>
-            <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam lokálnych katalógov', link: '/sprava/lokalne-katalogy'}, {title: 'Nový katalóg'}]} />
+            <Breadcrumbs items={[{title: t('nkod'), link: '/'}, {title: t('localCatalogList'), link: '/sprava/lokalne-katalogy'}, {title: t('newCatalog')}]} />
             <MainContent>
                 <div className="nkod-form-page">
-                    <PageHeader>Nový katalóg</PageHeader>
+                    <PageHeader>{t('newCatalog')}</PageHeader>
                     {userInfo?.publisherView ? <p className="govuk-body nkod-publisher-name">
-                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Poskytovateľ dát</span><br />
+                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>{t('publisher')}</span><br />
                         {userInfo.publisherView.name}
                     </p> : null}
 
@@ -38,7 +41,10 @@ export default function AddCatalog()
                         message: k[1]
                     }))} /> : null}
 
-                    <LocalCatalogForm catalog={catalog} setCatalog={setCatalog} errors={errors} userInfo={userInfo} />
+                    <LocalCatalogForm catalog={catalog} 
+                                      setCatalog={setCatalog} 
+                                      errors={errors}
+                                      saving={saving} />
 
                     <Button style={{marginRight: '20px'}} onClick={async () => {
                         const result = await save();
@@ -46,7 +52,7 @@ export default function AddCatalog()
                             navigate('/sprava/lokalne-katalogy');
                         }
                     }} disabled={saving}>
-                        Uložiť katalóg
+                        {t('save')}
                     </Button>
                 </div>
             </MainContent>

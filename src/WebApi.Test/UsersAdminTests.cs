@@ -20,7 +20,7 @@ namespace WebApi.Test
 
         private const string PublisherId = "http://example.com/publisher";
 
-        private readonly IFileStorageAccessPolicy accessPolicy = new PublisherAccessPolicy(PublisherId);
+        private readonly IFileStorageAccessPolicy accessPolicy = new PublisherFileAccessPolicy(PublisherId);
 
         public UsersAdminTests(StorageFixture fixture)
         {

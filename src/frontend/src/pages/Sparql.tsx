@@ -11,6 +11,8 @@ import storedQueries from '../sparql-queries.json';
 
 //@ts-ignore
 import { initAll } from  '@id-sk/frontend/idsk/all';
+import { useTranslation } from "react-i18next";
+import { useDocumentTitle } from "../client";
 
 const defaultSparqlQuery = `PREFIX dcat: <http://www.w3.org/ns/dcat#>
 SELECT (COUNT (*) AS ?count)
@@ -35,14 +37,16 @@ export default function Sparql()
           initAll();
         return () => {};
       }, []);
+      const {t} = useTranslation();
+      useDocumentTitle('SPARQL');
     
     return <>
-            <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'SPARQL'}]} />
+            <Breadcrumbs items={[{title: t('nkod'), link: '/'}, {title: 'SPARQL'}]} />
             <MainContent>
-                <PageHeader>SPARQL Endpoint pre Národný katalóg otvorených dát</PageHeader>
-                <PageSubheader style={{color: '#2B8CC4', margin: '30px 0 20px 0'}}>Príklady dotazov</PageSubheader>
+                <PageHeader>{t('sparqlEndpointNkod')}</PageHeader>
+                <PageSubheader style={{color: '#2B8CC4', margin: '30px 0 20px 0'}}>{t('queryExamples')}</PageSubheader>
 
-                {storedQueries.content.map((query: any) =><div style={{marginBottom: '20px'}}>
+                {storedQueries.content.map((query: any, i) =><div style={{marginBottom: '20px'}} key={i}>
                     <div className="govuk-body" style={{margin: 0}}>
                         <span style={{color: '#2B8CC4', cursor: 'pointer'}} onClick={e => {
                           e.preventDefault();

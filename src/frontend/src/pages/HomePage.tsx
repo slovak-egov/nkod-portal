@@ -1,13 +1,15 @@
 import { useState } from "react";
 
 import { Link, useNavigate } from "react-router-dom";
-import { usePublishers } from "../client";
+import { useDocumentTitle, usePublishers } from "../client";
 import HomePagePublisher from "./HomePagePublisher";
+import { useTranslation } from "react-i18next";
 
 export default function HomePage()
 {
     const [query, setQuery] = useState('');
     const navigate = useNavigate();
+    useDocumentTitle('');
 
     const [publishers] = usePublishers({
         pageSize: 4,
@@ -18,17 +20,19 @@ export default function HomePage()
         navigate('/datasety?query=' + encodeURIComponent(query));
     };
 
+    const { t } = useTranslation();
+
     return <div style={{marginTop: '0'}}>
            <div data-module="idsk-intro-block">
     <div className="idsk-intro-block ">
         <div className="govuk-grid-row ">
             <div className="govuk-grid-column-full govuk-grid-column-two-thirds-from-desktop">
                 <h2 className="govuk-heading-m ">
-                    Vitajte na stránke Národného katalógu otvorených dát
+                    {t('homePage.title')}
                 </h2>
                     <div data-module="idsk-search-component" className="idsk-search-component   ">
   <label className="" htmlFor="intro-block-search">
-    Zadajte hľadaný výraz
+    {t('enterSearchTerm')}
   </label>
   <input className="govuk-input idsk-search-component__input " id="intro-block-search" name="search" type="search" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => {
     if (e.code === 'Enter') {
@@ -56,7 +60,7 @@ export default function HomePage()
             5.18629 13.2928 5.18629C17.7728 5.18629 21.4178 8.73781 21.4178 13.103C21.4178 17.4681 17.7728 21.0196 13.2928
             21.0196C8.81278 21.0196 5.16779 17.4681 5.16779 13.103Z" fill="white"></path>
       </svg>
-      <span className="govuk-visually-hidden">Vyhľadávanie
+      <span className="govuk-visually-hidden">{t('search')}
       </span>
     </button>
 </div>
@@ -64,26 +68,27 @@ export default function HomePage()
                       <div>
                           <ul className="idsk-intro-block__list__ul">
                               <li className="idsk-intro-block__bottom-menu__li govuk-caption-m">
-                                  <span>Hľadáte toto?</span>
+                                  <span>{t('homePage.doYouSearchForThis')}</span>
                               </li>
                               <li className="idsk-intro-block__list__li">
-                                      <Link className="govuk-link idsk-intro-block__list__a" to="/datasety" title="Zaregistrované datasety">
-                                          Zaregistrované datasety
+                                      <Link className="govuk-link idsk-intro-block__list__a" to="/datasety" title={t('homePage.registeredDatasets')}>
+                                          {t('homePage.registeredDatasets')}
                                       </Link>
                                   </li>
                                   <li className="idsk-intro-block__list__li">
-                                      <Link className="govuk-link idsk-intro-block__list__a" to="/poskytovatelia" title="Poskytovatelia otvorených dát">
-                                          Poskytovatelia otvorených dát
+                                      <Link className="govuk-link idsk-intro-block__list__a" to="/poskytovatelia" title={t('homePage.publishers')}>
+                                            {t('homePage.publishers')}
                                       </Link>
                                   </li>
                                   <li className="idsk-intro-block__list__li">
-                                      <Link className="govuk-link idsk-intro-block__list__a" to="/lokalne-katalogy" title="Lokálne katalógy poskytovateľov">
-                                          Lokálne katalógy poskytovateľov
+                                      <Link className="govuk-link idsk-intro-block__list__a" to="/lokalne-katalogy" title={t('homePage.localCatalogs')}>
+                                        {t('homePage.localCatalogs')}
+                                          
                                       </Link>
                                   </li>
                                   <li className="idsk-intro-block__list__li">
-                                      <Link className="govuk-link idsk-intro-block__list__a" to="/sparql" title="Prostredie pre SPARQL dopytovanie">
-                                          Prostredie pre SPARQL dopytovanie
+                                      <Link className="govuk-link idsk-intro-block__list__a" to="/sparql" title={t('homePage.sparql')}>
+                                      {t('homePage.sparql')}
                                       </Link>
                                   </li>
                           </ul>
@@ -92,20 +97,20 @@ export default function HomePage()
 
             <div className="idsk-intro-block__side-menu govuk-grid-column-full govuk-grid-column-one-third-from-desktop">
                 <h2 className="govuk-heading-s">
-                    Populárny obsah
+                    {t('homePage.favorities')}
                 </h2>
                 <ul className="idsk-intro-block__side-menu__ul">
                     <li className="idsk-intro-block__side-menu__li">
-                        <Link className="govuk-link idsk-intro-block__side-menu__a" to="/datasety" title="Registrované datasety">Registrované datasety</Link>
+                        <Link className="govuk-link idsk-intro-block__side-menu__a" to="/datasety" title={t('homePage.registeredDatasets')}>{t('homePage.registeredDatasets')}</Link>
                     </li>
                     <li className="idsk-intro-block__side-menu__li">
-                        <Link className="govuk-link idsk-intro-block__side-menu__a" to="/lokalne-katalogy" title="Lokálne katalógy otvorených dát">Lokálne katalógy otvorených dát</Link>
+                        <Link className="govuk-link idsk-intro-block__side-menu__a" to="/lokalne-katalogy" title={t('homePage.localCatalogs')}>{t('homePage.localCatalogs')}</Link>
                     </li>
                     <li className="idsk-intro-block__side-menu__li">
-                        <Link className="govuk-link idsk-intro-block__side-menu__a" to="/poskytovatelia" title="Poskytovatelia otvorených dát">Poskytovatelia otvorených dát</Link>
+                        <Link className="govuk-link idsk-intro-block__side-menu__a" to="/poskytovatelia" title={t('homePage.publishers')}>{t('homePage.publishers')}</Link>
                     </li>
                     <li className="idsk-intro-block__side-menu__li">
-                        <Link className="govuk-link idsk-intro-block__side-menu__a" to="/kvalita-metadat" title="Štatistika kvality metadát">Štatistika kvality metadát</Link>
+                        <Link className="govuk-link idsk-intro-block__side-menu__a" to="/kvalita-metadat" title={t('homePage.qualityStatistics')}>{t('homePage.qualityStatistics')}</Link>
                     </li>
                 </ul>
             </div>
@@ -124,9 +129,11 @@ export default function HomePage()
   {publishers && publishers.totalCount > 0 ? <>
     <hr className="idsk-hr-separator govuk-!-margin-bottom-6" />
 
-<h2 className="govuk-heading-l">Poskytovatelia s najväčším počtom datasetov</h2>
+<h2 className="govuk-heading-l">
+    {t('homePage.publishersWithMaxDatasets')}
+</h2>
 <p className="govuk-body-m">
-  Celkovo je v národnom katalógu otvorených dát zaregistrovaných {publishers?.totalCount} poskytovateľov, zoznam všetkých nájdete na <Link className="govuk-link" to="/poskytovatelia" title="podstránke Eurofondy">podstránke Poskytovatelia otvorených dát</Link>.
+  {t('homePage.totalPublishersCount', {val: publishers?.totalCount})}, {t('homePage.listOfAllPublishers')} <Link className="govuk-link" to="/poskytovatelia">{t('homePage.openDataPublishersPage')}</Link>.
 </p>
 
 <div className="govuk-grid-row">

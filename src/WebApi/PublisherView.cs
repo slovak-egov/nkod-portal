@@ -18,7 +18,7 @@ namespace WebApi
 
         public Dictionary<string, int>? Themes { get; set; }
 
-        internal static PublisherView MapFromRdf(Guid id, bool isPublic, FoafAgent agent, string language)
+        internal static PublisherView MapFromRdf(Guid id, bool isPublic, int datasetCount, FoafAgent agent, Dictionary<string, int>? themes, string language)
         {
             return new PublisherView
             {
@@ -26,6 +26,8 @@ namespace WebApi
                 Name = agent.GetName(language),
                 Key = agent.Uri.ToString(),
                 IsPublic = isPublic,
+                DatasetCount = datasetCount,
+                Themes = themes
             };
         }
     }

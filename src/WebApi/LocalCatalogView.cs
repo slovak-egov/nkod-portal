@@ -24,7 +24,7 @@ namespace WebApi
 
         public Uri? HomePage { get; set; }
 
-        public static async Task<LocalCatalogView> MapFromRdf(FileMetadata metadata, DcatCatalog catalogRdf, string language, bool fetchAllLanguages)
+        public static LocalCatalogView MapFromRdf(FileMetadata metadata, DcatCatalog catalogRdf, string language, bool fetchAllLanguages)
         {
             VcardKind? contactPoint = catalogRdf.ContactPoint;
 

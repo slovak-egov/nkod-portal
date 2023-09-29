@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: codelistprovider
+  namespace: nodc
+  labels:
+    role: codelistprovider
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: codelistprovider
+  template:
+    metadata:
+      labels:
+        role: codelistprovider
+    spec:
+      containers:
+        - name: codelistprovider
+          image: $REPOSITORY/codelistprovider:$TAG
+          imagePullPolicy: Always
+          env:
+            - name: Jwt__Issuer
+              value: ""
+            - name: Jwt__Audience
+              value: ""
+            - name: Jwt__Key
+              value: ""
+            - name: DocumentStorageUrl
+              value: http://documentstorage:6002
+          ports:
+            - name: api
+              containerPort: 80
+              protocol: TCP
+      imagePullSecrets:
+        - name: oci-registry-secret

@@ -1,4 +1,4 @@
-import { Dataset, DatasetInput, useDatasetEdit, useUserInfo } from "../client";
+import { Dataset, DatasetInput, useDatasetEdit, useDocumentTitle, useUserInfo } from "../client";
 
 import PageHeader from "../components/PageHeader";
 import Breadcrumbs from "../components/Breadcrumbs";
@@ -8,21 +8,22 @@ import ValidationSummary from "../components/ValidationSummary";
 import { DatasetForm } from "../components/DatasetForm";
 import Loading from "../components/Loading";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 
 const transformEntityForEdit = (entity: Dataset): DatasetInput => {
     return {
         id: entity.id,
         isPublic: entity.isPublic,
-        name: {'sk': entity.name ?? ''},
-        description: {'sk': entity.description ?? ''},
+        name: entity.nameAll ?? {},
+        description: entity.descriptionAll ?? {},
         themes: entity.themes,
         accrualPeriodicity: entity.accrualPeriodicity,
-        keywords: {'sk': entity.keywords ?? []},
+        keywords: entity.keywordsAll ?? {},
         type: entity.type,
         spatial: entity.spatial,
         startDate: entity.temporal?.startDate ?? null,
         endDate: entity.temporal?.endDate ?? null,
-        contactName: {'sk': entity.contactPoint?.name ?? ''},
+        contactName: entity?.contactPoint?.nameAll ?? {},
         contactEmail: entity.contactPoint?.email ?? '',
         documentation: entity.documentation,
         specification: entity.specification,
@@ -35,18 +36,20 @@ const transformEntityForEdit = (entity: Dataset): DatasetInput => {
 
 export default function EditDataset()
 {
-    const [inputs, dataset, loading, setDataset, errors, saving, saveResult, save] = useDatasetEdit(transformEntityForEdit);
+    const [inputs, , loading, setDataset, errors, saving, save] = useDatasetEdit(transformEntityForEdit);
 
     const [userInfo] = useUserInfo();
     const navigate = useNavigate();
+    const {t} = useTranslation();
+    useDocumentTitle(t('editDataset'));
 
     return <>
-            <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam datasetov', link: '/sprava/datasety'}, {title: 'Upraviť dataset'}]} />
+            <Breadcrumbs items={[{title: t('nkod'), link: '/'}, {title: t('datasetList'), link: '/sprava/datasety'}, {title: t('editDataset')}]} />
             <MainContent>
                 <div className="nkod-form-page">
-                    <PageHeader>Upraviť dataset</PageHeader>
+                    <PageHeader>{t('editDataset')}</PageHeader>
                     {userInfo?.publisherView ? <p className="govuk-body nkod-publisher-name">
-                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Poskytovateľ dát</span><br />
+                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>{t('publisher')}</span><br />
                         {userInfo.publisherView.name}
                     </p> : null}
 
@@ -57,14 +60,18 @@ export default function EditDataset()
 
                     {
                         !loading && inputs ? <>
-                        <DatasetForm dataset={inputs} setDataset={setDataset} errors={errors} userInfo={userInfo} />
+                        <DatasetForm dataset={inputs} 
+                                     setDataset={setDataset} 
+                                     errors={errors} 
+                                     userInfo={userInfo}
+                                     saving={saving} />
                         <Button style={{marginRight: '20px'}} onClick={async () => {
                         const result = await save();
                         if (result?.success) {
                             navigate('/sprava/datasety');
                         }
                     }} disabled={saving}>
-                            Uložiť dataset
+                            {t('save')}
                         </Button></> : <Loading />
                     }
                 </div>

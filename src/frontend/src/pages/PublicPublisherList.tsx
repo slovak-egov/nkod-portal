@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Fragment } from 'react';
-import { usePublishers } from '../client';
+import { useDocumentTitle, usePublishers } from '../client';
 import Breadcrumbs from '../components/Breadcrumbs';
 import GridColumn from '../components/GridColumn';
 import GridRow from '../components/GridRow';
 import MainContent from '../components/MainContent';
 import SearchResults from '../components/SearchResults';
+import { useTranslation } from 'react-i18next';
 
 type OrderOption = {
     name: string;
@@ -23,18 +24,20 @@ const orderByOptions: OrderOption[] = [{ name: 'Relevancie', value: 'relevance' 
 
 export default function PublicPublisherList() {
     const [publishers, query, setQueryParameters, loading, error] = usePublishers();
+    const {t} = useTranslation();
+    useDocumentTitle(t('publishers'));
 
     return (
         <>
             <Breadcrumbs
                 items={[
-                    { title: 'Národný katalóg otvorených dát', link: '/' },
-                    { title: 'Poskytovatelia dát' }
+                    { title: t('nkod'), link: '/' },
+                    { title: t('publishers') }
                 ]}
             />
             <MainContent>
                 <SearchResults
-                    header="Poskytovatelia dát"
+                    header={t('publishers')}
                     query={query}
                     setQueryParameters={setQueryParameters}
                     loading={loading}
@@ -57,7 +60,7 @@ export default function PublicPublisherList() {
                                     </Link>
                                 </GridColumn>
                                 {themes.length > 0 ? <GridColumn widthUnits={1} totalUnits={1}>
-                                    {themes.map(t => <span style={{marginRight: '10px'}}>{t.name} ({t.count})</span>)}
+                                    {themes.map(t => <span key={t.name} style={{marginRight: '10px'}}>{t.name} ({t.count})</span>)}
                                 </GridColumn> : null}
                             </GridRow>
                             {i < publishers.items.length - 1 ? (

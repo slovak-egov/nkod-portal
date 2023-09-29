@@ -8,6 +8,7 @@ type Props =
     selectedValues: string[];
     onChange: (items: string[]) => void;
     id: string;
+    disabled?: boolean;
 }
 
 export default function CodelistMultiTextBoxAutocomplete(props: Props)

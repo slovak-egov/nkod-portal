@@ -14,5 +14,7 @@ namespace TestBase
         public bool HasModifyAccessToFile(FileMetadata metadata) => false;
 
         public bool HasReadAccessToFile(FileMetadata metadata) => false;
+
+        public bool HasDeleteAccessToFile(FileMetadata metadata) => false;
     }
 }

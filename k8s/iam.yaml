@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iam
+  namespace: nodc
+  labels:
+    role: iam
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: iam
+  template:
+    metadata:
+      labels:
+        role: iam
+    spec:
+      containers:
+        - name: iam
+          image: $REPOSITORY/iam:$TAG
+          imagePullPolicy: Always
+          env:
+            - name: Jwt__Issuer
+              value: ""
+            - name: Jwt__Audience
+              value: ""
+            - name: AccessTokenValidInMinutes
+              value: ""
+            - name: RefreshTokenValidInMinutes
+              value: ""
+            - name: AccessTokenKeyPassword
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: AccessTokenKeyPassword
+            - name: AccessTokenKeyFile
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: AccessTokenKey
+            - name: Saml2__EntityId
+              value: ""
+            - name: Saml2__IdPMetadata
+              value: ""
+            - name: Saml2__SignatureAlgorithm
+              value: ""
+            - name: Saml2__SigningCertificateFile
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: SigningCertificateFile
+            - name: Saml2__SigningCertificatePassword
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: SigningCertificatePassword
+            - name: Saml2__DecryptionCertificateFile
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: DecryptionCertificateFile
+            - name: Saml2__DecryptionCertificatePassword
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: DecryptionCertificatePassword
+            - name: Saml2__CertificateValidationMode
+              value: ""
+            - name: Saml2__RevocationMode
+              value: ""
+            - name: Saml2__ReturnUrl
+              value: ""
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: MysqlConnectionString
+          ports:
+            - name: api
+              containerPort: 80
+              protocol: TCP
+      imagePullSecrets:
+        - name: oci-registry-secret

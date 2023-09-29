@@ -1,7 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
-import { doLogin, doLogout, useDefaultHeaders, useUserInfo } from "../client";
+import { TokenContext, doLogin, sendGet, useDefaultHeaders, useUserInfo } from "../client";
 import Button from "./Button";
 import IdSkModule from "./IdSkModule";
+import { useContext, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 type MenuItem = {
     title: string;
@@ -12,22 +14,24 @@ type MenuItem = {
 export default function Header() {
     const [ userInfo, userInfoLoading ] = useUserInfo();
     const headers = useDefaultHeaders();
+    const ctx = useContext(TokenContext);
 
     const navigate = useNavigate();
+    const {t} = useTranslation();
 
     const menu : MenuItem[] = [
         {
-            title: 'Vyhľadávanie',
+            title: t('search'),
             link: '/datasety',
             submenu: []
         },
         {
-            title: 'Poskytovatelia',
+            title: t('publishers'),
             link: '/poskytovatelia',
             submenu: []
         },
         {
-            title: 'Lokálne katalógy',
+            title: t('localCatalogs'),
             link: '/lokalne-katalogy',
             submenu: []
         },
@@ -37,46 +41,46 @@ export default function Header() {
             submenu: []
         },
         {
-            title: 'Kvalita metadát',
+            title: t('metadataQuality'),
             link: '/kvalita-metadat',
             submenu: []
-        }
+        },
     ];
 
     const adminMenu : MenuItem[] = [];
 
-    if (userInfo?.publisher) {
+    if (userInfo?.publisher && userInfo.role && userInfo.publisherActive) {
         adminMenu.push({
-            title: 'Datasety',
+            title: t('datasets'),
             link: '/sprava/datasety',
             submenu: []
         },
         {
-            title: 'Lokálne katalógy',
+            title: t('localCatalogs'),
             link: '/sprava/lokalne-katalogy',
             submenu: []
         });
-    }
 
-    if (userInfo?.role === 'PublisherAdmin') {
-        adminMenu.push({
-            title: 'Používatelia',
-            link: '/sprava/pouzivatelia',
-            submenu: []
-        }, {
-            title: 'Profil',
-            link: '/sprava/profil',
-            submenu: []
-        });
+        if (userInfo?.role === 'PublisherAdmin' || userInfo?.role === 'Superadmin') {
+            adminMenu.push({
+                title: t('users'),
+                link: '/sprava/pouzivatelia',
+                submenu: []
+            }, {
+                title: t('profile'),
+                link: '/sprava/profil',
+                submenu: []
+            });
+        }
     }
 
     if (userInfo?.role === 'Superadmin') {
         adminMenu.push({
-            title: 'Poskytovatelia',
+            title: t('publishers'),
             link: '/sprava/poskytovatelia',
             submenu: []
         },{
-            title: 'Číselníky',
+            title: t('codelists'),
             link: '/sprava/ciselniky',
             submenu: []
         });
@@ -84,8 +88,8 @@ export default function Header() {
 
     if (adminMenu.length > 0) {
         menu.push({
-            title: 'Správa',
-            link: adminMenu[0].link,
+            title: t('administration'),
+            link: '#1',
             submenu: adminMenu
         });
     }
@@ -98,7 +102,8 @@ export default function Header() {
     };
 
     const logout = async () => {
-        await doLogout(headers);
+        await sendGet('saml/login', headers);
+        ctx?.setToken(null);
         navigate('/');
     }
 
@@ -106,8 +111,12 @@ export default function Header() {
         navigate('/sprava/profil');
     }
 
+    const idPrefix = useMemo(() => {
+        return Math.random() * 100000 + (userInfo?.id.length ?? 0);
+    }, [userInfo]);
+
     return <header className="idsk-header-web">
-        <IdSkModule moduleType="idsk-header-web">
+        <IdSkModule moduleType="idsk-header-web" userInfo={userInfo ?? undefined}>
         <div className="idsk-header-web__scrolling-wrapper">
             
             <div className="idsk-header-web__tricolor"></div>
@@ -118,12 +127,12 @@ export default function Header() {
                         <div className="govuk-grid-column-full">
                             <div className="idsk-header-web__brand-gestor">
                                 <span className="govuk-body-s idsk-header-web__brand-gestor-text">
-                                    Národný katalóg otvorených dát
+                                    {t('nkod')}
                                 </span>
                             </div>
                             <div className="idsk-header-web__brand-spacer"></div>
                             <div className="idsk-header-web__brand-language">
-                                <button className="idsk-header-web__brand-language-button" aria-label="Rozbaliť jazykové menu" aria-expanded="false" data-text-for-hide="Skryť jazykové menu" data-text-for-show="Rozbaliť jazykové menu">
+                                <button className="idsk-header-web__brand-language-button" aria-label={t('expandLanguageMenu')} aria-expanded="false" data-text-for-hide={t('hideLanguageMenu')} data-text-for-show={t('expandLanguageMenu')}>
                                     Slovenčina
                                 </button>
                                 <ul className="idsk-header-web__brand-language-list">
@@ -149,10 +158,10 @@ export default function Header() {
                     <div className="govuk-grid-row">
                         <div className="govuk-grid-column-full govuk-grid-column-one-third-from-desktop">
                             <div className="idsk-header-web__main-headline">
-                                <Link to="/" title="Odkaz na úvodnú stránku">
+                                <Link to="/" title={t('homePageLink')}>
                                     <h2 className="govuk-heading-m">data.gov.sk</h2>
                                 </Link>
-                                <button className="idsk-button idsk-header-web__main-headline-menu-button" aria-label="Rozbaliť menu" aria-expanded="false" data-text-for-show="Rozbaliť menu" data-text-for-hide="Zavrieť menu" data-text-for-close="Zavrieť">
+                                <button className="idsk-button idsk-header-web__main-headline-menu-button" aria-label={t('expandMenu')} aria-expanded="false" data-text-for-show={t('expandMenu')} data-text-for-hide={t('hideMenu')} data-text-for-close={t('hideMenu')}>
                                     <span className="idsk-header-web__menu-open"></span>
                                     <span className="idsk-header-web__menu-close"></span>
                                 </button>
@@ -164,21 +173,21 @@ export default function Header() {
                                 <div className="idsk-header-web__main--buttons">
                                     {!userInfoLoading ? <><div className={'idsk-header-web__main--login ' + (userInfo ? 'idsk-header-web__main--login--loggedIn' : '')}>
                                         <Button className="idsk-header-web__main--login-loginbtn" onClick={login}>
-                                            Prihlásiť sa
+                                            {t('login')}
                                         </Button>
                                         <div className="idsk-header-web__main--login-action">
                                             <div className="idsk-header-web__main--login-action-text">
                                                 <span className="govuk-body-s idsk-header-web__main--login-action-text-user-name">
                                                     {userInfo?.firstName} {userInfo?.lastName}
                                                 </span>
+                                                {userInfo?.publisherView ? <div className="govuk-body-s" style={{margin: 0}}>{userInfo.publisherView.name}</div> : null}
                                                 <div className="govuk-!-margin-bottom-1">
-                                                    <a className="govuk-link idsk-header-web__main--login-action-text-logout idsk-header-web__main--login-logoutbtn" href="#" onClick={e => {e.preventDefault(); logout();}} title="odhlásiť">
-                                                        Odhlásiť
+                                                    <a className="govuk-link idsk-header-web__main--login-action-text-logout idsk-header-web__main--login-logoutbtn" href="#" onClick={e => {e.preventDefault(); logout();}} title={t('logout')}>
+                                                        {t('logout')}
                                                     </a>
-                                                    <span> | </span>
-                                                    <a className="govuk-link idsk-header-web__main--login-action-text-profile idsk-header-web__main--login-profilebtn" href="#" onClick={e => {e.preventDefault(); navigateToProfile();}} title="profil">
-                                                        Profil
-                                                    </a>
+                                                    {(userInfo?.publisherActive ?? false) ? <><span> | </span><a className="govuk-link idsk-header-web__main--login-action-text-profile idsk-header-web__main--login-profilebtn" href="#" onClick={e => {e.preventDefault(); navigateToProfile();}} title={t('profile')}>
+                                                        {t('profile')}
+                                                    </a></> : null}
                                                 </div>
                                             </div>
                                         </div>
@@ -209,26 +218,33 @@ export default function Header() {
                                         const ariaAttributes: {[id: string]: string} = {};
 
                                         if (i.submenu.length > 0) {
-                                            ariaAttributes["aria-label"] = "Rozbaliť menu " + i.title;
+                                            ariaAttributes["aria-label"] = t('expandMenu') + " " + i.title;
                                             ariaAttributes["aria-expanded"] = "false";
-                                            ariaAttributes["data-text-for-hide"] = "Skryť menu " + i.title;
-                                            ariaAttributes["data-text-for-show"] = "Rozbaliť menu " + i.title;
+                                            ariaAttributes["data-text-for-hide"] = t('hideMenu') + " " + i.title;
+                                            ariaAttributes["data-text-for-show"] = t('expandMenu') + " " + i.title;
                                         }
 
-                                        return <li key={i.link} className="idsk-header-web__nav-list-item">
-                                            <Link to={i.link} className="govuk-link idsk-header-web__nav-list-item-link" title={i.title} {...ariaAttributes}>
+                                        return <li key={idPrefix + i.link} className="idsk-header-web__nav-list-item">
+                                            {i.submenu.length > 0 ? 
+                                            <a href="#" className="govuk-link idsk-header-web__nav-list-item-link" title={i.title} {...ariaAttributes}>
                                                 {i.title}
                                                 {i.submenu.length > 0 ? <>
                                                     <div className="idsk-header-web__link-arrow"></div>
                                                     <div className="idsk-header-web__link-arrow-mobile"></div>
                                                 </> : null}
-                                            </Link>
+                                            </a> : <Link to={i.link} className="govuk-link idsk-header-web__nav-list-item-link" title={i.title} {...ariaAttributes}>
+                                                {i.title}
+                                                {i.submenu.length > 0 ? <>
+                                                    <div className="idsk-header-web__link-arrow"></div>
+                                                    <div className="idsk-header-web__link-arrow-mobile"></div>
+                                                </> : null}
+                                            </Link>}
                                             {i.submenu.length > 0 ? <>
                                                 <div className="idsk-header-web__nav-submenu">
                                                     <div className="govuk-width-container">
                                                         <div className="govuk-grid-row">
-                                                            <ul className="idsk-header-web__nav-submenu-list"  aria-label="Vnútorná navigácia">
-                                                                {i.submenu.map((s) => <li key={s.link} className="idsk-header-web__nav-submenu-list-item">
+                                                            <ul className="idsk-header-web__nav-submenu-list"  aria-label={t('innerNavigation')}>
+                                                                {i.submenu.map((s) => <li key={idPrefix + s.link} className="idsk-header-web__nav-submenu-list-item">
                                                                     <Link className="govuk-link idsk-header-web__nav-submenu-list-item-link" to={s.link} title={s.title}>
                                                                         <span>{s.title}</span>
                                                                     </Link>

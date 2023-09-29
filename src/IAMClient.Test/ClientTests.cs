@@ -307,6 +307,8 @@ namespace IAMClient.Test
                 Id = record.Id,
                 Email = "test@example.com",
                 Role = "Publisher",
+                FirstName = "Meno",
+                LastName = "Priezvisko"
             };
 
             IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("PublisherAdmin", PublisherId);
@@ -449,6 +451,8 @@ namespace IAMClient.Test
                 Id = record.Id,
                 Email = "test@example.com",
                 Role = "Publisher",
+                FirstName = "Meno",
+                LastName = "Priezvisko"
             };
 
             IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("Superadmin", PublisherId);
@@ -540,7 +544,7 @@ namespace IAMClient.Test
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, contextValueAccessor.Token);
             IdentityAccessManagementClient iamClient = new IdentityAccessManagementClient(new DefaultHttpClientFactory(client), contextValueAccessor);
 
-            UserInfo result = await iamClient.GetUserInfo().ConfigureAwait(false);
+            UserInfo result = await iamClient.GetUserInfo();
             Assert.NotNull(result);
             Assert.Equal(record.Id, result.Id);
             Assert.Equal(record.Email, result.Email);

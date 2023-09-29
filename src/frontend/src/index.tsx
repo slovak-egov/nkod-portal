@@ -3,8 +3,13 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import './index.scss';
 import { TokenResult } from './client';
+import './i18n';
 
 declare let externalToken: TokenResult|null;
+
+if (process.env.REACT_APP_TOKEN) {
+  externalToken = {token: process.env.REACT_APP_TOKEN, expires: null, refreshToken: '1', redirectUrl: null};
+}
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement

@@ -1,17 +1,17 @@
 ﻿using NkodSk.Abstractions;
 using NkodSk.RdfFileStorage;
-using Test;
 using VDS.RDF.Parsing;
 using VDS.RDF;
 using CsvHelper;
 using CsvHelper.Configuration;
 using System.Globalization;
 using System.Xml;
+using TestBase;
 
 string sourceDir = args[0];
 string targetDir = args[1];
 
-TestAccess accessPolicy = new TestAccess();
+AllAccessFilePolicy accessPolicy = new AllAccessFilePolicy();
 foreach (string path in Directory.EnumerateDirectories(targetDir))
 {
     Directory.Delete(path, true);
@@ -31,6 +31,7 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Agent"
 }
 
 Dictionary<Uri, (Guid, DcatDataset)> datasets = new Dictionary<Uri, (Guid, DcatDataset)>();
+HashSet<Uri> requiredPlaces = new HashSet<Uri>();
 
 foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Dataset")))
 {
@@ -38,6 +39,8 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Datase
     DcatDataset catalog = DcatDataset.Parse(content)!;
 
     Guid id = Guid.NewGuid();
+
+    requiredPlaces.UnionWith(catalog.Spatial);
 
     foreach (Uri uri in catalog.Distributions)
     {
@@ -49,7 +52,7 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Datase
     {
         additionalValues[DcatDataset.TypeCodelist] = new string[] { catalog.Type.ToString()! };
     }
-    additionalValues["themes_sk"] = catalog.GetKeywords("sk").ToArray();
+    additionalValues["keywords_sk"] = catalog.GetKeywords("sk").ToArray();
 
     storage.InsertFile(
         content, new FileMetadata(id, catalog.GetTitle("sk") ?? id.ToString(), FileType.DatasetRegistration, null, catalog.Publisher!.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, additionalValues), true, accessPolicy
@@ -63,11 +66,17 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Distri
 
     Guid id = Guid.NewGuid();
 
-    (Guid parentId, DcatDataset dataset) = datasets[catalog.Uri];
-
-    storage.InsertFile(
-        content, new FileMetadata(id, catalog.GetTitle("sk") ?? id.ToString(), FileType.DistributionRegistration, parentId, dataset.Publisher!.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy
-    );
+    if (datasets.TryGetValue(catalog.Uri, out var v))
+    {
+        (Guid parentId, DcatDataset dataset) = v;
+        storage.InsertFile(
+            content, new FileMetadata(id, catalog.GetTitle("sk") ?? id.ToString(), FileType.DistributionRegistration, parentId, dataset.Publisher!.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy
+        );
+    }
+    else
+    {
+        Console.WriteLine("Dataset not found: " + catalog.Uri);
+    }
 }
 
 foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Catalog")))
@@ -147,7 +156,7 @@ void PrepareXml(string path)
     File.WriteAllText(path, document.OuterXml);
 }
 
-void SaveGraph(IGraph g, string name)
+void SaveGraph(IGraph g, string name, int? max)
 {
     IUriNode type = g.CreateUriNode("skos:Concept");
     int index = 0;
@@ -157,7 +166,7 @@ void SaveGraph(IGraph g, string name)
 
         List<Triple> labels = g.GetTriplesWithSubjectPredicate(subject, g.GetUriNode("skos:prefLabel")).ToList();
         bool hasSk = labels.Select(t => t.Object).OfType<ILiteralNode>().Any(n => n.Language == "sk");
-        if (hasSk && index < 100)
+        if (hasSk && (!max.HasValue || index < max.Value))
         {
             index++;
         }
@@ -199,7 +208,7 @@ void SaveGraph(IGraph g, string name)
     SkosConceptScheme.AddDefaultNamespaces(g);
     FileLoader.Load(g, Path.Combine(sourceDir, "ConceptScheme", "eurovoc.rdf"));
 
-    SaveGraph(g, "eurovoc");
+    SaveGraph(g, "eurovoc", 1000);
 }
 
 {
@@ -210,7 +219,7 @@ void SaveGraph(IGraph g, string name)
     SkosConceptScheme.AddDefaultNamespaces(g);
     FileLoader.Load(g, Path.Combine(sourceDir, "ConceptScheme", "places-skos.rdf"));
     FileLoader.Load(g, Path.Combine(sourceDir, "ConceptScheme", "countries-skos.rdf"));
-    SaveGraph(g, "places");
+    SaveGraph(g, "places", 1000);
 }
 
 {
@@ -225,11 +234,11 @@ void SaveGraph(IGraph g, string name)
         {
             while (csvReader.Read())
             {
-                SkosConcept concept = conceptScheme.CreateConcept(new Uri("http://www.iana.org/assignments/media-types/" + csvReader.GetField(0)!));
+                SkosConcept concept = conceptScheme.CreateConcept(new Uri("http://www.iana.org/assignments/media-types/" + csvReader.GetField(1)!));
                 concept.SetLabel(new LanguageDependedTexts { { "sk", csvReader.GetField(1)! } });
             }
         }
     }
 
-    SaveGraph(conceptScheme.Graph, "iana");
+    SaveGraph(conceptScheme.Graph, "iana", null);
 }

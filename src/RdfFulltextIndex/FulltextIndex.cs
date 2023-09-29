@@ -77,71 +77,64 @@ namespace NkodSk.RdfFulltextIndex
         {
             foreach (FileState state in states)
             {
-                if (state.Metadata.IsPublic && state.Content is not null)
+                if (state.Metadata.IsPublic && 
+                    state.Content is not null && 
+                    (state.Metadata.Type == FileType.PublisherRegistration ||
+                    state.Metadata.Type == FileType.DatasetRegistration ||
+                    state.Metadata.Type == FileType.LocalCatalogRegistration ||
+                    state.Metadata.Type == FileType.DistributionRegistration))
                 {
-                    RdfDocument rdfDocument = RdfDocument.Load(state.Content);
-
-                    string type = Enum.GetName(FileType.DatasetRegistration)!;
-
-                    foreach (DcatDataset dataset in rdfDocument.Datasets)
+                    try
                     {
-                        Document doc = new Document();
-                        doc.AddTextField("id", state.Metadata.Id.ToString(), Lucene.Net.Documents.Field.Store.YES);
+                        RdfDocument rdfDocument = RdfDocument.Load(state.Content);
+
+                        string type = Enum.GetName(FileType.DatasetRegistration)!;
+
+                        foreach (DcatDataset dataset in rdfDocument.Datasets)
+                        {
+                            Document doc = new Document();
+                            doc.AddTextField("id", state.Metadata.Id.ToString(), Lucene.Net.Documents.Field.Store.YES);
 
 
-                        doc.AddTextField("title", dataset.GetTitle("sk") ?? string.Empty, Lucene.Net.Documents.Field.Store.NO);
-                        doc.AddTextField("description", dataset.GetDescription("sk") ?? string.Empty, Lucene.Net.Documents.Field.Store.NO);
-                        
-                        doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
+                            doc.AddTextField("title", dataset.GetTitle("sk") ?? string.Empty, Lucene.Net.Documents.Field.Store.NO);
+                            doc.AddTextField("description", dataset.GetDescription("sk") ?? string.Empty, Lucene.Net.Documents.Field.Store.NO);
 
-                        //doc.AddStringField("publisher", dataset.Publisher?.ToString() ?? string.Empty, Lucene.Net.Documents.Field.Store.YES);
+                            doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
 
-                        //doc.AddFacetField("publisher", dataset.Publisher?.ToString() ?? string.Empty);
+                            indexWriter.AddDocument(facetsConfig.Build(taxonomyWriter, doc));
+                        }
 
-                        //DctTemporal? periodOfTime = dataset.Temporal;
-                        //doc.AddStringField("startDate", periodOfTime?.StartDate?.ToString("yyyyMMdd") ?? "00010101", Lucene.Net.Documents.Field.Store.YES);
-                        //doc.AddStringField("endDate", periodOfTime?.EndDate?.ToString("yyyyMMdd") ?? "29991231", Lucene.Net.Documents.Field.Store.YES);
+                        type = Enum.GetName(FileType.LocalCatalogRegistration)!;
 
-                        //if (state.Metadata.AdditionalValues is not null)
-                        //{
-                        //    foreach ((string key, string[] values) in state.Metadata.AdditionalValues)
-                        //    {
-                        //        foreach (string value in values)
-                        //        {
-                        //            doc.AddStringField(key, value, Lucene.Net.Documents.Field.Store.YES);
-                        //        }
-                        //    }
-                        //}
+                        foreach (DcatCatalog catalog in rdfDocument.Catalogs)
+                        {
+                            Document doc = new Document();
+                            doc.AddTextField("id", state.Metadata.Id.ToString(), Lucene.Net.Documents.Field.Store.YES);
 
-                        indexWriter.AddDocument(facetsConfig.Build(taxonomyWriter, doc));
+                            doc.AddTextField("title", catalog.GetTitle("sk") ?? string.Empty, Lucene.Net.Documents.Field.Store.NO);
+
+                            doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
+
+                            indexWriter.AddDocument(facetsConfig.Build(taxonomyWriter, doc));
+                        }
+
+                        type = Enum.GetName(FileType.PublisherRegistration)!;
+
+                        foreach (FoafAgent agent in rdfDocument.Agents)
+                        {
+                            Document doc = new Document();
+                            doc.AddTextField("id", state.Metadata.Id.ToString(), Lucene.Net.Documents.Field.Store.YES);
+
+                            doc.AddTextField("title", agent.GetName("sk") ?? string.Empty, Lucene.Net.Documents.Field.Store.NO);
+
+                            doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
+
+                            indexWriter.AddDocument(facetsConfig.Build(taxonomyWriter, doc));
+                        }
                     }
-
-                    type = Enum.GetName(FileType.LocalCatalogRegistration)!;
-
-                    foreach (DcatCatalog catalog in rdfDocument.Catalogs)
+                    catch
                     {
-                        Document doc = new Document();
-                        doc.AddTextField("id", state.Metadata.Id.ToString(), Lucene.Net.Documents.Field.Store.YES);
-
-                        doc.AddTextField("title", catalog.GetTitle("sk") ?? string.Empty, Lucene.Net.Documents.Field.Store.NO);
-
-                        doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
-
-                        indexWriter.AddDocument(facetsConfig.Build(taxonomyWriter, doc));
-                    }
-
-                    type = Enum.GetName(FileType.PublisherRegistration)!;
-
-                    foreach (FoafAgent agent in rdfDocument.Agents)
-                    {
-                        Document doc = new Document();
-                        doc.AddTextField("id", state.Metadata.Id.ToString(), Lucene.Net.Documents.Field.Store.YES);
-
-                        doc.AddTextField("title", agent.GetName("sk") ?? string.Empty, Lucene.Net.Documents.Field.Store.NO);
-
-                        doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
-
-                        indexWriter.AddDocument(facetsConfig.Build(taxonomyWriter, doc));
+                        //ignore
                     }
                 }
                 else

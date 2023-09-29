@@ -9,9 +9,12 @@ import TableCell from "../components/TableCell";
 import Pagination from "../components/Pagination";
 import Breadcrumbs from "../components/Breadcrumbs";
 import MainContent from "../components/MainContent";
-import { removeUser, useDefaultHeaders, useUserInfo, useUsers } from "../client";
+import { removeUser, useDefaultHeaders, useDocumentTitle, useUserInfo, useUsers } from "../client";
 import { useNavigate } from "react-router";
 import RoleName from "../components/RoleName";
+import Loading from "../components/Loading";
+import ErrorAlert from "../components/ErrorAlert";
+import { useTranslation } from "react-i18next";
 
 export default function UserList()
 {
@@ -19,29 +22,35 @@ export default function UserList()
     const [userInfo] = useUserInfo();
     const navigate = useNavigate();
     const headers = useDefaultHeaders();
+    const {t} = useTranslation();
+    useDocumentTitle(t('userList'));
 
     return <>
-        <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Lokálne katalógy'}]} />
+        <Breadcrumbs items={[{title: t('nkod'), link: '/'}, {title: t('userList')}]} />
             <MainContent>
-            <PageHeader>Zoznam používateľov</PageHeader>
+            <PageHeader>{t('userList')}</PageHeader>
             {userInfo?.publisherView ? <p className="govuk-body nkod-publisher-name">
-                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Poskytovateľ dát</span><br />
+                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>{t('publisher')}</span><br />
                         {userInfo.publisherView.name}
                     </p> : null}
             <p>
-                <Button onClick={() => navigate('/sprava/pouzivatelia/pridat')}>Nový používateľ</Button>
+                <Button onClick={() => navigate('/sprava/pouzivatelia/pridat')}>{t('newUser')}</Button>
             </p>
-            {users?.items && users.items.length > 0 ? <><Table>
+
+            {loading ? <Loading /> : null}
+            {error ? <ErrorAlert error={error} /> : null}
+
+            {users && users.items.length > 0 ? <><Table>
                 <TableHead>
                     <TableRow>
                         <TableHeaderCell>
-                            Meno a priezvisko
+                            {t('firstNameAndLastName')}
                         </TableHeaderCell>
                         <TableHeaderCell>
-                            Rola
+                            {t('role')}
                         </TableHeaderCell>
                         <TableHeaderCell>
-                            Nástroje
+                            {t('tools')}
                         </TableHeaderCell>
                     </TableRow>
                 </TableHead>
@@ -54,18 +63,18 @@ export default function UserList()
                             <RoleName role={u.role} />
                         </TableCell>
                         <TableCell style={{whiteSpace: 'nowrap'}}>
-                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/pouzivatelia/upravit/' + u.id)}>Upraviť</Button>
+                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/pouzivatelia/upravit/' + u.id)}>{t('edit')}</Button>
                             <Button className="idsk-button idsk-button--secondary" onClick={async () => {
                                     if (await removeUser(u.id, headers)) {
                                         refresh();
                                     }
-                                }}>Odstrániť</Button>
+                                }}>{t('remove')}</Button>
                         </TableCell>
                     </TableRow>)}
                 </TableBody>
             </Table>
             <Pagination totalItems={users.totalCount} pageSize={query.pageSize} currentPage={query.page} onPageChange={p => setQueryParameters({page: p})} />
-            </> : <div>No users found</div>}
+            </> : <div className="govuk-body">{t('usersListEmpty')}</div>}
             </MainContent>
         </>;
 }

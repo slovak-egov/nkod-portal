@@ -17,6 +17,7 @@
     <ProjectReference Include="..\DocumentStorageClient\DocumentStorageClient.csproj" />
     <ProjectReference Include="..\RdfFileStorage\RdfFileStorage.csproj" />
     <ProjectReference Include="..\RdfFulltextIndex\RdfFulltextIndex.csproj" />
+    <ProjectReference Include="..\TestBase\TestBase.csproj" />
   </ItemGroup>
 
 </Project>

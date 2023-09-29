@@ -667,7 +667,7 @@ namespace NkodSk.RdfFileStorage
 
                 HashSet<string>? onlyPublishers = query.OnlyPublishers is not null && query.OnlyPublishers.Count > 0 ? new HashSet<string>(query.OnlyPublishers) : null;
 
-                string themeKey = $"themes_{query.Language}";
+                string themeKey = $"keywords_{query.Language}";
 
                 FileStorageQuery datasetQuery = new FileStorageQuery
                 {
@@ -907,7 +907,7 @@ namespace NkodSk.RdfFileStorage
         {
             if (entryProperties.TryGetValue(id, out Entry? existingEntry))
             {
-                if (!accessPolicy.HasModifyAccessToFile(existingEntry.Metadata))
+                if (!accessPolicy.HasDeleteAccessToFile(existingEntry.Metadata))
                 {
                     throw new UnauthorizedAccessException($"Unauthorized access to file {id}");
                 }

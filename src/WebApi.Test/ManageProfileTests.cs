@@ -19,7 +19,7 @@ namespace WebApi.Test
 
         private const string PublisherId = "http://example.com/publisher";
 
-        private readonly IFileStorageAccessPolicy accessPolicy = new PublisherAccessPolicy(PublisherId);
+        private readonly IFileStorageAccessPolicy accessPolicy = new PublisherFileAccessPolicy(PublisherId);
 
         public ManageProfileTests(StorageFixture fixture)
         {
@@ -40,6 +40,9 @@ namespace WebApi.Test
         public async Task UpdateProfileIsNotAllowedWithoutToken()
         {
             string path = fixture.GetStoragePath();
+
+            fixture.CreatePublisher("Test", PublisherId, isPublic: true);
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -53,6 +56,9 @@ namespace WebApi.Test
         public async Task UpdateProfileIsNotAllowedWithoutPublisher()
         {
             string path = fixture.GetStoragePath();
+
+            fixture.CreatePublisher("Test", PublisherId, isPublic: true);
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -68,12 +74,12 @@ namespace WebApi.Test
         {
             string path = fixture.GetStoragePath();
 
-            fixture.CreatePublisher("Test", PublisherId, isPublic: false);
+            fixture.CreatePublisher("Test", PublisherId, isPublic: true);
 
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             RegistrationInput input = CreateInput();
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PutAsync("/profile", requestContent);
@@ -89,7 +95,7 @@ namespace WebApi.Test
             Assert.NotNull(state);
             Assert.NotNull(state.Content);
             Assert.Equal(FileType.PublisherRegistration, state.Metadata.Type);
-            Assert.False(state.Metadata.IsPublic);
+            Assert.True(state.Metadata.IsPublic);
             Assert.True((DateTimeOffset.Now - state.Metadata.Created).Duration().TotalMinutes < 1);
             Assert.True((DateTimeOffset.Now - state.Metadata.LastModified).Duration().TotalMinutes < 1);
 
@@ -106,10 +112,13 @@ namespace WebApi.Test
         public async Task UpdateProfileWebsiteIsRequired()
         {
             string path = fixture.GetStoragePath();
+
+            fixture.CreatePublisher("Test", PublisherId, isPublic: true);
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             RegistrationInput input = CreateInput();
             input.Website = string.Empty;
             using JsonContent requestContent = JsonContent.Create(input);
@@ -129,10 +138,13 @@ namespace WebApi.Test
         public async Task UpdateProfileEmailIsRequired()
         {
             string path = fixture.GetStoragePath();
+
+            fixture.CreatePublisher("Test", PublisherId, isPublic: true);
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             RegistrationInput input = CreateInput();
             input.Email = string.Empty;
             using JsonContent requestContent = JsonContent.Create(input);
@@ -152,10 +164,13 @@ namespace WebApi.Test
         public async Task UpdateProfilePhoneIsRequired()
         {
             string path = fixture.GetStoragePath();
+            
+            fixture.CreatePublisher("Test", PublisherId, isPublic: true);
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("User", PublisherId));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             RegistrationInput input = CreateInput();
             input.Phone = string.Empty;
             using JsonContent requestContent = JsonContent.Create(input);

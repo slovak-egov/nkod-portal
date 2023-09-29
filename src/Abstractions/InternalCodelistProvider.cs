@@ -1,6 +1,7 @@
 ﻿using Abstractions;
 using AngleSharp.Dom;
 using Lucene.Net.Util;
+using Microsoft.ApplicationInsights;
 using NkodSk.Abstractions;
 using System.Collections.Immutable;
 
@@ -12,14 +13,17 @@ namespace NkodSk.Abstractions
 
         private readonly ILanguagesSource languages;
 
+        private readonly TelemetryClient? telemetryClient;
+
         private ImmutableDictionary<string, Codelist>? codelists;
 
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
 
-        public InternalCodelistProvider(IDocumentStorageClient storageClient, ILanguagesSource languages)
+        public InternalCodelistProvider(IDocumentStorageClient storageClient, ILanguagesSource languages, TelemetryClient? telemetryClient)
         {
             this.storageClient = storageClient;
             this.languages = languages;
+            this.telemetryClient = telemetryClient;
         }
 
         private bool ShouldRefresh => codelists is null;
@@ -74,7 +78,7 @@ namespace NkodSk.Abstractions
                             }
                             catch (Exception e)
                             {
-
+                                telemetryClient?.TrackException(e);
                             }
                         }
 

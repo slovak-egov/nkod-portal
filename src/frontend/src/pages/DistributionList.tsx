@@ -10,7 +10,10 @@ import Pagination from "../components/Pagination";
 import Breadcrumbs from "../components/Breadcrumbs";
 import MainContent from "../components/MainContent";
 import { useNavigate, useParams } from "react-router";
-import { removeDistribution, useDataset, useDefaultHeaders, useDistributions, useUserInfo } from "../client";
+import { removeDistribution, useDataset, useDefaultHeaders, useDistributions, useDocumentTitle, useUserInfo } from "../client";
+import Loading from "../components/Loading";
+import ErrorAlert from "../components/ErrorAlert";
+import { useTranslation } from "react-i18next";
 
 export default function DistributionList()
 {
@@ -20,30 +23,36 @@ export default function DistributionList()
     const [dataset] = useDataset(datasetId);
     const navigate = useNavigate();
     const headers = useDefaultHeaders();
+    const {t} = useTranslation();
+    useDocumentTitle(t('distributionList'));
 
     return <>
-            <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'},{title: 'Zoznam datasetov', link: '/admin/datasets'}, {title: 'Organizačná štruktúra júl 2023', link: '/admin/datasets'}, {title: 'Distribúcie'}]} />
+            <Breadcrumbs items={[{title: t('nkod'), link: '/'},{title: t('distributionList'), link: '/sprava/datasety'}, {title: t('distributionList')}]} />
             <MainContent>
-            <PageHeader>Zoznam distribúcií</PageHeader>
+            <PageHeader>{t('distributionList')}</PageHeader>
             {userInfo?.publisherView ? <p className="govuk-body nkod-publisher-name">
-                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Poskytovateľ dát</span><br />
+                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>{t('publisher')}</span><br />
                         {userInfo.publisherView.name}
                     </p> : null}
                     {dataset ? <p className="govuk-body nkod-publisher-name">
-                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Dataset</span><br />
+                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>{t('dataset')}</span><br />
                     {dataset.name}
                     </p> : null}
             <p>
-                <Button onClick={() => navigate('/sprava/distribucie/' + datasetId + '/pridat')}>Nová distribúcia</Button>
+                <Button onClick={() => navigate('/sprava/distribucie/' + datasetId + '/pridat')}>{t('newDistribution')}</Button>
             </p>
-            {distributions ? <><Table>
+
+            {loading ? <Loading /> : null}
+            {error ? <ErrorAlert error={error} /> : null}
+
+            {distributions && distributions.items.length > 0 ? <><Table>
                 <TableHead>
                     <TableRow>
                         <TableHeaderCell>
-                            Formát
+                            {t('format')}
                         </TableHeaderCell>
                         <TableHeaderCell>
-                            Nástroje
+                            {t('tools')}
                         </TableHeaderCell>
                     </TableRow>
                 </TableHead>
@@ -53,18 +62,18 @@ export default function DistributionList()
                             {d.downloadUrl ? <a href={d.downloadUrl} className="govuk-link">{d.title ?? d.formatValue?.label ?? d.id}</a> : <span></span>}
                         </TableCell>
                         <TableCell style={{whiteSpace: 'nowrap'}}>
-                            {d.downloadUrl ? <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => { if (d.downloadUrl) {window.location.href = d.downloadUrl}}}>Stiahnuť</Button> : null}
-                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/distribucie/' + datasetId + '/upravit/' + d.id)}>Upraviť</Button>
+                            {d.downloadUrl ? <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => { if (d.downloadUrl) {window.location.href = d.downloadUrl}}}>{t('download')}</Button> : null}
+                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/distribucie/' + datasetId + '/upravit/' + d.id)}>{t('edit')}</Button>
                             <Button className="idsk-button idsk-button--secondary" onClick={async () => {
                                     if (await removeDistribution(d.id, headers)) {
                                         refresh();
                                     }
-                                }}>Odstrániť</Button>
+                                }}>{t('remove')}</Button>
                         </TableCell>
                     </TableRow>)}
                 </TableBody>
             </Table>
-            <Pagination totalItems={distributions.totalCount} pageSize={query.pageSize} currentPage={query.page} onPageChange={p => setQueryParameters({page: p})} /></> : <div>No distributions found</div>}
+            <Pagination totalItems={distributions.totalCount} pageSize={query.pageSize} currentPage={query.page} onPageChange={p => setQueryParameters({page: p})} /></> : <div className="govuk-body">{t('datasetListEmpty')}</div>}
             </MainContent>
         </>;
 }

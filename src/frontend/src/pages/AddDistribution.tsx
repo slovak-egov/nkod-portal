@@ -1,4 +1,4 @@
-import { useDistributionAdd, useUserInfo } from "../client";
+import { useDistributionAdd, useDocumentTitle, useUserInfo } from "../client";
 
 import PageHeader from "../components/PageHeader";
 import Breadcrumbs from "../components/Breadcrumbs";
@@ -7,13 +7,14 @@ import Button from "../components/Button";
 import ValidationSummary from "../components/ValidationSummary";
 import { DistributionForm } from "../components/DistributionForm";
 import { useNavigate, useParams } from "react-router";
+import { useTranslation } from "react-i18next";
 
 
 export default function AddDistribution()
 {
     const { datasetId } = useParams();
 
-    const [distribution, setDistribution, errors, saving, saveResult, save] = useDistributionAdd({
+    const [distribution, setDistribution, errors, saving, save] = useDistributionAdd({
         datasetId: datasetId ?? '',
         authorsWorkType: 'https://data.gov.sk/def/authors-work-type/3',
         originalDatabaseType: 'https://data.gov.sk/def/original-database-type/3',
@@ -32,14 +33,16 @@ export default function AddDistribution()
 
     const [userInfo] = useUserInfo();
     const navigate = useNavigate();
+    const {t} = useTranslation();
+    useDocumentTitle(t('newDistribution'));
 
     return <>
-            <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam distribúcií', link: '/sprava/distributions'}, {title: 'Nová distribúcia'}]} />
+            <Breadcrumbs items={[{title: t('nkod'), link: '/'}, {title: t('distributionList'), link: '/sprava/distribucie/' + datasetId}, {title: t('newDistribution')}]} />
             <MainContent>
                 <div className="nkod-form-page">
-                    <PageHeader>Nová distribúcia</PageHeader>
+                    <PageHeader>{t('newDistribution')}</PageHeader>
                     {userInfo?.publisherView ? <p className="govuk-body nkod-publisher-name">
-                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Poskytovateľ dát</span><br />
+                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>{t('publisher')}</span><br />
                         {userInfo.publisherView.name}
                     </p> : null}
 
@@ -48,7 +51,10 @@ export default function AddDistribution()
                         message: k[1]
                     }))} /> : null}
 
-                    <DistributionForm distribution={distribution} setDistribution={setDistribution} errors={errors} userInfo={userInfo} />
+                    <DistributionForm distribution={distribution} 
+                                      setDistribution={setDistribution} 
+                                      errors={errors}
+                                      saving={saving} />
 
                     <Button style={{marginRight: '20px'}} onClick={async () => {
                         const result = await save();
@@ -56,7 +62,7 @@ export default function AddDistribution()
                             navigate('/sprava/distribucie/' + datasetId);
                         }
                     }} disabled={saving}>
-                        Uložiť distribúciu
+                        {t('save')}
                     </Button>
                 </div>
             </MainContent>

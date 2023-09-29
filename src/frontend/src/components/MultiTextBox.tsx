@@ -21,7 +21,8 @@ export default function MultiTextBox(props: Props)
             <BaseInput value={newValue} onChange={e => newValueChanged(e.target.value)} {...rest} />
         </GridColumn>
         <GridColumn widthUnits={1} totalUnits={4}>
-            <Button buttonType="secondary" onClick={() => {
+            <Button buttonType="secondary" onClick={e => {
+                e.preventDefault();
                 if (newValue !== '') {
                     if (!values.includes(newValue)) {
                         onChange([...values, newValue]);

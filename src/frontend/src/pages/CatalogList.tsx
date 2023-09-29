@@ -9,9 +9,12 @@ import TableCell from "../components/TableCell";
 import Pagination from "../components/Pagination";
 import Breadcrumbs from "../components/Breadcrumbs";
 import MainContent from "../components/MainContent";
-import { removeLocalCatalog, useDefaultHeaders, useLocalCatalogs, useUserInfo } from "../client";
+import { removeLocalCatalog, useDefaultHeaders, useDocumentTitle, useLocalCatalogs, useUserInfo } from "../client";
 import { useNavigate } from "react-router";
 import { useEffect } from "react";
+import Loading from "../components/Loading";
+import ErrorAlert from "../components/ErrorAlert";
+import { useTranslation } from "react-i18next";
 
 export default function CatalogList()
 {
@@ -30,29 +33,35 @@ export default function CatalogList()
             });
         }
     }, [userInfo]);
+    const {t} = useTranslation();
+    useDocumentTitle(t('localCatalogList'));
 
     return <>
-    <Breadcrumbs items={[{title: 'Národný katalóg otvorených dát', link: '/'}, {title: 'Zoznam lokálnych katalógov'}]} />
+    <Breadcrumbs items={[{title: t('nkod'), link: '/'}, {title: t('localCatalogList')}]} />
             <MainContent>
-            <PageHeader>Zoznam lokálnych katalógov</PageHeader>
+            <PageHeader>{t('localCatalogList')}</PageHeader>
             {userInfo?.publisherView ? <p className="govuk-body nkod-publisher-name">
-                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>Poskytovateľ dát</span><br />
+                    <span style={{color: '#2B8CC4', fontWeight: 'bold'}}>{t('publisher')}</span><br />
                         {userInfo.publisherView.name}
                     </p> : null}
             <p>
-                <Button onClick={() => navigate('/sprava/lokalne-katalogy/pridat')}>Nový lokálny katalóg</Button>
+                <Button onClick={() => navigate('/sprava/lokalne-katalogy/pridat')}>{t('newCatalog')}</Button>
             </p>
-            {catalogs ? <><Table>
+
+            {loading ? <Loading /> : null}
+            {error ? <ErrorAlert error={error} /> : null}
+
+            {catalogs && catalogs.items.length > 0 ? <><Table>
                 <TableHead>
                     <TableRow>
                         <TableHeaderCell>
-                            Názov
+                            {t('name')}
                         </TableHeaderCell>
                         <TableHeaderCell>
-                            Stav
+                            {t('state')}
                         </TableHeaderCell>
                         <TableHeaderCell>
-                            Nástroje
+                            {t('tools')}
                         </TableHeaderCell>
                     </TableRow>
                 </TableHead>
@@ -62,20 +71,21 @@ export default function CatalogList()
                             {c.name}
                         </TableCell>
                         <TableCell>
-                            {c.isPublic ? 'publikovaný' : 'nepublikovaný'}
+                            {c.isPublic ? t('published') : t('notPublished')}
                         </TableCell>
                         <TableCell style={{whiteSpace: 'nowrap'}}>
-                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/lokalne-katalogy/upravit/' + c.id)}>Upraviť</Button>
+                            <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/lokalne-katalogy/upravit/' + c.id)}>{t('edit')}</Button>
                             <Button className="idsk-button idsk-button--secondary" onClick={async () => {
                                     if (await removeLocalCatalog(c.id, headers)) {
                                         refresh();
                                     }
-                                }}>Odstrániť</Button>
+                                }}>{t('remove')}</Button>
                         </TableCell>
                     </TableRow>)}
                 </TableBody>
             </Table>
-            <Pagination totalItems={catalogs.totalCount} pageSize={query.pageSize} currentPage={query.page} onPageChange={p => setQueryParameters({page: p})} /></> : <div>No catalogs found</div>}
+            <Pagination totalItems={catalogs.totalCount} pageSize={query.pageSize} currentPage={query.page} onPageChange={p => setQueryParameters({page: p})} /></> : 
+            <div className="govuk-body">{t('catalogListEmpty')}</div>}
             </MainContent>
         </>;
 }

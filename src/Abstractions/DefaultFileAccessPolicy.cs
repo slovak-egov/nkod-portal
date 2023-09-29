@@ -18,7 +18,17 @@ namespace NkodSk.Abstractions
                 return true;
             }
 
-            return HasModifyAccessToFile(metadata);
+            if (httpContextAccessor.HasRole("Superadmin"))
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(metadata.Publisher) && (httpContextAccessor.HasRole("Publisher") || httpContextAccessor.HasRole("PublisherAdmin")))
+            {
+                return httpContextAccessor.Publisher == metadata.Publisher;
+            }
+
+            return false;
         }
 
         public bool HasModifyAccessToFile(FileMetadata metadata)
@@ -28,9 +38,37 @@ namespace NkodSk.Abstractions
                 return true;
             }
 
-            if (!string.IsNullOrEmpty(metadata.Publisher))
+            if (!string.IsNullOrEmpty(metadata.Publisher) && (httpContextAccessor.HasRole("Publisher") || httpContextAccessor.HasRole("PublisherAdmin")))
             {
-                return httpContextAccessor.Publisher == metadata.Publisher;
+                if (httpContextAccessor.Publisher == metadata.Publisher)
+                {
+                    return metadata.Type == FileType.DatasetRegistration ||
+                        metadata.Type == FileType.DistributionRegistration ||
+                        metadata.Type == FileType.LocalCatalogRegistration ||
+                        metadata.Type == FileType.DistributionFile ||
+                        metadata.Type == FileType.PublisherRegistration;
+                }
+            }
+
+            return false;
+        }
+
+        public bool HasDeleteAccessToFile(FileMetadata metadata)
+        {
+            if (httpContextAccessor.HasRole("Superadmin"))
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(metadata.Publisher) && (httpContextAccessor.HasRole("Publisher") || httpContextAccessor.HasRole("PublisherAdmin")))
+            {
+                if (httpContextAccessor.Publisher == metadata.Publisher)
+                {
+                    return metadata.Type == FileType.DatasetRegistration ||
+                        metadata.Type == FileType.DistributionRegistration ||
+                        metadata.Type == FileType.LocalCatalogRegistration ||
+                        metadata.Type == FileType.DistributionFile;
+                }
             }
 
             return false;

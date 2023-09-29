@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: documentstorage
+  namespace: nodc
+  labels:
+    role: documentstorage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: documentstorage
+  template:
+    metadata:
+      labels:
+        role: documentstorage
+    spec:
+      containers:
+        - name: documentstorage
+          image: $REPOSITORY/documentstorage:$TAG
+          imagePullPolicy: Always
+          env:
+            - name: Jwt__Issuer
+              value: ""
+            - name: Jwt__Audience
+              value: ""
+            - name: StoragePath
+              value: /data
+            - name: Jwt__Key
+              value: ""
+          volumeMounts:
+            - name: storage-pvc
+              mountPath: /data
+          ports:
+            - name: api
+              containerPort: 80
+              protocol: TCP
+      imagePullSecrets:
+        - name: oci-registry-secret
+      volumes:
+        - name: storage-pvc
+          persistentVolumeClaim:
+            claimName: storage-pvc

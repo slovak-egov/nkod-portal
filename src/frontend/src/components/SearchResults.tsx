@@ -207,7 +207,7 @@ export default function SearchResults(props: Props) {
                  })} />
                 }
             }
-            return <></>
+            return null;
           })}
           
         </GridColumn>
@@ -289,11 +289,12 @@ export default function SearchResults(props: Props) {
                         if (codelist) {
                             const values = codelist && props.query.filters ? props.query.filters[codelist.id] ?? [] : [];
                             if (values.length > 0) {
-                                return <div className="idsk-search-results__content__picked-filters__topics idsk-search-results--invisible">
+                                return <div className="idsk-search-results__content__picked-filters__topics idsk-search-results--invisible" key={codelistId}>
                                         <span className="idsk-search-results__text">{codelist.label}</span>
                                     </div>
                             }
                         }
+                        return null;
                     })}
                     <button className="idsk-search-results__button--turn-filters-off govuk-grid-column-full idsk-search-results--invisible" type="button">Vypnúť všetky filtre</button>
                     </div>

@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapi
+  namespace: nodc
+  labels:
+    role: webapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: webapi
+  template:
+    metadata:
+      labels:
+        role: webapi
+    spec:
+      containers:
+        - name: webapi
+          image: $REPOSITORY/webapi:$TAG
+          imagePullPolicy: Always
+          env:
+            - name: Jwt__Issuer
+              value: ""
+            - name: Jwt__Audience
+              value: ""
+            - name: Jwt__Key
+              value: ""
+            - name: DocumentStorageUrl
+              value: http://documentstorage:6002
+            - name: CodelistProviderUrl
+              value: http://codelistprovider:6003
+            - name: IAMUrl
+              value: http://iam:6004
+          ports:
+            - name: api
+              containerPort: 80
+              protocol: TCP
+      imagePullSecrets:
+        - name: oci-registry-secret

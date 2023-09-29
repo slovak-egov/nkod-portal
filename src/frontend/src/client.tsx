@@ -1,15 +1,24 @@
 import axios, { AxiosError, AxiosResponse, RawAxiosRequestHeaders } from "axios";
 import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
 import { useSearchParams } from "react-router-dom";
 
 const baseUrl = process.env.REACT_APP_API_URL;
 
-export const TokenContext = React.createContext<TokenResult|null>(null);
+export type TokenContextType = {
+    token: TokenResult|null;
+    setToken: (token: TokenResult|null) => void;
+    userInfo: UserInfo|null;
+    userInfoLoading: boolean;
+    defaultHeaders: RawAxiosRequestHeaders;
+}
+export const TokenContext = React.createContext<TokenContextType|null>(null);
 
 export type TokenResult = {
     token: string;
-    refreshToken: string;
+    expires: string|null;
+    refreshToken: string|null;
     redirectUrl: string|null;
 }
 
@@ -53,6 +62,7 @@ type Temporal = {
 
 type CardView = {
     name: string|null;
+    nameAll: LanguageDependentTexts|null;
     email: string|null;
 }
 
@@ -149,7 +159,9 @@ export type Dataset = {
     id: string;
     isPublic: boolean;
     name: string|null;
+    nameAll: LanguageDependentTexts|null;
     description: string|null;
+    descriptionAll: LanguageDependentTexts|null;
     publisherId: string|null;
     publisher: Publisher|null;
     themes: string[];
@@ -157,6 +169,7 @@ export type Dataset = {
     accrualPeriodicity: string|null;
     accrualPeriodicityValue: CodelistValue|null;
     keywords: string[];
+    keywordsAll: LanguageDependentTextsMulti|null;
     type: string[];
     typeValues: CodelistValue|null;
     spatial: string[];
@@ -193,13 +206,16 @@ export type Distribution = {
     compressFormat: string|null;
     packageFormat: string|null;
     title: string|null;
+    titleAll: LanguageDependentTexts|null;
 }
 
 export type LocalCatalog = {
     id: string;
     isPublic: boolean;
     name: string;
+    nameAll: LanguageDependentTexts|null;
     description: string|null;
+    descriptionAll: LanguageDependentTexts|null;
     publisher: Publisher|null;
     contactPoint: CardView|null;
     homePage: string|null;
@@ -242,7 +258,7 @@ type User = {
 
 type CodelistAdminView = {
     id: string;
-    name: string;
+    label: string;
     count: number;
 }
 
@@ -316,9 +332,7 @@ export function useEntities<T>(url: string, initialQuery?: Partial<RequestQuery>
         setLoading(true);
         if (query.page > 0) {
             try{
-                const response: AxiosResponse<Response<T>> = await axios.post(url, query, {
-                    headers: headers
-                });
+                const response: AxiosResponse<Response<T>> = await sendPost(url, query, headers);
                 setItems(response.data);
             } catch (err) {
                 if (err instanceof Error) {
@@ -368,9 +382,7 @@ export function useEntity<T>(url: string, sourceId?: string) {
                 setError(null);
                 setItem(null);
                 try{
-                    const response: AxiosResponse<Response<T>> = await axios.post(url, query, {
-                        headers: headers
-                    });
+                    const response: AxiosResponse<Response<T>> = await sendPost(url, query, headers);
                     if (response.data.items.length > 0) {
                         setItem(response.data.items[0]);
                     }
@@ -391,27 +403,27 @@ export function useEntity<T>(url: string, sourceId?: string) {
 }
 
 export function useDataset(id?: string) {
-    return useEntity<Dataset>(baseUrl + 'datasets/search', id);
+    return useEntity<Dataset>('datasets/search', id);
 }
 
 export function useLocalCatalog() {
-    return useEntity<LocalCatalog>(baseUrl + 'local-catalogs/search');
+    return useEntity<LocalCatalog>('local-catalogs/search');
 }
 
 export function useDatasets(initialQuery?: Partial<RequestQuery>) {
-    return useEntities<Dataset>(baseUrl + 'datasets/search', {orderBy: 'created', ...initialQuery});
+    return useEntities<Dataset>('datasets/search', {orderBy: 'created', ...initialQuery});
 }
 
 export function useLocalCatalogs(initialQuery?: Partial<RequestQuery>) {
-    return useEntities<LocalCatalog>(baseUrl + 'local-catalogs/search', initialQuery);
+    return useEntities<LocalCatalog>('local-catalogs/search', initialQuery);
 }
 
 export function usePublishers(initialQuery?: Partial<RequestQuery>) {
-    return useEntities<Publisher>(baseUrl + 'publishers/search', {orderBy: 'relevance', ...initialQuery});
+    return useEntities<Publisher>('publishers/search', {orderBy: 'relevance', ...initialQuery});
 }
 
 export function useDistributions(initialQuery?: Partial<RequestQuery>) {
-    return useEntities<Distribution>(baseUrl + 'distributions/search', {orderBy: 'relevance', ...initialQuery});
+    return useEntities<Distribution>('distributions/search', {orderBy: 'relevance', ...initialQuery});
 }
 
 export function useUsers() {
@@ -433,9 +445,7 @@ export function useUsers() {
         setLoading(true);
         if (query.page > 0) {
             try{
-                const response: AxiosResponse<Response<User>> = await axios.post('users/search', query, {
-                    headers: headers
-                });
+                const response: AxiosResponse<Response<User>> = await sendPost('users/search', query, headers);
                 setItems(response.data);
             } catch (err) {
                 if (err instanceof Error) {
@@ -494,7 +504,7 @@ export function useCodelists(keys: string[]) {
 }
 
 export async function searchCodelistItem(codelistId: string, query: string) {
-    const response: AxiosResponse<Codelist[]> = await axios.post(baseUrl + 'codelists/search', {}, {
+    const response: AxiosResponse<Codelist[]> = await axios.post(baseUrl + 'codelists/item', {}, {
         params: {
             key: codelistId,
             query: query
@@ -526,18 +536,14 @@ export function useEntityAdd<T>(url: string, initialValue: T) {
     const [entity, setEntity] = useState<T>(initialValue);
     const [errors, setErrors] = useState<{[id: string]: string}>({});
     const [saving, setSaving] = useState(false);
-    const [saveResult, setSaveResult] = useState<SaveResult|null>(null);
     const headers = useDefaultHeaders();
 
     const save = useCallback(async () => {
         setSaving(true);
         setErrors({});
         try {
-            const response: AxiosResponse<SaveResult> = await axios.post(url, entity, {
-                headers: headers
-            });
+            const response: AxiosResponse<SaveResult> = await sendPost(url, entity, headers);
             setErrors(response.data.errors ?? {});
-            setSaveResult(response.data);
             return response.data;
         } catch (err) {
             if (err instanceof AxiosError) {
@@ -557,35 +563,23 @@ export function useEntityAdd<T>(url: string, initialValue: T) {
         setEntity({...entity, ...properties});
     }, [entity, setEntity]);
 
-    return [ entity, setEntityProperties, errors, saving, saveResult, save ] as const;
-}
-
-export function useDefaultHeaders() {
-    const token = useContext(TokenContext);
-    const headers = useMemo(() => {
-        const headers: RawAxiosRequestHeaders = {};
-        if (token?.token) {
-            headers['Authorization'] = 'Bearer ' + token.token;
-        }
-        return headers;
-    }, [token]);
-    return headers;
+    return [ entity, setEntityProperties, errors, saving, save ] as const;
 }
 
 export async function sendGet(url: string, headers: RawAxiosRequestHeaders) {
-    return await axios.get(url, {
+    return await axios.get(baseUrl + url, {
         headers: headers
     });
 }
 
 export async function sendPost<TInput>(url: string, input: TInput, headers: RawAxiosRequestHeaders) {
-    return await axios.post(url, input, {
+    return await axios.post(baseUrl + url, input, {
         headers: headers
     });
 }
 
 export async function sendPut<TInput>(url: string, input: TInput, headers: RawAxiosRequestHeaders) {
-    return await axios.put(url, input, {
+    return await axios.put(baseUrl + url, input, {
         headers: headers
     });
 }
@@ -594,9 +588,14 @@ export function useEntityEdit<TEntity, TInput>(url: string, loadUrl: string, ini
     const [entity, setEntity] = useState<TInput|null>(null);
     const [errors, setErrors] = useState<{[id: string]: string}>({});
     const [saving, setSaving] = useState(false);
-    const [saveResult, setSaveResult] = useState<SaveResult|null>(null);
     const [item, loading, error] = useEntity<TEntity>(loadUrl);
     const headers = useDefaultHeaders();
+
+    useEffect(() => {
+        if (error) {
+            setErrors(e => ({...e, load: error.message}));
+        }
+    }, [error]);
 
     useEffect(() => {
         if (item) {
@@ -610,7 +609,6 @@ export function useEntityEdit<TEntity, TInput>(url: string, loadUrl: string, ini
         try {
             const response: AxiosResponse<SaveResult> = await sendPut(url, entity, headers)
             setErrors(response.data.errors);
-            setSaveResult(response.data);
             return response.data;
         } catch (err) {
             if (err instanceof AxiosError) {
@@ -632,31 +630,31 @@ export function useEntityEdit<TEntity, TInput>(url: string, loadUrl: string, ini
         }
     }, [entity, setEntity]);
 
-    return [ entity, item, loading, setEntityProperties, errors, saving, saveResult, save ] as const;
+    return [ entity, item, loading, setEntityProperties, errors, saving, save ] as const;
 }
 
 export function useDatasetAdd(initialValue: DatasetInput) {
-    return useEntityAdd<DatasetInput>(baseUrl + 'datasets', initialValue);
+    return useEntityAdd<DatasetInput>('datasets', initialValue);
 }
 
 export function useDatasetEdit(initialValue: (entity: Dataset) => DatasetInput) {
-    return useEntityEdit<Dataset, DatasetInput>(baseUrl + 'datasets', baseUrl + 'datasets/search', initialValue);
+    return useEntityEdit<Dataset, DatasetInput>('datasets', 'datasets/search', initialValue);
 }
 
 export function useDistributionAdd(initialValue: DistributionInput) {
-    return useEntityAdd<DistributionInput>(baseUrl + 'distributions', initialValue);
+    return useEntityAdd<DistributionInput>('distributions', initialValue);
 }
 
 export function useDistributionEdit(initialValue: (entity: Distribution) => DistributionInput) {
-    return useEntityEdit<Distribution, DistributionInput>(baseUrl + 'distributions', baseUrl + 'distributions/search', initialValue);
+    return useEntityEdit<Distribution, DistributionInput>('distributions', 'distributions/search', initialValue);
 }
 
 export function useLocalCatalogAdd(initialValue: LocalCatalogInput) {
-    return useEntityAdd<LocalCatalogInput>(baseUrl + 'local-catalogs', initialValue);
+    return useEntityAdd<LocalCatalogInput>('local-catalogs', initialValue);
 }
 
 export function useLocalCatalogEdit(initialValue: (entity: LocalCatalog) => LocalCatalogInput) {
-    return useEntityEdit<LocalCatalog, LocalCatalogInput>(baseUrl + 'local-catalogs', baseUrl + 'local-catalogs/search', initialValue);
+    return useEntityEdit<LocalCatalog, LocalCatalogInput>('local-catalogs', 'local-catalogs/search', initialValue);
 }
 
 export const supportedLanguages: Language[] = [
@@ -667,34 +665,14 @@ export const supportedLanguages: Language[] = [
 ]
 
 export function useUserInfo() {
-    const [userInfo, setUserInfo] = useState<UserInfo|null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-    const headers = useDefaultHeaders();
+    const ctx = useContext(TokenContext);
 
-    useEffect(() => {
-        async function load() {
-            setLoading(true);
-            setError(null);
-            setUserInfo(null);
-            try{
-                const response: AxiosResponse<UserInfo> = await axios.post(baseUrl + 'user-info', {}, {
-                    headers: headers
-                });
-                setUserInfo(response.data);
-            } catch (err) {
-                if (err instanceof Error) {
-                    setError(err);
-                }
-            } finally {
-                setLoading(false);
-            }
-        }
+    return [ctx?.userInfo ?? null, ctx?.userInfoLoading ?? false] as const;
+}
 
-        load();
-    }, [headers]);
-
-    return [userInfo, loading, error] as const;
+export function useDefaultHeaders() {
+    const ctx = useContext(TokenContext);
+    return ctx?.defaultHeaders ?? {};
 }
 
 export function extractLanguageErrors(errors: {[id: string]: string}, key: string) {
@@ -710,7 +688,7 @@ export function extractLanguageErrors(errors: {[id: string]: string}, key: strin
 export async function removeEntity(url: string, id: string, headers: RawAxiosRequestHeaders) {
     if (window.confirm('Skutočne chcete odstrániť záznam?')) {
         try{
-            await axios.delete(url, {
+            await axios.delete(baseUrl + url, {
                 headers: headers,
                 params: {
                     id: id
@@ -730,19 +708,19 @@ type FileUploadResult = {
 }
 
 export function removeDataset(id: string, headers: RawAxiosRequestHeaders) {
-    return removeEntity(baseUrl + 'datasets', id, headers);
+    return removeEntity('datasets', id, headers);
 }
 
 export function removeDistribution(id: string, headers: RawAxiosRequestHeaders) {
-    return removeEntity(baseUrl + 'distributions', id, headers);
+    return removeEntity('distributions', id, headers);
 }
 
 export function removeLocalCatalog(id: string, headers: RawAxiosRequestHeaders) {
-    return removeEntity(baseUrl + 'local-catalogs', id, headers);
+    return removeEntity('local-catalogs', id, headers);
 }
 
 export function removeUser(id: string, headers: RawAxiosRequestHeaders) {
-    return removeEntity(baseUrl + 'users', id, headers);
+    return removeEntity('users', id, headers);
 }
 
 export function useSingleFileUpload(url: string) {
@@ -761,7 +739,7 @@ export function useSingleFileUpload(url: string) {
         } finally {
             setUploading(false);
         }
-    }, []);
+    }, [url, headers]);
 
     return [ uploading, upload ] as const;
 }
@@ -783,7 +761,7 @@ export function useCodelistAdmin() {
     const refresh = useCallback(async () => {
         setLoading(true);
         try{
-            const response: AxiosResponse<CodelistAdminView[]> = await axios.post('codelists/search', {}, {
+            const response: AxiosResponse<CodelistAdminView[]> = await axios.post(baseUrl + 'codelists/search', {}, {
                 headers: headers
             });
             setItems(response.data);
@@ -795,7 +773,7 @@ export function useCodelistAdmin() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [headers]);
 
     useEffect(() => {
         refresh();
@@ -810,12 +788,8 @@ export async function doLogin(headers: RawAxiosRequestHeaders) {
     return response.data.redirectUrl;
 }
 
-export function doLogout(headers: RawAxiosRequestHeaders) {
-    return sendPost('saml/logout', {}, headers);
-}
-
 export function useUserAdd(initialValue: NewUser) {
-    return useEntityAdd<NewUser>(baseUrl + 'users', initialValue);
+    return useEntityAdd<NewUser>('users', initialValue);
 }
 
 export function useUser() {
@@ -852,16 +826,30 @@ export function useUser() {
     return [ item, loading, error ] as const;
 }
 
-export function useUserEdit() {
-    return useEntityEdit<User, EditUser>('users', 'users/search', (entity: User) => ({
+function convertUserToInput(entity: User)
+{
+    return {
         id: entity.id,
         firstName: entity.firstName,
         lastName: entity.lastName,
         email: entity.email,
         role: entity.role,
-    }));
+    }
+}
+
+export function useUserEdit() {
+    return useEntityEdit<User, EditUser>('users', 'users/search', convertUserToInput);
 }
 
 export function usePublisherAdd(initialValue: NewPublisher) {
-    return useEntityAdd<NewPublisher>(baseUrl + 'registration', initialValue);
+    return useEntityAdd<NewPublisher>('registration', initialValue);
+}
+
+export function useDocumentTitle(text: string)
+{
+    const {t} = useTranslation();
+
+    useEffect(() => {
+        document.title = t('nkod') + (text.length > 0 ? " - " + text : "");
+    }, [text, t]);
 }
