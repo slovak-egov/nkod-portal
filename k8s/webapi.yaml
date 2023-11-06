@@ -18,14 +18,16 @@ spec:
       containers:
         - name: webapi
           image: $REPOSITORY/webapi:$TAG
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: jwt-config
           env:
-            - name: Jwt__Issuer
-              value: ""
-            - name: Jwt__Audience
-              value: ""
             - name: Jwt__Key
-              value: ""
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: JwtPublicKey
             - name: DocumentStorageUrl
               value: http://documentstorage:6002
             - name: CodelistProviderUrl

@@ -28,7 +28,9 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "start:localk8s": "cross-env REACT_APP_API_URL=http://demo.nkod/ REACT_APP_NO_AUTH=true REACT_APP_CMS_API_URL=http://localhost:5000/ npm run start",
     "build": "react-scripts build",
+    "build:localk8s": "cross-env REACT_APP_API_URL=http://demo.nkod/ npm run build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -51,6 +53,7 @@
     ]
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "eslint-config-react-app": "^7.0.1",
     "jest-editor-support": "^31.1.0",
     "sass": "^1.64.1"

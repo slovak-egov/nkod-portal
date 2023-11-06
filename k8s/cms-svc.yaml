@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cms
+  namespace: nodc
+spec:
+  selector:
+    role: cms
+  ports:
+    - protocol: TCP
+      port: 6005
+      targetPort: 80

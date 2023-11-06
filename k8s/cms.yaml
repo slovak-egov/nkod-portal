@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cms
+  namespace: nodc
+  labels:
+    role: cms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: cms
+  template:
+    metadata:
+      labels:
+        role: cms
+    spec:
+      containers:
+        - name: cms
+          image: $REPOSITORY/cms:$TAG
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: api
+              containerPort: 80
+              protocol: TCP
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+      imagePullSecrets:
+        - name: oci-registry-secret

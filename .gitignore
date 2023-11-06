@@ -428,3 +428,8 @@ build
 
 /src/frontend/.vscode/settings.json
 /build2.ps1
+
+
+.idea
+k8s/out
+piranha.db
