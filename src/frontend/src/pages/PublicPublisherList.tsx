@@ -51,7 +51,7 @@ export default function PublicPublisherList() {
                         const themes : Theme[] = c.themes ? Object.entries(c.themes).filter((_, c) => c > 0).sort((a, b) => b[1] - a[1]).slice(0, 5).map(v => ({name: v[0], count: v[1]})) : [];
 
                         return <Fragment key={c.id}><GridRow >
-                                <GridColumn widthUnits={1} totalUnits={1}>
+                                <GridColumn widthUnits={1} totalUnits={1} data-testid="sr-result">
                                     <Link
                                         to={'/datasety?publisher=' + encodeURIComponent(c.key)}
                                         className="idsk-card-title govuk-link"

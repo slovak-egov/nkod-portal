@@ -40,7 +40,7 @@ export default function MultiSelectElementItems<T>(props: Props<T>)
         </div>
     <div>
         {selectedOptions.length > 0 ? <div className="nkod-entity-detail"><div className="nkod-entity-detail-tags govuk-clearfix" style={{marginTop: '20px'}}>
-                {selectedOptions.map(o => <div key={getValue(o)} className="govuk-body nkod-entity-detail-tag" style={{cursor: 'pointer'}} onClick={() => {
+                {selectedOptions.map(o => <div key={getValue(o)} data-value={getValue(o)} className="govuk-body nkod-entity-detail-tag" style={{cursor: 'pointer'}} onClick={() => {
                     if (!disabled) {
                         onChange(selectedOptions.map(getValue).filter(x => x !== getValue(o)));
                     }

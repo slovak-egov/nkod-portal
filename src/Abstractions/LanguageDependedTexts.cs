@@ -22,7 +22,13 @@ namespace NkodSk.Abstractions
 
         public LanguageDependedTexts(Dictionary<string, string> texts) : base(texts)
         {
-
+            foreach (string key in Keys.ToList())
+            {
+                if (string.IsNullOrEmpty(key))
+                {
+                    Remove(key);
+                }
+            }
         }
 
         public string? GetText(string language)

@@ -7,6 +7,7 @@ using CsvHelper.Configuration;
 using System.Globalization;
 using System.Xml;
 using TestBase;
+using System.Xml.Linq;
 
 string sourceDir = args[0];
 string targetDir = args[1];
@@ -30,32 +31,24 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Agent"
   );
 }
 
-Dictionary<Uri, (Guid, DcatDataset)> datasets = new Dictionary<Uri, (Guid, DcatDataset)>();
-HashSet<Uri> requiredPlaces = new HashSet<Uri>();
+Dictionary<Uri, Guid> distributionUriToDataset = new Dictionary<Uri, Guid>();
+Dictionary<Guid, FileMetadata> datasetMetadatas = new Dictionary<Guid, FileMetadata>();
 
 foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Dataset")))
 {
     string content = File.ReadAllText(path);
     DcatDataset catalog = DcatDataset.Parse(content)!;
 
-    Guid id = Guid.NewGuid();
-
-    requiredPlaces.UnionWith(catalog.Spatial);
+    FileMetadata metadata = catalog.UpdateMetadata(true);
 
     foreach (Uri uri in catalog.Distributions)
     {
-        datasets[uri] = (id, catalog);
+        distributionUriToDataset[uri] = metadata.Id;
     }
-
-    Dictionary<string, string[]> additionalValues = new Dictionary<string, string[]>();
-    if (catalog.Type is not null)
-    {
-        additionalValues[DcatDataset.TypeCodelist] = new string[] { catalog.Type.ToString()! };
-    }
-    additionalValues["keywords_sk"] = catalog.GetKeywords("sk").ToArray();
+    datasetMetadatas[metadata.Id] = metadata;
 
     storage.InsertFile(
-        content, new FileMetadata(id, catalog.GetTitle("sk") ?? id.ToString(), FileType.DatasetRegistration, null, catalog.Publisher!.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, additionalValues), true, accessPolicy
+        content, metadata, true, accessPolicy
     );
 }
 
@@ -64,14 +57,18 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Distri
     string content = File.ReadAllText(path);
     DcatDistribution catalog = DcatDistribution.Parse(content)!;
 
-    Guid id = Guid.NewGuid();
-
-    if (datasets.TryGetValue(catalog.Uri, out var v))
+    if (distributionUriToDataset.TryGetValue(catalog.Uri, out Guid datasetId))
     {
-        (Guid parentId, DcatDataset dataset) = v;
+        FileMetadata datasetMetadata = datasetMetadatas[datasetId];
+
+        FileMetadata metadata = catalog.UpdateMetadata(datasetMetadata);
+        datasetMetadata = catalog.UpdateDatasetMetadata(datasetMetadata);
+
         storage.InsertFile(
-            content, new FileMetadata(id, catalog.GetTitle("sk") ?? id.ToString(), FileType.DistributionRegistration, parentId, dataset.Publisher!.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy
+            content, metadata, true, accessPolicy
         );
+        storage.UpdateMetadata(datasetMetadata, accessPolicy);
+        datasetMetadatas[datasetId] = datasetMetadata;
     }
     else
     {
@@ -84,10 +81,10 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Catalo
     string content = File.ReadAllText(path);
     DcatCatalog catalog = DcatCatalog.Parse(content)!;
 
-    Guid id = Guid.NewGuid();
+    FileMetadata metadata = catalog.UpdateMetadata();
 
     storage.InsertFile(
-        content, new FileMetadata(id, catalog.GetTitle("sk") ?? id.ToString(), FileType.LocalCatalogRegistration, null, catalog.Publisher!.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy
+        content, metadata, true, accessPolicy
     );
 }
 
@@ -105,7 +102,7 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Concep
     string[] lines = File.ReadAllLines(path);
 
     SkosConceptScheme conceptScheme = SkosConceptScheme.Create(new Uri(lines[0]));
-    conceptScheme.SetLabel(new LanguageDependedTexts { { "sk", lines[2] } });
+    conceptScheme.SetLabel(new LanguageDependedTexts { { "sk", lines[1] } });
 
     for (int i = 2; i < lines.Length; i += 2)
     {
@@ -118,49 +115,49 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Concep
    );
 }
 
-void PrepareXml(string path)
-{
-    XmlDocument document = new XmlDocument();
-    document.Load(path);
-    XmlNamespaceManager nsmgr = new XmlNamespaceManager(document.NameTable);
-    nsmgr.AddNamespace("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-    nsmgr.AddNamespace("skos", "http://www.w3.org/2008/05/skos-xl#");
+//void PrepareXml(string path)
+//{
+//    XmlDocument document = new XmlDocument();
+//    document.Load(path);
+//    XmlNamespaceManager nsmgr = new XmlNamespaceManager(document.NameTable);
+//    nsmgr.AddNamespace("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+//    nsmgr.AddNamespace("skos", "http://www.w3.org/2008/05/skos-xl#");
 
-    XmlNodeList? nodes = document.SelectNodes("//rdf:Description", nsmgr);
+//    XmlNodeList? nodes = document.SelectNodes("//rdf:Description", nsmgr);
 
-    if (nodes is not null)
-    {
-        foreach (XmlNode node in nodes)
-        {
-            bool isValid = false;
-            XmlNodeList? literals = node.ChildNodes;
-            if (literals is not null)
-            {
-                foreach (XmlNode literal in literals)
-                {
-                    string? lang = literal.Attributes?["xml:lang"]?.Value;
-                    if (lang == "sk")
-                    {
-                        isValid = true;
-                        break;
-                    }
-                }
-            }
-            if (!isValid)
-            {
-                node.ParentNode!.RemoveChild(node);
-            }
-        }
-    }
+//    if (nodes is not null)
+//    {
+//        foreach (XmlNode node in nodes)
+//        {
+//            bool isValid = false;
+//            XmlNodeList? literals = node.ChildNodes;
+//            if (literals is not null)
+//            {
+//                foreach (XmlNode literal in literals)
+//                {
+//                    string? lang = literal.Attributes?["xml:lang"]?.Value;
+//                    if (lang == "sk")
+//                    {
+//                        isValid = true;
+//                        break;
+//                    }
+//                }
+//            }
+//            if (!isValid)
+//            {
+//                node.ParentNode!.RemoveChild(node);
+//            }
+//        }
+//    }
 
-    File.WriteAllText(path, document.OuterXml);
-}
+//    File.WriteAllText(path, document.OuterXml);
+//}
 
 void SaveGraph(IGraph g, string name, int? max)
 {
     IUriNode type = g.CreateUriNode("skos:Concept");
     int index = 0;
-    foreach (Triple t in g.GetTriplesWithPredicateObject(g.GetUriNode("rdf:type"), type))
+    foreach (Triple t in g.GetTriplesWithPredicateObject(g.CreateUriNode("rdf:type"), type))
     {
         IUriNode subject = (IUriNode)t.Subject;
 
@@ -202,24 +199,66 @@ void SaveGraph(IGraph g, string name, int? max)
 }
 
 {
-    PrepareXml(Path.Combine(sourceDir, "ConceptScheme", "eurovoc.rdf"));
+    //PrepareXml(Path.Combine(sourceDir, "ConceptScheme", "eurovoc.rdf"));
 
     IGraph g = new Graph();
     SkosConceptScheme.AddDefaultNamespaces(g);
-    FileLoader.Load(g, Path.Combine(sourceDir, "ConceptScheme", "eurovoc.rdf"));
 
-    SaveGraph(g, "eurovoc", 1000);
+    SkosConceptScheme conceptScheme = SkosConceptScheme.Create(new Uri(DcatDataset.EuroVocThemeCodelist));
+    conceptScheme.SetLabel(new Dictionary<string, string> { { "sk", "EuroVoc" } });
+
+    string content = conceptScheme.ToString();
+
+    storage.InsertFile(
+       content, new FileMetadata(Guid.NewGuid(), "eurovoc", FileType.Codelist, null, null, true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy);
+    Console.WriteLine(content.Length);
+
+    /*FileLoader.Load(g, Path.Combine(sourceDir, "ConceptScheme", "eurovoc.rdf"));
+    SaveGraph(g, "eurovoc", 0);*/
 }
 
-{
-    PrepareXml(Path.Combine(sourceDir, "ConceptScheme", "places-skos.rdf"));
-    PrepareXml(Path.Combine(sourceDir, "ConceptScheme", "countries-skos.rdf"));
+//{
+//    PrepareXml(Path.Combine(sourceDir, "ConceptScheme", "places-skos.rdf"));
+//    PrepareXml(Path.Combine(sourceDir, "ConceptScheme", "countries-skos.rdf"));
 
+//    IGraph g = new Graph();
+//    SkosConceptScheme.AddDefaultNamespaces(g);
+//    FileLoader.Load(g, Path.Combine(sourceDir, "ConceptScheme", "places-skos.rdf"));
+//    FileLoader.Load(g, Path.Combine(sourceDir, "ConceptScheme", "countries-skos.rdf"));
+//    SaveGraph(g, "places", 1000);
+//}
+
+{
     IGraph g = new Graph();
     SkosConceptScheme.AddDefaultNamespaces(g);
-    FileLoader.Load(g, Path.Combine(sourceDir, "ConceptScheme", "places-skos.rdf"));
-    FileLoader.Load(g, Path.Combine(sourceDir, "ConceptScheme", "countries-skos.rdf"));
-    SaveGraph(g, "places", 1000);
+
+    FileLoader.Load(g, Path.Combine(sourceDir, "ConceptScheme", "nuts2004.ttl"));
+
+    SkosConceptScheme conceptScheme = SkosConceptScheme.Create(new Uri(DcatDataset.SpatialCodelist));
+    conceptScheme.SetLabel(new LanguageDependedTexts { { "sk", "Geografické územie" } });
+
+    IUriNode rdfTypeNode = g.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+    
+    void LoadNodes(string type)
+    {
+        IUriNode ontologyType = g.CreateUriNode(new Uri(type));
+        IUriNode labelNode = g.CreateUriNode(new Uri("http://www.w3.org/2004/02/skos/core#prefLabel"));
+        foreach (IUriNode subject in g.GetTriplesWithPredicateObject(rdfTypeNode, ontologyType).Select(t => t.Subject).OfType<IUriNode>())
+        {
+            SkosConcept concept = conceptScheme.CreateConcept(subject.Uri);
+            concept.SetLabel(new Dictionary<string, string> { { "sk", g.GetTriplesWithSubjectPredicate(subject, labelNode).Select(f => f.Object).OfType<ILiteralNode>().First(l => l.Language == "sk").Value } });
+        }
+    }
+
+    LoadNodes("https://data.gov.sk/def/ontology/location/NUTS3");
+    LoadNodes("https://data.gov.sk/def/ontology/location/LAU1");
+    LoadNodes("https://data.gov.sk/def/ontology/location/LAU2");
+
+    string content = conceptScheme.ToString();
+
+    storage.InsertFile(
+       content, new FileMetadata(Guid.NewGuid(), "places", FileType.Codelist, null, null, true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy);
+    Console.WriteLine(content.Length);
 }
 
 {

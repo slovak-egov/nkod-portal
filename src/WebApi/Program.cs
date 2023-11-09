@@ -30,6 +30,8 @@ using System.Reflection.Metadata;
 using UserInfo = NkodSk.Abstractions.UserInfo;
 using Newtonsoft.Json.Serialization;
 using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.AspNetCore.Extensions;
+using System;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -161,19 +163,18 @@ var app = builder.Build();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.UseCors("LocalhostOrigin");
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
-        options.RoutePrefix = string.Empty;
-    });
+    //app.UseSwagger();
+    //app.UseSwaggerUI(options =>
+    //{
+    //    options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
+    //    options.RoutePrefix = string.Empty;
+    //});
 }
 
 FileStorageQuery MapQuery(AbstractQuery query, string language, bool allowAll = false)
@@ -338,18 +339,57 @@ async Task<Dictionary<string, PublisherView>> FetchPublishers(IDocumentStorageCl
     FileStorageResponse response = await client.GetFileStates(storageQuery).ConfigureAwait(false);
     if (response.Files.Count > 0)
     {
-        FileState fileState = response.Files[0];
-        if (fileState.Content is not null)
+        foreach (FileState fileState in response.Files)
         {
-            FoafAgent? agent = FoafAgent.Parse(fileState.Content);
-            if (agent is not null)
+            if (fileState.Content is not null)
             {
-                publishers[agent.Uri.ToString()] = PublisherView.MapFromRdf(fileState.Metadata.Id, fileState.Metadata.IsPublic, 0, agent, null, language);
+                FoafAgent? agent = FoafAgent.Parse(fileState.Content);
+                if (agent is not null)
+                {
+                    publishers[agent.Uri.ToString()] = PublisherView.MapFromRdf(fileState.Metadata.Id, fileState.Metadata.IsPublic, 0, agent, null, language);
+                }
             }
         }
     }
 
     return publishers;
+}
+
+async Task UpdateDatasetMetadata(IDocumentStorageClient client, Guid datasetId)
+{
+    FileState? datasetState = await client.GetFileState(datasetId).ConfigureAwait(false);
+    if (datasetState?.Content is not null)
+    {
+        DcatDataset? dataset = DcatDataset.Parse(datasetState.Content);
+
+        if (dataset is not null)
+        {
+            FileMetadata datasetMetadata = datasetState.Metadata;
+
+            FileStorageQuery query = new FileStorageQuery
+            {
+                ParentFile = datasetId,
+                OnlyTypes = new List<FileType> { FileType.DistributionRegistration },
+            };
+            FileStorageResponse response = await client.GetFileStates(query).ConfigureAwait(false);
+
+            datasetMetadata = dataset.UpdateMetadata(response.Files.Count > 0, datasetMetadata);
+
+            foreach (FileState state in response.Files)
+            {
+                if (state.Content is not null)
+                {
+                    DcatDistribution? distribution = DcatDistribution.Parse(state.Content);
+                    if (distribution is not null)
+                    {
+                        datasetMetadata = distribution.UpdateDatasetMetadata(datasetMetadata);
+                    }
+                }
+            }
+
+            await client.UpdateMetadata(datasetMetadata).ConfigureAwait(false);
+        }
+    }   
 }
 
 app.MapPost("/publishers/search", async ([FromBody] PublisherQuery query, [FromServices] IDocumentStorageClient client, [FromServices] TelemetryClient? telemetryClient) => {
@@ -522,7 +562,7 @@ app.MapPost("/distributions/search", async ([FromBody] DatasetQuery query, [From
     }
 });
 
-app.MapPost("/local-catalogs/search", async ([FromBody] LocalCatalogsQuery query, [FromServices] IDocumentStorageClient client, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/local-catalogs/search", async ([FromBody] LocalCatalogsQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
     {
@@ -548,7 +588,7 @@ app.MapPost("/local-catalogs/search", async ([FromBody] LocalCatalogsQuery query
                 DcatCatalog? catalogRdf = DcatCatalog.Parse(fileState.Content);
                 if (catalogRdf is not null)
                 {
-                    LocalCatalogView view = LocalCatalogView.MapFromRdf(fileState.Metadata, catalogRdf, language, isAuthenticated);
+                    LocalCatalogView view = await LocalCatalogView.MapFromRdf(fileState.Metadata, catalogRdf, codelistProviderClient, language, isAuthenticated);
 
                     response.Items.Add(view);
                     if (fileState.Metadata.Publisher is not null)
@@ -717,9 +757,16 @@ app.MapPost("/datasets", [Authorize] async ([FromBody] DatasetInput? dataset, [F
             ValidationResults validationResults = await dataset.Validate(publisherId, client, codelistProviderClient);
             if (validationResults.IsValid)
             {
+                Guid? parentDataset = null;
+                if (!string.IsNullOrEmpty(dataset.IsPartOf) && Guid.TryParse(dataset.IsPartOf, out Guid parentDatasetId))
+                {
+                    parentDataset = parentDatasetId;
+                }
+
                 DcatDataset datasetRdf = DcatDataset.Create(new Uri($"http://data.gov.sk/dataset/{Guid.NewGuid()}"));
                 dataset.MapToRdf(publisher, datasetRdf);
-                FileMetadata metadata = datasetRdf.UpdateMetadata(false);
+                FileMetadata metadata = datasetRdf.UpdateMetadata(dataset.IsSerie);
+                metadata = await datasetRdf.UpdateReferenceToParent(parentDataset, metadata, client);
                 await client.InsertFile(datasetRdf.ToString(), false, metadata).ConfigureAwait(false);
                 result.Id = metadata.Id.ToString();
                 result.Success = true;
@@ -784,8 +831,15 @@ app.MapPut("/datasets", [Authorize] async ([FromBody] DatasetInput? dataset, [Fr
                             ValidationResults validationResults = await dataset.Validate(publisherId, client, codelistProviderClient);
                             if (validationResults.IsValid)
                             {
+                                Guid? parentDataset = null;
+                                if (!string.IsNullOrEmpty(dataset.IsPartOf) && Guid.TryParse(dataset.IsPartOf, out Guid parentDatasetId))
+                                {
+                                    parentDataset = parentDatasetId;
+                                }
+
                                 dataset.MapToRdf(publisher, datasetRdf);
-                                FileMetadata metadata = datasetRdf.UpdateMetadata(hasDistributions, state.Metadata);
+                                FileMetadata metadata = datasetRdf.UpdateMetadata(hasDistributions || dataset.IsSerie, state.Metadata);
+                                metadata = await datasetRdf.UpdateReferenceToParent(parentDataset, metadata, client);
                                 await client.InsertFile(datasetRdf.ToString(), true, metadata).ConfigureAwait(false);
                                 result.Id = metadata.Id.ToString();
                                 result.Success = true;
@@ -935,7 +989,7 @@ app.MapPost("/distributions", [Authorize] async ([FromBody] DistributionInput? d
                             distribution.MapToRdf(distributionRdf);
                             FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata);
                             await client.InsertFile(distributionRdf.ToString(), false, metadata).ConfigureAwait(false);
-                            await client.UpdateMetadata(dataset.UpdateMetadata(true, datasetState.Metadata)).ConfigureAwait(false);
+                            await UpdateDatasetMetadata(client, datasetId).ConfigureAwait(false);  
                             if (distributionFileMetadata is not null)
                             {
                                 await client.UpdateMetadata(distributionFileMetadata with { ParentFile = metadata.Id }).ConfigureAwait(false);
@@ -1037,6 +1091,8 @@ app.MapPut("/distributions", [Authorize] async ([FromBody] DistributionInput dis
                                     distribution.MapToRdf(distributionRdf);
                                     FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata, state.Metadata);
                                     await client.InsertFile(distributionRdf.ToString(), true, metadata).ConfigureAwait(false);
+                                    await UpdateDatasetMetadata(client, datasetId).ConfigureAwait(false);
+
                                     if (distributionFileMetadata is not null)
                                     {
                                         await client.UpdateMetadata(distributionFileMetadata with { ParentFile = metadata.Id }).ConfigureAwait(false);
@@ -1108,7 +1164,14 @@ app.MapDelete("/distributions", [Authorize] async ([FromQuery] string? id, [From
     {
         if (Guid.TryParse(id, out Guid key))
         {
-            await client.DeleteFile(key).ConfigureAwait(false);
+            FileMetadata? metadata = await client.GetFileMetadata(key);
+            if (metadata is not null && metadata.Type == FileType.DistributionRegistration && metadata.Publisher == publisher.ToString() && metadata.ParentFile.HasValue)
+            {
+                Guid datasetId = metadata.ParentFile.Value;
+                await client.DeleteFile(key).ConfigureAwait(false);
+                await UpdateDatasetMetadata(client, datasetId).ConfigureAwait(false); 
+            }
+
             return Results.Ok();
         }
         else
@@ -1152,7 +1215,7 @@ app.MapPost("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? 
     {
         if (catalog is not null)
         {
-            ValidationResults validationResults = catalog.Validate();
+            ValidationResults validationResults = await catalog.Validate(codelistProviderClient);
             if (validationResults.IsValid)
             {
                 DcatCatalog catalogRdf = DcatCatalog.Create(new Uri($"http://data.gov.sk/catalog/{Guid.NewGuid()}"));
@@ -1209,7 +1272,7 @@ app.MapPut("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? c
                     DcatCatalog? catalogRdf = DcatCatalog.Parse(state.Content);
                     if (catalogRdf is not null)
                     {
-                        ValidationResults validationResults = catalog.Validate();
+                        ValidationResults validationResults = await catalog.Validate(codelistProviderClient);
                         if (validationResults.IsValid)
                         {
                             catalog.MapToRdf(publisher, catalogRdf);
@@ -1866,13 +1929,17 @@ app.MapGet("/download", async ([FromServices] IDocumentStorageClient client, [Fr
     }
 });
 
-app.MapPost("/refresh", async ([FromServices] IIdentityAccessManagementClient client, RefreshTokenRequest request, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/refresh", async ([FromServices] IIdentityAccessManagementClient client, RefreshTokenRequest request, HttpResponse response, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
     {
         if (!string.IsNullOrEmpty(request?.AccessToken) && !string.IsNullOrEmpty(request?.RefreshToken))
         {
-            return Results.Ok(await client.RefreshToken(request.AccessToken, request.RefreshToken));
+            TokenResult token = await client.RefreshToken(request.AccessToken, request.RefreshToken);
+            string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+            response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+
+            return Results.Ok(token);
         }
         else
         {
@@ -1919,11 +1986,12 @@ app.MapGet("/saml/login", async ([FromServices] IIdentityAccessManagementClient 
     }
 });
 
-app.MapGet("/saml/logout", async ([FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapGet("/saml/logout", async ([FromServices] IIdentityAccessManagementClient client, HttpResponse response, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
     {
         await client.Logout();
+        response.Cookies.Delete("accessToken");
         return Results.Ok();
     }
     catch (HttpRequestException e)
@@ -1943,18 +2011,22 @@ app.MapGet("/saml/logout", async ([FromServices] IIdentityAccessManagementClient
     }
 });
 
-app.MapPost("/saml/consume", async ([FromServices] IIdentityAccessManagementClient client, HttpRequest request, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/saml/consume", async ([FromServices] IIdentityAccessManagementClient client, HttpRequest request, HttpResponse response, IWebHostEnvironment environment, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
     {
         using StreamReader reader = new StreamReader(request.Body);
         TokenResult token = await client.Consume(await reader.ReadToEndAsync()).ConfigureAwait(false);
-        const string mainPage = "wwwroot/index.html";
+        string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+
+        response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+
+        string mainPage = Path.Combine(environment.WebRootPath, "index.html");
         string content = string.Empty;
         if (File.Exists(mainPage))
         {
             content = File.ReadAllText(mainPage);
-            content = content.Replace("<script>var externalToken=null</script>", $"<script>var externalToken = {JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() })};</script>");
+            content = content.Replace("<script>var externalToken=null</script>", $"<script>var externalToken = {serializedToken};</script>");
         }
         return Results.Content(content, new Microsoft.Net.Http.Headers.MediaTypeHeaderValue("text/html"));
     }
@@ -1975,9 +2047,55 @@ app.MapPost("/saml/consume", async ([FromServices] IIdentityAccessManagementClie
     }
 });
 
-app.UseSpa(config =>
+app.Use(async (context, next) =>
 {
-    
+    if (context.GetEndpoint() is not null || HttpMethods.IsGet(context.Request?.Method ?? string.Empty))
+    {
+        await next(context);
+        return;
+    }
+    context.Response.Redirect(context.Request.GetUri().ToString());
+    return;
+});
+
+app.Use(async (context, next) =>
+{
+    if (context.GetEndpoint() is not null)
+    {
+        await next(context);
+        return;
+    }
+
+    IWebHostEnvironment environment = context.RequestServices.GetRequiredService<IWebHostEnvironment>();
+    string mainPage = Path.Combine(environment.WebRootPath, "index.html");
+    string content = string.Empty;
+    if (File.Exists(mainPage))
+    {
+        content = File.ReadAllText(mainPage);
+
+        string? serializedToken = context.Request.Cookies["accessToken"];
+        if (!string.IsNullOrWhiteSpace(serializedToken))
+        {
+            try
+            {
+                TokenResult? token = JsonConvert.DeserializeObject<TokenResult>(serializedToken);
+                if (token is not null)
+                {
+                    content = content.Replace("<script>var externalToken=null</script>", $"<script>var externalToken = {JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() })};</script>");
+                }
+            }
+            catch
+            {
+                //ignore
+            }
+        }
+        context.Response.Headers.ContentType = "text/html";
+        await context.Response.WriteAsync(content);
+    }
+    else
+    {
+        await next(context);
+    }
 });
 
 app.Run();

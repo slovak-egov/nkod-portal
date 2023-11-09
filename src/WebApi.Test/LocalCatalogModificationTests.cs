@@ -39,7 +39,9 @@ namespace WebApi.Test
                 {
                     { "sk", "TestDescription" }
                 },
-                IsPublic = true
+                IsPublic = true,
+                Type = DcatCatalog.LocalCatalogTypeCodelist + "/1",
+                EndpointUrl = "https://data.gov.sk/",
             };
 
             if (withOptionalProperties)
@@ -99,6 +101,8 @@ namespace WebApi.Test
         public async Task TestCreateMinimal()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreateLocalCatalogCodelists();
+
             fixture.CreatePublisher("Test", PublisherId);
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
@@ -121,6 +125,8 @@ namespace WebApi.Test
         public async Task TestCreateMinimalNonPublic()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreateLocalCatalogCodelists();
+
             fixture.CreatePublisher("Test", PublisherId);
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
@@ -144,6 +150,8 @@ namespace WebApi.Test
         public async Task TestCreateExtended()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreateLocalCatalogCodelists();
+
             fixture.CreatePublisher("Test", PublisherId);
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
@@ -166,6 +174,8 @@ namespace WebApi.Test
         public async Task TestModifyUnauthorized()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreateLocalCatalogCodelists();
+
             (Guid catalogId, Guid publisherId) = fixture.CreateFullLocalCatalog(PublisherId);
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
@@ -181,6 +191,8 @@ namespace WebApi.Test
         public async Task TestModify()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreateLocalCatalogCodelists();
+
             (Guid catalogId, Guid publisherId) = fixture.CreateFullLocalCatalog(PublisherId);
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
@@ -204,6 +216,8 @@ namespace WebApi.Test
         public async Task TestModifyNonPublic()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreateLocalCatalogCodelists();
+
             (Guid catalogId, Guid publisherId) = fixture.CreateFullLocalCatalog(PublisherId);
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
@@ -228,6 +242,8 @@ namespace WebApi.Test
         public async Task TestModifyOtherPublisher()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreateLocalCatalogCodelists();
+
             fixture.CreatePublisher("Test", PublisherId);
             (Guid catalogId, Guid publisherId) = fixture.CreateFullLocalCatalog(PublisherId + "1");
             using Storage storage = new Storage(path);
@@ -245,6 +261,8 @@ namespace WebApi.Test
         public async Task TestDeleteUnauthorized()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreateLocalCatalogCodelists();
+
             (Guid catalogId, Guid publisherId) = fixture.CreateFullLocalCatalog(PublisherId);
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
@@ -259,6 +277,8 @@ namespace WebApi.Test
         public async Task TestDelete()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreateLocalCatalogCodelists();
+
             (Guid catalogId, Guid publisherId) = fixture.CreateFullLocalCatalog(PublisherId);
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
@@ -274,6 +294,8 @@ namespace WebApi.Test
         public async Task TestDeleteOtherPublisher()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreateLocalCatalogCodelists();
+
             (Guid catalogId, Guid publisherId) = fixture.CreateFullLocalCatalog(PublisherId + "1");
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);

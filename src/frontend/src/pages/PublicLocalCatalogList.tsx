@@ -14,12 +14,13 @@ type OrderOption = {
     value: string;
 };
 
-const codelistsKeys: [] = [];
+const codelistsKeys = ['publishers', 'https://data.gov.sk/def/local-catalog-type'];
 
 const orderByOptions: OrderOption[] = [{ name: 'Názvu', value: 'name' }];
 
 export default function PublicDatasetList() {
     const [catalogs, query, setQueryParameters, loading, error] = useLocalCatalogs({
+        requiredFacets: codelistsKeys,
         orderBy: 'name'
     });
     const {t} = useTranslation();
@@ -42,14 +43,14 @@ export default function PublicDatasetList() {
                 >
                     {catalogs?.items.map((c, i) => (
                         <Fragment key={c.id}>
-                            <GridRow>
+                            <GridRow data-testid="sr-result">
                                 <GridColumn widthUnits={1} totalUnits={1}>
                                     <Link to={'/lokalne-katalogy/' + c.id} className="idsk-card-title govuk-link">
                                         {c.name}
                                     </Link>
                                 </GridColumn>
                                 {c.publisher != null ? (
-                                    <GridColumn widthUnits={1} totalUnits={1}>
+                                    <GridColumn widthUnits={1} totalUnits={1} data-testid="sr-result-publisher">
                                         {c.publisher.name}
                                     </GridColumn>
                                 ) : null}

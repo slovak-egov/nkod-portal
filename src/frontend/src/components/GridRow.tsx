@@ -1,10 +1,12 @@
-import { PropsWithChildren } from "react";
+import { HTMLAttributes } from "react";
 
-type Props = PropsWithChildren
+type Props = HTMLAttributes<HTMLDivElement>;
 
 export default function GridRow(props: Props)
 {
-    return <div className="govuk-grid-row">
-        {props.children}
+    const { className, children, ...rest } = props;
+
+    return <div className={'govuk-grid-row ' + className} {...rest}>
+        {children}
     </div>
 }

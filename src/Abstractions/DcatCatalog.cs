@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using VDS.RDF;
 using VDS.RDF.Parsing;
 
@@ -10,6 +11,8 @@ namespace NkodSk.Abstractions
 {
     public class DcatCatalog : RdfObject
     {
+        public const string LocalCatalogTypeCodelist = "https://data.gov.sk/def/local-catalog-type";
+
         public DcatCatalog(IGraph graph, IUriNode node) : base(graph, node)
         {
         }
@@ -58,9 +61,12 @@ namespace NkodSk.Abstractions
         public void SetContactPoint(LanguageDependedTexts? name, string? email)
         {
             RemoveUriNodes("dcat:contactPoint");
-            VcardKind contactPoint = new VcardKind(Graph, CreateSubject("dcat:contactPoint", "vcard:Individual"));
-            contactPoint.SetNames(name);
-            contactPoint.Email = email;
+            if (name is not null || email is not null)
+            {
+                VcardKind contactPoint = new VcardKind(Graph, CreateSubject("dcat:contactPoint", "vcard:Individual"));
+                contactPoint.SetNames(name);
+                contactPoint.Email = !string.IsNullOrEmpty(email) ? email : null;
+            }
         }
 
         public Uri? HomePage
@@ -73,6 +79,40 @@ namespace NkodSk.Abstractions
         {
             get => GetBooleanFromUriNode("custom:shouldBePublic") ?? true;
             set => SetBooleanToUriNode("custom:shouldBePublic", value);
+        }
+
+        public Uri? Type
+        {
+            get
+            {
+                IUriNode rdfTypeNode = Graph.GetUriNode(new Uri(RdfSpecsHelper.RdfType));
+                if (rdfTypeNode is not null)
+                {
+                    return Graph.GetTriplesWithSubjectPredicate(Node, rdfTypeNode).Select(n => n.Object).OfType<IUriNode>().Select(n => n.Uri).Where(u => u.ToString().StartsWith(LocalCatalogTypeCodelist, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+                }
+                return null;
+            }
+            set
+            {
+                IUriNode rdfTypeNode = Graph.GetUriNode(new Uri(RdfSpecsHelper.RdfType));
+                if (rdfTypeNode is not null)
+                {
+                    foreach (Triple t in Graph.GetTriplesWithSubjectPredicate(Node, rdfTypeNode))
+                    {
+                        if (t.Object is IUriNode node && node.Uri.ToString().StartsWith(LocalCatalogTypeCodelist, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Graph.Retract(t);
+                        }
+                    }
+                    Graph.Assert(Node, rdfTypeNode, Graph.CreateUriNode(value));
+                }
+            }
+        }
+
+        public Uri? EndpointUrl
+        {
+            get => GetUriFromUriNode("dcat:endpointURL");
+            set => SetUriNode("dcat:endpointURL", value);
         }
 
         public static DcatCatalog? Parse(string text)
@@ -102,6 +142,8 @@ namespace NkodSk.Abstractions
             Guid id = metadata?.Id ?? Guid.NewGuid();
             DateTimeOffset now = DateTimeOffset.UtcNow;
             Dictionary<string, string[]> values = new Dictionary<string, string[]>();
+
+            values[LocalCatalogTypeCodelist] = Type is not null ? new[] { Type.ToString() } : Array.Empty<string>();
 
             LanguageDependedTexts names = GetLiteralNodesFromUriNode("dct:title").ToArray();
 

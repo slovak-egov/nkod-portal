@@ -81,7 +81,7 @@ namespace WebApi
             return null;
         }
 
-        public static Uri? AsUri(this string? value) => value is not null ? new Uri(value, UriKind.Absolute) : null;
+        public static Uri? AsUri(this string? value) => !string.IsNullOrEmpty(value) ? new Uri(value, UriKind.Absolute) : null;
 
         public static async Task<FileState?> GetPublisherFileState(this IDocumentStorageClient documentStorageClient, string publisherId)
         {

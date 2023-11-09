@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import FormElementGroup from "./FormElementGroup"
 import MultiRadio from "./MultiRadio"
-import { CodelistValue, DistributionInput, knownCodelists, useCodelists, useDistributionFileUpload } from "../client"
+import { CodelistValue, DistributionInput, extractLanguageErrors, knownCodelists, supportedLanguages, useCodelists, useDistributionFileUpload } from "../client"
 import BaseInput from "./BaseInput"
 import SelectElementItems from "./SelectElementItems"
 import FileUpload from "./FileUpload"
@@ -9,6 +9,7 @@ import Alert from "./Alert"
 import Loading from "./Loading"
 import ErrorAlert from "./ErrorAlert"
 import { useTranslation } from "react-i18next"
+import MultiLanguageFormGroup from "./MultiLanguageFormGroup"
 
 type Props = {
     distribution: DistributionInput;
@@ -154,6 +155,8 @@ export function DistributionForm(props: Props)
             getValue={v => v.id} 
             onChange={v => {setDistribution({mediaType: v}) }} />} /> : null}
 
+        <FormElementGroup label={t('conformsTo')} errorMessage={errors['conformsto']} element={id => <BaseInput id={id} disabled={saving} value={distribution.conformsTo ?? ''} onChange={e => setDistribution({conformsTo: e.target.value})} />} />
+
         {mediaTypeCodelist ? <FormElementGroup label={t('compressionMediaType')} errorMessage={errors['compressformat']} element={id => <SelectElementItems<CodelistValue> 
             id={id} 
             disabled={saving}
@@ -161,7 +164,7 @@ export function DistributionForm(props: Props)
             selectedValue={distribution.compressFormat ?? ''} 
             renderOption={v => v.label} 
             getValue={v => v.id}  
-            onChange={v => {setDistribution({compressFormat: v}) }} />} /> : null}
+            onChange={v => {setDistribution({compressFormat: v === '' ? null : v}) }} />} /> : null}
 
         {mediaTypeCodelist ? <FormElementGroup label={t('packageMediaType')} errorMessage={errors['packageformat']} element={id => <SelectElementItems<CodelistValue> 
             id={id} 
@@ -170,7 +173,8 @@ export function DistributionForm(props: Props)
             selectedValue={distribution.packageFormat ?? ''} 
             renderOption={v => v.label} 
             getValue={v => v.id} 
-            onChange={v => {setDistribution({packageFormat: v}) }} />} /> : null}
+            onChange={v => {setDistribution({packageFormat: v === '' ? null : v}) }} />} /> : null}
 
-                </>
+        <MultiLanguageFormGroup<string> label={t('distributionName')} errorMessage={extractLanguageErrors(errors, 'title')} values={distribution.title ?? {}} onChange={v => setDistribution({title: v})} emptyValue="" element={(id, value, onChange) => <BaseInput id={id} disabled={saving} value={value} onChange={e => onChange(e.target.value)} />} />
+        </>
 }

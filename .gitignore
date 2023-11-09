@@ -426,3 +426,5 @@ launchSettings.json
 /build.ps1
 build
 
+/src/frontend/.vscode/settings.json
+/build2.ps1

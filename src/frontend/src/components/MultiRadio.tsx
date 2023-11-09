@@ -17,7 +17,7 @@ type Props<T> =
 
 export default function MultiRadio<T>(props: Props<T>)
 {
-    const {options, inline, selectedOption, onChange, renderOption, getValue, label, hint, errorMessage, ...inputProperties} = props;
+    const {options, inline, selectedOption, onChange, renderOption, getValue, label, hint, errorMessage, id, ...inputProperties} = props;
 
     return <div className={'govuk-form-group ' + (errorMessage ? 'govuk-form-group--error' : '')}>
         <fieldset className="govuk-fieldset">

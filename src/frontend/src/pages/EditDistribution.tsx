@@ -19,7 +19,6 @@ const transformEntityForEdit = (entity: Distribution): DistributionInput => {
         databaseProtectedBySpecialRightsType: entity.termsOfUse?.databaseProtectedBySpecialRightsType ?? null,
         personalDataContainmentType: entity.termsOfUse?.personalDataContainmentType ?? null,
         downloadUrl: entity.downloadUrl ?? null,
-        accessUrl: entity.accessUrl ?? null,
         format: entity.format ?? null,
         mediaType: entity.mediaType ?? null,
         compressFormat: entity.compressFormat ?? null,

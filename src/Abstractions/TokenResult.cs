@@ -6,6 +6,8 @@
 
         public DateTimeOffset Expires { get; set; }
 
+        public DateTimeOffset RefreshTokenAfter { get; set; }
+
         public string? RefreshToken { get; set; }
 
         public string? RedirectUrl { get; set; }

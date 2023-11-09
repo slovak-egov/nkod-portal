@@ -71,7 +71,7 @@ namespace WebApi.Test
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
 
             TestIdentityAccessManagementClient identityClient = applicationFactory.Services.GetRequiredService<TestIdentityAccessManagementClient>();
-            string userId = (await identityClient.CreateUser(new NewUserInput
+            string userId = (identityClient.CreateUser(new NewUserInput
             {
                 FirstName = "Meno",
                 LastName = "Priezvisko",
@@ -101,7 +101,7 @@ namespace WebApi.Test
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
 
             TestIdentityAccessManagementClient identityClient = applicationFactory.Services.GetRequiredService<TestIdentityAccessManagementClient>();
-            string userId = (await identityClient.CreateUser(new NewUserInput
+            string userId = (identityClient.CreateUser(new NewUserInput
             {
                 FirstName = "Meno",
                 LastName = "Priezvisko",
@@ -162,7 +162,7 @@ namespace WebApi.Test
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
 
             TestIdentityAccessManagementClient identityClient = applicationFactory.Services.GetRequiredService<TestIdentityAccessManagementClient>();
-            string userId = (await identityClient.CreateUser(new NewUserInput
+            string userId = ( identityClient.CreateUser(new NewUserInput
             {
                 FirstName = "Meno",
                 LastName = "Priezvisko",
@@ -193,7 +193,7 @@ namespace WebApi.Test
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
 
             TestIdentityAccessManagementClient identityClient = applicationFactory.Services.GetRequiredService<TestIdentityAccessManagementClient>();
-            string userId = (await identityClient.CreateUser(new NewUserInput
+            string userId = (identityClient.CreateUser(new NewUserInput
             {
                 FirstName = "Meno",
                 LastName = "Priezvisko",
@@ -274,7 +274,7 @@ namespace WebApi.Test
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
 
             TestIdentityAccessManagementClient identityClient = applicationFactory.Services.GetRequiredService<TestIdentityAccessManagementClient>();
-            string userId = (await identityClient.CreateUser(new NewUserInput
+            string userId = (identityClient.CreateUser(new NewUserInput
             {
                 FirstName = "Meno",
                 LastName = "Priezvisko",
@@ -316,7 +316,7 @@ namespace WebApi.Test
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
 
             TestIdentityAccessManagementClient identityClient = applicationFactory.Services.GetRequiredService<TestIdentityAccessManagementClient>();
-            string userId = (await identityClient.CreateUser(new NewUserInput
+            string userId = (identityClient.CreateUser(new NewUserInput
             {
                 FirstName = "Meno",
                 LastName = "Priezvisko",
@@ -399,7 +399,7 @@ namespace WebApi.Test
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
 
             TestIdentityAccessManagementClient identityClient = applicationFactory.Services.GetRequiredService<TestIdentityAccessManagementClient>();
-            string userId = (await identityClient.CreateUser(new NewUserInput
+            string userId = (identityClient.CreateUser(new NewUserInput
             {
                 FirstName = "Meno",
                 LastName = "Priezvisko",
@@ -441,7 +441,7 @@ namespace WebApi.Test
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
 
             TestIdentityAccessManagementClient identityClient = applicationFactory.Services.GetRequiredService<TestIdentityAccessManagementClient>();
-            string userId = (await identityClient.CreateUser(new NewUserInput
+            string userId = (identityClient.CreateUser(new NewUserInput
             {
                 FirstName = "Meno",
                 LastName = "Priezvisko",

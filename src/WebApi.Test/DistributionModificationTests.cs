@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using System.Web;
 using TestBase;
 using System.Data;
+using static Lucene.Net.Documents.Field;
+using System.Security.Policy;
 
 namespace WebApi.Test
 {
@@ -38,7 +40,6 @@ namespace WebApi.Test
                 DatabaseProtectedBySpecialRightsType = "https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1",
                 PersonalDataContainmentType = "https://data.gov.sk/def/ontology/law/personalDataContainmentType/1",
                 DownloadUrl = "http://data.gov.sk/download",
-                AccessUrl = "http://data.gov.sk/",
                 Format = "http://publications.europa.eu/resource/dataset/file-type/1",
                 MediaType = "http://www.iana.org/assignments/media-types/text/csv",
             };
@@ -80,7 +81,6 @@ namespace WebApi.Test
             Assert.Equal(input.DatabaseProtectedBySpecialRightsType, distribution.TermsOfUse?.DatabaseProtectedBySpecialRightsType?.ToString());
             Assert.Equal(input.PersonalDataContainmentType, distribution.TermsOfUse?.PersonalDataContainmentType?.ToString());
             Assert.Equal(input.DownloadUrl, distribution.DownloadUrl?.ToString());
-            Assert.Equal(input.AccessUrl, distribution.AccessUrl?.ToString());
             Assert.Equal(input.Format, distribution.Format?.ToString());
             Assert.Equal(input.MediaType, distribution.MediaType?.ToString());
             Assert.Equal(input.ConformsTo, distribution.ConformsTo?.ToString());
@@ -399,6 +399,163 @@ namespace WebApi.Test
 
             state = storage.GetFileState(datasetId, accessPolicy)!;
             Assert.False(state.Metadata.IsPublic);
+        }
+
+        [Fact]
+        public async Task TestCreateShouldAddFormatToDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+
+            fixture.CreatePublisher("Ministerstvo hospodárstva SR", PublisherId);
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Empty(metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+        }
+
+        [Fact]
+        public async Task TestCreateShouldNotAddFormatToDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+
+            (Guid datasetId, _, _) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+        }
+
+        [Fact]
+        public async Task TestCreateShouldAddSecondFormatToDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+
+            (Guid datasetId, _, _) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            input.Format = "http://publications.europa.eu/resource/dataset/file-type/2";
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1", "http://publications.europa.eu/resource/dataset/file-type/2" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+        }
+
+        [Fact]
+        public async Task TestEditShouldRetainFormatInDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+
+            (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            input.Id = distributions[0].ToString();
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+        }
+
+        [Fact]
+        public async Task TestEditShouldChangeFormatInDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            input.Id = distributions[0].ToString();
+            input.Format = "http://publications.europa.eu/resource/dataset/file-type/2";
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/2" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+        }
+
+        [Fact]
+        public async Task TestDeleteShouldRemoveFormatInDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            using HttpResponseMessage response = await client.DeleteAsync($"/distributions?id={HttpUtility.UrlEncode(distributions[0].ToString())}");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(Array.Empty<string>(), metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
         }
     }
 }

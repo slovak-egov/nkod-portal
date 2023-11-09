@@ -30,7 +30,8 @@ export default function AddDataset()
         euroVocThemes: [],
         spatialResolutionInMeters: null,
         temporalResolution: null,
-        isPartOf: null
+        isPartOf: null,
+        isSerie: false
     });
 
     const [userInfo] = useUserInfo();

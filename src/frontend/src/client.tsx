@@ -15,9 +15,16 @@ export type TokenContextType = {
 }
 export const TokenContext = React.createContext<TokenContextType|null>(null);
 
+export type LanguageOptionsContextType = {
+    language: Language;
+    setLanguage: (language: Language) => void;
+}
+export const LanguageOptionsContext = React.createContext<LanguageOptionsContextType|null>(null);
+
 export type TokenResult = {
     token: string;
     expires: string|null;
+    refreshTokenAfter: string|null;
     refreshToken: string|null;
     redirectUrl: string|null;
 }
@@ -27,7 +34,7 @@ export const knownCodelists = {
         'theme': 'http://publications.europa.eu/resource/authority/data-theme',
         'type': 'https://data.gov.sk/set/codelist/dataset-type',
         'accrualPeriodicity': 'http://publications.europa.eu/resource/authority/frequency',
-        'spatial': 'http://publications.europa.eu/resource/authority/place',
+        'spatial': 'https://data.gov.sk/def/ontology/location',
         'euroVoc': 'http://eurovoc.europa.eu/100141',
     },
     'distribution': {
@@ -37,6 +44,9 @@ export const knownCodelists = {
         'personalDataContainmentType': 'https://data.gov.sk/set/codelist/personal-data-occurence-type',
         'format': 'http://publications.europa.eu/resource/authority/file-type',
         'mediaType': 'http://www.iana.org/assignments/media-types',
+    },
+    'catalog': {
+        'type': 'https://data.gov.sk/def/local-catalog-type'
     }
 }
 
@@ -88,6 +98,9 @@ export type LanguageDependentTextsMulti = {
 export type Language = {
     id: string;
     name: string;
+    nameInPrimaryLanguage: string;
+    isPrimary: boolean;
+    isRequired: boolean;
 }
 
 export type UserInfo = {
@@ -122,9 +135,10 @@ export type DatasetInput = {
     documentation: string|null;
     specification: string|null;
     euroVocThemes: string[];
-    spatialResolutionInMeters: number|null;
+    spatialResolutionInMeters: string|null;
     temporalResolution: string|null;
     isPartOf: string|null;
+    isSerie: boolean;
 }
 
 export type DistributionInput = {
@@ -135,7 +149,6 @@ export type DistributionInput = {
     databaseProtectedBySpecialRightsType: string|null;
     personalDataContainmentType: string|null;
     downloadUrl: string|null;
-    accessUrl: string|null;
     format: string|null;
     mediaType: string|null;
     conformsTo: string|null;
@@ -153,10 +166,13 @@ export type LocalCatalogInput = {
     contactName: LanguageDependentTexts;
     contactEmail: string|null;
     homePage: string|null;
+    type: string|null;
+    endpointUrl: string|null;
 }
 
 export type Dataset = {
     id: string;
+    key: string;
     isPublic: boolean;
     name: string|null;
     nameAll: LanguageDependentTexts|null;
@@ -179,10 +195,11 @@ export type Dataset = {
     documentation: string|null;
     specification: string|null;
     euroVocThemes: string[];
-    euroVocThemeValues: CodelistValue[];
+    euroVocThemeValues: string[];
     spatialResolutionInMeters: number|null;
     temporalResolution: string|null;
     isPartOf: string|null;
+    isSerie: boolean;
     distributions: Distribution[];
 }
 
@@ -219,6 +236,9 @@ export type LocalCatalog = {
     publisher: Publisher|null;
     contactPoint: CardView|null;
     homePage: string|null;
+    type: string|null;
+    typeValue: CodelistValue|null;
+    endpointUrl: string|null;
 }
 
 export type Codelist = {
@@ -292,25 +312,18 @@ export function useDelay<T>(initialValue: T, delay: number, callback: (value: T)
 export function useEntities<T>(url: string, initialQuery?: Partial<RequestQuery>) {
     const [searchParams] = useSearchParams();
 
+    const l = useContext(LanguageOptionsContext);
+    const language = l?.language ?? supportedLanguages[0];
+
     let defaultParams: RequestQuery = {
         pageSize: 10,
         page: 1,
         queryText: '',
-        language: 'sk',
+        language: language.id,
         orderBy: 'name',
         filters: {},
         requiredFacets: [],
     };
-
-    if (searchParams.has('publisher')) {
-        defaultParams = {
-            ...defaultParams,
-            filters: {
-                ...defaultParams.filters,
-                publishers: [searchParams.get('publisher')!]
-            }
-        }
-    }
 
     if (searchParams.has('query')) {
         defaultParams = {
@@ -353,6 +366,10 @@ export function useEntities<T>(url: string, initialQuery?: Partial<RequestQuery>
         setQuery(q => ({...q, ...query}));
     }, []);
 
+    useEffect(() => {
+        setQueryParameters({language: language.id});
+    }, [language, setQueryParameters]);
+
     return [items, query, setQueryParameters, loading, error, refresh] as const;
 }
 
@@ -363,13 +380,16 @@ export function useEntity<T>(url: string, sourceId?: string) {
     const [error, setError] = useState<Error | null>(null);
     const headers = useDefaultHeaders();
 
+    const l = useContext(LanguageOptionsContext);
+    const language = l?.language ?? supportedLanguages[0];
+
     const targetId = sourceId ?? id;
 
     useEffect(() => {
         async function load() {
             if (targetId) {
                 const query: RequestQuery = {
-                    language: 'sk',
+                    language: language.id,
                     page: 1,
                     pageSize: 1,
                     filters: {
@@ -397,7 +417,7 @@ export function useEntity<T>(url: string, sourceId?: string) {
         }
 
         load();
-    }, [targetId, url, headers]);
+    }, [targetId, url, headers, language]);
 
     return [ item, loading, error ] as const;
 }
@@ -411,7 +431,20 @@ export function useLocalCatalog() {
 }
 
 export function useDatasets(initialQuery?: Partial<RequestQuery>) {
-    return useEntities<Dataset>('datasets/search', {orderBy: 'created', ...initialQuery});
+    let defaultParams: Partial<RequestQuery> = {...initialQuery};
+    
+    const [searchParams] = useSearchParams();
+    if (searchParams.has('publisher')) {
+        defaultParams = {
+            ...defaultParams,
+            filters: {
+                ...defaultParams.filters,
+                publishers: [searchParams.get('publisher')!]
+            }
+        }
+    }
+
+    return useEntities<Dataset>('datasets/search', {orderBy: 'created', ...defaultParams});
 }
 
 export function useLocalCatalogs(initialQuery?: Partial<RequestQuery>) {
@@ -586,22 +619,46 @@ export async function sendPut<TInput>(url: string, input: TInput, headers: RawAx
 
 export function useEntityEdit<TEntity, TInput>(url: string, loadUrl: string, initialValue: (entity: TEntity) => TInput) {
     const [entity, setEntity] = useState<TInput|null>(null);
+    const [item, setItem] = useState<TEntity|null>(null);
     const [errors, setErrors] = useState<{[id: string]: string}>({});
     const [saving, setSaving] = useState(false);
-    const [item, loading, error] = useEntity<TEntity>(loadUrl);
+    const [loading, setLoading] = useState(false);
     const headers = useDefaultHeaders();
+    const { id } = useParams();
 
     useEffect(() => {
-        if (error) {
-            setErrors(e => ({...e, load: error.message}));
+        async function load() {
+            if (id) {
+                const query: RequestQuery = {
+                    language: 'sk',
+                    page: 1,
+                    pageSize: 1,
+                    filters: {
+                        id: [id]
+                    },
+                    requiredFacets: []
+                }
+    
+                setLoading(true);
+                setItem(null);
+                try{
+                    const response: AxiosResponse<Response<TEntity>> = await sendPost(loadUrl, query, headers);
+                    if (response.data.items.length > 0) {
+                        setItem(response.data.items[0]);
+                        setEntity(initialValue(response.data.items[0]));
+                    }
+                } catch (err) {
+                    if (err instanceof Error) {
+                        setErrors({load: err.message});
+                    }
+                } finally {
+                    setLoading(false);
+                }
+            }
         }
-    }, [error]);
 
-    useEffect(() => {
-        if (item) {
-            setEntity(initialValue(item));
-        }
-    }, [item, initialValue]);
+        load();
+    }, [id, loadUrl]);
 
     const save = useCallback(async () => {
         setSaving(true);
@@ -612,7 +669,7 @@ export function useEntityEdit<TEntity, TInput>(url: string, loadUrl: string, ini
             return response.data;
         } catch (err) {
             if (err instanceof AxiosError) {
-                setErrors(err.response?.data.errors ?? {'generic': 'Error'});
+                setErrors(err.response?.data.errors ?? {'generic': err.message});
             } else if (err instanceof Error) {
                 setErrors({
                     generic: err.message
@@ -660,7 +717,24 @@ export function useLocalCatalogEdit(initialValue: (entity: LocalCatalog) => Loca
 export const supportedLanguages: Language[] = [
     {
         id: 'sk',
-        name: 'slovensky'
+        name: 'slovensky',
+        nameInPrimaryLanguage: 'slovensky',
+        isPrimary: true,
+        isRequired: true
+    },
+    {
+        id: 'en',
+        name: 'english',
+        nameInPrimaryLanguage: 'anglicky',
+        isPrimary: false,
+        isRequired: false
+    },
+    {
+        id: 'de',
+        name: 'deutsch',
+        nameInPrimaryLanguage: 'nemecky',
+        isPrimary: false,
+        isRequired: false
     }
 ]
 
@@ -792,40 +866,6 @@ export function useUserAdd(initialValue: NewUser) {
     return useEntityAdd<NewUser>('users', initialValue);
 }
 
-export function useUser() {
-    const { id } = useParams();
-    const [item, setItem] = useState<User|null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-    const headers = useDefaultHeaders();
-
-    useEffect(() => {
-        async function load() {
-            if (id) {   
-                setLoading(true);
-                setError(null);
-                setItem(null);
-                try{
-                    const response: AxiosResponse<User> = await axios.get('users/' + encodeURIComponent(id), {
-                        headers: headers
-                    });
-                    setItem(response.data);
-                } catch (err) {
-                    if (err instanceof Error) {
-                        setError(err);
-                    }
-                } finally {
-                    setLoading(false);
-                }
-            }
-        }
-
-        load();
-    }, [id, headers]);
-
-    return [ item, loading, error ] as const;
-}
-
 function convertUserToInput(entity: User)
 {
     return {
@@ -838,7 +878,71 @@ function convertUserToInput(entity: User)
 }
 
 export function useUserEdit() {
-    return useEntityEdit<User, EditUser>('users', 'users/search', convertUserToInput);
+    const [entity, setEntity] = useState<EditUser|null>(null);
+    const [errors, setErrors] = useState<{[id: string]: string}>({});
+    const [saving, setSaving] = useState(false);
+    const [item, setItem] = useState<User|null>(null);
+    const [loading, setLoading] = useState(false);
+    const headers = useDefaultHeaders();
+    const { id } = useParams();
+
+    useEffect(() => {
+        async function load() {
+            if (id) {
+                const query = {
+                    id: id
+                };
+    
+                setLoading(true);
+                setItem(null);
+                try{
+                    const response: AxiosResponse<Response<User>> = await sendPost('users/search', query, headers);
+                    if (response.data.items.length > 0) {
+                        const user = response.data.items[0];
+                        setItem(user);
+                        setEntity(convertUserToInput(user));
+                    }
+                } catch (err) {
+                    if (err instanceof Error) {
+                        setErrors({load: err.message});
+                    }
+                } finally {
+                    setLoading(false);
+                }
+            }
+        }
+
+        load();
+    }, [id]);
+
+    const save = useCallback(async () => {
+        setSaving(true);
+        setErrors({});
+        try {
+            const response: AxiosResponse<SaveResult> = await sendPut('users', entity, headers)
+            setErrors(response.data.errors);
+            return response.data;
+        } catch (err) {
+            if (err instanceof AxiosError) {
+                setErrors(err.response?.data.errors ?? {'generic': err.message});
+            } else if (err instanceof Error) {
+                setErrors({
+                    generic: err.message
+                });
+            }
+        } finally {
+            setSaving(false);
+        }
+        return null;
+    }, [entity, headers]);
+
+    const setEntityProperties = useCallback((properties: Partial<EditUser>) => {
+        if (entity) {
+            setEntity({...entity, ...properties});
+        }
+    }, [entity, setEntity]);
+
+    return [ entity, item, loading, setEntityProperties, errors, saving, save ] as const;
 }
 
 export function usePublisherAdd(initialValue: NewPublisher) {

@@ -25,5 +25,17 @@ namespace NkodSk.Abstractions
         void UpdateMetadata(FileMetadata metadata, IFileStorageAccessPolicy accessPolicy);
 
         void DeleteFile(Guid id, IFileStorageAccessPolicy accessPolicy);
+
+        FileState? GetPublisherState(string publisher, IFileStorageAccessPolicy accessPolicy)
+        {
+            FileStorageQuery query = new FileStorageQuery
+            {
+                OnlyPublishers = new List<string> { publisher },
+                OnlyTypes = new List<FileType> { FileType.PublisherRegistration },
+                MaxResults = 1
+            };
+            FileStorageResponse response = GetFileStates(query, accessPolicy);
+            return response.Files.Count > 0 ? response.Files[0] : null;
+        }
     }
 }

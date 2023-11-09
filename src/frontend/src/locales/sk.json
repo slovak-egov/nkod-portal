@@ -48,7 +48,7 @@
     "waitingForApprove": "Registrácia poskytovateľa dát, ktorého zastupujete, čaká na schválenie.",
     "publisherApprove": "Schválenie poskytovateľa dát",
     "publisherUser": "Zverejňovateľ dát",
-    "publisherAdmin": "Administrátor zverejňovateľa dát",
+    "publisherAdmin": "Administrátor poskytovateľa dát",
     "noRole": "Žiadna rola",
     "editUser": "Upraviť používateľa",
     "firstName": "Meno",
@@ -100,7 +100,7 @@
     "logout": "Odhlásiť",
     "innerNavigation": "Vnútorná navigácia",
     "expandMenu": "Rozbaliť menu",
-    "hideMenu": "SKryť menu",
+    "hideMenu": "Skryť menu",
     "login": "Prihlásiť sa",
     "homePageLink": "Odkaz na úvodnú stránku",
     "singleDataset": "Samostatný dataset",
@@ -110,7 +110,7 @@
     "datasetType": "Typ datasetu",
     "datasetName": "Názov datasetu",
     "description": "Popis",
-    "keywords": "kľúčové slová",
+    "keywords": "Kľúčové slová",
     "relatedSpatial": "Súvisiace geografické územie",
     "timeValidityDateFrom": "Časové pokrytie, dátum od",
     "timeValidityDateTo": "Časové pokrytie, dátum do",
@@ -148,6 +148,10 @@
     "hideLanguageMenu": "Skryť jazykové menu",
     "show": "Zobraziť",
     "byDateCreated": "Dátumu vytvorenia",
-    "byName": "Názvu"
-
+    "byName": "Názvu",
+    "conformsTo": "Odkaz na strojovo-čitateľnú schému súboru na stiahnutie",
+    "distributionName": "Názov distribúcie",
+    "parentDataset": "Nadradený dataset",
+    "catalogType": "Typ katalógu",
+    "catalogEndpoint": "Prístupový bod katalógu"
 }

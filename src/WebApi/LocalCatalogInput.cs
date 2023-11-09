@@ -19,7 +19,11 @@ namespace WebApi
 
         public string? HomePage { get; set; }
 
-        public ValidationResults Validate()
+        public string? EndpointUrl { get; set; }
+
+        public string? Type { get; set; }
+
+        public async Task<ValidationResults> Validate(ICodelistProviderClient codelistProvider)
         {
             ValidationResults results = new ValidationResults();
 
@@ -34,6 +38,8 @@ namespace WebApi
             results.ValidateLanguageTexts(nameof(ContactName), ContactName, languages, false);
             results.ValidateEmail(nameof(ContactEmail), ContactEmail, false);
             results.ValidateUrl(nameof(HomePage), HomePage, false);
+            results.ValidateUrl(nameof(EndpointUrl), EndpointUrl, true);
+            await results.ValidateRequiredCodelistValue(nameof(Type), Type, DcatCatalog.LocalCatalogTypeCodelist, codelistProvider);
 
             return results;
         }
@@ -48,6 +54,8 @@ namespace WebApi
                 ContactEmail);
             catalog.HomePage = HomePage.AsUri();
             catalog.ShouldBePublic = IsPublic;
+            catalog.EndpointUrl = EndpointUrl.AsUri();
+            catalog.Type = Type.AsUri();
         }
     }
 }

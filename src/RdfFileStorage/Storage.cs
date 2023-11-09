@@ -328,7 +328,7 @@ namespace NkodSk.RdfFileStorage
         {
             return key switch
             {
-                "keywords" => key + language,
+                "keywords" => key + "_" + language,
                 _ => key
             };
         }
@@ -384,15 +384,6 @@ namespace NkodSk.RdfFileStorage
             if (query.OnlyIds is not null && query.OnlyIds.Count > 0)
             {
                 sets.Add(new HashSet<Guid>(query.OnlyIds));
-            }
-
-            if (entriesByLanguage.TryGetValue(query.Language, out HashSet<Guid>? languageEntries))
-            {
-                sets.Add(languageEntries);
-            }
-            else
-            {
-                sets.Add(new HashSet<Guid>());
             }
 
             if (query.AdditionalFilters is not null)
@@ -740,6 +731,7 @@ namespace NkodSk.RdfFileStorage
             if (orderDefinitions.Count == 0)
             {
                 orderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.Revelance, true));
+                orderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.Name, false));
             }
 
             int CompareEntries(FileStorageGroup a, FileStorageGroup b)

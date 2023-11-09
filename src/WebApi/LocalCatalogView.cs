@@ -1,4 +1,5 @@
-﻿using NkodSk.Abstractions;
+﻿using CodelistProviderClient;
+using NkodSk.Abstractions;
 
 namespace WebApi
 {
@@ -24,7 +25,13 @@ namespace WebApi
 
         public Uri? HomePage { get; set; }
 
-        public static LocalCatalogView MapFromRdf(FileMetadata metadata, DcatCatalog catalogRdf, string language, bool fetchAllLanguages)
+        public Uri? Type { get; set; }
+
+        public CodelistItemView? TypeValue { get; set; }
+
+        public string? EndpointUrl { get; set; }
+
+        public static async Task<LocalCatalogView> MapFromRdf(FileMetadata metadata, DcatCatalog catalogRdf, ICodelistProviderClient codelistProviderClient, string language, bool fetchAllLanguages)
         {
             VcardKind? contactPoint = catalogRdf.ContactPoint;
 
@@ -36,8 +43,12 @@ namespace WebApi
                 Description = catalogRdf.GetDescription(language),
                 PublisherId = metadata.Publisher,
                 ContactPoint = contactPoint is not null ? CardView.MapFromRdf(contactPoint, language, fetchAllLanguages) : null,
-                HomePage = catalogRdf.HomePage
+                HomePage = catalogRdf.HomePage,
+                Type = catalogRdf.Type,
+                EndpointUrl = catalogRdf.EndpointUrl?.ToString(),
             };
+
+            view.TypeValue = await codelistProviderClient.MapCodelistValue(DcatCatalog.LocalCatalogTypeCodelist, view.Type?.ToString(), language);
 
             if (fetchAllLanguages)
             {

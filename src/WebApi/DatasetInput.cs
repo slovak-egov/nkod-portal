@@ -1,4 +1,5 @@
-﻿using NkodSk.Abstractions;
+﻿using Microsoft.IdentityModel.Tokens;
+using NkodSk.Abstractions;
 
 namespace WebApi
 {
@@ -42,6 +43,10 @@ namespace WebApi
 
         public string? IsPartOf { get; set; }
 
+        public bool IsSerie { get; set; }
+
+        private Dictionary<string, List<string>>? loadedEuroVocLabels = new Dictionary<string, List<string>>();
+
         public async Task<ValidationResults> Validate(string publisher, IDocumentStorageClient documentStorage, ICodelistProviderClient codelistProvider)
         {
             ValidationResults results = new ValidationResults();
@@ -65,7 +70,11 @@ namespace WebApi
             results.ValidateEmail(nameof(ContactEmail), ContactEmail, false);
             results.ValidateUrl(nameof(Documentation), Documentation, false);
             results.ValidateUrl(nameof(Specification), Specification, false);
-            await results.ValidateCodelistValues(nameof(EuroVocThemes), EuroVocThemes, DcatDataset.EuroVocThemeCodelist, codelistProvider);
+            
+            loadedEuroVocLabels ??= new Dictionary<string, List<string>>();
+            loadedEuroVocLabels.Clear();
+            await results.ValidateEuroVocValues(nameof(EuroVocThemes), EuroVocThemes, loadedEuroVocLabels);
+            
             results.ValidateNumber(nameof(SpatialResolutionInMeters), SpatialResolutionInMeters);
             results.ValidateTemporalResolution(nameof(TemporalResolution), TemporalResolution);
             await results.ValidateDataset(nameof(IsPartOf), IsPartOf, publisher, documentStorage);
@@ -90,11 +99,15 @@ namespace WebApi
             dataset.SetContactPoint(
                 ContactName is not null ? new LanguageDependedTexts(ContactName) : null,
                 ContactEmail);
-            dataset.Documentation = Documentation is not null ? new Uri(Documentation) : null;
-            dataset.Specification = Specification is not null ? new Uri(Specification) : null;
+            dataset.Documentation = Documentation.AsUri();
+            dataset.Specification = Specification.AsUri();
             dataset.SpatialResolutionInMeters = SpatialResolutionInMeters is not null ? decimal.Parse(SpatialResolutionInMeters, System.Globalization.CultureInfo.CurrentCulture) : null;
             dataset.TemporalResolution = TemporalResolution;
-            dataset.IsPartOf = IsPartOf is not null ? new Uri(IsPartOf) : null;
+            dataset.IsSerie = IsSerie;
+            dataset.IsPartOfInternalId = IsPartOf;
+
+            loadedEuroVocLabels ??= new Dictionary<string, List<string>>();
+            dataset.SetEuroVocLabelThemes(loadedEuroVocLabels);
         }
     }
 }

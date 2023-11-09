@@ -1,47 +1,102 @@
-import { ReactNode, useId } from "react";
+import { ReactNode, useEffect, useId, useState } from "react";
 import GridRow from "./GridRow";
 import GridColumn from "./GridColumn";
-import { Language } from "../client";
+import { Language, supportedLanguages } from "../client";
+import Button from "./Button";
+import SelectElementItems from "./SelectElementItems";
 
-type Props =
+type Props<T> =
 {
     label: string;
     hint?: string;
-    languages: Language[]
-    element: (id: string, language: Language) => ReactNode;
+    values: {[id: string]: T};
+    element: (id: string, value: T, onChange: (value: T) => void) => ReactNode;
+    onChange: (values: {[id: string]: T}) => void;
+    emptyValue: T;
     errorMessage?: {[id: string] : string};
 }
 
-export default function MultiLanguageFormGroup(props: Props)
+export default function MultiLanguageFormGroup<T>(props: Props<T>)
 {
     const id = useId();
+    const [selectedLanguage, setSelectedLanguage] = useState<Language|null>(null);
 
-    return <div className={'govuk-form-group ' + (props.errorMessage && Object.keys(props.errorMessage).length > 0 ? 'govuk-form-group--error' : '')}>
-        <GridRow>
-            <GridColumn widthUnits={3} totalUnits={4}>
-                {props.languages.map(lang => <div key={lang.id}>
-                    <label className="govuk-label" htmlFor={id}>
-                        {props.label} ({lang.name})
-                    </label>
-                    {props.hint ? <span className="govuk-hint">{props.hint}</span> : null}
-                    {props.errorMessage && props.errorMessage[lang.id] && props.errorMessage[lang.id] !== '' ? <span className="govuk-error-message"><span className="govuk-visually-hidden">Chyba: </span> {props.errorMessage[lang.id]}</span> : null}
-                    {props.element(id, lang)}
-                </div>)}
-            </GridColumn>
-            <GridColumn widthUnits={1} totalUnits={4}>
-                {/* <div style={{marginTop: '38px'}}>
-                <label className="govuk-label" htmlFor={id}>
-                    Jazyk
-                </label>
-                <SelectElement>
-                    <option value="sk">SK</option>
-                </SelectElement>
-                <div style={{verticalAlign: 'middle', display: 'inline-block', marginLeft: '10px'}}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z"/></svg>
-                </div>
-                </div> */}
-            </GridColumn>
-        </GridRow>
+    const values = props.values;
+
+    const existingLanguages = Object.keys(values);
+    const newLanguages = supportedLanguages.filter(l => !existingLanguages.includes(l.id));
+
+    useEffect(() => {
+        const existingLanguages = Object.keys(values);
+        if (selectedLanguage === null || existingLanguages.includes(selectedLanguage.id)) {
+            const newLanguages = supportedLanguages.filter(l => !existingLanguages.includes(l.id));
+            if (newLanguages.length > 0) {
+                setSelectedLanguage(newLanguages[0]);
+            } else if (selectedLanguage !== null) {
+                setSelectedLanguage(null);
+            }
+        }
+    }, [selectedLanguage, values]);
+
+    const emptyValue = props.emptyValue;
+    const onChange = props.onChange;
+    useEffect(() => {
+        const existingLanguages = Object.keys(values);
+        const newValues = {...values};
+        let valueChanged = false;
+        supportedLanguages.forEach(l => {
+            if (l.isRequired) {
+                if (!existingLanguages.includes(l.id)) {
+                    newValues[l.id] = emptyValue;
+                    valueChanged = true;
+                }
+            }
+        });
+        if (valueChanged) {
+            onChange(newValues);
+        }
+    }, [values, emptyValue, onChange]);
+
+    return <div className={'govuk-form-group ' + (props.errorMessage && Object.keys(props.errorMessage).length > 0 ? 'govuk-form-group--error' : '')} data-label={props.label}>
+        {Object.keys(values).map(lang => {
+            const language = supportedLanguages.find(l => l.id === lang);
+            if (!language) return null;
+            const value = values[lang];
+
+            return <div key={lang}>
+                <GridRow>
+                    <GridColumn widthUnits={3} totalUnits={4}>
+                        <div className="language-input" data-lang={lang}>
+                            <label className="govuk-label" htmlFor={id + "_" + lang}>
+                                {props.label} ({language.nameInPrimaryLanguage})
+                            </label>
+                            {props.hint ? <span className="govuk-hint">{props.hint}</span> : null}
+                            {props.errorMessage && props.errorMessage[lang] && props.errorMessage[lang] !== '' ? <span className="govuk-error-message"><span className="govuk-visually-hidden">Chyba: </span> {props.errorMessage[lang]}</span> : null}
+                            {props.element(id + "_" + lang, value, v => props.onChange({...values, [lang]: v}))}
+                        </div>
+                    </GridColumn>
+                    <GridColumn widthUnits={1} totalUnits={4}>
+                        {!language.isRequired ? <Button buttonType="secondary" onClick={() => {
+                            const newValues = {...values};
+                            delete newValues[lang];
+                            props.onChange(newValues);
+                        }}>
+                            Odstrániť jazykovú verziu
+                        </Button> : null}
+                    </GridColumn>
+                </GridRow>
+            </div>
+        })}
+        {newLanguages.length > 0 ? <div className="add-language" style={{marginTop: '10px'}}>
+            <SelectElementItems<Language>
+                options={newLanguages}
+                getValue={l => l ? l.id : ''}
+                id={id + '_lang'}
+                renderOption={l => l.nameInPrimaryLanguage}
+                selectedValue={selectedLanguage ? selectedLanguage.id : ''}
+                onChange={lang => props.onChange({...values, [lang]: props.emptyValue})} />
+            {selectedLanguage ? <Button buttonType="secondary" style={{marginLeft: '20px'}} onClick={() => props.onChange({...values, [selectedLanguage.id]: props.emptyValue})}>Pridať jazykovú verziu</Button> : null}
+        </div> : null}
     </div>
 }
 

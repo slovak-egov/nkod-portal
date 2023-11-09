@@ -26,11 +26,11 @@ export default function EditUser()
     const roles: Role[] = [
         {
             id: 'Publisher',
-            name: t('publisherAdmin')
+            name: t('publisherUser')
         },
         {
             id: 'PublisherAdmin',
-            name: t('publisherUser')
+            name: t('publisherAdmin')
         },
         {
             id: null,

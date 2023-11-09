@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { TokenContext, doLogin, sendGet, useDefaultHeaders, useUserInfo } from "../client";
+import { LanguageOptionsContext, TokenContext, doLogin, sendGet, supportedLanguages, useDefaultHeaders, useUserInfo } from "../client";
 import Button from "./Button";
 import IdSkModule from "./IdSkModule";
 import { useContext, useMemo } from "react";
@@ -17,7 +17,8 @@ export default function Header() {
     const ctx = useContext(TokenContext);
 
     const navigate = useNavigate();
-    const {t} = useTranslation();
+    const {t, i18n } = useTranslation();
+    const l = useContext(LanguageOptionsContext);
 
     const menu : MenuItem[] = [
         {
@@ -102,7 +103,7 @@ export default function Header() {
     };
 
     const logout = async () => {
-        await sendGet('saml/login', headers);
+        await sendGet('saml/logout', headers);
         ctx?.setToken(null);
         navigate('/');
     }
@@ -132,20 +133,25 @@ export default function Header() {
                             </div>
                             <div className="idsk-header-web__brand-spacer"></div>
                             <div className="idsk-header-web__brand-language">
-                                <button className="idsk-header-web__brand-language-button" aria-label={t('expandLanguageMenu')} aria-expanded="false" data-text-for-hide={t('hideLanguageMenu')} data-text-for-show={t('expandLanguageMenu')}>
-                                    Slovenčina
+                                <button key={idPrefix + '_lang_button'} className="idsk-header-web__brand-language-button" aria-label={t('expandLanguageMenu')} aria-expanded="false" data-text-for-hide={t('hideLanguageMenu')} data-text-for-show={t('expandLanguageMenu')}>
+                                    {l?.language.name}
                                 </button>
                                 <ul className="idsk-header-web__brand-language-list">
-                                    <li className="idsk-header-web__brand-language-list-item">
-                                        {/* {{ 'idsk-header-web__brand-language-list-item-link--selected' if language.selected }} */}
-                                        <a className="govuk-link idsk-header-web__brand-language-list-item-link"  
-                                            title="English"
+                                    {supportedLanguages.filter(lg => lg.id !== l?.language.id).map(lg => <li key={idPrefix + lg.id} className="idsk-header-web__brand-language-list-item"><a className="govuk-link idsk-header-web__brand-language-list-item-link"  
+                                            title={lg.name}
                                             href="/"
-                                            lang="en"
+                                            onClick={e => {
+                                                e.preventDefault();
+                                                if (lg.id) {
+                                                    l?.setLanguage(lg);
+                                                    i18n.changeLanguage(lg.id);
+                                                }
+                                                return false;
+                                            }}
+                                            lang={lg.id}
                                             >
-                                            English
-                                        </a>
-                                    </li>
+                                                {lg.name}
+                                            </a></li>)}
                                 </ul>
                             </div>
                         </div>
@@ -162,6 +168,7 @@ export default function Header() {
                                     <h2 className="govuk-heading-m">data.gov.sk</h2>
                                 </Link>
                                 <button className="idsk-button idsk-header-web__main-headline-menu-button" aria-label={t('expandMenu')} aria-expanded="false" data-text-for-show={t('expandMenu')} data-text-for-hide={t('hideMenu')} data-text-for-close={t('hideMenu')}>
+                                    Menu
                                     <span className="idsk-header-web__menu-open"></span>
                                     <span className="idsk-header-web__menu-close"></span>
                                 </button>

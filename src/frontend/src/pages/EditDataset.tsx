@@ -28,9 +28,10 @@ const transformEntityForEdit = (entity: Dataset): DatasetInput => {
         documentation: entity.documentation,
         specification: entity.specification,
         euroVocThemes: entity.euroVocThemes,
-        spatialResolutionInMeters: entity.spatialResolutionInMeters,
+        spatialResolutionInMeters: entity.spatialResolutionInMeters?.toLocaleString() ?? null,
         temporalResolution: entity.temporalResolution,
-        isPartOf: entity.isPartOf
+        isPartOf: entity.isPartOf,
+        isSerie: entity.isSerie
     }
 };
 

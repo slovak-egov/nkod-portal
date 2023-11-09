@@ -13,7 +13,13 @@ type OrderOption = {
     value: string;
 };
 
-const codelistsKeys = ['publishers', 'https://data.gov.sk/def/ontology/egov/DatasetType'];
+const codelistsKeys = [
+    'publishers', 
+    'https://data.gov.sk/set/codelist/dataset-type',
+    'http://publications.europa.eu/resource/authority/data-theme', 
+    'format',
+    'keywords'
+];
 
 export default function PublicDatasetList() {
     const [datasets, query, setQueryParameters, loading, error] = useDatasets({
@@ -46,7 +52,7 @@ export default function PublicDatasetList() {
                 >
                     {datasets?.items.map((c, i) => (
                         <Fragment key={c.id}>
-                            <GridRow>
+                            <GridRow data-testid="sr-result">
                                 <GridColumn widthUnits={1} totalUnits={1}>
                                     <Link
                                         to={'/datasety/' + c.id}
@@ -56,7 +62,7 @@ export default function PublicDatasetList() {
                                     </Link>
                                 </GridColumn>
                                 {c.description ? (
-                                    <GridColumn widthUnits={1} totalUnits={1}>
+                                    <GridColumn widthUnits={1} totalUnits={1} data-testid="sr-result-description">
                                         <div style={{WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box'}}>{c.description}</div>
                                     </GridColumn>
                                 ) : null}
@@ -82,7 +88,7 @@ export default function PublicDatasetList() {
                                     })}
                                 </GridColumn>
                                 {c.publisher ? (
-                                    <GridColumn widthUnits={1} totalUnits={2}>
+                                    <GridColumn widthUnits={1} totalUnits={2} data-testid="sr-result-publisher">
                                         {c.publisher.name}
                                     </GridColumn>
                                 ) : null}

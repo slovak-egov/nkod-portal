@@ -21,5 +21,21 @@ namespace NkodSk.Abstractions
         public void SetLabel(Dictionary<string, string> texts) => SetTexts("skos:prefLabel", texts);
 
         public bool IsDeprecated => false;
+
+        public static SkosConcept? ParseXml(Stream stream)
+        {
+            IGraph graph = new Graph();
+            SkosConceptScheme.AddDefaultNamespaces(graph);
+            using StreamReader reader = new StreamReader(stream);
+            RdfXmlParser parser = new RdfXmlParser();
+            parser.Load(graph, reader);
+            IEnumerable<IUriNode> nodes = RdfDocument.ParseNode(graph, "skos:Concept");
+            IUriNode? node = nodes.FirstOrDefault();
+            if (node is not null)
+            {
+                return new SkosConcept(graph, node);
+            }
+            return null;
+        }
     }
 }

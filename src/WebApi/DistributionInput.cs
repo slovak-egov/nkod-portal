@@ -19,8 +19,6 @@ namespace WebApi
 
         public string? DownloadUrl { get; set; }
 
-        public string? AccessUrl { get; set; }
-
         public string? Format { get; set; }
 
         public string? MediaType { get; set; }
@@ -39,17 +37,11 @@ namespace WebApi
         {
             ValidationResults results = new ValidationResults();
 
-            if (AccessUrl == null)
-            {
-                AccessUrl = DownloadUrl;
-            }
-
             await results.ValidateRequiredCodelistValue(nameof(AuthorsWorkType), AuthorsWorkType, DcatDistribution.AuthorsWorkTypeCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(OriginalDatabaseType), OriginalDatabaseType, DcatDistribution.OriginalDatabaseTypeCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(DatabaseProtectedBySpecialRightsType), DatabaseProtectedBySpecialRightsType, DcatDistribution.DatabaseProtectedBySpecialRightsTypeCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(PersonalDataContainmentType), PersonalDataContainmentType, DcatDistribution.PersonalDataContainmentTypeCodelist, codelistProvider);
             results.ValidateUrl(nameof(DownloadUrl), DownloadUrl, true);
-            results.ValidateUrl(nameof(AccessUrl), AccessUrl, true);
             await results.ValidateRequiredCodelistValue(nameof(Format), Format, DcatDistribution.FormatCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(MediaType), MediaType, DcatDistribution.MediaTypeCodelist, codelistProvider);
             results.ValidateUrl(nameof(ConformsTo), ConformsTo, false);
@@ -64,7 +56,7 @@ namespace WebApi
         {
             distribution.SetTermsOfUse(AuthorsWorkType.AsUri(), OriginalDatabaseType.AsUri(), DatabaseProtectedBySpecialRightsType.AsUri(), PersonalDataContainmentType.AsUri());
             distribution.DownloadUrl = DownloadUrl.AsUri();
-            distribution.AccessUrl = AccessUrl.AsUri();
+            distribution.AccessUrl = DownloadUrl.AsUri();
             distribution.Format = Format.AsUri();
             distribution.MediaType = MediaType.AsUri();
             distribution.ConformsTo = ConformsTo.AsUri();

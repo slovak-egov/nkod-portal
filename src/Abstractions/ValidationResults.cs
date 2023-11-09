@@ -1,5 +1,6 @@
 ﻿using Abstractions;
 using NkodSk.Abstractions;
+using System;
 using System.Collections;
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
@@ -230,22 +231,90 @@ namespace NkodSk.Abstractions
 
         public async Task<bool> ValidateDataset(string key, string? id, string publisher, IDocumentStorageClient documentStorage)
         {
-            if (!string.IsNullOrEmpty(id))
+            if (!string.IsNullOrEmpty(id) && Guid.TryParse(id, out Guid datasetId))
             {
-                if (Guid.TryParse(id, out Guid guid))
+                FileStorageQuery query = new FileStorageQuery
                 {
-                    FileState? state = await documentStorage.GetFileState(guid);
-                    if (state == null || state.Metadata.Type != FileType.DatasetRegistration || state.Metadata.Publisher != publisher)
+                    OnlyPublishers = new List<string> { publisher },
+                    OnlyTypes = new List<FileType> { FileType.DatasetRegistration },
+                    OnlyIds = new List<Guid> { datasetId },
+                    AdditionalFilters = new Dictionary<string, string[]>
                     {
-                        AddError(key, "Dataset nie je platný");
-                        return false;
+                        { "serie", new string[] { "1" } },
                     }
+                };
+                FileStorageResponse response = await documentStorage.GetFileStates(query);
+                if (response.Files.Count == 1)
+                {
+                    return true;
                 }
                 else
                 {
                     AddError(key, "Dataset nie je platný");
                     return false;
                 }
+            }
+            return true;
+        }
+
+        public async Task<bool> ValidateEuroVocValues(string key, ICollection<string>? values, Dictionary<string, List<string>> labels)
+        {
+            RemoveEmptyValues(values);
+            if (values is not null && values.Count > 0)
+            {
+                using HttpClient client = new HttpClient();
+
+                string[] languages = new[] { "sk", "en" };
+
+                bool isValid = true;
+                foreach (string? value in values)
+                {
+                    if (!string.IsNullOrEmpty(value) && value.StartsWith(DcatDataset.EuroVocPrefix) && Regex.IsMatch(value, "^" + Regex.Escape(DcatDataset.EuroVocPrefix) + @"[0-9]+$"))
+                    {
+                        try
+                        {
+                            using Stream stream = await client.GetStreamAsync(value);
+                            SkosConcept? concept = SkosConcept.ParseXml(stream);
+                            if (concept is not null)
+                            {
+                                foreach (string language in languages)
+                                {
+                                    string? label = concept.GetLabel(language);
+                                    if (!string.IsNullOrEmpty(label))
+                                    {
+                                        if (!labels.TryGetValue(language, out List<string>? languageLabels))
+                                        {
+                                            languageLabels = new List<string>();
+                                            labels[language] = languageLabels;
+                                        }
+                                        languageLabels.Add(label);
+                                    }
+                                    else
+                                    {
+                                        isValid = false;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                isValid = false;
+                            }
+                        }
+                        catch
+                        {
+                            isValid = false;
+                        }
+                    }
+                    else
+                    {
+                        isValid = false;
+                    }
+                }
+                if (!isValid)
+                {
+                    AddError(key, "Hodnota musí byť zadaná z číselníka EuroVoc");
+                }
+                return isValid;
             }
             return true;
         }

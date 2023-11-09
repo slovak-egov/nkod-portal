@@ -18,9 +18,11 @@ namespace NkodSk.Abstractions
 
         public const string TypeCodelist = "https://data.gov.sk/set/codelist/dataset-type";
 
-        public const string SpatialCodelist = "http://publications.europa.eu/resource/authority/place";
+        public const string SpatialCodelist = "https://data.gov.sk/def/ontology/location";
 
         public const string EuroVocThemeCodelist = "http://eurovoc.europa.eu/100141";
+
+        public const string EuroVocPrefix = "http://eurovoc.europa.eu/";
 
         public DcatDataset(IGraph graph, IUriNode node) : base(graph, node)
         {
@@ -55,6 +57,16 @@ namespace NkodSk.Abstractions
             get => GetUrisFromUriNode("dcat:theme");
             set => SetUriNodes("dcat:theme", value);
         }
+
+        public IEnumerable<Uri> EuroVocThemes => Themes.Where(t => t.ToString().StartsWith(EuroVocPrefix));
+
+        public IEnumerable<Uri> NonEuroVocThemes => Themes.Where(t => !t.ToString().StartsWith(EuroVocPrefix));
+
+        public Dictionary<string, List<string>> EuroVocThemeLabels => GetTextsFromUriNodeAll("custom:euroVocLabels");
+
+        public IEnumerable<string> GetEuroVocLabelThemes(string language) => GetTextsFromUriNode("custom:euroVocLabels", language);
+
+        public void SetEuroVocLabelThemes(Dictionary<string, List<string>> texts) => SetTexts("custom:euroVocLabels", texts);
 
         public Uri? AccrualPeriodicity
         {
@@ -133,7 +145,7 @@ namespace NkodSk.Abstractions
             {
                 VcardKind contactPoint = new VcardKind(Graph, CreateSubject("dcat:contactPoint", "vcard:Individual"));
                 contactPoint.SetNames(name ?? new LanguageDependedTexts());
-                contactPoint.Email = email;
+                contactPoint.Email = !string.IsNullOrEmpty(email) ? email : null;
             }
         }
 
@@ -168,10 +180,22 @@ namespace NkodSk.Abstractions
             set => SetUriNode("dct:isPartOf", value);
         }
 
+        public string? IsPartOfInternalId
+        {
+            get => GetTextFromUriNode("custom:isPartOf");
+            set => SetTextToUriNode("custom:isPartOf", value);
+        }
+
         public bool ShouldBePublic
         {
             get => GetBooleanFromUriNode("custom:shouldBePublic") ?? true;
             set => SetBooleanToUriNode("custom:shouldBePublic", value);
+        }
+
+        public bool IsSerie
+        {
+            get => GetBooleanFromUriNode("custom:isSerie") ?? false;
+            set => SetBooleanToUriNode("custom:isSerie", value);
         }
 
         public IEnumerable<Uri> Distributions => GetUrisFromUriNode("dcat:distribution");
@@ -206,22 +230,56 @@ namespace NkodSk.Abstractions
             isPublic = isPublic && ShouldBePublic;
 
             values[TypeCodelist] = Type.Select(v => v.ToString()).ToArray();
+            values[ThemeCodelist] = NonEuroVocThemes.Select(v => v.ToString()).ToArray();
+            values["serie"] = new string[] { IsSerie ? "1" : "0" };
+            values["key"] = new string[] { Uri.ToString() };
 
             foreach ((string language, List<string> texts) in Keywords)
             {
-                values["keywords" + language] = texts.ToArray();
+                values["keywords_" + language] = texts.ToArray();
+            }
+
+            Guid? parentId = null;
+            if (!string.IsNullOrEmpty(IsPartOfInternalId) && Guid.TryParse(IsPartOfInternalId, out Guid parentIdValue))
+            {
+                parentId = parentIdValue;
             }
 
             LanguageDependedTexts names = GetLiteralNodesFromUriNode("dct:title").ToArray();
             if (metadata is null)
             {
-                metadata = new FileMetadata(id, names, FileType.DatasetRegistration, null, Publisher?.ToString(), isPublic, null, now, now, values);
+                metadata = new FileMetadata(id, names, FileType.DatasetRegistration, parentId, Publisher?.ToString(), isPublic, null, now, now, values);
             }
             else
             {
-                metadata = metadata with { Name = names, Publisher = Publisher?.ToString(), IsPublic = isPublic, AdditionalValues = values, LastModified = now };
+                metadata = metadata with { Name = names, ParentFile = parentId, Publisher = Publisher?.ToString(), IsPublic = isPublic, AdditionalValues = values, LastModified = now };
             }
             return metadata;
+        }
+
+        public async Task<FileMetadata> UpdateReferenceToParent(Guid? parentId, FileMetadata metadata, IDocumentStorageClient documentStorageClient)
+        {
+            IsPartOfInternalId = parentId?.ToString();
+
+            if (parentId.HasValue)
+            {
+                FileState? state = await documentStorageClient.GetFileState(parentId.Value);
+                if (state?.Content is not null)
+                {
+                    DcatDataset? parent = Parse(state.Content);
+                    IsPartOf = parent?.Uri;
+                }
+                else
+                {
+                    IsPartOf = null;
+                }
+            }
+            else
+            {
+                IsPartOf = null;
+            }
+
+            return metadata with { ParentFile = parentId };
         }
     }
 }

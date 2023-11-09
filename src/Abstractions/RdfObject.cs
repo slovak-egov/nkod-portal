@@ -120,7 +120,20 @@ namespace NkodSk.Abstractions
 
         public IEnumerable<string> GetTextsFromUriNode(string name, string language)
         {
-            return GetLiteralNodesFromUriNode(name).Where(n => n.Language == language).Select(n => n.Value);
+            IEnumerable<string> GetTexts(string language)
+            {
+                return GetLiteralNodesFromUriNode(name).Where(n => n.Language == language).Select(n => n.Value);
+            }
+
+            IEnumerable<string> texts = GetTexts(language);
+            if (!texts.Any())
+            {
+                if (!string.Equals(language, "sk", StringComparison.OrdinalIgnoreCase))
+                {
+                    texts = GetTexts("sk");
+                }
+            }
+            return texts;
         }
 
         public string? GetTextFromUriNode(string name, string language)

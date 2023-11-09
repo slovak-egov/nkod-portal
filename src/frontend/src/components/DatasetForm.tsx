@@ -1,13 +1,12 @@
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import FormElementGroup from "./FormElementGroup"
 import MultiLanguageFormGroup from "./MultiLanguageFormGroup"
 import MultiRadio from "./MultiRadio"
-import { CodelistValue, Dataset, DatasetInput, UserInfo, extractLanguageErrors, knownCodelists, supportedLanguages, useCodelists, useDatasets } from "../client"
+import { CodelistValue, Dataset, DatasetInput, UserInfo, extractLanguageErrors, knownCodelists, useCodelists, useDatasets } from "../client"
 import BaseInput from "./BaseInput"
 import TextArea from "./TextArea"
 import MultiSelectElementItems from "./MultiSelecteElementItems"
 import SelectElementItems from "./SelectElementItems"
-import CodelistMultiTextBoxAutocomplete from "./CodelistMultiTextBoxAutocomplete"
 import MultiTextBox from "./MultiTextBox"
 import MultiCheckbox from "./MultiCheckbox"
 import ErrorAlert from "./ErrorAlert"
@@ -27,7 +26,7 @@ type PublicOption = {
     value: boolean;
 }
 
-const requiredCodelists = [knownCodelists.dataset.theme, knownCodelists.dataset.type, knownCodelists.dataset.accrualPeriodicity];
+const requiredCodelists = [knownCodelists.dataset.theme, knownCodelists.dataset.type, knownCodelists.dataset.accrualPeriodicity, knownCodelists.dataset.spatial];
 
 type SerieSetting = {
     name: string;
@@ -38,28 +37,10 @@ type SerieSetting = {
 export function DatasetForm(props: Props)
 {
     const {t} = useTranslation();
-    const serieSettings: SerieSetting[] = [
-        {
-            'name': t('singleDataset'),
-            'id': 'single',
-            'enableDatasetSelection': false
-        },
-        {
-            'name': t('datasetIsSerie'),
-            'id': 'serie',
-            'enableDatasetSelection': false
-        },
-        {
-            'name': t('datasetIsPartOfSerie'),
-            'id': 'isPartOf',
-            'enableDatasetSelection': true
-        }
-    ];
-
-    const [isPartOf, setIsPartOf] = useState<SerieSetting>(serieSettings[0]);
+    
     const [datasets, , setDatasetQueryParameters, loadingDatasets, errorDatasets] = useDatasets({
         pageSize: -1,
-        page: 0
+        page: 0,
     });
 
     const [codelists, loadingCodelists, errorCodelists] = useCodelists(requiredCodelists);
@@ -82,6 +63,7 @@ export function DatasetForm(props: Props)
             setDatasetQueryParameters({
                 filters: {
                     publishers: [userInfo.publisher],
+                    serie: ['1']
                 },
                 page: 1
             });
@@ -94,8 +76,67 @@ export function DatasetForm(props: Props)
     const typeCodelist = codelists.find(c => c.id === knownCodelists.dataset.type);
     const themeCodelist = codelists.find(c => c.id === knownCodelists.dataset.theme);
     const accrualPeriodicityCodelist = codelists.find(c => c.id === knownCodelists.dataset.accrualPeriodicity);
+    const spatialCodelist = codelists.find(c => c.id === knownCodelists.dataset.spatial);
 
     const saving = props.saving;
+
+    const isEnabledPartOf = datasets && datasets.items.length > 0;
+
+    const serieSettings: SerieSetting[] = [
+        {
+            'name': t('singleDataset'),
+            'id': 'single',
+            'enableDatasetSelection': false
+        },
+        {
+            'name': t('datasetIsSerie'),
+            'id': 'serie',
+            'enableDatasetSelection': false
+        }
+    ];
+
+    if (isEnabledPartOf)
+    {
+        serieSettings.push({
+            'name': t('datasetIsPartOfSerie'),
+            'id': 'isPartOf',
+            'enableDatasetSelection': true
+        });
+    }
+
+    let selectedSerie: string;
+
+    if (dataset.isSerie)
+    {
+        selectedSerie = 'serie';
+    } 
+    else if (dataset.isPartOf)
+    {
+        selectedSerie = 'isPartOf';
+    } 
+    else
+    {
+        selectedSerie = 'single';
+    }
+
+    function setSerieSetting(setting: SerieSetting)
+    {
+        switch (setting.id)
+        {
+            case 'single':
+                setDataset({isPartOf: null, isSerie: false});
+                break;
+            case 'serie':
+                setDataset({isPartOf: null, isSerie: true});
+                break;
+            case 'isPartOf':
+                if (datasets && datasets.items.length > 0)
+                {
+                    setDataset({isPartOf: datasets.items[0].id, isSerie: false});
+                }
+                break;
+        }
+    }
 
     return <>
     
@@ -120,8 +161,8 @@ export function DatasetForm(props: Props)
             onCheckedChanged={v => {setDataset({...dataset, type: v})
         }} />} /> : null}
 
-        <MultiLanguageFormGroup label={t('datasetName')} errorMessage={extractLanguageErrors(errors, 'name')} languages={supportedLanguages} element={(id, lang) => <BaseInput id={id} disabled={saving} value={dataset.name[lang.id] ?? ''} onChange={e => setDataset({name: {...dataset.name, [lang.id]: e.target.value}})} />} />
-        <MultiLanguageFormGroup label={t('description')} errorMessage={extractLanguageErrors(errors, 'description')} languages={supportedLanguages} element={(id, lang) => <TextArea id={id} disabled={saving} value={dataset.description[lang.id] ?? ''} onChange={e => setDataset({description: {...dataset.description, [lang.id]: e.target.value}})} />} />
+        <MultiLanguageFormGroup<string> label={t('datasetName')} values={dataset.name} onChange={v => setDataset({name: v})} emptyValue="" errorMessage={extractLanguageErrors(errors, 'name')} element={(id, value, onChange) => <BaseInput id={id} disabled={saving} value={value} onChange={e => onChange(e.target.value)} />} />
+        <MultiLanguageFormGroup<string> label={t('description')} values={dataset.description} onChange={v => setDataset({description: v})} emptyValue="" errorMessage={extractLanguageErrors(errors, 'description')} element={(id, value, onChange) => <TextArea id={id} disabled={saving} value={value} onChange={e => onChange(e.target.value)} />} />
 
         {themeCodelist ? <FormElementGroup label={t('theme')} errorMessage={errors['themes']} element={id => <MultiSelectElementItems<CodelistValue> 
             id={id} 
@@ -141,37 +182,38 @@ export function DatasetForm(props: Props)
             getValue={v => v.id} 
             onChange={v => {setDataset({...dataset, accrualPeriodicity: v}) }} />} /> : null}
 
-        <MultiLanguageFormGroup label={t('keywords')} errorMessage={extractLanguageErrors(errors, 'keywords')} languages={supportedLanguages} element={(id, lang) => <MultiTextBox id={id} values={dataset.keywords[lang.id] ?? ''} onChange={e => setDataset({keywords: {...dataset.keywords, [lang.id]: e}})} />} />
+        <MultiLanguageFormGroup<string[]> label={t('keywords')} errorMessage={extractLanguageErrors(errors, 'keywords')} values={dataset.keywords} onChange={v => setDataset({keywords: v})} emptyValue={[]} element={(id, value, onChange) => <MultiTextBox id={id} disabled={saving} values={value} onChange={onChange} />} />
 
-        <FormElementGroup label={t('relatedSpatial')} errorMessage={errors['spatial']} element={id => <CodelistMultiTextBoxAutocomplete 
+        {spatialCodelist ? <FormElementGroup label={t('relatedSpatial')} errorMessage={errors['spatial']} element={id => <MultiSelectElementItems<CodelistValue>  
             id={id} 
             disabled={saving}
-            codelistId={knownCodelists.dataset.spatial}
-            selectedValues={dataset.spatial}
-            onChange={v => {setDataset({spatial: v}) }} />} />
+            options={spatialCodelist.values} 
+            selectedOptions={spatialCodelist.values.filter(v => dataset.spatial.includes(v.id))} 
+            renderOption={v => v.label} 
+            getValue={v => v.id} 
+            onChange={v => {setDataset({spatial: v}) }} />} /> : null}
         
         <FormElementGroup label={t('timeValidityDateFrom')} errorMessage={errors['startdate']} element={id => <BaseInput id={id} disabled={saving} value={dataset.startDate ?? ''} onChange={e => setDataset({startDate: e.target.value})} />} />
         <FormElementGroup label={t('timeValidityDateTo')} errorMessage={errors['enddate']} element={id => <BaseInput id={id} disabled={saving} value={dataset.endDate ?? ''} onChange={e => setDataset({endDate: e.target.value})} />} />
 
-        <MultiLanguageFormGroup label={t('contactPointName')} errorMessage={extractLanguageErrors(errors, 'contactname')} languages={supportedLanguages} element={(id, lang) => <BaseInput id={id} disabled={saving} value={dataset.contactName[lang.id] ?? ''} onChange={e => setDataset({contactName: {...dataset.contactName, [lang.id]: e.target.value}})} />} />
+        <MultiLanguageFormGroup<string> label={t('contactPointName')} values={dataset.contactName} onChange={v => setDataset({contactName: v})} emptyValue="" errorMessage={extractLanguageErrors(errors, 'contactname')} element={(id, value, onChange) => <BaseInput id={id} disabled={saving} value={value} onChange={e => onChange(e.target.value)} />} />
         <FormElementGroup label={t('contactPointEmail')} errorMessage={errors['contactemail']} element={id => <BaseInput id={id} disabled={saving} value={dataset.contactEmail ?? ''} onChange={e => setDataset({contactEmail: e.target.value})} />} />
 
         <FormElementGroup label={t('documenationLink')} errorMessage={errors['documentation']} element={id => <BaseInput id={id} disabled={saving} value={dataset.documentation ?? ''} onChange={e => setDataset({documentation: e.target.value})} />} />
         <FormElementGroup label={t('specificationLink')} errorMessage={errors['specification']} element={id => <BaseInput id={id} disabled={saving} value={dataset.specification ?? ''} onChange={e => setDataset({specification: e.target.value})} />} />
 
-        <FormElementGroup label={t('euroVocClassification')} errorMessage={errors['eurovocthemes']} element={id => <CodelistMultiTextBoxAutocomplete 
+        <FormElementGroup label={t('euroVocClassification')} errorMessage={errors['eurovocthemes']} element={id => <MultiTextBox 
             id={id} 
             disabled={saving}
-            codelistId={knownCodelists.dataset.euroVoc}
-            selectedValues={dataset.euroVocThemes}
-            onChange={v => {setDataset({euroVocThemes: v}) }} />} />
+            values={dataset.euroVocThemes}
+            onChange={e => setDataset({euroVocThemes: e})} />} />
 
-        <FormElementGroup label={t('spatialResolution')} errorMessage={errors['spatialresolutioninmeters']} element={id => <BaseInput id={id} disabled={saving} value={dataset.spatialResolutionInMeters ?? ''} onChange={e => setDataset({spatialResolutionInMeters: Number(e.target.value)})} />} />
+        <FormElementGroup label={t('spatialResolution')} errorMessage={errors['spatialresolutioninmeters']} element={id => <BaseInput id={id} disabled={saving} value={dataset.spatialResolutionInMeters ?? ''} onChange={e => setDataset({spatialResolutionInMeters: e.target.value})} />} />
         <FormElementGroup label={t('timeResolution')} errorMessage={errors['temporalresolution']} element={id => <BaseInput id={id} disabled={saving} value={dataset.temporalResolution ?? ''} onChange={e => setDataset({temporalResolution: e.target.value})} />} />
 
-        <MultiRadio<SerieSetting> label={t('datasetData')} disabled={saving} options={serieSettings} onChange={setIsPartOf} selectedOption={isPartOf} id="serie-settings" getValue={v => v.id} renderOption={v => v.name} />
+        <MultiRadio<SerieSetting> label={t('datasetData')} disabled={saving} options={serieSettings} onChange={setSerieSetting} selectedOption={serieSettings.find(s => s.id === selectedSerie) ?? serieSettings[0]} id="serie-settings" getValue={v => v.id} renderOption={v => v.name} />
 
-        {isPartOf.enableDatasetSelection && datasets ? <FormElementGroup label="Nadradený dataset" errorMessage={errors['ispartof']} element={id => <SelectElementItems<Dataset|null> 
+        {selectedSerie === 'isPartOf' && datasets ? <FormElementGroup label={t('parentDataset')} errorMessage={errors['ispartof']} element={id => <SelectElementItems<Dataset|null> 
                 id={id} 
                 disabled={saving}
                 options={datasets.items.filter(d => d.distributions.length === 0)} 

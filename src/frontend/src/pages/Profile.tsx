@@ -2,8 +2,8 @@ import PageHeader from "../components/PageHeader";
 import Button from "../components/Button";
 import Breadcrumbs from "../components/Breadcrumbs";
 import MainContent from "../components/MainContent";
-import { sendPut, useUserInfo, SaveResult, useDefaultHeaders, useDocumentTitle } from "../client";
-import { useEffect, useState } from "react";
+import { sendPut, useUserInfo, SaveResult, useDefaultHeaders, useDocumentTitle, TokenContext } from "../client";
+import { useContext, useEffect, useState } from "react";
 import FormElementGroup from "../components/FormElementGroup";
 import BaseInput from "../components/BaseInput";
 import { AxiosResponse } from "axios";
@@ -25,6 +25,7 @@ export default function Profile()
     const headers = useDefaultHeaders();
     const {t} = useTranslation();
     useDocumentTitle(t('publisherProfile'));
+    const tokenContext = useContext(TokenContext);
 
     const errors = saveResult?.errors ?? {};
 
@@ -43,6 +44,9 @@ export default function Profile()
         try {
             const response: AxiosResponse<SaveResult> = await sendPut('profile', profile, headers);
             setSaveResult(response.data);
+            if (tokenContext?.token) {
+                tokenContext?.setToken({...tokenContext.token});
+            }
         } finally {
             setSaving(false);
         }

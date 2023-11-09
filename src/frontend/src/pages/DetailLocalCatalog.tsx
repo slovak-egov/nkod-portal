@@ -20,10 +20,10 @@ export default function DetailLocalCatalog()
         <MainContent>
             <div className="nkod-entity-detail">
                 <PageHeader>{catalog.name}</PageHeader>
-                {catalog.publisher ? <p className="govuk-body nkod-publisher-name">
+                {catalog.publisher ? <p className="govuk-body nkod-publisher-name" data-testid="publisher-name">
                     {catalog.publisher.name}
                 </p> : null}
-                {catalog.description ? <p className="govuk-body nkod-entity-description">
+                {catalog.description ? <p className="govuk-body nkod-entity-description" data-testid="description">
                     {catalog.description}
                 </p> : null}
                 <GridRow>
@@ -32,7 +32,7 @@ export default function DetailLocalCatalog()
                             <div className="govuk-body nkod-detail-attribute-name">
                                 {t('publisher')}
                             </div>
-                            <div className="govuk-body nkod-detail-attribute-value">
+                            <div className="govuk-body nkod-detail-attribute-value" data-testid="publisher-name">
                                 {catalog.publisher.name}
                             </div>
                         </div>                        
@@ -43,7 +43,7 @@ export default function DetailLocalCatalog()
                                 {t('homePagePublisher')}
                             </div>
                             <div className="govuk-body nkod-detail-attribute-value">
-                                <a href={catalog.homePage} className="govuk-link">{t('goToHomePageOfCatalog')}</a>
+                                <a href={catalog.homePage} className="govuk-link" data-testid="homepage">{t('goToHomePageOfCatalog')}</a>
                             </div>
                         </div>                        
                     </GridColumn> : null}

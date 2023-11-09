@@ -13,6 +13,7 @@ type Props<T> =
     getValue: (item: T) => string;
     selectedItems: T[];
     onSelectionChange: (items: T[]) => void;
+    dataTestId: string;
 }
 
 export default function SearchFilter<T>(props: Props<T>) 
@@ -25,7 +26,7 @@ export default function SearchFilter<T>(props: Props<T>)
         onSelectionChange(checked ? [...selectedItems, item] : selectedItems.filter(i => i !== item));
     }, [selectedItems, onSelectionChange]);
 
-    return <IdSkModule moduleType="idsk-search-results-filter">
+    return <IdSkModule moduleType="idsk-search-results-filter" data-testid={props.dataTestId}>
         <div className="idsk-search-results__filter idsk-search-results-filter__filter-panel">
             <div className="idsk-search-results__link-panel idsk-search-results--expand idsk-search-results__content-type-filter">
                 <button className="idsk-search-results__link-panel-button">

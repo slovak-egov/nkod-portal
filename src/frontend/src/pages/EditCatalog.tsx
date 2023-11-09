@@ -19,6 +19,8 @@ const transformEntityForEdit = (entity: LocalCatalog): LocalCatalogInput => {
         contactName: entity?.contactPoint?.nameAll ?? {},
         contactEmail: entity.contactPoint?.email ?? '',
         homePage: entity.homePage,
+        type: entity.type,
+        endpointUrl: entity.endpointUrl
     }
 };
 

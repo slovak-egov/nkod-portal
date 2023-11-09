@@ -1,11 +1,14 @@
 ﻿using CodelistProviderClient;
 using NkodSk.Abstractions;
+using System.Globalization;
 
 namespace WebApi
 {
     public class DatasetView
     {
         public Guid Id { get; set; }
+
+        public string? Key { get; set; }
 
         public bool IsPublic { get; set; }
 
@@ -51,13 +54,15 @@ namespace WebApi
 
         public Uri[] EuroVocThemes { get; set; } = Array.Empty<Uri>();
 
-        public CodelistItemView[] EuroVocThemeValues { get; set; } = Array.Empty<CodelistItemView>();
+        public string[] EuroVocThemeValues { get; set; } = Array.Empty<string>();
 
         public decimal? SpatialResolutionInMeters { get; set; }
 
         public string? TemporalResolution { get; set; }
 
-        public Uri? IsPartOf { get; set; }
+        public string? IsPartOf { get; set; }
+
+        public bool IsSerie { get; set; }
 
         public List<DistributionView> Distributions { get; } = new List<DistributionView>();
 
@@ -66,41 +71,29 @@ namespace WebApi
             VcardKind? contactPoint = datasetRdf.ContactPoint;
             DctTemporal? temporal = datasetRdf.Temporal;
 
-            List<Uri> eurovocThemes = new List<Uri>();
-            List<Uri> nonEurovocThemes = new List<Uri>();
-            foreach (Uri theme in datasetRdf.Themes)
-            {
-                if (theme.ToString().StartsWith("http://publications.europa.eu/resource/dataset/eurovoc/"))
-                {
-                    eurovocThemes.Add(theme);
-                }
-                else
-                {
-                    nonEurovocThemes.Add(theme);
-                }
-            }
-
             DatasetView view = new DatasetView
             {
                 Id = metadata.Id,
+                Key = datasetRdf.Uri.ToString(),
                 IsPublic = metadata.IsPublic,
                 Name = datasetRdf.GetTitle(language),
                 Description = datasetRdf.GetDescription(language),
                 PublisherId = metadata.Publisher,
-                Themes = nonEurovocThemes.ToArray(),
+                Themes = datasetRdf.NonEuroVocThemes.ToArray(),
                 AccrualPeriodicity = datasetRdf.AccrualPeriodicity,
                 Keywords = datasetRdf.GetKeywords(language).ToArray(),
                 KeywordsAll = datasetRdf.Keywords,
                 Type = datasetRdf.Type.ToArray(),
                 Spatial = datasetRdf.Spatial.ToArray(),
-                Temporal = temporal is not null ? new TemporalView { StartDate = temporal.StartDate, EndDate = temporal.EndDate } : null,
+                Temporal = temporal is not null ? new TemporalView { StartDate = temporal.StartDate?.ToString(CultureInfo.CurrentCulture), EndDate = temporal.EndDate?.ToString(CultureInfo.CurrentCulture) } : null,
                 ContactPoint = contactPoint is not null ? CardView.MapFromRdf(contactPoint, language, fetchAllLanguages) : null,
                 Documentation = datasetRdf.Documentation,
                 Specification = datasetRdf.Specification,
-                EuroVocThemes = eurovocThemes.ToArray(),
+                EuroVocThemes = datasetRdf.EuroVocThemes.ToArray(),
                 SpatialResolutionInMeters = datasetRdf.SpatialResolutionInMeters,
                 TemporalResolution = datasetRdf.TemporalResolution,
-                IsPartOf = datasetRdf.IsPartOf
+                IsPartOf = datasetRdf.IsPartOfInternalId,
+                IsSerie = datasetRdf.IsSerie
             };
 
             if (fetchAllLanguages)
@@ -113,7 +106,7 @@ namespace WebApi
             view.AccrualPeriodicityValue = await codelistProviderClient.MapCodelistValue(DcatDataset.AccrualPeriodicityCodelist, view.AccrualPeriodicity?.ToString(), language);
             view.TypeValues = await codelistProviderClient.MapCodelistValues(DcatDataset.TypeCodelist, view.Type.Select(u => u.ToString()), language);
             view.SpatialValues = await codelistProviderClient.MapCodelistValues(DcatDataset.SpatialCodelist, view.Spatial.Select(u => u.ToString()), language);
-            view.EuroVocThemeValues = await codelistProviderClient.MapCodelistValues(DcatDataset.EuroVocThemeCodelist, view.EuroVocThemes.Select(u => u.ToString()), language);
+            view.EuroVocThemeValues = datasetRdf.GetEuroVocLabelThemes(language).ToArray();
 
             return view;
         }

@@ -134,20 +134,41 @@ namespace NkodSk.Abstractions
             return new DcatDistribution(graph, subject);
         }
 
-        public FileMetadata UpdateMetadata(FileMetadata datasetMetadata, FileMetadata? metadata = null)
+        public FileMetadata UpdateMetadata(Guid datasetId, string? publisher, FileMetadata? metadata = null)
         {
             Guid id = metadata?.Id ?? Guid.NewGuid();
             DateTimeOffset now = DateTimeOffset.UtcNow;
             Dictionary<string, string[]> values = new Dictionary<string, string[]>();
             if (metadata is null)
             {
-                metadata = new FileMetadata(id, Format?.ToString() ?? id.ToString(), FileType.DistributionRegistration, datasetMetadata.Id, datasetMetadata.Publisher?.ToString(), true, null, now, now, values);
+                metadata = new FileMetadata(id, Format?.ToString() ?? id.ToString(), FileType.DistributionRegistration, datasetId, publisher, true, null, now, now, values);
             }
             else
             {
-                metadata = metadata with { Publisher = datasetMetadata.Publisher?.ToString(), IsPublic = true, AdditionalValues = values, LastModified = now };
+                metadata = metadata with { Publisher = publisher, IsPublic = true, AdditionalValues = values, LastModified = now };
             }
             return metadata;
+        }
+
+        public FileMetadata UpdateMetadata(FileMetadata datasetMetadata, FileMetadata? metadata = null)
+        {
+            return UpdateMetadata(datasetMetadata.Id, datasetMetadata.Publisher, metadata);
+        }
+
+        public FileMetadata UpdateDatasetMetadata(FileMetadata metadata)
+        {
+            Dictionary<string, string[]> values = metadata.AdditionalValues ?? new Dictionary<string, string[]>();
+
+            HashSet<string> formats = values.ContainsKey("format") ? new HashSet<string>(values["format"]) : new HashSet<string>();
+            if (Format is not null)
+            {
+                formats.Add(Format.ToString());
+            }
+            string[] formatsAsArray = formats.ToArray();
+            Array.Sort(formatsAsArray);
+            values["format"] = formatsAsArray;
+
+            return metadata with { AdditionalValues = values };
         }
     }
 }

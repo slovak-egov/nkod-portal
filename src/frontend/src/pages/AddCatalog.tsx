@@ -19,6 +19,8 @@ export default function AddCatalog()
         contactName: {},
         contactEmail: null,
         homePage: null,
+        type: 'https://data.gov.sk/def/local-catalog-type/1',
+        endpointUrl: null,
     });
 
     const [userInfo] = useUserInfo();

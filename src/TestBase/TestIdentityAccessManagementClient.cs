@@ -1,6 +1,7 @@
 ﻿using NkodSk.Abstractions;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Policy;
 using System.Text;
@@ -11,7 +12,7 @@ namespace TestBase
 {
     public class TestIdentityAccessManagementClient : IIdentityAccessManagementClient
     {
-        private readonly Dictionary<string, List<PersistentUserInfo>> users = new Dictionary<string, List<PersistentUserInfo>>();
+        private readonly Dictionary<string, List<Entry>> users = new Dictionary<string, List<Entry>>();
 
         private readonly IHttpContextValueAccessor httpContextValueAccessor;
 
@@ -22,6 +23,8 @@ namespace TestBase
             this.httpContextValueAccessor = httpContextValueAccessor;
             this.tokenService = tokenService;
         }
+
+        public TimeSpan RefreshTokenAfter { get; set; } = TimeSpan.FromMinutes(30);
 
         private string PublisherId
         {
@@ -57,78 +60,109 @@ namespace TestBase
             int take = query.PageSize ?? int.MaxValue;
             int skip = query.Page.HasValue && query.PageSize.HasValue ? (query.Page.Value - 1) * query.PageSize.Value : 0;
 
-            if (!users.TryGetValue(publisherId, out List<PersistentUserInfo>? list))
+            if (!users.TryGetValue(publisherId, out List<Entry>? list))
             {
-                list = new List<PersistentUserInfo>();
+                list = new List<Entry>();
             }
 
-            UserInfoResult result = new UserInfoResult(list.Skip(skip).Take(take).ToList(), list.Count);
+            IQueryable<Entry> queryable = list.AsQueryable();
+
+            if (query.Id is not null)
+            {
+                queryable = queryable.Where(e => e.UserInfo.Id == query.Id);
+            }
+
+            UserInfoResult result = new UserInfoResult(queryable.OrderByDescending(e => e.Updated).Skip(skip).Take(take).Select(e => e.UserInfo).ToList(), list.Count);
 
             return Task.FromResult(result);
+        }
+
+        public PersistentUserInfo? GetUser(string publisherId, string id)
+        {
+            if (users.TryGetValue(publisherId, out List<Entry>? list))
+            {
+                return list.Where(u => u.UserInfo.Id == id).Select(e => e.UserInfo).FirstOrDefault();
+            }
+            return null;
         }
 
         public Task<SaveResult> CreateUser(NewUserInput input)
         {
-            return CreateUser(input, PublisherId);
+            return Task.FromResult(CreateUser(input, PublisherId));
         }
 
-        public Task<SaveResult> CreateUser(NewUserInput input, string publisherId)
+        public SaveResult CreateUser(NewUserInput input, string? publisherId)
         {
+            publisherId ??= string.Empty;
+
             SaveResult result = new SaveResult();
-            if (!string.IsNullOrEmpty(publisherId))
+            if (!users.TryGetValue(publisherId, out List<Entry>? list))
             {
-                if (!users.TryGetValue(publisherId, out List<PersistentUserInfo>? list))
-                {
-                    list = new List<PersistentUserInfo>();
-                    users.Add(publisherId, list);
-                }
-
-                PersistentUserInfo userInfo = new PersistentUserInfo
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    Email = input.Email,
-                    Role = input.Role
-                };
-
-                list.Add(userInfo);
-
-                result.Id = userInfo.Id;
-                result.Success = true;
+                list = new List<Entry>();
+                users.Add(publisherId, list);
             }
-            return Task.FromResult(result);
+
+            PersistentUserInfo userInfo = new PersistentUserInfo
+            {
+                Id = input.IdentificationNumber!,
+                Email = input.Email,
+                Role = input.Role,
+                FirstName = input.FirstName,
+                LastName = input.LastName
+            };
+
+            list.Add(new Entry(userInfo, DateTimeOffset.UtcNow));
+
+            result.Id = userInfo.Id;
+            result.Success = true;
+            return result;
+        }
+
+        public void AddUser(string? publisherId, PersistentUserInfo userInfo)
+        {
+            publisherId ??= string.Empty;
+
+            if (!users.TryGetValue(publisherId, out List<Entry>? list))
+            {
+                list = new List<Entry>();
+                users.Add(publisherId, list);
+            }
+
+            list.Add(new Entry(userInfo, DateTimeOffset.UtcNow));
         }
 
         public Task<SaveResult> UpdateUser(EditUserInput input)
         {
-            return UpdateUser(input, PublisherId);
+            return Task.FromResult(UpdateUser(input, PublisherId));
         }
 
-        public Task<SaveResult> UpdateUser(EditUserInput input, string publisherId)
+        public SaveResult UpdateUser(EditUserInput input, string publisherId)
         {
+            publisherId ??= string.Empty;
+
             SaveResult result = new SaveResult();
-            if (!string.IsNullOrEmpty(publisherId))
+            if (!users.TryGetValue(publisherId, out List<Entry>? list))
             {
-                if (!users.TryGetValue(publisherId, out List<PersistentUserInfo>? list))
-                {
-                    list = new List<PersistentUserInfo>();
-                    users.Add(publisherId, list);
-                }
-
-                list.RemoveAll(u => u.Id == input.Id);
-
-                PersistentUserInfo userInfo = new PersistentUserInfo
-                {
-                    Id = input.Id!,
-                    Email = input.Email,
-                    Role = input.Role
-                };
-
-                list.Add(userInfo);
-
-                result.Id = userInfo.Id;
-                result.Success = true;
+                list = new List<Entry>();
+                users.Add(publisherId, list);
             }
-            return Task.FromResult(result);
+
+            list.RemoveAll(u => u.UserInfo.Id == input.Id);
+
+            PersistentUserInfo userInfo = new PersistentUserInfo
+            {
+                Id = input.Id!,
+                Email = input.Email,
+                Role = input.Role,
+                FirstName = input.FirstName,
+                LastName = input.LastName
+            };
+
+            list.Add(new Entry(userInfo, DateTimeOffset.UtcNow));
+
+            result.Id = userInfo.Id;
+            result.Success = true;
+            return result;
         }
 
         public Task DeleteUser(string id)
@@ -138,15 +172,13 @@ namespace TestBase
 
         public Task DeleteUser(string id, string publisherId)
         {
-            if (!string.IsNullOrEmpty(publisherId))
+            publisherId ??= string.Empty;
+
+            if (users.TryGetValue(publisherId, out List<Entry>? list))
             {
-                if (users.TryGetValue(publisherId, out List<PersistentUserInfo>? list))
-                {
-                    list.RemoveAll(u => u.Id == id);
-                }
-                return Task.FromResult(true);
+                list.RemoveAll(u => u.UserInfo.Id == id);
             }
-            return Task.FromResult(false);
+            return Task.CompletedTask;
         }
 
         public Task<TokenResult> RefreshToken(string token, string refreshToken)
@@ -166,9 +198,11 @@ namespace TestBase
 
         public Task<UserInfo> GetUserInfo()
         {
-            if (!string.IsNullOrEmpty(httpContextValueAccessor.Publisher) && users.TryGetValue(httpContextValueAccessor.Publisher, out List<PersistentUserInfo>? list))
+            string publisherId = httpContextValueAccessor.Publisher ?? string.Empty;
+
+            if (users.TryGetValue(publisherId, out List<Entry>? list))
             {
-                PersistentUserInfo? persistentUserInfo = list.FirstOrDefault(u => u.Id == httpContextValueAccessor.UserId);
+                PersistentUserInfo? persistentUserInfo = list.Where(u => u.UserInfo.Id == httpContextValueAccessor.UserId).Select(e => e.UserInfo).FirstOrDefault();
                 if (persistentUserInfo is not null)
                 {
                     return Task.FromResult(new UserInfo
@@ -177,7 +211,9 @@ namespace TestBase
                         LastName = persistentUserInfo.LastName,
                         Role = persistentUserInfo.Role,
                         Email = persistentUserInfo.Email,
-                        Id = persistentUserInfo.Id
+                        Id = persistentUserInfo.Id,
+                        Publisher = httpContextValueAccessor.Publisher,
+                        CompanyName = httpContextValueAccessor.Publisher,
                     });
                 }
             }
@@ -191,7 +227,18 @@ namespace TestBase
 
         public Task<TokenResult> Consume(string content)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrEmpty(content))
+            {
+                throw new HttpRequestException("Forbidden", null, System.Net.HttpStatusCode.Forbidden);
+            }
+            else
+            {
+                DateTimeOffset refreshTokenAfter = DateTimeOffset.UtcNow.Add(RefreshTokenAfter);
+
+                return Task.FromResult(new TokenResult { Token = content[6..], RefreshToken = "1", Expires = refreshTokenAfter.AddMinutes(30), RefreshTokenAfter = refreshTokenAfter });
+            }
         }
+
+        private record Entry(PersistentUserInfo UserInfo, DateTimeOffset Updated) { }
     }
 }

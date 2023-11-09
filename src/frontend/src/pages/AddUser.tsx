@@ -7,6 +7,7 @@ import BaseInput from "../components/BaseInput";
 import { useDocumentTitle, useUserAdd, useUserInfo } from "../client";
 import MultiRadio from "../components/MultiRadio";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router";
 
 type Role = {
     id: string;
@@ -24,6 +25,7 @@ export default function AddUser()
         identificationNumber: '',
     });
     const {t} = useTranslation();
+    const navigate = useNavigate();
 
     const roles: Role[] = [
         {
@@ -61,7 +63,12 @@ export default function AddUser()
                                     selectedOption={roles.find(o => o.id === user.role) ?? roles[0]} 
                                     onChange={o => setUser({role: o.id})}  />
                     
-                    <Button style={{marginRight: '20px'}} onClick={save}>
+                    <Button style={{marginRight: '20px'}} onClick={async () => {
+                        const result = await save();
+                        if (result?.success) {
+                            navigate('/sprava/pouzivatelia');
+                        }
+                    }}>
                         {t('save')} 
                     </Button>
             </MainContent>

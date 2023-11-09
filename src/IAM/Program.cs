@@ -280,6 +280,7 @@ async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord use
     {
         Token = token,
         Expires = expires,
+        RefreshTokenAfter = expires.AddMinutes(-5),
         RefreshToken = user.RefreshToken
     };
 }

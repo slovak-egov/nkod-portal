@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TestBase;
 using VDS.RDF.Query.Algebra;
+using static Lucene.Net.Documents.Field;
 
 namespace WebApi.Test
 {
@@ -390,6 +391,156 @@ namespace WebApi.Test
         }
 
         [Fact]
+        public async Task FilterByThemeTest()
+        {
+            string path = fixture.GetStoragePath();
+
+            Guid id1 = fixture.CreateDataset("Cestovné poriadky", PublisherId);
+            Guid id2 = fixture.CreateDataset("Cestovné poriadky2", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            IFileStorageAccessPolicy accessPolicy = new AllAccessFilePolicy();
+            FileState state = storage.GetFileState(id1, accessPolicy)!;
+            DcatDataset dataset = DcatDataset.Parse(state.Content!)!;
+            dataset.Themes = new[] { new Uri("http://publications.europa.eu/resource/dataset/data-theme/1") };
+            FileMetadata metadata = dataset.UpdateMetadata(true, state.Metadata);
+            storage.InsertFile(dataset.ToString(), metadata, true, accessPolicy);
+
+            void AssertFacets(List<Facet>? facets)
+            {
+                Assert.NotNull(facets);
+                Assert.Single(facets);
+                Facet facet = facets[0];
+                Assert.Equal(DcatDataset.ThemeCodelist, facet.Id);
+                Assert.Equal(new Dictionary<string, int> { { "http://publications.europa.eu/resource/dataset/data-theme/1", 1 } }, facet.Values);
+            }
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView> result;
+
+            result = await client.SearchDatasets(JsonContent.Create(new { OrderBy = "name", Filters = new Dictionary<string, string[]> { { DcatDataset.ThemeCodelist, Array.Empty<string>() } }, RequiredFacets = new[] { DcatDataset.ThemeCodelist } }));
+            Assert.Equal(2, result.TotalCount);
+            Assert.Equal(2, result.Items.Count);
+            Assert.Equal(new[] { id1, id2 }, result.Items.Select(i => i.Id));
+            AssertFacets(result.Facets);
+
+            result = await client.SearchDatasets(JsonContent.Create(new { OrderBy = "name", Filters = new Dictionary<string, string[]> { { DcatDataset.ThemeCodelist, new[] { "http://publications.europa.eu/resource/dataset/data-theme/1" } } }, RequiredFacets = new[] { DcatDataset.ThemeCodelist } }));
+            Assert.Equal(1, result.TotalCount);
+            Assert.Single(result.Items);
+            Assert.Equal(new[] { id1 }, result.Items.Select(i => i.Id));
+            AssertFacets(result.Facets);
+
+            result = await client.SearchDatasets(JsonContent.Create(new { OrderBy = "name", Filters = new Dictionary<string, string[]> { { DcatDataset.ThemeCodelist, new[] { "http://publications.europa.eu/resource/dataset/data-theme/2" } } }, RequiredFacets = new[] { DcatDataset.ThemeCodelist } }));
+            Assert.Equal(0, result.TotalCount);
+            Assert.Empty(result.Items);
+            AssertFacets(result.Facets);
+        }
+
+        [Fact]
+        public async Task FilterByFormatTest()
+        {
+            string path = fixture.GetStoragePath();
+
+            Guid id1 = fixture.CreateDataset("Cestovné poriadky", PublisherId);
+            Guid id2 = fixture.CreateDataset("Cestovné poriadky2", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            IFileStorageAccessPolicy accessPolicy = new AllAccessFilePolicy();
+            fixture.CreateDistrbution(storage.GetFileMetadata(id1, accessPolicy)!,
+                new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
+                new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
+                new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
+                new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"),
+                new Uri("http://data.gov.sk/download"),
+                new Uri("http://data.gov.sk/"),
+                new Uri("http://publications.europa.eu/resource/dataset/file-type/1"),
+                new Uri("http://www.iana.org/assignments/media-types/text/csv"));
+
+            fixture.CreateDistrbution(storage.GetFileMetadata(id1, accessPolicy)!,
+                new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
+                new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
+                new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
+                new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"),
+                new Uri("http://data.gov.sk/download"),
+                new Uri("http://data.gov.sk/"),
+                new Uri("http://publications.europa.eu/resource/dataset/file-type/2"),
+                new Uri("http://www.iana.org/assignments/media-types/text/xml"));
+
+            fixture.CreateDistrbution(storage.GetFileMetadata(id2, accessPolicy)!,
+                new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
+                new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
+                new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
+                new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"),
+                new Uri("http://data.gov.sk/download"),
+                new Uri("http://data.gov.sk/"),
+                new Uri("http://publications.europa.eu/resource/dataset/file-type/2"),
+                new Uri("http://www.iana.org/assignments/media-types/text/xml"));
+
+            fixture.CreateDistrbution(storage.GetFileMetadata(id2, accessPolicy)!,
+                new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
+                new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
+                new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
+                new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"),
+                new Uri("http://data.gov.sk/download"),
+                new Uri("http://data.gov.sk/"),
+                new Uri("http://publications.europa.eu/resource/dataset/file-type/3"),
+                new Uri("http://www.iana.org/assignments/media-types/application/zip"));
+
+            void AssertFacets(List<Facet>? facets)
+            {
+                Assert.NotNull(facets);
+                Assert.Single(facets);
+                Facet facet = facets[0];
+                Assert.Equal("format", facet.Id);
+                Assert.Equal(new Dictionary<string, int> { 
+                    { "http://publications.europa.eu/resource/dataset/file-type/1", 1 },
+                    { "http://publications.europa.eu/resource/dataset/file-type/2", 2 },
+                    { "http://publications.europa.eu/resource/dataset/file-type/3", 1 }
+                }, facet.Values);
+            }
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView> result;
+
+            result = await client.SearchDatasets(JsonContent.Create(new { OrderBy = "name", Filters = new Dictionary<string, string[]> { { "format", Array.Empty<string>() } }, RequiredFacets = new[] { "format" } }));
+            Assert.Equal(2, result.TotalCount);
+            Assert.Equal(2, result.Items.Count);
+            Assert.Equal(new[] { id1, id2 }, result.Items.Select(i => i.Id));
+            AssertFacets(result.Facets);
+
+            result = await client.SearchDatasets(JsonContent.Create(new { OrderBy = "name", Filters = new Dictionary<string, string[]> { { "format", new[] { "http://publications.europa.eu/resource/dataset/file-type/1" } } }, RequiredFacets = new[] { "format" } }));
+            Assert.Equal(1, result.TotalCount);
+            Assert.Single(result.Items);
+            Assert.Equal(new[] { id1 }, result.Items.Select(i => i.Id));
+            AssertFacets(result.Facets);
+
+            result = await client.SearchDatasets(JsonContent.Create(new
+            {
+                OrderBy = "name",
+                Filters = new Dictionary<string, string[]> { { "format", new[] {
+                    "http://publications.europa.eu/resource/dataset/file-type/1",
+                    "http://publications.europa.eu/resource/dataset/file-type/2"
+                } } },
+                RequiredFacets = new[] { "format" }
+            }));
+            Assert.Equal(2, result.TotalCount);
+            Assert.Equal(2, result.Items.Count);
+            Assert.Equal(new[] { id1, id2 }, result.Items.Select(i => i.Id));
+            AssertFacets(result.Facets);
+
+            result = await client.SearchDatasets(JsonContent.Create(new { OrderBy = "name", Filters = new Dictionary<string, string[]> { { "format", new[] { "http://publications.europa.eu/resource/dataset/data-theme/4" } } }, RequiredFacets = new[] { "format" } }));
+            Assert.Equal(0, result.TotalCount);
+            Assert.Empty(result.Items);
+            AssertFacets(result.Facets);
+        }
+
+        [Fact]
         public async Task ResultsInAnotherLanguage()
         {
             string path = fixture.GetStoragePath();
@@ -440,25 +591,25 @@ namespace WebApi.Test
             Assert.Equal(new[] { new Uri("https://data.gov.sk/set/codelist/dataset-type/1") }, view.Type);
             Assert.Equal(new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") }, view.Spatial);
             Assert.NotNull(view.Temporal);
-            Assert.Equal(new DateOnly(2023, 8, 16), view.Temporal.StartDate);
-            Assert.Equal(new DateOnly(2023, 9, 10), view.Temporal.EndDate);
+            Assert.Equal("16. 8. 2023", view.Temporal.StartDate);
+            Assert.Equal("10. 9. 2023", view.Temporal.EndDate);
             Assert.NotNull(view.ContactPoint);
             Assert.Equal("nameSk", view.ContactPoint.Name);
             Assert.Equal("test@example.com", view.ContactPoint.Email);
             Assert.Equal(new Uri("http://example.com/documentation"), view.Documentation);
             Assert.Equal(new Uri("http://example.com/specification"), view.Specification);
-            Assert.Equal(new[] { new Uri("http://publications.europa.eu/resource/dataset/eurovoc/1"), new Uri("http://publications.europa.eu/resource/dataset/eurovoc/2") }, view.EuroVocThemes);
+            Assert.Equal(new[] { new Uri("http://eurovoc.europa.eu/6409"), new Uri("http://eurovoc.europa.eu/6410") }, view.EuroVocThemes);
             Assert.Equal(10, view.SpatialResolutionInMeters);
             Assert.Equal("P2D", view.TemporalResolution);
-            Assert.Equal(new Uri("http://example.com/test-dataset"), view.IsPartOf);
+            Assert.Equal("XXX", view.IsPartOf);
 
-            Assert.NotNull(view.Themes);
+            Assert.NotNull(view.ThemeValues);
             Assert.Equal(new[] {
                 new CodelistItemView("http://publications.europa.eu/resource/dataset/data-theme/1", "theme1sk"),
                 new CodelistItemView("http://publications.europa.eu/resource/dataset/data-theme/2", "theme2sk")
             }, view.ThemeValues);
 
-            Assert.NotNull(view.Spatial);
+            Assert.NotNull(view.SpatialValues);
             Assert.Equal(new[] {
                 new CodelistItemView("http://publications.europa.eu/resource/dataset/country/1", "country1sk"),
                 new CodelistItemView("http://publications.europa.eu/resource/dataset/country/2", "country2sk")
@@ -470,8 +621,8 @@ namespace WebApi.Test
 
             Assert.NotNull(view.EuroVocThemeValues);
             Assert.Equal(new[] {
-                new CodelistItemView("http://publications.europa.eu/resource/dataset/eurovoc/1", "eurovoc1sk"),
-                new CodelistItemView("http://publications.europa.eu/resource/dataset/eurovoc/2", "eurovoc2sk")
+                "nepovolená likvidácia odpadu",
+                "chemický odpad"
             }, view.EuroVocThemeValues);
 
             Assert.Equivalent(new PublisherView
@@ -544,25 +695,25 @@ namespace WebApi.Test
             Assert.Equal(new[] { new Uri("https://data.gov.sk/set/codelist/dataset-type/1") }, view.Type);
             Assert.Equal(new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") }, view.Spatial);
             Assert.NotNull(view.Temporal);
-            Assert.Equal(new DateOnly(2023, 8, 16), view.Temporal.StartDate);
-            Assert.Equal(new DateOnly(2023, 9, 10), view.Temporal.EndDate);
+            Assert.Equal("16. 8. 2023", view.Temporal.StartDate);
+            Assert.Equal("10. 9. 2023", view.Temporal.EndDate);
             Assert.NotNull(view.ContactPoint);
             Assert.Equal("nameEn", view.ContactPoint.Name);
             Assert.Equal("test@example.com", view.ContactPoint.Email);
             Assert.Equal(new Uri("http://example.com/documentation"), view.Documentation);
             Assert.Equal(new Uri("http://example.com/specification"), view.Specification);
-            Assert.Equal(new[] { new Uri("http://publications.europa.eu/resource/dataset/eurovoc/1"), new Uri("http://publications.europa.eu/resource/dataset/eurovoc/2") }, view.EuroVocThemes);
+            Assert.Equal(new[] { new Uri("http://eurovoc.europa.eu/6409"), new Uri("http://eurovoc.europa.eu/6410") }, view.EuroVocThemes);
             Assert.Equal(10, view.SpatialResolutionInMeters);
             Assert.Equal("P2D", view.TemporalResolution);
-            Assert.Equal(new Uri("http://example.com/test-dataset"), view.IsPartOf);
-
-            Assert.NotNull(view.Themes);
+            Assert.Equal("XXX", view.IsPartOf);
+            
+            Assert.NotNull(view.ThemeValues);
             Assert.Equal(new[] {
                 new CodelistItemView("http://publications.europa.eu/resource/dataset/data-theme/1", "theme1en"),
                 new CodelistItemView("http://publications.europa.eu/resource/dataset/data-theme/2", "theme2en")
             }, view.ThemeValues);
 
-            Assert.NotNull(view.Spatial);
+            Assert.NotNull(view.SpatialValues);
             Assert.Equal(new[] {
                 new CodelistItemView("http://publications.europa.eu/resource/dataset/country/1", "country1en"),
                 new CodelistItemView("http://publications.europa.eu/resource/dataset/country/2", "country2en")
@@ -574,8 +725,8 @@ namespace WebApi.Test
 
             Assert.NotNull(view.EuroVocThemeValues);
             Assert.Equal(new[] {
-                new CodelistItemView("http://publications.europa.eu/resource/dataset/eurovoc/1", "eurovoc1en"),
-                new CodelistItemView("http://publications.europa.eu/resource/dataset/eurovoc/2", "eurovoc2en")
+                "unauthorised dumping", 
+                "chemical waste"
             }, view.EuroVocThemeValues);
 
             Assert.Equivalent(new PublisherView
@@ -593,6 +744,160 @@ namespace WebApi.Test
 
             Assert.Equal(distributions[0], distribution.Id);
             Assert.Equal("TitleEn", distribution.Title);
+            Assert.NotNull(distribution.TermsOfUse);
+            Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"), distribution.TermsOfUse.AuthorsWorkType);
+            Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"), distribution.TermsOfUse.OriginalDatabaseType);
+            Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"), distribution.TermsOfUse.DatabaseProtectedBySpecialRightsType);
+            Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"), distribution.TermsOfUse.PersonalDataContainmentType);
+            Assert.Equal(new Uri("http://data.gov.sk/download"), distribution.DownloadUrl);
+            Assert.Equal(new Uri("http://data.gov.sk/"), distribution.AccessUrl);
+            Assert.Equal(new Uri("http://publications.europa.eu/resource/dataset/file-type/1"), distribution.Format);
+            Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/text/csv"), distribution.MediaType);
+            Assert.Equal(new Uri("http://data.gov.sk/specification"), distribution.ConformsTo);
+            Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/application/zip"), distribution.CompressFormat);
+            Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/application/zip"), distribution.PackageFormat);
+            Assert.Equal(new Uri("http://data.gov.sk/"), distribution.AccessUrl);
+
+            Assert.Equal(new CodelistItemView("https://data.gov.sk/def/ontology/law/authorsWorkType/1", "work1en"), distribution.TermsOfUse.AuthorsWorkTypeValue);
+            Assert.Equal(new CodelistItemView("https://data.gov.sk/def/ontology/law/originalDatabaseType/1", "type1en"), distribution.TermsOfUse.OriginalDatabaseTypeValue);
+            Assert.Equal(new CodelistItemView("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1", "rights1en"), distribution.TermsOfUse.DatabaseProtectedBySpecialRightsTypeValue);
+            Assert.Equal(new CodelistItemView("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1", "personal1en"), distribution.TermsOfUse.PersonalDataContainmentTypeValue);
+            Assert.Equal(new CodelistItemView("http://publications.europa.eu/resource/dataset/file-type/1", "fileType1en"), distribution.FormatValue);
+            Assert.Equal(new CodelistItemView("http://www.iana.org/assignments/media-types/text/csv", "CSV"), distribution.MediaTypeValue);
+            Assert.Equal(new CodelistItemView("http://www.iana.org/assignments/media-types/application/zip", "ZIP"), distribution.CompressFormatValue);
+            Assert.Equal(new CodelistItemView("http://www.iana.org/assignments/media-types/application/zip", "ZIP"), distribution.PackageFormatValue);
+        }
+
+        [Fact]
+        public async Task FullEntityMapTestInAnotherLanguageIfDoesNotExists()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            Guid publisherId = fixture.CreatePublisher("Ministerstvo hospodárstva SR", PublisherId);
+
+            DcatDataset dataset = DcatDataset.Create(fixture.CreateUri());
+
+            Dictionary<string, string> names = new Dictionary<string, string> { { "sk", "TestSk" } };
+            dataset.SetTitle(names);
+            dataset.SetDescription(new Dictionary<string, string> { { "sk", "DescriptionSk" } });
+            dataset.Type = new[] { new Uri("https://data.gov.sk/set/codelist/dataset-type/1") };
+            dataset.Publisher = new Uri(PublisherId);
+            dataset.Themes = new[] {
+                new Uri("http://publications.europa.eu/resource/dataset/data-theme/1"),
+                new Uri("http://publications.europa.eu/resource/dataset/data-theme/2"),
+                new Uri(DcatDataset.EuroVocPrefix + "6409"),
+                new Uri(DcatDataset.EuroVocPrefix +"6410")};
+            dataset.SetKeywords(new Dictionary<string, List<string>> { { "sk", new List<string> { "keyword1", "keyword2" } } });
+            dataset.SetContactPoint(new LanguageDependedTexts { { "sk", "ContactSk" } }, "test@test.sk");
+            dataset.AccrualPeriodicity = new Uri("http://publications.europa.eu/resource/dataset/frequency/1");
+            dataset.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") };
+            dataset.SetTemporal(new DateOnly(2023, 8, 16), new DateOnly(2023, 9, 10));
+            dataset.Documentation = new Uri("http://example.com/documentation");
+            dataset.Specification = new Uri("http://example.com/specification");
+            dataset.SpatialResolutionInMeters = 10;
+            dataset.TemporalResolution = "P2D";
+            dataset.IsPartOf = new Uri("http://example.com/test-dataset");
+            dataset.IsPartOfInternalId = "XXX";
+            dataset.SetEuroVocLabelThemes(new Dictionary<string, List<string>> {
+                { "sk", new List<string> { "nepovolená likvidácia odpadu", "chemický odpad" } },
+                { "en", new List<string> { "unauthorised dumping", "chemical waste" } }
+            });
+
+
+            FileMetadata metadata = dataset.UpdateMetadata(true);
+            fixture.CreateFile(new FileState(metadata, dataset.ToString()));
+            Guid id = metadata.Id;
+
+            Guid[] distributions = new[] { fixture.CreateDistrbution(metadata,
+                new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
+                new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
+                new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
+                new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"),
+                new Uri("http://data.gov.sk/download"),
+                new Uri("http://data.gov.sk/"),
+                new Uri("http://publications.europa.eu/resource/dataset/file-type/1"),
+                new Uri("http://www.iana.org/assignments/media-types/text/csv"),
+                new Uri("http://data.gov.sk/specification"),
+                new Uri("http://www.iana.org/assignments/media-types/application/zip"),
+                new Uri("http://www.iana.org/assignments/media-types/application/zip"),
+                "TitleSk",
+                null,
+                new Uri("http://example.com/access-service")),
+            };
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView> result;
+
+            result = await client.SearchDatasets(JsonContent.Create(new { Language = "en" }));
+            Assert.Equal(1, result.TotalCount);
+            Assert.Single(result.Items);
+            DatasetView view = result.Items[0];
+
+            Assert.Equal(id, view.Id);
+            Assert.True(view.IsPublic);
+            Assert.Equal("TestSk", view.Name);
+            Assert.Equal("DescriptionSk", view.Description);
+            Assert.Equal(PublisherId, view.PublisherId);
+            Assert.Equal(new[] { new Uri("http://publications.europa.eu/resource/dataset/data-theme/1"), new Uri("http://publications.europa.eu/resource/dataset/data-theme/2") }, view.Themes);
+            Assert.Equal(new Uri("http://publications.europa.eu/resource/dataset/frequency/1"), view.AccrualPeriodicity);
+            Assert.Equal(new[] { "keyword1", "keyword2" }, view.Keywords);
+            Assert.Equal(new[] { new Uri("https://data.gov.sk/set/codelist/dataset-type/1") }, view.Type);
+            Assert.Equal(new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") }, view.Spatial);
+            Assert.NotNull(view.Temporal);
+            Assert.Equal("16. 8. 2023", view.Temporal.StartDate);
+            Assert.Equal("10. 9. 2023", view.Temporal.EndDate);
+            Assert.NotNull(view.ContactPoint);
+            Assert.Equal("ContactSk", view.ContactPoint.Name);
+            Assert.Equal("test@test.sk", view.ContactPoint.Email);
+            Assert.Equal(new Uri("http://example.com/documentation"), view.Documentation);
+            Assert.Equal(new Uri("http://example.com/specification"), view.Specification);
+            Assert.Equal(new[] { new Uri("http://eurovoc.europa.eu/6409"), new Uri("http://eurovoc.europa.eu/6410") }, view.EuroVocThemes);
+            Assert.Equal(10, view.SpatialResolutionInMeters);
+            Assert.Equal("P2D", view.TemporalResolution);
+            Assert.Equal("XXX", view.IsPartOf);
+
+            Assert.NotNull(view.ThemeValues);
+            Assert.Equal(new[] {
+                new CodelistItemView("http://publications.europa.eu/resource/dataset/data-theme/1", "theme1en"),
+                new CodelistItemView("http://publications.europa.eu/resource/dataset/data-theme/2", "theme2en")
+            }, view.ThemeValues);
+
+            Assert.NotNull(view.SpatialValues);
+            Assert.Equal(new[] {
+                new CodelistItemView("http://publications.europa.eu/resource/dataset/country/1", "country1en"),
+                new CodelistItemView("http://publications.europa.eu/resource/dataset/country/2", "country2en")
+            }, view.SpatialValues);
+
+            Assert.Equal(new[] { new CodelistItemView("https://data.gov.sk/set/codelist/dataset-type/1", "type1en") }, view.TypeValues);
+
+            Assert.Equal(new CodelistItemView("http://publications.europa.eu/resource/dataset/frequency/1", "frequency1en"), view.AccrualPeriodicityValue);
+
+            Assert.NotNull(view.EuroVocThemeValues);
+            Assert.Equal(new[] {
+                "unauthorised dumping",
+                "chemical waste"
+            }, view.EuroVocThemeValues);
+
+            Assert.Equivalent(new PublisherView
+            {
+                Name = "Ministerstvo hospodárstva SR",
+                Id = publisherId,
+                DatasetCount = 0,
+                Key = PublisherId,
+                Themes = null,
+                IsPublic = true
+            }, view.Publisher);
+
+            Assert.Single(view.Distributions);
+            DistributionView distribution = view.Distributions[0];
+
+            Assert.Equal(distributions[0], distribution.Id);
+            Assert.Equal("TitleSk", distribution.Title);
             Assert.NotNull(distribution.TermsOfUse);
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"), distribution.TermsOfUse.AuthorsWorkType);
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"), distribution.TermsOfUse.OriginalDatabaseType);

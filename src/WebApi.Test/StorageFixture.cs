@@ -27,12 +27,17 @@ namespace WebApi.Test
         {
             bool isPublic = Storage.ShouldBePublic(state.Metadata);
             string filePath = Path.Combine(path, isPublic ? "public" : "protected", state.Metadata.Id.ToString("N") + (isPublic ? ".ttl" : string.Empty));
-            string metadataPath = Path.Combine(path, "protected", state.Metadata.Id.ToString("N") + ".metadata");
             File.WriteAllText(filePath, state.Content);
-            state.Metadata.SaveTo(metadataPath);
+            UpdateMetadata(state.Metadata);
         }
 
-        private Uri CreateUri()
+        public void UpdateMetadata(FileMetadata metadata)
+        {
+            string metadataPath = Path.Combine(path, "protected", metadata.Id.ToString("N") + ".metadata");
+            metadata.SaveTo(metadataPath);
+        }
+
+        public Uri CreateUri()
         {
             int index = Interlocked.Increment(ref StorageFixture.index);
             return new Uri($"http://example.com/dataset/{index}");
@@ -52,13 +57,13 @@ namespace WebApi.Test
             dataset.Publisher = new Uri(publisher);
             dataset.SetKeywords(new Dictionary<string, List<string>> { { "sk", keywordsSk?.ToList() ?? new List<string>() }, { "en", keywordsEn?.ToList() ?? new List<string>() } });
 
-            FileMetadata metatdata = dataset.UpdateMetadata(true);
+            FileMetadata metadata = dataset.UpdateMetadata(true);
             if (parent is not null)
             {
-                metatdata = metatdata with { ParentFile = parent };
+                metadata = metadata with { ParentFile = parent };
             }
-            CreateFile(new FileState(metatdata, dataset.ToString()));
-            return metatdata.Id;
+            CreateFile(new FileState(metadata, dataset.ToString()));
+            return metadata.Id;
         }
 
         public Guid CreatePublisher(string nameSk, string? id = null, string? nameEn = null, bool isPublic = true)
@@ -72,10 +77,10 @@ namespace WebApi.Test
             }
             agent.SetNames(names);
 
-            FileMetadata metatdata = agent.UpdateMetadata();
-            metatdata = metatdata with { IsPublic = isPublic };
-            CreateFile(new FileState(metatdata, agent.ToString()));
-            return metatdata.Id;
+            FileMetadata metadata = agent.UpdateMetadata();
+            metadata = metadata with { IsPublic = isPublic };
+            CreateFile(new FileState(metadata, agent.ToString()));
+            return metadata.Id;
         }
 
         public Guid CreateLocalCatalog(string name, string publisher, string? nameEn = null, string? description = null, string? descriptionEn = null)
@@ -102,9 +107,9 @@ namespace WebApi.Test
 
             catalog.Publisher = new Uri(publisher);
 
-            FileMetadata metatdata = catalog.UpdateMetadata();
-            CreateFile(new FileState(metatdata, catalog.ToString()));
-            return metatdata.Id;
+            FileMetadata metadata = catalog.UpdateMetadata();
+            CreateFile(new FileState(metadata, catalog.ToString()));
+            return metadata.Id;
         }
 
         public Guid CreateDistrbution(FileMetadata datasetMetadata, Uri? authorsWorkType, Uri? originalDatabaseType, Uri? databaseProtectedBySpecialRightsType, Uri? personalDataContainmentType,
@@ -133,9 +138,13 @@ namespace WebApi.Test
             }
             distribution.SetTitle(titles);
 
-            FileMetadata metatdata = distribution.UpdateMetadata(datasetMetadata);
-            CreateFile(new FileState(metatdata, distribution.ToString()));
-            return metatdata.Id;
+            datasetMetadata = distribution.UpdateDatasetMetadata(datasetMetadata);
+            UpdateMetadata(datasetMetadata);
+
+            FileMetadata metadata = distribution.UpdateMetadata(datasetMetadata);
+            CreateFile(new FileState(metadata, distribution.ToString()));
+
+            return metadata.Id;
         }
 
         public (Guid, Guid, Guid[]) CreateFullDataset(string? publisher = null)
@@ -151,8 +160,8 @@ namespace WebApi.Test
             dataset.Themes = new[] { 
                 new Uri("http://publications.europa.eu/resource/dataset/data-theme/1"), 
                 new Uri("http://publications.europa.eu/resource/dataset/data-theme/2"),
-                new Uri("http://publications.europa.eu/resource/dataset/eurovoc/1"), 
-                new Uri("http://publications.europa.eu/resource/dataset/eurovoc/2")};
+                new Uri(DcatDataset.EuroVocPrefix + "6409"), 
+                new Uri(DcatDataset.EuroVocPrefix +"6410")};
             dataset.AccrualPeriodicity = new Uri("http://publications.europa.eu/resource/dataset/frequency/1");
             dataset.SetKeywords(new Dictionary<string, List<string>> { { "sk", new List<string> { "keyword1Sk", "keyword2Sk" } }, { "en", new List<string> { "keyword1En", "keyword2En" } } });
             dataset.Type = new[] { new Uri("https://data.gov.sk/set/codelist/dataset-type/1") };
@@ -164,11 +173,16 @@ namespace WebApi.Test
             dataset.SpatialResolutionInMeters = 10;
             dataset.TemporalResolution = "P2D";
             dataset.IsPartOf = new Uri("http://example.com/test-dataset");
+            dataset.IsPartOfInternalId = "XXX";
+            dataset.SetEuroVocLabelThemes(new Dictionary<string, List<string>> {
+                { "sk", new List<string> { "nepovolená likvidácia odpadu", "chemický odpad" } },
+                { "en", new List<string> { "unauthorised dumping", "chemical waste" } }
+            });
 
-            FileMetadata metatdata = dataset.UpdateMetadata(true);
-            CreateFile(new FileState(metatdata, dataset.ToString()));
+            FileMetadata metadata = dataset.UpdateMetadata(true);
+            CreateFile(new FileState(metadata, dataset.ToString()));
 
-            Guid distributionId = CreateDistrbution(metatdata, 
+            Guid distributionId = CreateDistrbution(metadata, 
                 new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
@@ -185,7 +199,7 @@ namespace WebApi.Test
                 new Uri("http://example.com/access-service")
             );
 
-            return (metatdata.Id, publisherId, new[] { distributionId });
+            return (metadata.Id, publisherId, new[] { distributionId });
         }
 
         public (Guid, Guid) CreateFullLocalCatalog(string? publisher = null)
@@ -200,11 +214,13 @@ namespace WebApi.Test
             catalog.Publisher = new Uri(publisher);
             catalog.SetContactPoint(new LanguageDependedTexts { { "sk", "nameSk" }, { "en", "nameEn" } }, "test@example.com");
             catalog.HomePage = new Uri("http://data.gov.sk/");
+            catalog.Type = new Uri(DcatCatalog.LocalCatalogTypeCodelist + "/2");
+            catalog.EndpointUrl = new Uri("http://data.gov.sk/sparql");
 
-            FileMetadata metatdata = catalog.UpdateMetadata();
-            CreateFile(new FileState(metatdata, catalog.ToString()));
+            FileMetadata metadata = catalog.UpdateMetadata();
+            CreateFile(new FileState(metadata, catalog.ToString()));
 
-            return (metatdata.Id, publisherId);
+            return (metadata.Id, publisherId);
         }
 
         public void CreateCodelistFile(string id, Dictionary<string, LanguageDependedTexts> values)
@@ -217,8 +233,8 @@ namespace WebApi.Test
                 concept.SetTexts("skos:prefLabel", texts);
             }
 
-            FileMetadata metatdata = new FileMetadata(Guid.NewGuid(), id, FileType.Codelist, null, null, true, id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
-            CreateFile(new FileState(metatdata, conceptScheme.ToString()));
+            FileMetadata metadata = new FileMetadata(Guid.NewGuid(), id, FileType.Codelist, null, null, true, id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+            CreateFile(new FileState(metadata, conceptScheme.ToString()));
         }
 
         public void CreateDatasetCodelists()
@@ -241,11 +257,7 @@ namespace WebApi.Test
                 { "http://publications.europa.eu/resource/dataset/country/1", new LanguageDependedTexts{ { "sk", "country1sk" }, { "en", "country1en" } } },
                 { "http://publications.europa.eu/resource/dataset/country/2", new LanguageDependedTexts{ { "sk", "country2sk" }, { "en", "country2en" } } }
             });
-            CreateCodelistFile(DcatDataset.EuroVocThemeCodelist, new Dictionary<string, LanguageDependedTexts>
-            {
-                { "http://publications.europa.eu/resource/dataset/eurovoc/1", new LanguageDependedTexts{ { "sk", "eurovoc1sk" }, { "en", "eurovoc1en" } } },
-                { "http://publications.europa.eu/resource/dataset/eurovoc/2", new LanguageDependedTexts{ { "sk", "eurovoc2sk" }, { "en", "eurovoc2en" } } }
-            });
+            CreateCodelistFile(DcatDataset.EuroVocThemeCodelist, new Dictionary<string, LanguageDependedTexts>());
         }
 
         public void CreateDistributionCodelists()
@@ -269,6 +281,7 @@ namespace WebApi.Test
             CreateCodelistFile(DcatDistribution.FormatCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "http://publications.europa.eu/resource/dataset/file-type/1", new LanguageDependedTexts{ { "sk", "fileType1sk" }, { "en", "fileType1en" } } },
+                { "http://publications.europa.eu/resource/dataset/file-type/2", new LanguageDependedTexts{ { "sk", "fileType2sk" }, { "en", "fileType2en" } } },
             });
             CreateCodelistFile(DcatDistribution.MediaTypeCodelist, new Dictionary<string, LanguageDependedTexts>
             {
@@ -279,7 +292,11 @@ namespace WebApi.Test
 
         public void CreateLocalCatalogCodelists()
         {
-
+            CreateCodelistFile(DcatCatalog.LocalCatalogTypeCodelist, new Dictionary<string, LanguageDependedTexts>
+            {
+                { DcatCatalog.LocalCatalogTypeCodelist + "/1", new LanguageDependedTexts{ { "sk", "DCAT Dokumenty" }, { "en", "DCAT Dokuments" } } },
+                { DcatCatalog.LocalCatalogTypeCodelist + "/2", new LanguageDependedTexts{ { "sk", "SPARQL" }, { "en", "SPARQL" } } },
+            });
         }
 
         public Guid CreateDistributionFile(string name, string content, bool isPublic = true)

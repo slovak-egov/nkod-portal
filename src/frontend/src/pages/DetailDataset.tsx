@@ -24,14 +24,36 @@ import ErrorAlert from "../components/ErrorAlert";
 import { useDataset, useDatasets, useDocumentTitle } from "../client";
 import { useParams } from "react-router";
 import { useTranslation } from "react-i18next";
+import { useEffect } from "react";
 
 export default function DetailDataset()
 {
     const [dataset, loading, error] = useDataset();
     const { id } = useParams();
-    const [datasets] = useDatasets(id ? {filters: {sibling: [id]}} : {pageSize: 0});
+    const [datasetsAsSibling, datasetsAsSiblingQuery, setDatasetsAsSiblingQuery] = useDatasets({page: 0});
+    const [datasetsAsParent, datasetsAsParentQuery, setDatasetsAsParentQuery] = useDatasets({page: 0});
     const {t} = useTranslation();
     useDocumentTitle(dataset?.name ?? '');
+
+    useEffect(() => {
+        if (id)
+        {
+            if (!datasetsAsSiblingQuery.filters || Object.keys(datasetsAsSiblingQuery.filters).length === 0) {
+                setDatasetsAsSiblingQuery({filters: {sibling: [id]}, page: 1, pageSize: 100})
+            }
+            if (!datasetsAsParentQuery.filters || Object.keys(datasetsAsParentQuery.filters).length === 0) {
+                setDatasetsAsParentQuery({filters: {parent: [id]}, page: 1, pageSize: 100})
+            }
+        }        
+    }, [id, datasetsAsSiblingQuery, setDatasetsAsSiblingQuery, datasetsAsParentQuery, setDatasetsAsParentQuery]);
+
+    const datasets = [];
+    if (datasetsAsSibling) {
+        datasets.push(...datasetsAsSibling.items);
+    }
+    if (datasetsAsParent) {
+        datasets.push(...datasetsAsParent.items);
+    }
 
     const path = [{title: t('nkod'), link: '/'}, {title: t('search'), link: '/datasety'}];
     if (dataset?.name) {
@@ -43,25 +65,26 @@ export default function DetailDataset()
         <MainContent>
             <div className="nkod-entity-detail">
                 <PageHeader>{dataset.name}</PageHeader>
-                {dataset.publisher ? <p className="govuk-body nkod-publisher-name">
+                {dataset.publisher ? <p className="govuk-body nkod-publisher-name" data-testid="publisher-name">
                     {dataset.publisher.name}
                 </p> : null}
-                {dataset.description ? <p className="govuk-body nkod-entity-description">
+                {dataset.description ? <p className="govuk-body nkod-entity-description" data-testid="description">
                     {dataset.description}
                 </p> : null}
-                {dataset.themes.length > 0 ? <div className="nkod-entity-detail-tags govuk-clearfix">
-                    {dataset.themes.map(t => <div key={t} className="govuk-body nkod-entity-detail-tag">
+                {dataset.keywords.length > 0 ? <div className="nkod-entity-detail-tags govuk-clearfix" data-testid="keywords">
+                    {dataset.keywords.map(t => <div key={t} className="govuk-body nkod-entity-detail-tag">
                         {t}
                     </div>)}
                 </div> : null}
                 <GridRow>
-                    {dataset.themeValues.length > 0 ? <GridColumn widthUnits={1} totalUnits={4}>
+                    {(dataset.themeValues.length > 0 || dataset.euroVocThemeValues.length > 0) ? <GridColumn widthUnits={1} totalUnits={4}>
                         <div className="nkod-detail-attribute">
                             <div className="govuk-body nkod-detail-attribute-name">
                                 {t('theme')}
                             </div>
-                            <div className="govuk-body nkod-detail-attribute-value">
-                                {dataset.themeValues.map(l => <span key={l.label}>{l.label}</span>)}
+                            <div className="govuk-body nkod-detail-attribute-value" data-testid="themes">
+                                {dataset.themeValues.map(l => <div key={l.label}>{l.label}</div>)}
+                                {dataset.euroVocThemeValues.map(l => <div key={l}>{l}</div>)}
                             </div>
                         </div>                        
                     </GridColumn> : null}          
@@ -70,7 +93,7 @@ export default function DetailDataset()
                             <div className="govuk-body nkod-detail-attribute-name">
                                 {t('documentation')}
                             </div>
-                            <div className="govuk-body nkod-detail-attribute-value">
+                            <div className="govuk-body nkod-detail-attribute-value" data-testid="documentation">
                                 <a href={dataset.documentation} className="govuk-link">{t('show')}</a>
                             </div>
                         </div>                        
@@ -80,7 +103,7 @@ export default function DetailDataset()
                             <div className="govuk-body nkod-detail-attribute-name">
                                 {t('updateFrequency')}
                             </div>
-                            <div className="govuk-body nkod-detail-attribute-value">
+                            <div className="govuk-body nkod-detail-attribute-value" data-testid="update-frequency">
                                 {dataset.accrualPeriodicityValue.label}
                             </div>
                         </div>
@@ -92,10 +115,10 @@ export default function DetailDataset()
                             </div>
                             <div className="govuk-body nkod-detail-attribute-value">
                                 {dataset.contactPoint?.name ? <div>
-                                    {dataset.contactPoint.name}
+                                    <span data-testid="contact-name">{dataset.contactPoint.name}</span>
                                 </div> : null}
                                 {dataset.contactPoint?.email ? <div>
-                                    {dataset.contactPoint.email}
+                                    <span data-testid="contact-email">{dataset.contactPoint.email}</span>
                                 </div> : null}
                             </div>
                         </div>                        
@@ -107,8 +130,8 @@ export default function DetailDataset()
                             <div className="govuk-body nkod-detail-attribute-name">
                                 {t('spatialValidity')}
                             </div>
-                            <div className="govuk-body nkod-detail-attribute-value">
-                                {dataset.spatialValues.map(l => <span key={l.label}>{l.label}</span>)}
+                            <div className="govuk-body nkod-detail-attribute-value" data-testid="spatial">
+                                {dataset.spatialValues.map(l => <div key={l.label}>{l.label}</div>)}
                             </div>
                         </div> : null}
                         {dataset.temporal?.startDate || dataset.temporal?.endDate ? <div className="nkod-detail-attribute">
@@ -117,20 +140,20 @@ export default function DetailDataset()
                             </div>
                             <div className="govuk-body nkod-detail-attribute-value">
                                 {dataset.temporal?.startDate ? <div>
-                                    <span style={{fontWeight: 'bold'}}>od: </span> {dataset.temporal.startDate}
+                                    <span style={{fontWeight: 'bold'}}>od: </span> <span data-testid="temporal-start">{dataset.temporal.startDate}</span>
                                 </div> : null}
                                 {dataset.temporal?.endDate ? <div>
-                                    <span style={{fontWeight: 'bold'}}>do: </span> {dataset.temporal.endDate}
+                                    <span style={{fontWeight: 'bold'}}>do: </span> <span data-testid="temporal-end">{dataset.temporal.endDate}</span>
                                 </div> : null}
                             </div>
                         </div> : null}
                     </GridColumn>
                     {dataset.distributions.length > 0 ? <GridColumn widthUnits={3} totalUnits={4}>
-                        <div className="govuk-body nkod-detail-distribution-count">
+                        <div className="govuk-body nkod-detail-distribution-count" data-testid="distributions-count">
                             {dataset.distributions.length} {dataset.distributions.length === 1 ? 'distribúcia' : dataset.distributions.length < 5 ? 'distribúcie' : 'distribúcií'}
                         </div>
                         <hr className="idsk-crossroad-line" aria-hidden="true"/>
-                        {dataset.distributions.map(distrubution => <div key={distrubution.id} className="govuk-body nkod-detail-distribution-row">
+                        {dataset.distributions.map(distrubution => <div key={distrubution.id} className="govuk-body nkod-detail-distribution-row" data-testid="distribution">
                             <span className="govuk-body nkod-detail-distribution-format">
                                 {
                                     distrubution.formatValue?.label?.toLowerCase() === 'csv' ? <img src={csvIcon} alt="csv" /> :
@@ -157,9 +180,9 @@ export default function DetailDataset()
                         </div>)}
                     </GridColumn> : null}
                 </GridRow>
-                {(datasets && datasets.items.length > 0) ? <GridRow>
-                    <GridColumn widthUnits={1} totalUnits={1}>
-                        <RelatedContent header={t('otherDatasetsFromList')} links={datasets.items.map(d => ({
+                {(datasets.length > 0) ? <GridRow>
+                    <GridColumn widthUnits={1} totalUnits={1} data-testid="related">
+                        <RelatedContent header={t('otherDatasetsFromList')} links={datasets.map(d => ({
                             title: d.name ?? 'Bez názvu',
                             url: '/datasety/' + d.id
                         }))}  />
