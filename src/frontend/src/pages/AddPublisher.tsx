@@ -4,13 +4,12 @@ import Breadcrumbs from "../components/Breadcrumbs";
 import MainContent from "../components/MainContent";
 import FormElementGroup from "../components/FormElementGroup";
 import BaseInput from "../components/BaseInput";
-import { useDocumentTitle, usePublisherAdd, useUserInfo } from "../client";
+import { useDocumentTitle, usePublisherAdd } from "../client";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 
 export default function AddPublisher()
 {
-    const [userInfo] = useUserInfo();
     const [publisher, setPublisher, errors, saving, save] = usePublisherAdd({
         website: '',
         email: '',

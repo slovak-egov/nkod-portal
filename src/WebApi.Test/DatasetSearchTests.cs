@@ -554,10 +554,10 @@ namespace WebApi.Test
 
             AbstractResponse<DatasetView> result;
 
-            result = await client.SearchDatasets(JsonContent.Create(new { Language = "en" } ));
-            Assert.Equal(1, result.TotalCount);
-            Assert.Single(result.Items);
-            Assert.Equal(new[] { id1 }, result.Items.Select(i => i.Id));
+            result = await client.SearchDatasets(JsonContent.Create(new { OrderBy = "name", Language = "en" } ));
+            Assert.Equal(2, result.TotalCount);
+            Assert.Equal(2, result.Items.Count);
+            Assert.Equal(new[] { id1, id2 }, result.Items.Select(i => i.Id));
         }
 
         [Fact]

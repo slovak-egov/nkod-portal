@@ -102,11 +102,14 @@ namespace IAMClient
                 ?? throw new HttpRequestException("Invalid response");
         }
 
-        public async Task Logout()
+        public async Task<DelegationAuthorizationResult?> Logout(string? queryString)
         {
             HttpClient client = CreateClient();
-            using HttpResponseMessage response = await client.GetAsync("/logout");
+            using HttpResponseMessage response = await client.GetAsync($"/logout{queryString}");
             response.EnsureSuccessStatusCode();
+            string? responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            return string.IsNullOrEmpty(responseContent) ? null : JsonConvert.DeserializeObject<DelegationAuthorizationResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
+                ?? throw new HttpRequestException("Invalid response");
         }
 
         public async Task<TokenResult> DelegatePublisher(string publisherId)

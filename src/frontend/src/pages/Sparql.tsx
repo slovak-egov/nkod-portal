@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import PageHeader from "../components/PageHeader";
 import Breadcrumbs from "../components/Breadcrumbs";

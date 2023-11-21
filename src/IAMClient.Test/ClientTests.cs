@@ -555,40 +555,6 @@ namespace IAMClient.Test
         }
 
         [Fact]
-        public async Task LogoutShouldClearRefreshToken()
-        {
-            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
-
-            UserRecord record;
-            using (IServiceScope scope = applicationFactory.Services.CreateScope())
-            {
-                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
-                record.RefreshToken = "1234";
-                record.RefreshTokenExpiryTime = DateTimeOffset.UtcNow.AddDays(1);
-                await context.SaveChangesAsync();
-            }
-
-            IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("Publisher", PublisherId, id: record.Id);
-            HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, contextValueAccessor.Token);
-            IdentityAccessManagementClient iamClient = new IdentityAccessManagementClient(new DefaultHttpClientFactory(client), contextValueAccessor);
-
-            await iamClient.Logout();
-
-            using (IServiceScope scope = applicationFactory.Services.CreateScope())
-            {
-                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                {
-                    UserRecord? changedRecord = await context.Users.FindAsync(record.Id);
-                    Assert.NotNull(changedRecord);
-                    Assert.Null(changedRecord.RefreshToken);
-                    Assert.Null(changedRecord.RefreshTokenExpiryTime);
-                }
-            }
-        }
-
-        [Fact]
         public async Task TokenShouldBeRefreshed()
         {
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();

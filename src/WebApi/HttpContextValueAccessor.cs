@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Primitives;
+using Newtonsoft.Json;
 using NkodSk.Abstractions;
 using System.Security.Claims;
 
@@ -26,6 +27,17 @@ namespace WebApi
                 {
                     return token.Substring(7);
                 }
+
+                string? cookieToken = httpContextAccessor.HttpContext?.Request.Cookies["accessToken"];
+                if (!string.IsNullOrEmpty(cookieToken))
+                {
+                    TokenResult? tokenResult = JsonConvert.DeserializeObject<TokenResult>(cookieToken);
+                    if (tokenResult is not null)
+                    {
+                        return tokenResult.Token;
+                    }
+                }
+
                 return null;
             }
         }

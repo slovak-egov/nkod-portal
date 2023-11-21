@@ -174,10 +174,10 @@ namespace WebApi.Test
 
             AbstractResponse<PublisherView> result;
 
-            result = await client.SearchPublishers(JsonContent.Create(new { Language = "en" }));
-            Assert.Equal(1, result.TotalCount);
-            Assert.Single(result.Items);
-            Assert.Equal(new[] { id3 }, result.Items.Select(i => i.Id));
+            result = await client.SearchPublishers(JsonContent.Create(new { OrderBy = "name", Language = "en" }));
+            Assert.Equal(3, result.TotalCount);
+            Assert.Equal(3, result.Items.Count);
+            Assert.Equal(new[] { id1, id3, id2 }, result.Items.Select(i => i.Id));
         }
 
         [Fact]

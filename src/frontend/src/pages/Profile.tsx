@@ -10,7 +10,7 @@ import { AxiosResponse } from "axios";
 import ValidationSummary from "../components/ValidationSummary";
 import { useTranslation } from "react-i18next";
 
-type Profile = {
+type ProfileOptions = {
     website: string;
     email: string;
     phone: string;
@@ -18,7 +18,7 @@ type Profile = {
 
 export default function Profile()
 {
-    const [profile, setProfile] = useState<Profile|null>(null);
+    const [profile, setProfile] = useState<ProfileOptions|null>(null);
     const [saving, setSaving] = useState<boolean>();
     const [saveResult, setSaveResult] = useState<SaveResult|null>(null);    
     const [userInfo] = useUserInfo();

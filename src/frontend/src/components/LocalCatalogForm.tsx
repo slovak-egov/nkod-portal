@@ -1,13 +1,12 @@
 import FormElementGroup from "./FormElementGroup"
 import MultiLanguageFormGroup from "./MultiLanguageFormGroup"
 import MultiRadio from "./MultiRadio"
-import { CodelistValue, LocalCatalogInput, extractLanguageErrors, knownCodelists, supportedLanguages, useCodelists } from "../client"
+import { CodelistValue, LocalCatalogInput, extractLanguageErrors, knownCodelists, useCodelists } from "../client"
 import BaseInput from "./BaseInput"
 import TextArea from "./TextArea"
 import { useTranslation } from "react-i18next"
 import Loading from "./Loading"
 import ErrorAlert from "./ErrorAlert"
-import SelectElementItems from "./SelectElementItems"
 
 type Props = {
     catalog: LocalCatalogInput;

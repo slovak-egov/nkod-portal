@@ -186,9 +186,9 @@ namespace TestBase
             return tokenService.RefreshToken(token, refreshToken);
         }
 
-        public Task Logout()
+        public Task<DelegationAuthorizationResult?> Logout(string? content)
         {
-            return Task.CompletedTask;
+            return Task.FromResult<DelegationAuthorizationResult?>(null);
         }
 
         public Task<TokenResult> DelegatePublisher(string publisherId)

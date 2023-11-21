@@ -18,7 +18,7 @@ namespace NkodSk.Abstractions
 
         Task<TokenResult> RefreshToken(string token, string refreshToken);
 
-        Task Logout();
+        Task<DelegationAuthorizationResult?> Logout(string? queryString);
 
         Task<TokenResult> DelegatePublisher(string publisherId);
 

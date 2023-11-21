@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import FormElementGroup from "./FormElementGroup"
 import MultiRadio from "./MultiRadio"
-import { CodelistValue, DistributionInput, extractLanguageErrors, knownCodelists, supportedLanguages, useCodelists, useDistributionFileUpload } from "../client"
+import { CodelistValue, DistributionInput, extractLanguageErrors, knownCodelists, useCodelists, useDistributionFileUpload } from "../client"
 import BaseInput from "./BaseInput"
 import SelectElementItems from "./SelectElementItems"
 import FileUpload from "./FileUpload"

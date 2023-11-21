@@ -1986,13 +1986,24 @@ app.MapGet("/saml/login", async ([FromServices] IIdentityAccessManagementClient 
     }
 });
 
-app.MapGet("/saml/logout", async ([FromServices] IIdentityAccessManagementClient client, HttpResponse response, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapGet("/saml/logout", async ([FromServices] IIdentityAccessManagementClient client, HttpRequest request, HttpResponse response, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
     {
-        await client.Logout();
-        response.Cookies.Delete("accessToken");
-        return Results.Ok();
+        DelegationAuthorizationResult? result = await client.Logout(request.QueryString.ToString());
+        if (result is null || result.DoLogout)
+        {
+            response.Cookies.Delete("accessToken");
+        }
+        
+        if (request.Headers.Accept.Any(s => s?.Contains("application/json") ?? false))
+        {
+            return Results.Ok(result);
+        }
+        else
+        {
+            return Results.Redirect(result?.RedirectUrl ?? "/");
+        }
     }
     catch (HttpRequestException e)
     {

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { LanguageOptionsContext, TokenContext, doLogin, sendGet, supportedLanguages, useDefaultHeaders, useUserInfo } from "../client";
+import { LanguageOptionsContext, doLogin, doLogout, supportedLanguages, useDefaultHeaders, useUserInfo } from "../client";
 import Button from "./Button";
 import IdSkModule from "./IdSkModule";
 import { useContext, useMemo } from "react";
@@ -14,7 +14,6 @@ type MenuItem = {
 export default function Header() {
     const [ userInfo, userInfoLoading ] = useUserInfo();
     const headers = useDefaultHeaders();
-    const ctx = useContext(TokenContext);
 
     const navigate = useNavigate();
     const {t, i18n } = useTranslation();
@@ -103,9 +102,10 @@ export default function Header() {
     };
 
     const logout = async () => {
-        await sendGet('saml/logout', headers);
-        ctx?.setToken(null);
-        navigate('/');
+        const url = await doLogout(headers);
+        if (url) {
+            window.location.href = url;
+        }
     }
 
     const navigateToProfile = async () => {

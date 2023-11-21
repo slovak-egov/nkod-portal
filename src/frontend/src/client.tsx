@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosResponse, RawAxiosRequestHeaders } from "axios";
-import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
 import { useSearchParams } from "react-router-dom";
@@ -859,6 +859,12 @@ export function useCodelistAdmin() {
 export async function doLogin(headers: RawAxiosRequestHeaders) {
     type DelegationAuthorizationResult = { redirectUrl: string };
     const response: AxiosResponse<DelegationAuthorizationResult> = await sendGet('saml/login', headers);
+    return response.data.redirectUrl;
+}
+
+export async function doLogout(headers: RawAxiosRequestHeaders) {
+    type DelegationAuthorizationResult = { redirectUrl: string };
+    const response: AxiosResponse<DelegationAuthorizationResult> = await sendGet('saml/logout', headers);
     return response.data.redirectUrl;
 }
 

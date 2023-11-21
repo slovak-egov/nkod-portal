@@ -197,6 +197,8 @@ builder.Services.AddApplicationInsightsTelemetry(options =>
     options.ConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
 });
 
+builder.Logging.AddConsole();
+
 WebApplication app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -213,7 +215,7 @@ app.UseSaml2();
 app.UseAuthentication();
 app.UseAuthorization();
 
-async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord user, IConfiguration configuration, SigningCredentials signingCredentials, bool hasExplicitDelegation, string? publisher = null, string? companyName = null)
+async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord user, IConfiguration configuration, SigningCredentials signingCredentials, bool hasExplicitDelegation, IEnumerable<Claim>? customClaims, string? publisher = null, string? companyName = null)
 {
     List<Claim> claims = new List<Claim>
     {
@@ -223,6 +225,17 @@ async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord use
         new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
     };
 
+    if (customClaims is not null)
+    {
+        foreach (Claim claim in customClaims)
+        {
+            if (!claims.Any(c => c.Type == claim.Type))
+            {
+                claims.Add(claim);
+            }
+        }
+    }
+    
     if (user.Email is not null)
     {
         claims.Add(new Claim(ClaimTypes.Email, user.Email));
@@ -544,7 +557,7 @@ app.MapPost("/refresh", async ([FromServices] ApplicationDbContext context, [Fro
 
                         if (areEqual && request.RefreshToken.Length == refreshTokenLen)
                         {
-                            return Results.Ok(await CreateToken(context, record, configuration, signingCredentials, hasExplicitDelegation));
+                            return Results.Ok(await CreateToken(context, record, configuration, signingCredentials, hasExplicitDelegation, principal.Claims));
                         }
                     }
                 }
@@ -559,22 +572,96 @@ app.MapPost("/refresh", async ([FromServices] ApplicationDbContext context, [Fro
     return Results.Forbid();
 });
 
-app.MapGet("/logout", [Authorize] async ([FromServices] ApplicationDbContext context, ClaimsPrincipal user) =>
+app.MapGet("/logout", [Authorize] async ([FromServices] ApplicationDbContext context, HttpRequest request, ClaimsPrincipal user, [FromServices] Saml2Configuration saml2Configuration, [FromServices] IConfiguration configuration, [FromServices] ILogger<Program> logger) =>
 {
-    string? id = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    string? content = request.Query["SAMLResponse"];
 
-    if (id is not null)
+    if (!string.IsNullOrEmpty(content))
     {
-        UserRecord? record = await context.Users.FindAsync(id);
-        if (record is not null)
-        {
-            record.RefreshToken = null;
-            record.RefreshTokenExpiryTime = null;
-            await context.SaveChangesAsync();
-        }
-    }
+        Saml2RedirectBinding binding = new Saml2RedirectBinding();
+        Saml2LogoutResponse saml2AuthnResponse = new Saml2LogoutResponse(saml2Configuration);
 
-    return new DelegationAuthorizationResult();
+        ITfoxtec.Identity.Saml2.Http.HttpRequest genericRequest = request.ToGenericHttpRequest();
+
+        binding.ReadSamlResponse(genericRequest, saml2AuthnResponse);
+        if (saml2AuthnResponse.Status != Saml2StatusCodes.Success)
+        {
+            logger.LogInformation($"SAML Response status: {saml2AuthnResponse.Status}");
+            return Results.BadRequest($"SAML Response status: {saml2AuthnResponse.Status}");
+        }
+        binding.Unbind(genericRequest, saml2AuthnResponse);
+        logger.LogInformation(saml2AuthnResponse.XmlDocument.OuterXml);
+
+        string? id = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (id is not null)
+        {
+            UserRecord? record = await context.Users.FindAsync(id);
+            if (record is not null)
+            {
+                record.RefreshToken = null;
+                record.RefreshTokenExpiryTime = null;
+                await context.SaveChangesAsync();
+            }
+        }
+
+        return Results.Ok(new DelegationAuthorizationResult
+        {
+            DoLogout = true
+        });
+    } 
+    else
+    {
+        content = request.Query["SAMLRequest"];
+
+        if (!string.IsNullOrEmpty(content))
+        {
+            Saml2LogoutRequest logoutRequest = new Saml2LogoutRequest(saml2Configuration);
+            Saml2RedirectBinding binding = new Saml2RedirectBinding();
+
+            ITfoxtec.Identity.Saml2.Http.HttpRequest genericRequest = request.ToGenericHttpRequest();
+
+            binding.ReadSamlRequest(genericRequest, logoutRequest);
+            binding.Unbind(genericRequest, logoutRequest);
+            logger.LogInformation(logoutRequest.XmlDocument.OuterXml);
+
+            Saml2RedirectBinding responseBinding = new Saml2RedirectBinding();
+            responseBinding.RelayState = binding.RelayState;
+            Saml2LogoutResponse response = new Saml2LogoutResponse(saml2Configuration)
+            {
+                InResponseToAsString = logoutRequest.IdAsString,
+                Status = Saml2StatusCodes.Success,
+                Issuer = configuration["Saml2:EntityId"]
+            };
+
+            Saml2RedirectBinding redirectBinding = responseBinding.Bind(response);
+
+            logger.LogInformation(redirectBinding.XmlDocument.OuterXml);
+
+            return Results.Ok(new DelegationAuthorizationResult
+            {
+                RedirectUrl = redirectBinding.RedirectLocation.OriginalString,
+                DoLogout = true
+            });
+        }
+        else
+        {
+            Saml2RedirectBinding binding = new Saml2RedirectBinding();
+            CustomLogoutRequest logoutRequest = new CustomLogoutRequest(saml2Configuration, user);
+            logoutRequest.Issuer = configuration["Saml2:EntityId"];
+            logoutRequest.NameId.NameQualifier = "https://prihlasenie.upvsfix.gov.sk/oam/fed";
+            logoutRequest.NameId.SPNameQualifier = configuration["Saml2:EntityId"];
+
+            Saml2RedirectBinding redirectBinding = binding.Bind(logoutRequest);
+
+            logger.LogInformation(logoutRequest.XmlDocument.OuterXml);
+
+            return Results.Ok(new DelegationAuthorizationResult
+            {
+                RedirectUrl = redirectBinding.RedirectLocation.OriginalString
+            });
+        }        
+    }
 });
 
 app.MapPost("/delegate-publisher", [Authorize] async ([FromServices] ApplicationDbContext context, ClaimsPrincipal user, [FromServices] SigningCredentials signingCredentials, [FromServices] IConfiguration configuration, [FromQuery] string? publisher) =>
@@ -587,7 +674,7 @@ app.MapPost("/delegate-publisher", [Authorize] async ([FromServices] Application
             UserRecord? record = await context.Users.FindAsync(id);
             if (record is not null)
             {
-                return Results.Ok(await CreateToken(context, record, configuration, signingCredentials, false, publisher));
+                return Results.Ok(await CreateToken(context, record, configuration, signingCredentials, false, user.Claims, publisher));
             }
             else
             {
@@ -605,7 +692,7 @@ app.MapPost("/delegate-publisher", [Authorize] async ([FromServices] Application
     }
 });
 
-app.MapGet("/login", ([FromServices] Saml2Configuration saml2Configuration, IConfiguration configuration) =>
+app.MapGet("/login", ([FromServices] Saml2Configuration saml2Configuration, IConfiguration configuration, [FromServices] ILogger<Program> logger) =>
 {
     string? returnUrl = configuration["Saml2:ReturnUrl"];
     if (string.IsNullOrEmpty(returnUrl))
@@ -620,17 +707,20 @@ app.MapGet("/login", ([FromServices] Saml2Configuration saml2Configuration, ICon
     request.Issuer = configuration["Saml2:EntityId"];
 
     Saml2RedirectBinding redirectBinding = binding.Bind(request);
+
+    logger.LogInformation(request.XmlDocument.OuterXml);
+    
     return Results.Ok(new DelegationAuthorizationResult
     {
         RedirectUrl = redirectBinding.RedirectLocation.OriginalString
     });
 });
 
-app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configuration, [FromServices] ApplicationDbContext context, HttpRequest request, [FromServices] SigningCredentials signingCredentials, IConfiguration configuration) =>
+app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configuration, [FromServices] ApplicationDbContext context, HttpRequest request, [FromServices] SigningCredentials signingCredentials, IConfiguration configuration, [FromServices] ILogger<Program> logger) =>
 {
-    Saml2PostBinding binding = new Saml2PostBinding();
     Saml2AuthnResponse saml2AuthnResponse = new Saml2AuthnResponse(saml2Configuration);
 
+    Saml2PostBinding binding = new Saml2PostBinding();
     ITfoxtec.Identity.Saml2.Http.HttpRequest genericRequest = request.ToGenericHttpRequest();
 
     binding.ReadSamlResponse(genericRequest, saml2AuthnResponse);
@@ -639,6 +729,7 @@ app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configurat
         return Results.BadRequest($"SAML Response status: {saml2AuthnResponse.Status}");
     }
     binding.Unbind(genericRequest, saml2AuthnResponse);
+    logger.LogInformation(saml2AuthnResponse.XmlDocument.OuterXml);
 
 
     string? id = saml2AuthnResponse.ClaimsIdentity.FindFirst("Actor.UPVSIdentityID")?.Value;
@@ -661,7 +752,7 @@ app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configurat
         UserRecord? user = await context.GetOrCreateUser(id, firstName, lastName, email, publisher).ConfigureAwait(false);
         if (user is not null)
         {
-            return Results.Ok(await CreateToken(context, user, configuration, signingCredentials, hasExplicitDelegation, companyName: companyName));
+            return Results.Ok(await CreateToken(context, user, configuration, signingCredentials, hasExplicitDelegation, saml2AuthnResponse.ClaimsIdentity.Claims, companyName: companyName));
         }
         else
         {

@@ -1,8 +1,6 @@
 import { ReactNode, useState } from "react";
 import SelectElementItems from "./SelectElementItems";
 import Button from "./Button";
-import GridRow from "./GridRow";
-import GridColumn from "./GridColumn";
 
 type Props<T> = 
 {

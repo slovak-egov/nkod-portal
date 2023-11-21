@@ -1,5 +1,5 @@
 import Header from './components/Header';
-import { BrowserRouter, Route, Routes, useFetcher, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { Footer } from './components/Footer';
 import AddDataset from './pages/AddDataset';
 import DatasetList from './pages/DatasetList';
@@ -20,7 +20,7 @@ import EditDistribution from './pages/EditDistribution';
 import Sparql from './pages/Sparql';
 import Quality from './pages/Quality';
 import Profile from './pages/Profile';
-import { Language, LanguageOptionsContext, LanguageOptionsContextType, TokenContext, TokenResult, UserInfo, sendPost, supportedLanguages, useUserInfo } from './client';
+import { Language, LanguageOptionsContext, TokenContext, TokenResult, UserInfo, sendPost, supportedLanguages, useUserInfo } from './client';
 import React, { useEffect, useState, useContext } from 'react';
 import PublisherList from './pages/PublisherList';
 import UserList from './pages/UserList';
@@ -166,7 +166,7 @@ function App(props: Props) {
             }}>
                 <BrowserRouter>
                     <Alert type="warning" style={{ margin: 0 }}>
-                        Vývojová verzia Národného katalógu otvorených dát (20231023)
+                        Vývojová verzia Národného katalógu otvorených dát (20231121)
                     </Alert>
                     <Header />
                     <AppNavigator {...props} />

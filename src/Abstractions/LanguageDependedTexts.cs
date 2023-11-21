@@ -37,6 +37,10 @@ namespace NkodSk.Abstractions
             {
                 return text;
             }
+            if (!string.Equals(language, "sk", StringComparison.OrdinalIgnoreCase) && TryGetValue("sk", out text))
+            {
+                return text;
+            }
             return null;
         }
 

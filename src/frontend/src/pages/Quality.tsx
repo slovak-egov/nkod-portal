@@ -21,7 +21,7 @@ type Response = {
     };
 }
 
-async function runSparql<T>(query: string) {
+async function runSparql(query: string) {
     const response: AxiosResponse<Response> = await axios.get('https://opendata.mirri.tech/api/sparql?query=' + encodeURIComponent(query));
     return response.data;
 }
@@ -263,17 +263,17 @@ export default function Quality()
     const [results3, setResults3] = useState<Response|null>(null);
     const [results4, setResults4] = useState<Response|null>(null);
 
-    const [codelists, loadingCodelists, errorCodelists] = useCodelists(requiredCodelists);
+    const [codelists] = useCodelists(requiredCodelists);
     const formatCodelist = codelists.find(c => c.id === knownCodelists.distribution.mediaType);
     const {t} = useTranslation();
     useDocumentTitle(t('metadataQuality'));
 
     useEffect(() => {
         async function load() {
-            setResults1(await runSparql<Response>(query1));
-            setResults2(await runSparql<Response>(query2));
-            setResults3(await runSparql<Response>(query3));
-            setResults4(await runSparql<Response>(query4));
+            setResults1(await runSparql(query1));
+            setResults2(await runSparql(query2));
+            setResults3(await runSparql(query3));
+            setResults4(await runSparql(query4));
         }
 
         load();

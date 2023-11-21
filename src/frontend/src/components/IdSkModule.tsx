@@ -3,7 +3,6 @@ import { HTMLAttributes, useCallback, useEffect, useState } from "react";
 //@ts-ignore
 import { initAll } from  '@id-sk/frontend/idsk/all';
 import { UserInfo } from "../client";
-import { userInfo } from "os";
 
 export function initializeNode<T extends HTMLElement>(node: T)
 {

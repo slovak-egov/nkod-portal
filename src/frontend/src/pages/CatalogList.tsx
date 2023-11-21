@@ -32,7 +32,7 @@ export default function CatalogList()
                 page: 1
             });
         }
-    }, [userInfo]);
+    }, [userInfo, setQueryParameters]);
     const {t} = useTranslation();
     useDocumentTitle(t('localCatalogList'));
 
