@@ -9,7 +9,7 @@ namespace NkodSk.Abstractions
 {
     public class DefaultLanguagesSource : ILanguagesSource
     {
-        private readonly string[] languages = new[] { "sk", "en" };
+        private readonly string[] languages = new[] { "sk", "en", "de" };
 
         public IEnumerator<string> GetEnumerator()
         {

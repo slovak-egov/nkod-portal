@@ -495,7 +495,7 @@ namespace WebApi.Test
                 Assert.NotNull(facets);
                 Assert.Single(facets);
                 Facet facet = facets[0];
-                Assert.Equal("format", facet.Id);
+                Assert.Equal(DcatDistribution.FormatCodelist, facet.Id);
                 Assert.Equal(new Dictionary<string, int> { 
                     { "http://publications.europa.eu/resource/dataset/file-type/1", 1 },
                     { "http://publications.europa.eu/resource/dataset/file-type/2", 2 },
@@ -508,13 +508,13 @@ namespace WebApi.Test
 
             AbstractResponse<DatasetView> result;
 
-            result = await client.SearchDatasets(JsonContent.Create(new { OrderBy = "name", Filters = new Dictionary<string, string[]> { { "format", Array.Empty<string>() } }, RequiredFacets = new[] { "format" } }));
+            result = await client.SearchDatasets(JsonContent.Create(new { OrderBy = "name", Filters = new Dictionary<string, string[]> { { DcatDistribution.FormatCodelist, Array.Empty<string>() } }, RequiredFacets = new[] { DcatDistribution.FormatCodelist } }));
             Assert.Equal(2, result.TotalCount);
             Assert.Equal(2, result.Items.Count);
             Assert.Equal(new[] { id1, id2 }, result.Items.Select(i => i.Id));
             AssertFacets(result.Facets);
 
-            result = await client.SearchDatasets(JsonContent.Create(new { OrderBy = "name", Filters = new Dictionary<string, string[]> { { "format", new[] { "http://publications.europa.eu/resource/dataset/file-type/1" } } }, RequiredFacets = new[] { "format" } }));
+            result = await client.SearchDatasets(JsonContent.Create(new { OrderBy = "name", Filters = new Dictionary<string, string[]> { { DcatDistribution.FormatCodelist, new[] { "http://publications.europa.eu/resource/dataset/file-type/1" } } }, RequiredFacets = new[] { DcatDistribution.FormatCodelist } }));
             Assert.Equal(1, result.TotalCount);
             Assert.Single(result.Items);
             Assert.Equal(new[] { id1 }, result.Items.Select(i => i.Id));
@@ -523,18 +523,18 @@ namespace WebApi.Test
             result = await client.SearchDatasets(JsonContent.Create(new
             {
                 OrderBy = "name",
-                Filters = new Dictionary<string, string[]> { { "format", new[] {
+                Filters = new Dictionary<string, string[]> { { DcatDistribution.FormatCodelist, new[] {
                     "http://publications.europa.eu/resource/dataset/file-type/1",
                     "http://publications.europa.eu/resource/dataset/file-type/2"
                 } } },
-                RequiredFacets = new[] { "format" }
+                RequiredFacets = new[] { DcatDistribution.FormatCodelist }
             }));
             Assert.Equal(2, result.TotalCount);
             Assert.Equal(2, result.Items.Count);
             Assert.Equal(new[] { id1, id2 }, result.Items.Select(i => i.Id));
             AssertFacets(result.Facets);
 
-            result = await client.SearchDatasets(JsonContent.Create(new { OrderBy = "name", Filters = new Dictionary<string, string[]> { { "format", new[] { "http://publications.europa.eu/resource/dataset/data-theme/4" } } }, RequiredFacets = new[] { "format" } }));
+            result = await client.SearchDatasets(JsonContent.Create(new { OrderBy = "name", Filters = new Dictionary<string, string[]> { { DcatDistribution.FormatCodelist, new[] { "http://publications.europa.eu/resource/dataset/data-theme/4" } } }, RequiredFacets = new[] { DcatDistribution.FormatCodelist } }));
             Assert.Equal(0, result.TotalCount);
             Assert.Empty(result.Items);
             AssertFacets(result.Facets);

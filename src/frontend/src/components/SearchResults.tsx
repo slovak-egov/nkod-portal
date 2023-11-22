@@ -1,4 +1,4 @@
-import { PropsWithChildren } from "react";
+import { PropsWithChildren, useState } from "react";
 import { Codelist, Facet, RequestQuery, useCodelists, usePublishers } from "../client";
 import FormElementGroup from "./FormElementGroup";
 import GridColumn from "./GridColumn";
@@ -10,6 +10,8 @@ import ResultsCount from "./ResultsCount";
 import SearchBar from "./SearchBar";
 import SearchFilter from "./SearchFilter";
 import SelectElementItems from "./SelectElementItems";
+import { useTranslation } from "react-i18next";
+import SearchFilterWithQuery from "./SearchFilterWithQuery";
 
 type OrderOption = {
     name: string;
@@ -32,10 +34,6 @@ export type Props = {
     totalCount: number;
     facets: Facet[];
 } & PropsWithChildren;
-
-export type FilterProps = {
-
-}
 
 function PublisherFilter(props : {facet?: Facet, selectedValues: string[], onChange: (values: string[]) => void}) {
     const [publishers] = usePublishers({pageSize: -1, orderBy: 'relevance'});
@@ -64,7 +62,7 @@ function PublisherFilter(props : {facet?: Facet, selectedValues: string[], onCha
       }
 
       if (options.length > 0) {
-        return <SearchFilter<FilterValue>
+        return <SearchFilterWithQuery<FilterValue>
         key='publishers'
         title='Poskytovatelia dát'
         dataTestId="sr-filter-publishers"
@@ -107,11 +105,48 @@ function CodelistFilter(props : {codelist: Codelist, facet?: Facet, selectedValu
 
 
   if (options.length > 0) {
-      return <SearchFilter<FilterValue>
+      return <SearchFilterWithQuery<FilterValue>
       key={codelistId}
       dataTestId={'sr-filter-' + codelistId}
       title={codelist.label}
       searchElementTitle={codelist.label}
+      items={options}
+      getLabel={(e) => e.label}
+      getValue={(e) => e.id}
+      selectedItems={options.filter((o) =>
+          props.selectedValues.includes(o.id)
+      )}
+      onSelectionChange={(e) => props.onChange(e.map((o) => o.id))}
+      />
+  }
+  return <></>
+}
+
+function KeywordFilter(props : {facet?: Facet, selectedValues: string[], onChange: (values: string[]) => void}){
+  const facet = props.facet;
+  const options: FilterValue[] = [];
+  const {t} = useTranslation();
+
+  if (facet) {  
+      const sorted = Object.entries(facet.values).filter(([_, count]) => count > 0).sort((a, b) => b[1] - a[1]);
+      sorted.forEach(([id, count]) => {
+          const label = id;
+          if (label) {
+              options.push({
+                  id: id,
+                  label: label + ' (' + count + ')'
+              });
+          }
+      });
+  }
+
+
+  if (options.length > 0) {
+      return <SearchFilterWithQuery<FilterValue>
+      key='keyword'
+      dataTestId={'sr-filter-keyword'}
+      title={t('keywords')}
+      searchElementTitle={t('keywords')}
       items={options}
       getLabel={(e) => e.label}
       getValue={(e) => e.id}
@@ -191,6 +226,16 @@ export default function SearchResults(props: Props) {
             switch (codelistId) {
               case 'publishers':
                 return <PublisherFilter key = {codelistId}
+                facet={props.facets.find(f => f.id === codelistId)}
+                selectedValues={props.query.filters ? props.query.filters[codelistId] ?? [] : []}
+                onChange={v => props.setQueryParameters({
+                 filters: {
+                     ...props.query.filters,
+                     [codelistId]: v,
+                 },
+                 })} />;
+                 case 'keywords':
+                return <KeywordFilter key = {codelistId}
                 facet={props.facets.find(f => f.id === codelistId)}
                 selectedValues={props.query.filters ? props.query.filters[codelistId] ?? [] : []}
                 onChange={v => props.setQueryParameters({

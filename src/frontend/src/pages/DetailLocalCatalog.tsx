@@ -37,6 +37,7 @@ export default function DetailLocalCatalog()
                             </div>
                         </div>                        
                     </GridColumn> : null}
+                   
                     {catalog.homePage ? <GridColumn widthUnits={1} totalUnits={4}>
                         <div className="nkod-detail-attribute">
                             <div className="govuk-body nkod-detail-attribute-name">
@@ -44,6 +45,44 @@ export default function DetailLocalCatalog()
                             </div>
                             <div className="govuk-body nkod-detail-attribute-value">
                                 <a href={catalog.homePage} className="govuk-link" data-testid="homepage">{t('goToHomePageOfCatalog')}</a>
+                            </div>
+                        </div>                        
+                    </GridColumn> : null}
+                    
+                    {catalog.typeValue ? <GridColumn widthUnits={1} totalUnits={4}>
+                        <div className="nkod-detail-attribute">
+                            <div className="govuk-body nkod-detail-attribute-name">
+                                {t('catalogType')}
+                            </div>
+                            <div className="govuk-body nkod-detail-attribute-value" data-testid="local-catalog-type">
+                                {catalog.typeValue.label}
+                            </div>
+                        </div>
+                    </GridColumn> : null}
+
+                    {catalog.endpointUrl ? <GridColumn widthUnits={1} totalUnits={4}>
+                        <div className="nkod-detail-attribute">
+                            <div className="govuk-body nkod-detail-attribute-name">
+                                {t('catalogEndpoint')}
+                            </div>
+                            <div className="govuk-body nkod-detail-attribute-value">
+                                {catalog.endpointUrl}
+                            </div>
+                        </div>                        
+                    </GridColumn> : null}
+
+                    {catalog.contactPoint?.name || catalog.contactPoint?.email ? <GridColumn widthUnits={1} totalUnits={4}>
+                        <div className="nkod-detail-attribute">
+                            <div className="govuk-body nkod-detail-attribute-name">
+                                {t('contactPoint')}
+                            </div>
+                            <div className="govuk-body nkod-detail-attribute-value">
+                                {catalog.contactPoint?.name ? <div>
+                                    <span data-testid="contact-name">{catalog.contactPoint.name}</span>
+                                </div> : null}
+                                {catalog.contactPoint?.email ? <div>
+                                    <span data-testid="contact-email">{catalog.contactPoint.email}</span>
+                                </div> : null}
                             </div>
                         </div>                        
                     </GridColumn> : null}

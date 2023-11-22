@@ -47,6 +47,7 @@ builder.Services.AddAuthentication(o =>
 });
 builder.Services.AddAuthorization();
 
+builder.Services.AddSingleton<ILanguagesSource, DefaultLanguagesSource>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<IHttpContextValueAccessor, HttpContextValueAccessor>();
 builder.Services.AddSingleton<IFileStorage>(_ =>

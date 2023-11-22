@@ -414,7 +414,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
 
             FileMetadata metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Empty(metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Empty(metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -425,7 +425,7 @@ namespace WebApi.Test
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
         }
 
         [Fact]
@@ -440,7 +440,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
 
             FileMetadata metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -451,7 +451,7 @@ namespace WebApi.Test
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
         }
 
         [Fact]
@@ -466,7 +466,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
 
             FileMetadata metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -478,7 +478,7 @@ namespace WebApi.Test
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1", "http://publications.europa.eu/resource/dataset/file-type/2" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1", "http://publications.europa.eu/resource/dataset/file-type/2" }, metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
         }
 
         [Fact]
@@ -493,7 +493,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
 
             FileMetadata metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -505,7 +505,7 @@ namespace WebApi.Test
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
         }
 
         [Fact]
@@ -519,7 +519,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
 
             FileMetadata metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -532,7 +532,7 @@ namespace WebApi.Test
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/2" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/2" }, metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
         }
 
         [Fact]
@@ -546,7 +546,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
 
             FileMetadata metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -555,7 +555,7 @@ namespace WebApi.Test
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(Array.Empty<string>(), metadata.AdditionalValues?.GetValueOrDefault("format", Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(Array.Empty<string>(), metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
         }
     }
 }

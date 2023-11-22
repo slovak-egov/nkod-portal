@@ -488,15 +488,51 @@ namespace NkodSk.RdfFileStorage
 
                 if (query.RequiredFacets is not null && query.RequiredFacets.Count > 0)
                 {
+                    Dictionary<string, HashSet<Entry>> resultsWithFacet = new Dictionary<string, HashSet<Entry>>();
+
+                    if (query.RequiredFacets.Contains("publishers") && query.OnlyPublishers is not null && query.OnlyPublishers.Count > 0)
+                    {
+                        HashSet<string> publisherKeys = new HashSet<string>(query.OnlyPublishers);
+                        
+                        HashSet<Entry> filteredEntries = new HashSet<Entry>(results);
+                        filteredEntries.RemoveWhere(e => e.Metadata.Publisher == null || !publisherKeys.Contains(e.Metadata.Publisher));
+
+                        resultsWithFacet["publishers"] = filteredEntries;
+                    }
+
+                    if (query.AdditionalFilters is not null)
+                    {
+                        foreach (string facetId in query.RequiredFacets)
+                        {
+                            if (query.AdditionalFilters.TryGetValue(facetId, out string[]? values) && values.Length > 0)
+                            {
+                                string filterId = GetFilterId(facetId, query.Language);
+                                HashSet<string> keys = new HashSet<string>(values);
+
+                                HashSet<Entry> filteredEntries = new HashSet<Entry>(results);
+                                filteredEntries.RemoveWhere(e => e.Metadata.AdditionalValues == null || !e.Metadata.AdditionalValues.TryGetValue(filterId, out string[]? entryValues) || !keys.Overlaps(entryValues));
+
+                                resultsWithFacet[facetId] = filteredEntries;
+                            }                                
+                        }
+                    }
+
                     foreach (string facetId in query.RequiredFacets)
                     {
+                        HashSet<Entry> sourceEntries = new HashSet<Entry>(results);
+
+                        foreach (HashSet<Entry> facetEntries in resultsWithFacet.Where(kv => kv.Key != facetId).Select(kv => kv.Value))
+                        {
+                            sourceEntries.IntersectWith(facetEntries);
+                        }
+
                         Facet facet = new Facet(facetId);
                         Dictionary<string, int> counts = facet.Values;
-                       
+
                         switch (facetId)
                         {
                             case "publishers":
-                                foreach (Entry entry in results)
+                                foreach (Entry entry in sourceEntries)
                                 {
                                     if (entry.Metadata.Publisher is not null)
                                     {
@@ -509,9 +545,9 @@ namespace NkodSk.RdfFileStorage
                                 }
                                 break;
                             default:
-                                foreach (Entry entry in results)
+                                string filterId = GetFilterId(facetId, query.Language);
+                                foreach (Entry entry in sourceEntries)
                                 {
-                                    string filterId = GetFilterId(facetId, query.Language);
                                     if (entry.Metadata.AdditionalValues is not null && entry.Metadata.AdditionalValues.TryGetValue(filterId, out string[]? values))
                                     {
                                         foreach (string value in values)
@@ -530,28 +566,16 @@ namespace NkodSk.RdfFileStorage
                         facets.Add(facet);
                     }
 
-                    HashSet<Entry> filteredEntries = new HashSet<Entry>(results);
-
-                    if (query.RequiredFacets.Contains("publishers") && query.OnlyPublishers is not null && query.OnlyPublishers.Count > 0)
+                    if (resultsWithFacet.Count > 0)
                     {
-                        HashSet<string> publisherKeys = new HashSet<string>(query.OnlyPublishers);
-                        filteredEntries.RemoveWhere(e => e.Metadata.Publisher == null || !publisherKeys.Contains(e.Metadata.Publisher));
-                    }
-
-                    if (query.AdditionalFilters is not null)
-                    {
-                        foreach (string facetId in query.RequiredFacets)
+                        HashSet<Entry> filteredEntries = new HashSet<Entry>(results);
+                        foreach (HashSet<Entry> facetEntries in resultsWithFacet.Values)
                         {
-                            if (query.AdditionalFilters.TryGetValue(facetId, out string[]? values) && values.Length > 0)
-                            {
-                                string filterId = GetFilterId(facetId, query.Language);
-                                HashSet<string> keys = new HashSet<string>(values);
-                                filteredEntries.RemoveWhere(e => e.Metadata.AdditionalValues == null || !e.Metadata.AdditionalValues.TryGetValue(filterId, out string[]? entryValues) || !keys.Overlaps(entryValues));
-                            }                                
+                            filteredEntries.IntersectWith(facetEntries);
                         }
-                    }
 
-                    results = filteredEntries.ToList();
+                        results = filteredEntries.ToList();
+                    }
                 }
 
                 if (orderDefinitions.Count >= 1 && orderDefinitions[0].Property == FileStorageOrderProperty.Revelance && !orderDefinitions[0].ReverseOrder && query.OnlyIds is not null && query.OnlyIds.Count > 0)

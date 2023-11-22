@@ -159,14 +159,14 @@ namespace NkodSk.Abstractions
         {
             Dictionary<string, string[]> values = metadata.AdditionalValues ?? new Dictionary<string, string[]>();
 
-            HashSet<string> formats = values.ContainsKey("format") ? new HashSet<string>(values["format"]) : new HashSet<string>();
+            HashSet<string> formats = values.ContainsKey(FormatCodelist) ? new HashSet<string>(values[FormatCodelist]) : new HashSet<string>();
             if (Format is not null)
             {
                 formats.Add(Format.ToString());
             }
             string[] formatsAsArray = formats.ToArray();
             Array.Sort(formatsAsArray);
-            values["format"] = formatsAsArray;
+            values[FormatCodelist] = formatsAsArray;
 
             return metadata with { AdditionalValues = values };
         }

@@ -31,6 +31,7 @@ import AddPublisher from './pages/AddPublisher';
 import InfoPageInvalidDelegation from './pages/InfoPageInvalidDelegation';
 import InfoPageWaitingForApprove from './pages/InfoPageWaitingForApprove';
 import { AxiosResponse, RawAxiosRequestHeaders } from 'axios';
+import NotFound from './pages/NotFound';
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -226,6 +227,8 @@ function App(props: Props) {
                                             <Route path="/sprava/ciselniky" Component={Codelists} />
                                         </>
                                     ) : null}
+
+                                    <Route path='*' Component={NotFound} />
                                 </Routes>
                             </div>
                         </div>

@@ -6,7 +6,7 @@ namespace DocumentStorageApi
 {
     public class FulltextStorageMap : FulltextIndex
     {
-        public FulltextStorageMap(IFileStorage fileStorage) 
+        public FulltextStorageMap(IFileStorage fileStorage, ILanguagesSource languages) : base(languages)
         {
             Initialize(fileStorage);
         }

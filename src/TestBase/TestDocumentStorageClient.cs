@@ -21,7 +21,7 @@ namespace TestBase
         {
             this.fileStorage = fileStorage;
             this.accessPolicy = accessPolicy;
-            fulltextIndex = new FulltextIndex();
+            fulltextIndex = new FulltextIndex(new DefaultLanguagesSource());
             fulltextIndex.Initialize(fileStorage);
         }
 

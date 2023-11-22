@@ -17,7 +17,8 @@ const codelistsKeys = [
     'publishers', 
     'https://data.gov.sk/set/codelist/dataset-type',
     'http://publications.europa.eu/resource/authority/data-theme', 
-    'format',
+    'http://publications.europa.eu/resource/authority/file-type',
+    'http://publications.europa.eu/resource/authority/frequency',
     'keywords'
 ];
 
@@ -89,7 +90,7 @@ export default function PublicDatasetList() {
                                 </GridColumn>
                                 {c.publisher ? (
                                     <GridColumn widthUnits={1} totalUnits={2} data-testid="sr-result-publisher">
-                                        {c.publisher.name}
+                                        <span style={{color: '#777', fontStyle: 'italic'}}>{c.publisher.name}</span>
                                     </GridColumn>
                                 ) : null}
                             </GridRow>

@@ -40,7 +40,7 @@ namespace NkodSk.RdfFulltextIndex
 
         private readonly DirectoryTaxonomyWriter taxonomyWriter;
 
-        private  TaxonomyReader taxonomyReader;
+        private TaxonomyReader taxonomyReader;
 
         private IndexReader indexReader;
 
@@ -48,7 +48,9 @@ namespace NkodSk.RdfFulltextIndex
 
         private const LuceneVersion Version = LuceneVersion.LUCENE_48;
 
-        public FulltextIndex()
+        private ILanguagesSource languages;
+
+        public FulltextIndex(ILanguagesSource languages)
         {
             analyzer = new DefaultAnalyyzer(Version);
             directory = new RAMDirectory();
@@ -63,6 +65,7 @@ namespace NkodSk.RdfFulltextIndex
 
             taxonomyWriter = new DirectoryTaxonomyWriter(taxonomyDirectory);
             taxonomyReader = new DirectoryTaxonomyReader(taxonomyWriter);
+            this.languages = languages;
         }
 
         public void Initialize(IFileStorage fileStorage)
@@ -81,8 +84,7 @@ namespace NkodSk.RdfFulltextIndex
                     state.Content is not null && 
                     (state.Metadata.Type == FileType.PublisherRegistration ||
                     state.Metadata.Type == FileType.DatasetRegistration ||
-                    state.Metadata.Type == FileType.LocalCatalogRegistration ||
-                    state.Metadata.Type == FileType.DistributionRegistration))
+                    state.Metadata.Type == FileType.LocalCatalogRegistration))
                 {
                     try
                     {
@@ -92,44 +94,70 @@ namespace NkodSk.RdfFulltextIndex
 
                         foreach (DcatDataset dataset in rdfDocument.Datasets)
                         {
-                            Document doc = new Document();
-                            doc.AddTextField("id", state.Metadata.Id.ToString(), Lucene.Net.Documents.Field.Store.YES);
+                            foreach (string lang in languages)
+                            {
+                                Document doc = new Document();
+                                doc.AddTextField("id", state.Metadata.Id.ToString(), Lucene.Net.Documents.Field.Store.YES);
+                                doc.AddTextField("lang", lang, Lucene.Net.Documents.Field.Store.YES);
 
+                                string title = dataset.GetTitle(lang) ?? string.Empty;
+                                string description = dataset.GetDescription(lang) ?? string.Empty;
 
-                            doc.AddTextField("title", dataset.GetTitle("sk") ?? string.Empty, Lucene.Net.Documents.Field.Store.NO);
-                            doc.AddTextField("description", dataset.GetDescription("sk") ?? string.Empty, Lucene.Net.Documents.Field.Store.NO);
+                                if (!string.IsNullOrEmpty(description))
+                                {
+                                    description += " ";
+                                }
+                                description += string.Join(" ", dataset.GetKeywords(lang));
 
-                            doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
+                                doc.AddTextField("title", title, Lucene.Net.Documents.Field.Store.NO);
+                                doc.AddTextField("description", description, Lucene.Net.Documents.Field.Store.NO);
 
-                            indexWriter.AddDocument(facetsConfig.Build(taxonomyWriter, doc));
+                                doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
+
+                                indexWriter.AddDocument(facetsConfig.Build(taxonomyWriter, doc));
+                            }
                         }
 
                         type = Enum.GetName(FileType.LocalCatalogRegistration)!;
 
                         foreach (DcatCatalog catalog in rdfDocument.Catalogs)
                         {
-                            Document doc = new Document();
-                            doc.AddTextField("id", state.Metadata.Id.ToString(), Lucene.Net.Documents.Field.Store.YES);
+                            foreach (string lang in languages)
+                            {
+                                Document doc = new Document();
 
-                            doc.AddTextField("title", catalog.GetTitle("sk") ?? string.Empty, Lucene.Net.Documents.Field.Store.NO);
+                                doc.AddTextField("id", state.Metadata.Id.ToString(), Lucene.Net.Documents.Field.Store.YES);
+                                doc.AddTextField("lang", lang, Lucene.Net.Documents.Field.Store.YES);
 
-                            doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
+                                string title = catalog.GetTitle(lang) ?? string.Empty;
+                                string description = catalog.GetDescription(lang) ?? string.Empty;
 
-                            indexWriter.AddDocument(facetsConfig.Build(taxonomyWriter, doc));
+                                doc.AddTextField("title", title, Lucene.Net.Documents.Field.Store.NO);
+                                doc.AddTextField("description", description, Lucene.Net.Documents.Field.Store.NO);
+                                doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
+
+                                indexWriter.AddDocument(facetsConfig.Build(taxonomyWriter, doc));
+                            }
                         }
 
                         type = Enum.GetName(FileType.PublisherRegistration)!;
 
                         foreach (FoafAgent agent in rdfDocument.Agents)
                         {
-                            Document doc = new Document();
-                            doc.AddTextField("id", state.Metadata.Id.ToString(), Lucene.Net.Documents.Field.Store.YES);
+                            foreach (string lang in languages)
+                            {
+                                Document doc = new Document();
 
-                            doc.AddTextField("title", agent.GetName("sk") ?? string.Empty, Lucene.Net.Documents.Field.Store.NO);
+                                doc.AddTextField("id", state.Metadata.Id.ToString(), Lucene.Net.Documents.Field.Store.YES);
+                                doc.AddTextField("lang", lang, Lucene.Net.Documents.Field.Store.YES);
 
-                            doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
+                                string title = agent.GetName(lang) ?? string.Empty;
 
-                            indexWriter.AddDocument(facetsConfig.Build(taxonomyWriter, doc));
+                                doc.AddTextField("title", title, Lucene.Net.Documents.Field.Store.NO);
+                                doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
+
+                                indexWriter.AddDocument(facetsConfig.Build(taxonomyWriter, doc));
+                            }
                         }
                     }
                     catch
@@ -170,6 +198,8 @@ namespace NkodSk.RdfFulltextIndex
             IndexSearcher indexSearcher = this.indexSearcher;
 
             BooleanQuery booleanClauses = new BooleanQuery();
+
+            booleanClauses.Add(new TermQuery(new Term("lang", externalQuery.Language)), Occur.MUST);
 
             if (!string.IsNullOrWhiteSpace(externalQuery.QueryText))
             {

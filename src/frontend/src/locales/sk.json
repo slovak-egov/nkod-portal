@@ -153,5 +153,7 @@
     "distributionName": "Názov distribúcie",
     "parentDataset": "Nadradený dataset",
     "catalogType": "Typ katalógu",
-    "catalogEndpoint": "Prístupový bod katalógu"
+    "catalogEndpoint": "Prístupový bod katalógu",
+    "notFound": "Stránka nebola nájdená",
+    "pageNotFound": "Stránka na základe zadanej adresy nebola nájdená"
 }

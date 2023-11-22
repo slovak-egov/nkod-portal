@@ -173,7 +173,7 @@ export default function DetailDataset()
                             </span>
                             <span className="govuk-body nkod-detail-distribution-url">
                                 {distrubution.downloadUrl ? <a href={distrubution.downloadUrl} className="govuk-link">
-                                    {distrubution.title ?? dataset.name}
+                                    {(distrubution.title && distrubution.title.trim().length > 0) ? distrubution.title : dataset.name}
                                 </a> : null}
                             </span>
                             <hr className="idsk-crossroad-line" aria-hidden="true"/>

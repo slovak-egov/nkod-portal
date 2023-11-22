@@ -11,7 +11,7 @@ namespace NkodSk.RdfFulltextIndex.Test
     {
         public StorageFixture() 
         {
-            Index = new FulltextIndex();
+            Index = new FulltextIndex(new DefaultLanguagesSource());
             Index.Index(new[] { new FileState(
                 new FileMetadata(Guid.NewGuid(), "Test", FileType.DatasetRegistration, null, "Pub1", true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
                 File.ReadAllText(@"c:\Temp\rdf.txt")) });

@@ -231,6 +231,7 @@ namespace NkodSk.Abstractions
 
             values[TypeCodelist] = Type.Select(v => v.ToString()).ToArray();
             values[ThemeCodelist] = NonEuroVocThemes.Select(v => v.ToString()).ToArray();
+            values[AccrualPeriodicityCodelist] = AccrualPeriodicity is not null ? new[] { AccrualPeriodicity.ToString() } : Array.Empty<string>();
             values["serie"] = new string[] { IsSerie ? "1" : "0" };
             values["key"] = new string[] { Uri.ToString() };
 

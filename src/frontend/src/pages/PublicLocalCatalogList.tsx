@@ -51,7 +51,7 @@ export default function PublicDatasetList() {
                                 </GridColumn>
                                 {c.publisher != null ? (
                                     <GridColumn widthUnits={1} totalUnits={1} data-testid="sr-result-publisher">
-                                        {c.publisher.name}
+                                        <span style={{color: '#777', fontStyle: 'italic'}}>{c.publisher.name}</span>
                                     </GridColumn>
                                 ) : null}
                             </GridRow>
