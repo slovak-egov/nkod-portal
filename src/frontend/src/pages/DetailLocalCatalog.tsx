@@ -32,7 +32,7 @@ export default function DetailLocalCatalog()
                             <div className="govuk-body nkod-detail-attribute-name">
                                 {t('publisher')}
                             </div>
-                            <div className="govuk-body nkod-detail-attribute-value" data-testid="publisher-name">
+                            <div className="govuk-body nkod-detail-attribute-value" data-testid="publisher-name" style={{wordBreak: 'break-all'}}>
                                 {catalog.publisher.name}
                             </div>
                         </div>                        
@@ -43,7 +43,7 @@ export default function DetailLocalCatalog()
                             <div className="govuk-body nkod-detail-attribute-name">
                                 {t('homePagePublisher')}
                             </div>
-                            <div className="govuk-body nkod-detail-attribute-value">
+                            <div className="govuk-body nkod-detail-attribute-value" style={{wordBreak: 'break-all'}}>
                                 <a href={catalog.homePage} className="govuk-link" data-testid="homepage">{t('goToHomePageOfCatalog')}</a>
                             </div>
                         </div>                        
@@ -54,7 +54,7 @@ export default function DetailLocalCatalog()
                             <div className="govuk-body nkod-detail-attribute-name">
                                 {t('catalogType')}
                             </div>
-                            <div className="govuk-body nkod-detail-attribute-value" data-testid="local-catalog-type">
+                            <div className="govuk-body nkod-detail-attribute-value" data-testid="local-catalog-type" style={{wordBreak: 'break-all'}}>
                                 {catalog.typeValue.label}
                             </div>
                         </div>
@@ -65,7 +65,7 @@ export default function DetailLocalCatalog()
                             <div className="govuk-body nkod-detail-attribute-name">
                                 {t('catalogEndpoint')}
                             </div>
-                            <div className="govuk-body nkod-detail-attribute-value">
+                            <div className="govuk-body nkod-detail-attribute-value" style={{wordBreak: 'break-all'}}>
                                 {catalog.endpointUrl}
                             </div>
                         </div>                        
@@ -76,7 +76,7 @@ export default function DetailLocalCatalog()
                             <div className="govuk-body nkod-detail-attribute-name">
                                 {t('contactPoint')}
                             </div>
-                            <div className="govuk-body nkod-detail-attribute-value">
+                            <div className="govuk-body nkod-detail-attribute-value" style={{wordBreak: 'break-all'}}>
                                 {catalog.contactPoint?.name ? <div>
                                     <span data-testid="contact-name">{catalog.contactPoint.name}</span>
                                 </div> : null}

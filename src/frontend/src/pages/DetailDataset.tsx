@@ -4,6 +4,7 @@ import MainContent from "../components/MainContent";
 import GridRow from "../components/GridRow";
 import GridColumn from "../components/GridColumn";
 import RelatedContent from "../components/RelatedContent";
+import FileIcon from "../components/FileIcon";
 
 import csvIcon from '../icons/csv.png';
 import docIcon from '../icons/doc.png';
@@ -82,7 +83,7 @@ export default function DetailDataset()
                             <div className="govuk-body nkod-detail-attribute-name">
                                 {t('theme')}
                             </div>
-                            <div className="govuk-body nkod-detail-attribute-value" data-testid="themes">
+                            <div className="govuk-body nkod-detail-attribute-value" data-testid="themes" style={{wordBreak: 'break-all'}}>
                                 {dataset.themeValues.map(l => <div key={l.label}>{l.label}</div>)}
                                 {dataset.euroVocThemeValues.map(l => <div key={l}>{l}</div>)}
                             </div>
@@ -93,7 +94,7 @@ export default function DetailDataset()
                             <div className="govuk-body nkod-detail-attribute-name">
                                 {t('documentation')}
                             </div>
-                            <div className="govuk-body nkod-detail-attribute-value" data-testid="documentation">
+                            <div className="govuk-body nkod-detail-attribute-value" data-testid="documentation" style={{wordBreak: 'break-all'}}>
                                 <a href={dataset.documentation} className="govuk-link">{t('show')}</a>
                             </div>
                         </div>                        
@@ -113,7 +114,7 @@ export default function DetailDataset()
                             <div className="govuk-body nkod-detail-attribute-name">
                                 {t('contactPoint')}
                             </div>
-                            <div className="govuk-body nkod-detail-attribute-value">
+                            <div className="govuk-body nkod-detail-attribute-value" style={{wordBreak: 'break-all'}}>
                                 {dataset.contactPoint?.name ? <div>
                                     <span data-testid="contact-name">{dataset.contactPoint.name}</span>
                                 </div> : null}
@@ -138,7 +139,7 @@ export default function DetailDataset()
                             <div className="govuk-body nkod-detail-attribute-name">
                                 {t('timeValidity')}
                             </div>
-                            <div className="govuk-body nkod-detail-attribute-value">
+                            <div className="govuk-body nkod-detail-attribute-value" style={{wordBreak: 'break-all'}}>
                                 {dataset.temporal?.startDate ? <div>
                                     <span style={{fontWeight: 'bold'}}>od: </span> <span data-testid="temporal-start">{dataset.temporal.startDate}</span>
                                 </div> : null}
@@ -153,29 +154,15 @@ export default function DetailDataset()
                             {dataset.distributions.length} {dataset.distributions.length === 1 ? 'distribúcia' : dataset.distributions.length < 5 ? 'distribúcie' : 'distribúcií'}
                         </div>
                         <hr className="idsk-crossroad-line" aria-hidden="true"/>
-                        {dataset.distributions.map(distrubution => <div key={distrubution.id} className="govuk-body nkod-detail-distribution-row" data-testid="distribution">
-                            <span className="govuk-body nkod-detail-distribution-format">
-                                {
-                                    distrubution.formatValue?.label?.toLowerCase() === 'csv' ? <img src={csvIcon} alt="csv" /> :
-                                    distrubution.formatValue?.label?.toLowerCase() === 'doc' ? <img src={docIcon} alt="doc" /> :
-                                    distrubution.formatValue?.label?.toLowerCase() === 'html' ? <img src={htmlIcon} alt="html" /> :
-                                    distrubution.formatValue?.label?.toLowerCase() === 'json' ? <img src={jsonIcon} alt="json" /> :
-                                    distrubution.formatValue?.label?.toLowerCase() === 'mdb' ? <img src={mdbIcon} alt="mdb" /> :
-                                    distrubution.formatValue?.label?.toLowerCase() === 'ods' ? <img src={odsIcon} alt="ods" /> :
-                                    distrubution.formatValue?.label?.toLowerCase() === 'pdf' ? <img src={pdfIcon} alt="pdf" /> :
-                                    distrubution.formatValue?.label?.toLowerCase() === 'rdf' ? <img src={rdfIcon} alt="rdf" /> :
-                                    distrubution.formatValue?.label?.toLowerCase() === 'sql' ? <img src={sqlIcon} alt="sql" /> :
-                                    distrubution.formatValue?.label?.toLowerCase() === 'txt' ? <img src={txtIcon} alt="txt" /> :
-                                    distrubution.formatValue?.label?.toLowerCase() === 'xls' ? <img src={xlsIcon} alt="xls" /> :
-                                    distrubution.formatValue?.label?.toLowerCase() === 'xlsx' ? <img src={xlsxIcon} alt="xlsx" /> :
-                                    distrubution.formatValue?.label?.toLowerCase() === 'xml' ? <img src={xmlIcon} alt="xml" /> : null
-                                }
-                            </span>
-                            <span className="govuk-body nkod-detail-distribution-url">
-                                {distrubution.downloadUrl ? <a href={distrubution.downloadUrl} className="govuk-link">
-                                    {(distrubution.title && distrubution.title.trim().length > 0) ? distrubution.title : dataset.name}
-                                </a> : null}
-                            </span>
+                        {dataset.distributions.map(distrubution => <div key={distrubution.id} className="govuk-body nkod-detail-distribution-row" data-testid="distribution" >
+                            <div style={{display: 'flex'}}>
+                                <FileIcon format={distrubution.formatValue?.label ?? ''} />
+                                <span className="govuk-body nkod-detail-distribution-url" style={{lineHeight: '20px', paddingTop: '20px'}}>
+                                    {distrubution.downloadUrl ? <a href={distrubution.downloadUrl} className="govuk-link">
+                                        {(distrubution.title && distrubution.title.trim().length > 0) ? distrubution.title : dataset.name}
+                                    </a> : null}
+                                </span>
+                            </div>
                             <hr className="idsk-crossroad-line" aria-hidden="true"/>
                         </div>)}
                     </GridColumn> : null}
