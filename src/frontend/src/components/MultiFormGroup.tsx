@@ -1,6 +1,7 @@
 import { ReactNode, useId } from "react";
 import GridRow from "./GridRow";
 import GridColumn from "./GridColumn";
+import { useTranslation } from "react-i18next";
 
 type Props =
 {
@@ -13,6 +14,7 @@ type Props =
 export default function MultiFormGroup(props: Props)
 {
     const id = useId();
+    const {t} = useTranslation();
 
     return <div className={'govuk-form-group ' + (props.errorMessage ? 'govuk-form-group--error' : '')}>
         <GridRow>
@@ -21,7 +23,7 @@ export default function MultiFormGroup(props: Props)
                     {props.label}
                 </label>
                 {props.hint && <span className="govuk-hint">{props.hint}</span>}
-                {props.errorMessage && <span className="govuk-error-message"><span className="govuk-visually-hidden">Chyba: </span> {props.errorMessage}</span>}
+                {props.errorMessage && <span className="govuk-error-message"><span className="govuk-visually-hidden">{t('error')}: </span> {props.errorMessage}</span>}
                 {props.element(id)}
             </GridColumn>
             <GridColumn widthUnits={1} totalUnits={4}>

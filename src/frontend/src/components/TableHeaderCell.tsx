@@ -1,4 +1,5 @@
 import { HTMLAttributes } from "react";
+import { useTranslation } from "react-i18next";
 
 type Props = 
 {
@@ -12,12 +13,13 @@ export default function TableHeaderCell(props: Props)
     let directionClass = '';
     if (props.sortingDirection === "asc") directionClass = "aes";
     if (props.sortingDirection === "desc") directionClass = "des";
+    const {t} = useTranslation();
 
     return <th className="idsk-table__header">
         <span className="th-span">
             <>
             {props.children}
-            {props.enableSorting ? <><button className={"arrowBtn " + directionClass} onClick={props.toggleSortingDirection}><span className="sr-only">Nezoradený stĺpec - použije vzostupné zoradenie.</span></button></> : null }
+            {props.enableSorting ? <><button className={"arrowBtn " + directionClass} onClick={props.toggleSortingDirection}><span className="sr-only">{t('sortingByColumn')}</span></button></> : null }
             </>
         </span>
     </th>

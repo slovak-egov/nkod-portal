@@ -12,7 +12,7 @@ import TableCell from "../components/TableCell";
 import PageSubheader from "../components/PageSubHeader";
 import axios, { AxiosResponse } from "axios";
 import Pagination from "../components/Pagination";
-import { knownCodelists, useCodelists, useDocumentTitle } from "../client";
+import { knownCodelists, useCodelists, useDocumentTitle, useEndpointUrl } from "../client";
 import { useTranslation } from "react-i18next";
 
 type Response = {
@@ -21,8 +21,8 @@ type Response = {
     };
 }
 
-async function runSparql(query: string) {
-    const response: AxiosResponse<Response> = await axios.get('https://opendata.mirri.tech/api/sparql?query=' + encodeURIComponent(query));
+async function runSparql(endpointUrl: string, query: string) {
+    const response: AxiosResponse<Response> = await axios.get(endpointUrl + '?query=' + encodeURIComponent(query));
     return response.data;
 }
 
@@ -263,6 +263,8 @@ export default function Quality()
     const [results3, setResults3] = useState<Response|null>(null);
     const [results4, setResults4] = useState<Response|null>(null);
 
+    const endpointUrl = useEndpointUrl();
+
     const [codelists] = useCodelists(requiredCodelists);
     const formatCodelist = codelists.find(c => c.id === knownCodelists.distribution.mediaType);
     const {t} = useTranslation();
@@ -270,22 +272,24 @@ export default function Quality()
 
     useEffect(() => {
         async function load() {
-            setResults1(await runSparql(query1));
-            setResults2(await runSparql(query2));
-            setResults3(await runSparql(query3));
-            setResults4(await runSparql(query4));
+            if (endpointUrl) {
+              setResults1(await runSparql(endpointUrl, query1));
+              setResults2(await runSparql(endpointUrl, query2));
+              setResults3(await runSparql(endpointUrl, query3));
+              setResults4(await runSparql(endpointUrl, query4));
+            }
         }
 
         load();
-    }, []);
+    }, [endpointUrl]);
 
     return <>
             <Breadcrumbs items={[{title: t('nkod'), link: '/'}, {title: t('metadataQuality')}]} />
             <MainContent>
                 <PageHeader>{t('metadataQuality')}</PageHeader>
 
-                {results1 ? <QualityTable header="Počet distribúcií bez uvedenia licencie použitia podľa poskytovateľa"
-                                          headerCells={['Poskytovateľ', 'Distribúcie bez licencií', 'Celkový počet distribúcií']}
+                {results1 ? <QualityTable header={t('distributionCountByPublisher')}
+                                          headerCells={[t('publisher'), t('distributionsWithoutLicense'), t('totalCountDistributions')]}
                                           rows={results1.results.bindings.map(r => ({
                                             name: r['meno_poskytovateľa'].value,
                                             values: [
@@ -294,8 +298,8 @@ export default function Quality()
                                             ]
                                           }))} /> : null}
 
-                {results2 ? <QualityTable header="Počet datasetov bez uvedenia licencie použitia podľa poskytovateľa"
-                                          headerCells={['Poskytovateľ', 'Datasetov bez licencií', 'Celkový počet datasetov']}
+                {results2 ? <QualityTable header={t('datasetsWithoutLicenseCount')}
+                                          headerCells={[t('publisher'), t('datasetsWithoutLicense'), t('totalCountDatasets')]}
                                           rows={results2.results.bindings.map(r => ({
                                             name: r['meno_poskytovateľa'].value,
                                             values: [
@@ -305,8 +309,8 @@ export default function Quality()
                                           }))} /> : null}
 
 
-                {results3 ? <QualityTable header="Počet datasetov bez uvedenia licencie použitia podľa poskytovateľa"
-                                          headerCells={['Poskytovateľ', 'Počet datasetov s chýbajúcimi atribútami']}
+                {results3 ? <QualityTable header={t('datasetsCountWithoutRequiredAttributesByPublisher')}
+                                          headerCells={[t('publisher'), t('datasetsCountWithoutRequiredAttributes')]}
                                           rows={results3.results.bindings.map(r => ({
                                             name: r['meno_poskytovateľa'].value,
                                             values: [
@@ -314,8 +318,8 @@ export default function Quality()
                                             ]
                                           }))} /> : null}
 
-                {results4 && formatCodelist ? <QualityTable header="Počet záznamov datasetov nespĺňajúcich povinné atribúty podľa poskytovateľa"
-                                          headerCells={['Formát', 'Celkový počet distribúcií']}
+                {results4 && formatCodelist ? <QualityTable header={t('distributionsByFormat')}
+                                          headerCells={[t('format'), t('totalCountDistributions')]}
                                           rows={results4.results.bindings.map(r => ({
                                             name: formatCodelist.values.find(v => v.id === r['mime_type'].value)?.label ?? r['mime_type'].value,
                                             values: [

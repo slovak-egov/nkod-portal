@@ -220,7 +220,7 @@ export default function Header() {
                     <div className="govuk-grid-row">
                         <div className="govuk-grid-column-full">                            
                             <nav className="idsk-header-web__nav-bar--buttons">
-                                <ul className="idsk-header-web__nav-list" aria-label="Hlavná navigácia">
+                                <ul className="idsk-header-web__nav-list" aria-label={t('mainNavigation')}>
                                     {menu.map((i) => {
                                         const ariaAttributes: {[id: string]: string} = {};
 

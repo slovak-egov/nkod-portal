@@ -26,7 +26,7 @@ namespace Frontend.Test
         {
             publisher ??= PublisherId;
 
-            DcatDataset dataset = DcatDataset.Create(new Uri($"http://example.com/dataset/{index}"));
+            DcatDataset dataset = DcatDataset.Create();
             dataset.SetTitle(new Dictionary<string, string> { { "sk", name } });
             dataset.SetDescription(new Dictionary<string, string> { { "sk", "Test Description" } });
             dataset.SetKeywords(new Dictionary<string, List<string>> { { "sk", new List<string> { "Test1", "Test2" } } });
@@ -46,7 +46,7 @@ namespace Frontend.Test
 
             Guid datasetId = fixture.CreateDataset(dataset);
 
-            DcatDistribution distribution = DcatDistribution.Create(new Uri("http://example.com/distribution"));
+            DcatDistribution distribution = DcatDistribution.Create(datasetId);
             distribution.SetTermsOfUse(
                 new Uri("https://creativecommons.org/licenses/by/4.0/"),
                 new Uri("https://creativecommons.org/licenses/by/4.0/"),

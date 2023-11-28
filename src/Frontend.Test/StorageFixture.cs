@@ -37,7 +37,7 @@ namespace Frontend.Test
 
         public Guid CreateDataset(string name, string publisher)
         {
-            DcatDataset dataset = DcatDataset.Create(CreateUri());
+            DcatDataset dataset = DcatDataset.Create();
             dataset.SetTitle(new Dictionary<string, string> { { "sk", name } });
             dataset.Publisher = new Uri(publisher);
             return CreateDataset(dataset);
@@ -52,7 +52,7 @@ namespace Frontend.Test
 
         public Guid CreateDistribution(Guid datasetId, string publisher)
         {
-            DcatDistribution distribution = DcatDistribution.Create(CreateUri());
+            DcatDistribution distribution = DcatDistribution.Create(datasetId);
             distribution.SetTermsOfUse(
                 new Uri("https://creativecommons.org/licenses/by/4.0/"),
                 new Uri("https://creativecommons.org/licenses/by/4.0/"),
@@ -76,7 +76,7 @@ namespace Frontend.Test
 
         public Guid CreateLocalCatalog(string name, string publisher)
         {
-            DcatCatalog catalog = DcatCatalog.Create(CreateUri());
+            DcatCatalog catalog = DcatCatalog.Create();
             catalog.SetTitle(new Dictionary<string, string> { { "sk", name } });
             catalog.Publisher = new Uri(publisher);
             return CreateLocalCatalog(catalog);

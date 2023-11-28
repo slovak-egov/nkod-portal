@@ -72,7 +72,7 @@ namespace Frontend.Test
                 Uri publisherUri = new Uri(publisher);
                 for (int i = 0; i < count; i++)
                 {
-                    DcatDataset dataset = DcatDataset.Create(new Uri($"http://example.com/dataset/{index}"));
+                    DcatDataset dataset = DcatDataset.Create();
                     dataset.SetTitle(new Dictionary<string, string> { { "sk", $"Test {index}" } });
                     dataset.Publisher = publisherUri;
                     dataset.ShouldBePublic = true;

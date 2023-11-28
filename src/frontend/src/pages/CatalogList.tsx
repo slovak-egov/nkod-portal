@@ -76,7 +76,7 @@ export default function CatalogList()
                         <TableCell style={{whiteSpace: 'nowrap'}}>
                             <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/lokalne-katalogy/upravit/' + c.id)}>{t('edit')}</Button>
                             <Button className="idsk-button idsk-button--secondary" onClick={async () => {
-                                    if (await removeLocalCatalog(c.id, headers)) {
+                                    if (await removeLocalCatalog(t('removePrompt'), c.id, headers)) {
                                         refresh();
                                     }
                                 }}>{t('remove')}</Button>

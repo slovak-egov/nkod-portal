@@ -20,12 +20,12 @@ type Theme = {
 
 const codelistsKeys: [] = [];
 
-const orderByOptions: OrderOption[] = [{ name: 'Relevancie', value: 'relevance' }, { name: 'Názvu', value: 'name' }];
-
 export default function PublicPublisherList() {
     const [publishers, query, setQueryParameters, loading, error] = usePublishers();
     const {t} = useTranslation();
     useDocumentTitle(t('publishers'));
+
+    const orderByOptions: OrderOption[] = [{ name: t('byRelevance'), value: 'relevance' }, { name: t('byName'), value: 'name' }];
 
     return (
         <>

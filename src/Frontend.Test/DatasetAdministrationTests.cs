@@ -73,7 +73,7 @@ namespace Frontend.Test
                 await Page.GetByText("Nový dataset").ClickAsync();
             });
 
-            DcatDataset dataset = DcatDataset.Create(new Uri("http://example.com/dataset/1"));
+            DcatDataset dataset = DcatDataset.Create();
             dataset.AccrualPeriodicity = new Uri("http://publications.europa.eu/resource/dataset/frequency/1");
             dataset.SetTitle(new Dictionary<string, string> { { "sk", string.Empty } });
             dataset.SetDescription(new Dictionary<string, string> { { "sk", string.Empty } });
@@ -84,7 +84,7 @@ namespace Frontend.Test
 
         private DcatDataset CreateMinimalDataset(int? index = null)
         {
-            DcatDataset input = DcatDataset.Create(new Uri($"http://example.com/dataset/{index ?? 1}"));
+            DcatDataset input = DcatDataset.Create();
             input.Publisher = new Uri(PublisherId);
             input.SetTitle(new Dictionary<string, string> { { "sk", "NameSk" } });
             input.SetDescription(new Dictionary<string, string> { { "sk", "DescriptionSk" } });
@@ -283,7 +283,7 @@ namespace Frontend.Test
             });
 
             DcatDataset input = CreateMinimalDataset();
-            input.IsPartOf = new Uri("http://example.com/dataset/2");
+            input.IsPartOf = new Uri($"https://data.gov.sk/set/{serieId}");
             input.IsPartOfInternalId = serieId.ToString();
             await Page.FillDatasetFields(input);
 
@@ -382,7 +382,7 @@ namespace Frontend.Test
 
             await Page.AssertDatasetForm(dataset);
 
-            DcatDataset input = DcatDataset.Create(new Uri($"http://example.com/dataset/1"));
+            DcatDataset input = DcatDataset.Create();
             input.Publisher = new Uri(PublisherId);
             input.SetTitle(new Dictionary<string, string> { { "sk", "NameSk2" } });
             input.SetDescription(new Dictionary<string, string> { { "sk", "DescriptionSk2" } });
@@ -426,7 +426,7 @@ namespace Frontend.Test
 
             await Page.AssertDatasetForm(dataset);
 
-            DcatDataset input = DcatDataset.Create(new Uri($"http://example.com/dataset/1"));
+            DcatDataset input = DcatDataset.Create();
             input.Publisher = new Uri(PublisherId);
             input.SetTitle(new Dictionary<string, string> { { "sk", "NameSk2" } });
             input.SetDescription(new Dictionary<string, string> { { "sk", "DescriptionSk2" } });
@@ -525,7 +525,7 @@ namespace Frontend.Test
             Guid serieId = fixture.CreateDataset(serie);
 
             DcatDataset dataset = CreateMinimalDataset();
-            dataset.IsPartOf = new Uri("http://example.com/dataset/2");
+            dataset.IsPartOf = new Uri($"https://data.gov.sk/set/{serieId}");
             dataset.IsPartOfInternalId = serieId.ToString();
             Guid id = fixture.CreateDataset(dataset);
 
@@ -682,7 +682,7 @@ namespace Frontend.Test
                 await Page.ClickOnTableButton(1, "Upraviť");
             });
 
-            dataset.IsPartOf = new Uri("http://example.com/dataset/2");
+            dataset.IsPartOf = new Uri($"https://data.gov.sk/set/{serieId}");
             dataset.IsPartOfInternalId = serieId.ToString();
             await Page.FillDatasetFields(dataset);
 
@@ -719,7 +719,7 @@ namespace Frontend.Test
 
             await Page.AssertDatasetForm(dataset);
 
-            DcatDataset input = DcatDataset.Create(new Uri($"http://example.com/dataset/1"));
+            DcatDataset input = DcatDataset.Create();
             input.Publisher = new Uri(PublisherId);
             input.SetTitle(new Dictionary<string, string> { { "sk", "NameSk2" } });
             input.SetDescription(new Dictionary<string, string> { { "sk", "DescriptionSk2" } });
@@ -790,7 +790,7 @@ namespace Frontend.Test
 
             await Page.AssertDatasetForm(dataset);
 
-            DcatDataset input = DcatDataset.Create(new Uri($"http://example.com/dataset/1"));
+            DcatDataset input = DcatDataset.Create();
             input.Publisher = new Uri(PublisherId);
             input.SetTitle(new Dictionary<string, string> { { "sk", "NameSk2" }, { "en", "NameEn2" }, { "de", "NameDe2" } });
             input.SetDescription(new Dictionary<string, string> { { "sk", "DescriptionSk2" }, { "en", "DescriptionEn2" }, { "de", "DescriptionDe2" } });

@@ -65,7 +65,7 @@ export default function DistributionList()
                             {d.downloadUrl ? <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => { if (d.downloadUrl) {window.location.href = d.downloadUrl}}}>{t('download')}</Button> : null}
                             <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/distribucie/' + datasetId + '/upravit/' + d.id)}>{t('edit')}</Button>
                             <Button className="idsk-button idsk-button--secondary" onClick={async () => {
-                                    if (await removeDistribution(d.id, headers)) {
+                                    if (await removeDistribution(t('removePrompt'), d.id, headers)) {
                                         refresh();
                                     }
                                 }}>{t('remove')}</Button>

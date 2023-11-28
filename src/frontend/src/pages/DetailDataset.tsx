@@ -6,20 +6,6 @@ import GridColumn from "../components/GridColumn";
 import RelatedContent from "../components/RelatedContent";
 import FileIcon from "../components/FileIcon";
 
-import csvIcon from '../icons/csv.png';
-import docIcon from '../icons/doc.png';
-import htmlIcon from '../icons/html.png';
-import jsonIcon from '../icons/json.png';
-import mdbIcon from '../icons/mdb.png';
-import odsIcon from '../icons/ods.png';
-import pdfIcon from '../icons/pdf.png';
-import rdfIcon from '../icons/rdf.png';
-import sqlIcon from '../icons/sql.png';
-import txtIcon from '../icons/txt.png';
-import xlsIcon from '../icons/xls.png';
-import xlsxIcon from '../icons/xlsx.png';
-import xmlIcon from '../icons/xml.png';
-
 import Loading from "../components/Loading";
 import ErrorAlert from "../components/ErrorAlert";
 import { useDataset, useDatasets, useDocumentTitle } from "../client";
@@ -141,17 +127,17 @@ export default function DetailDataset()
                             </div>
                             <div className="govuk-body nkod-detail-attribute-value" style={{wordBreak: 'break-all'}}>
                                 {dataset.temporal?.startDate ? <div>
-                                    <span style={{fontWeight: 'bold'}}>od: </span> <span data-testid="temporal-start">{dataset.temporal.startDate}</span>
+                                    <span style={{fontWeight: 'bold'}}>{t('from')}: </span> <span data-testid="temporal-start">{dataset.temporal.startDate}</span>
                                 </div> : null}
                                 {dataset.temporal?.endDate ? <div>
-                                    <span style={{fontWeight: 'bold'}}>do: </span> <span data-testid="temporal-end">{dataset.temporal.endDate}</span>
+                                    <span style={{fontWeight: 'bold'}}>{t('to')}: </span> <span data-testid="temporal-end">{dataset.temporal.endDate}</span>
                                 </div> : null}
                             </div>
                         </div> : null}
                     </GridColumn>
                     {dataset.distributions.length > 0 ? <GridColumn widthUnits={3} totalUnits={4}>
                         <div className="govuk-body nkod-detail-distribution-count" data-testid="distributions-count">
-                            {dataset.distributions.length} {dataset.distributions.length === 1 ? 'distribúcia' : dataset.distributions.length < 5 ? 'distribúcie' : 'distribúcií'}
+                            {dataset.distributions.length} {dataset.distributions.length === 1 ? t('distribution') : dataset.distributions.length < 5 ? t('distribution2-4') : t('distribution5')}
                         </div>
                         <hr className="idsk-crossroad-line" aria-hidden="true"/>
                         {dataset.distributions.map(distrubution => <div key={distrubution.id} className="govuk-body nkod-detail-distribution-row" data-testid="distribution" >
@@ -170,7 +156,7 @@ export default function DetailDataset()
                 {(datasets.length > 0) ? <GridRow>
                     <GridColumn widthUnits={1} totalUnits={1} data-testid="related">
                         <RelatedContent header={t('otherDatasetsFromList')} links={datasets.map(d => ({
-                            title: d.name ?? 'Bez názvu',
+                            title: d.name ?? t('noName'),
                             url: '/datasety/' + d.id
                         }))}  />
                     </GridColumn>

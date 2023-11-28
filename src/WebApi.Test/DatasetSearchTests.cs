@@ -777,7 +777,7 @@ namespace WebApi.Test
             fixture.CreateDistributionCodelists();
             Guid publisherId = fixture.CreatePublisher("Ministerstvo hospodárstva SR", PublisherId);
 
-            DcatDataset dataset = DcatDataset.Create(fixture.CreateUri());
+            DcatDataset dataset = DcatDataset.Create();
 
             Dictionary<string, string> names = new Dictionary<string, string> { { "sk", "TestSk" } };
             dataset.SetTitle(names);

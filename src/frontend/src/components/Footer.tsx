@@ -26,7 +26,7 @@ export function Footer()
                                 <p> 
                                     <span>{t('nkodPart')}</span> <a href="https://www.mirri.gov.sk/projekty/projekty-esif/operacny-program-integrovana-infrastruktura/prioritna-os-7-informacna-spolocnost/projekty/otvorene-udaje-2-0/index.html" target="_blank" rel="noopener noreferrer" title={t('openData20')}> {t('openData20')} </a> 
                                 </p> 
-                                <img className="idsk-footer-extended-logo" src="/assets/eulogo.png" alt="EURÓPSKA ÚNIA Európske štrukturálne a investičné fondy OP Integrovaná infraštruktúra 2014 – 2020" /> 
+                                <img className="idsk-footer-extended-logo" src="/assets/eulogo.png" alt={t('euProjectFinancing')} /> 
                             </div>
                         </div>
                     </div>

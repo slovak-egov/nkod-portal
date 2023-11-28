@@ -4,6 +4,7 @@ import GridColumn from "./GridColumn";
 import { Language, supportedLanguages } from "../client";
 import Button from "./Button";
 import SelectElementItems from "./SelectElementItems";
+import { useTranslation } from "react-i18next";
 
 type Props<T> =
 {
@@ -20,6 +21,8 @@ export default function MultiLanguageFormGroup<T>(props: Props<T>)
 {
     const id = useId();
     const [selectedLanguage, setSelectedLanguage] = useState<Language|null>(null);
+
+    const {t} = useTranslation();
 
     const values = props.values;
 
@@ -71,7 +74,7 @@ export default function MultiLanguageFormGroup<T>(props: Props<T>)
                                 {props.label} ({language.nameInPrimaryLanguage})
                             </label>
                             {props.hint ? <span className="govuk-hint">{props.hint}</span> : null}
-                            {props.errorMessage && props.errorMessage[lang] && props.errorMessage[lang] !== '' ? <span className="govuk-error-message"><span className="govuk-visually-hidden">Chyba: </span> {props.errorMessage[lang]}</span> : null}
+                            {props.errorMessage && props.errorMessage[lang] && props.errorMessage[lang] !== '' ? <span className="govuk-error-message"><span className="govuk-visually-hidden">{t('error')}: </span> {props.errorMessage[lang]}</span> : null}
                             {props.element(id + "_" + lang, value, v => props.onChange({...values, [lang]: v}))}
                         </div>
                     </GridColumn>
@@ -81,7 +84,7 @@ export default function MultiLanguageFormGroup<T>(props: Props<T>)
                             delete newValues[lang];
                             props.onChange(newValues);
                         }}>
-                            Odstrániť jazykovú verziu
+                            {t('removeLanguageVersion')}
                         </Button> : null}
                     </GridColumn>
                 </GridRow>
@@ -95,7 +98,7 @@ export default function MultiLanguageFormGroup<T>(props: Props<T>)
                 renderOption={l => l.nameInPrimaryLanguage}
                 selectedValue={selectedLanguage ? selectedLanguage.id : ''}
                 onChange={lang => props.onChange({...values, [lang]: props.emptyValue})} />
-            {selectedLanguage ? <Button buttonType="secondary" style={{marginLeft: '20px'}} onClick={() => props.onChange({...values, [selectedLanguage.id]: props.emptyValue})}>Pridať jazykovú verziu</Button> : null}
+            {selectedLanguage ? <Button buttonType="secondary" style={{marginLeft: '20px'}} onClick={() => props.onChange({...values, [selectedLanguage.id]: props.emptyValue})}>{t('addLanguageVersion')}</Button> : null}
         </div> : null}
     </div>
 }

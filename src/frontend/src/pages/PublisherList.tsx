@@ -76,7 +76,7 @@ export default function PublisherList()
                                 navigate('/');
                             }} >{t('impersonate')}</Button>
                             <Button className="idsk-button idsk-button--secondary" onClick={async () => {
-                                await removeEntity('publishers', p.id, headers);
+                                await removeEntity(t('removePrompt'), 'publishers', p.id, headers);
                                 refresh();
                             }} >{t('remove')}</Button>
                         </TableCell>

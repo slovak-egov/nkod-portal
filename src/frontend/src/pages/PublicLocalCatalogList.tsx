@@ -16,8 +16,6 @@ type OrderOption = {
 
 const codelistsKeys = ['publishers', 'https://data.gov.sk/def/local-catalog-type'];
 
-const orderByOptions: OrderOption[] = [{ name: 'Názvu', value: 'name' }];
-
 export default function PublicDatasetList() {
     const [catalogs, query, setQueryParameters, loading, error] = useLocalCatalogs({
         requiredFacets: codelistsKeys,
@@ -25,6 +23,8 @@ export default function PublicDatasetList() {
     });
     const {t} = useTranslation();
     useDocumentTitle(t('localCatalogs'));
+
+    const orderByOptions: OrderOption[] = [{ name: t('byName'), value: 'name' }];
 
     return (
         <>

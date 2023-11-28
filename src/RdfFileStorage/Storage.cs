@@ -1,6 +1,7 @@
 ﻿using AngleSharp.Dom;
 using Lucene.Net.QueryParsers.Classic;
 using Lucene.Net.Search;
+using Lucene.Net.Search.Similarities;
 using Newtonsoft.Json;
 using NkodSk.Abstractions;
 using System;
@@ -119,25 +120,71 @@ namespace NkodSk.RdfFileStorage
 
                 List<Exception> exceptions = new List<Exception>();
 
-                foreach (string metadataPath in files)
+                try
+                {
+                    string testFileName = $"_test_{Guid.NewGuid()}_test";
+
+                    void TestFolder(string directory)
+                    {
+                        string path = Path.Combine(directory, testFileName);
+                        using (FileStream fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+                        {
+                            fs.Write(Encoding.UTF8.GetBytes(testFileName));
+                            fs.Close();
+                        }                            
+                        File.Delete(testFileName);
+                    }
+
+                    TestFolder(publicTurtlePath);
+                    TestFolder(protectedPath);
+                }
+                catch (Exception e)
+                {
+                    exceptions.Add(e);
+                }
+
+                Parallel.ForEach(files, metadataPath =>
                 {
                     try
                     {
+                        static void CheckFile(string path)
+                        {
+                            if (!File.Exists(path))
+                            {
+                                throw new Exception($"Unable to find target file {path}");
+                            }
+
+                            using FileStream fs = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+                            if (!fs.CanRead)
+                            {
+                                throw new Exception($"File {path} is not readable");
+                            }
+                            if (!fs.CanWrite)
+                            {
+                                throw new Exception($"File {path} is not writable");
+                            }
+                        }
+
+                        CheckFile(metadataPath);
+
                         FileMetadata metadata = FileMetadata.LoadFrom(metadataPath);
                         string filePath = GetFilePath(metadata);
 
-                        if (!File.Exists(filePath))
-                        {
-                            throw new Exception($"Unable to find target file for metadata file {metadataPath}, id {metadata.Id}");
-                        }
+                        CheckFile(filePath);
 
-                        InsertFileEntry(metadata, filePath);
+                        lock (entries)
+                        {
+                            InsertFileEntry(metadata, filePath);
+                        }
                     }
                     catch (Exception e)
                     {
-                        exceptions.Add(e);
+                        lock (exceptions)
+                        {
+                            exceptions.Add(e);
+                        }
                     }
-                }
+                });
 
                 if (exceptions.Count > 0)
                 {

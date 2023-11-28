@@ -3,6 +3,7 @@ import Button from "./Button";
 import BaseInput from "./BaseInput";
 import GridRow from "./GridRow";
 import GridColumn from "./GridColumn";
+import { useTranslation } from "react-i18next";
 
 type Props = 
 {
@@ -16,6 +17,7 @@ export default function MultiTextBox(props: Props)
 {
     const [newValue, newValueChanged] = useState<string>('');
     const { values, onChange, disabled, ...rest } = props;
+    const {t} = useTranslation();
 
     return <><GridRow>
         <GridColumn widthUnits={3} totalUnits={4}>
@@ -29,7 +31,7 @@ export default function MultiTextBox(props: Props)
                         onChange([...values, newValue]);
                     }
                 }}} disabled={newValue === '' || disabled}>
-                Pridať
+                {t('addToList')}
             </Button>
         </GridColumn>
     </GridRow>

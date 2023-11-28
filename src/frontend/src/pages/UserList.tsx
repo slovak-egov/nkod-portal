@@ -65,7 +65,7 @@ export default function UserList()
                         <TableCell style={{whiteSpace: 'nowrap'}}>
                             <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px'}} onClick={() => navigate('/sprava/pouzivatelia/upravit/' + u.id)}>{t('edit')}</Button>
                             <Button className="idsk-button idsk-button--secondary" onClick={async () => {
-                                    if (await removeUser(u.id, headers)) {
+                                    if (await removeUser(t('removePrompt'), u.id, headers)) {
                                         refresh();
                                     }
                                 }}>{t('remove')}</Button>

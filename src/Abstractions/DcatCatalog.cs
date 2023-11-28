@@ -13,6 +13,8 @@ namespace NkodSk.Abstractions
     {
         public const string LocalCatalogTypeCodelist = "https://data.gov.sk/def/local-catalog-type";
 
+        private Guid? createdId;
+
         public DcatCatalog(IGraph graph, IUriNode node) : base(graph, node)
         {
         }
@@ -126,20 +128,25 @@ namespace NkodSk.Abstractions
             return null;
         }
 
-        public static DcatCatalog Create(Uri uri)
+        public static DcatCatalog Create()
         {
+            Guid id = Guid.NewGuid();
+            Uri uri = new Uri($"https://data.gov.sk/set/lkod/{id}");
+
             IGraph graph = new Graph();
             RdfDocument.AddDefaultNamespaces(graph);
             IUriNode subject = graph.CreateUriNode(uri);
             IUriNode rdfTypeNode = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
             IUriNode targetTypeNode = graph.CreateUriNode("dcat:Catalog");
             graph.Assert(subject, rdfTypeNode, targetTypeNode);
-            return new DcatCatalog(graph, subject);
+            DcatCatalog catalog = new DcatCatalog(graph, subject);
+            catalog.createdId = id;
+            return catalog;
         }
 
         public FileMetadata UpdateMetadata(FileMetadata? metadata = null)
         {
-            Guid id = metadata?.Id ?? Guid.NewGuid();
+            Guid id = metadata?.Id ?? createdId ?? Guid.NewGuid();
             DateTimeOffset now = DateTimeOffset.UtcNow;
             Dictionary<string, string[]> values = new Dictionary<string, string[]>();
 

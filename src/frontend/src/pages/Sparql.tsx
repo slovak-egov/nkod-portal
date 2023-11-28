@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import PageHeader from "../components/PageHeader";
 import Breadcrumbs from "../components/Breadcrumbs";
@@ -12,7 +12,7 @@ import storedQueries from '../sparql-queries.json';
 //@ts-ignore
 import { initAll } from  '@id-sk/frontend/idsk/all';
 import { useTranslation } from "react-i18next";
-import { useDocumentTitle } from "../client";
+import { useDocumentTitle, useEndpointUrl } from "../client";
 
 const defaultSparqlQuery = `PREFIX dcat: <http://www.w3.org/ns/dcat#>
 SELECT (COUNT (*) AS ?count)
@@ -25,18 +25,23 @@ let yasgui: Yasgui;
 
 export default function Sparql()
 {
+    const endpointUrl = useEndpointUrl();
+
       useEffect(() => {
-        yasgui = new Yasgui(document.getElementById("yasgui")!, {
+        if (endpointUrl) {
+          yasgui = new Yasgui(document.getElementById("yasgui")!, {
             "requestConfig": {
-              "endpoint": () => "https://opendata.mirri.tech/api/sparql",
+              "endpoint": () => endpointUrl,
               "method": "GET"
             },
             "copyEndpointOnNewTab": true,
+            "autofocus": false
           });
           yasgui.getTab()?.setQuery(defaultSparqlQuery);
           initAll();
         return () => {};
-      }, []);
+        }
+      }, [endpointUrl]);
       const {t} = useTranslation();
       useDocumentTitle('SPARQL');
     
@@ -61,7 +66,7 @@ export default function Sparql()
                     </div>
                 </div>)}
 
-                <PageSubheader style={{color: '#2B8CC4', margin: '30px 0 20px 0'}}>Zadaj SPARQL dopyt</PageSubheader>
+                <PageSubheader style={{color: '#2B8CC4', margin: '30px 0 20px 0'}}>{t('enterSparqlQuery')}</PageSubheader>
                 <div id="yasgui" />
             </MainContent>
         </>;

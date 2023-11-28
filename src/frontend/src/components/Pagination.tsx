@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import Button from "./Button";
 
 type Props =
@@ -23,6 +24,8 @@ export default function Pagination(props: Props)
     const showNextPageIndex = currentPage < totalPages - 1;
     const showwLastPageIndex = currentPage < totalPages;
 
+    const {t} = useTranslation();
+
     const onPageChange = props.onPageChange;
 
     const getPageIndexLink = (page: number) => <Button className={"idsk-button idsk-button--secondary" + (page === currentPage ? " nkod-current-page" : "")} style={{marginRight: '5px'}} onClick={() => onPageChange(page)}>
@@ -30,7 +33,7 @@ export default function Pagination(props: Props)
     </Button>;
 
     return <>{totalPages > 0 ? <nav className="nkod-pagination">
-        {showPrevious ? <Button className="idsk-button idsk-button--secondary nkod-previous-page" style={{marginRight: '5px'}} onClick={() => onPageChange(currentPage - 1)}>Predchádzajúca stránka</Button> : null}    
+        {showPrevious ? <Button className="idsk-button idsk-button--secondary nkod-previous-page" style={{marginRight: '5px'}} onClick={() => onPageChange(currentPage - 1)}>{t('previousPage')}</Button> : null}    
         {showFirstPageIndex ? getPageIndexLink(1) : null}
         {showLeadingEllipses ? <span className="nkod-pagination-ellipsis" style={{lineHeight: '34px', margin: '0 10px'}}>...</span> : null}
         {showPreviousPageIndex ? getPageIndexLink(currentPage - 1) : null}
@@ -38,6 +41,6 @@ export default function Pagination(props: Props)
         {showNextPageIndex ? getPageIndexLink(currentPage + 1) : null}
         {showTrailingEllipses ? <span className="nkod-pagination-ellipsis" style={{lineHeight: '34px', margin: '0 10px'}}>...</span> : null}
         {showwLastPageIndex ? getPageIndexLink(totalPages) : null}
-        {showNext ? <Button className="idsk-button idsk-button--secondary nkod-next-page" onClick={() => onPageChange(currentPage + 1)}>Ďalšia stránka</Button> : null}
+        {showNext ? <Button className="idsk-button idsk-button--secondary nkod-next-page" onClick={() => onPageChange(currentPage + 1)}>{t('nextPage')}</Button> : null}
     </nav> : null}</>
 }

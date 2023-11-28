@@ -45,7 +45,7 @@ namespace WebApi.Test
 
         public Guid CreateDataset(string nameSk, string publisher, bool isPublic = true, Uri? type = null, string[]? keywordsSk = null, string? nameEn = null, string[]? keywordsEn = null, Guid? parent = null)
         {
-            DcatDataset dataset = DcatDataset.Create(CreateUri());
+            DcatDataset dataset = DcatDataset.Create();
 
             Dictionary<string, string> names = new Dictionary<string, string> { { "sk", nameSk } };
             if (nameEn is not null)
@@ -85,7 +85,7 @@ namespace WebApi.Test
 
         public Guid CreateLocalCatalog(string name, string publisher, string? nameEn = null, string? description = null, string? descriptionEn = null)
         {
-            DcatCatalog catalog = DcatCatalog.Create(CreateUri());
+            DcatCatalog catalog = DcatCatalog.Create();
 
             Dictionary<string, string> names = new Dictionary<string, string> { { "sk", name } };
             if (nameEn is not null)
@@ -115,7 +115,7 @@ namespace WebApi.Test
         public Guid CreateDistrbution(FileMetadata datasetMetadata, Uri? authorsWorkType, Uri? originalDatabaseType, Uri? databaseProtectedBySpecialRightsType, Uri? personalDataContainmentType,
             Uri? downloadUri, Uri? accessUri, Uri? format, Uri? mediaType, Uri? conformsTo = null, Uri? compressFormat = null, Uri? packageFormat = null, string? title = null, string? titleEn = null, Uri? accessService = null)
         {
-            DcatDistribution distribution = DcatDistribution.Create(CreateUri());
+            DcatDistribution distribution = DcatDistribution.Create(datasetMetadata.Id);
 
             distribution.SetTermsOfUse(authorsWorkType, originalDatabaseType, databaseProtectedBySpecialRightsType, personalDataContainmentType);
             distribution.DownloadUrl = downloadUri;
@@ -149,7 +149,7 @@ namespace WebApi.Test
 
         public (Guid, Guid, Guid[]) CreateFullDataset(string? publisher = null)
         {
-            DcatDataset dataset = DcatDataset.Create(CreateUri());
+            DcatDataset dataset = DcatDataset.Create();
 
             publisher ??= "https://data.gov.sk/id/publisher/full";
             Guid publisherId = CreatePublisher("Ministerstvo hospodárstva SR", id: publisher, nameEn: "Ministry of economy");
@@ -204,7 +204,7 @@ namespace WebApi.Test
 
         public (Guid, Guid) CreateFullLocalCatalog(string? publisher = null)
         {
-            DcatCatalog catalog = DcatCatalog.Create(CreateUri());
+            DcatCatalog catalog = DcatCatalog.Create();
 
             publisher ??= "https://data.gov.sk/id/publisher/full";
             Guid publisherId = CreatePublisher("Ministerstvo hospodárstva SR", id: publisher, nameEn: "Ministry of economy");

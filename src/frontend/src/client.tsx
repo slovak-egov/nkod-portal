@@ -759,8 +759,8 @@ export function extractLanguageErrors(errors: {[id: string]: string}, key: strin
     return filtered;
 }
 
-export async function removeEntity(url: string, id: string, headers: RawAxiosRequestHeaders) {
-    if (window.confirm('Skutočne chcete odstrániť záznam?')) {
+export async function removeEntity(prompt: string, url: string, id: string, headers: RawAxiosRequestHeaders) {
+    if (window.confirm(prompt)) {
         try{
             await axios.delete(baseUrl + url, {
                 headers: headers,
@@ -781,20 +781,20 @@ type FileUploadResult = {
     url: string;
 }
 
-export function removeDataset(id: string, headers: RawAxiosRequestHeaders) {
-    return removeEntity('datasets', id, headers);
+export function removeDataset(prompt: string, id: string, headers: RawAxiosRequestHeaders) {
+    return removeEntity(prompt,'datasets', id, headers);
 }
 
-export function removeDistribution(id: string, headers: RawAxiosRequestHeaders) {
-    return removeEntity('distributions', id, headers);
+export function removeDistribution(prompt: string, id: string, headers: RawAxiosRequestHeaders) {
+    return removeEntity(prompt,'distributions', id, headers);
 }
 
-export function removeLocalCatalog(id: string, headers: RawAxiosRequestHeaders) {
-    return removeEntity('local-catalogs', id, headers);
+export function removeLocalCatalog(prompt: string, id: string, headers: RawAxiosRequestHeaders) {
+    return removeEntity(prompt,'local-catalogs', id, headers);
 }
 
-export function removeUser(id: string, headers: RawAxiosRequestHeaders) {
-    return removeEntity('users', id, headers);
+export function removeUser(prompt: string, id: string, headers: RawAxiosRequestHeaders) {
+    return removeEntity(prompt, 'users', id, headers);
 }
 
 export function useSingleFileUpload(url: string) {
@@ -962,4 +962,20 @@ export function useDocumentTitle(text: string)
     useEffect(() => {
         document.title = t('nkod') + (text.length > 0 ? " - " + text : "");
     }, [text, t]);
+}
+
+export function useEndpointUrl()
+{
+    const [endpointUrl, setEndpointUrl] = useState<string|null>(null);
+
+    useEffect(() => {
+      async function fetch()
+      {
+        const response: AxiosResponse<string> = await sendGet('sparql-endpoint-url', {});
+        setEndpointUrl(response.data);
+      }
+      fetch();
+    }, []);
+
+    return endpointUrl;
 }

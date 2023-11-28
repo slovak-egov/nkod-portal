@@ -763,7 +763,7 @@ app.MapPost("/datasets", [Authorize] async ([FromBody] DatasetInput? dataset, [F
                     parentDataset = parentDatasetId;
                 }
 
-                DcatDataset datasetRdf = DcatDataset.Create(new Uri($"http://data.gov.sk/dataset/{Guid.NewGuid()}"));
+                DcatDataset datasetRdf = DcatDataset.Create();
                 dataset.MapToRdf(publisher, datasetRdf);
                 FileMetadata metadata = datasetRdf.UpdateMetadata(dataset.IsSerie);
                 metadata = await datasetRdf.UpdateReferenceToParent(parentDataset, metadata, client);
@@ -985,7 +985,7 @@ app.MapPost("/distributions", [Authorize] async ([FromBody] DistributionInput? d
                         ValidationResults validationResults = await distribution.Validate(publisherId, client, codelistProviderClient);
                         if (validationResults.IsValid)
                         {
-                            DcatDistribution distributionRdf = DcatDistribution.Create(new Uri($"http://data.gov.sk/distribution/{Guid.NewGuid()}"));
+                            DcatDistribution distributionRdf = DcatDistribution.Create(datasetId);
                             distribution.MapToRdf(distributionRdf);
                             FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata);
                             await client.InsertFile(distributionRdf.ToString(), false, metadata).ConfigureAwait(false);
@@ -1218,7 +1218,7 @@ app.MapPost("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? 
             ValidationResults validationResults = await catalog.Validate(codelistProviderClient);
             if (validationResults.IsValid)
             {
-                DcatCatalog catalogRdf = DcatCatalog.Create(new Uri($"http://data.gov.sk/catalog/{Guid.NewGuid()}"));
+                DcatCatalog catalogRdf = DcatCatalog.Create();
                 catalog.MapToRdf(publisher, catalogRdf);
                 FileMetadata metadata = catalogRdf.UpdateMetadata();
                 await client.InsertFile(catalogRdf.ToString(), false, metadata).ConfigureAwait(false);
@@ -2056,6 +2056,11 @@ app.MapPost("/saml/consume", async ([FromServices] IIdentityAccessManagementClie
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
+});
+
+app.MapGet("/sparql-endpoint-url", (IConfiguration configuration) =>
+{
+    return Results.Ok(configuration["PublicSparqlEndpoint"]);
 });
 
 app.Use(async (context, next) =>

@@ -1,15 +1,17 @@
+import { useTranslation } from "react-i18next";
 import IdSkModule from "./IdSkModule";
 import { InputHTMLAttributes, useId } from "react";
 
 export default function SearchBar(props: InputHTMLAttributes<HTMLInputElement>) {
     const id = useId();
+    const {t} = useTranslation();
 
     return <div className="idsk-search-results__search-bar">
         <IdSkModule moduleType="idsk-search-component" className="idsk-search-component idsk-search-component--small">
             <label className="idsk-search-component__label--small" htmlFor={id} style={{display: 'none'}}>
-                Zadajte hľadaný výraz
+                {t('enterSearchTerm')}
             </label>
-            <input className="govuk-input idsk-search-component__input idsk-search-component__input--small" placeholder="Zadajte hľadaný výraz" id={id} type="search" {...props} />
+            <input className="govuk-input idsk-search-component__input idsk-search-component__input--small" placeholder={t('enterSearchTerm')} id={id} type="search" {...props} />
             <button className="idsk-button idsk-search-component__button idsk-search-component__button--small">
                 <svg width="18" height="18" viewBox="0 0 31 30" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M21.0115 13.103C21.0115 17.2495 17.5484 20.6238 13.2928 20.6238C9.03714 20.6238 5.57404 17.2495 5.57404 13.103C5.57404
@@ -31,7 +33,7 @@ export default function SearchBar(props: InputHTMLAttributes<HTMLInputElement>) 
                         5.18629 13.2928 5.18629C17.7728 5.18629 21.4178 8.73781 21.4178 13.103C21.4178 17.4681 17.7728 21.0196 13.2928
                         21.0196C8.81278 21.0196 5.16779 17.4681 5.16779 13.103Z" fill="white"></path>
                 </svg>
-                <span className="govuk-visually-hidden">Vyhľadávanie</span>
+                <span className="govuk-visually-hidden">{t('search')}</span>
             </button>
         </IdSkModule>
     </div>;

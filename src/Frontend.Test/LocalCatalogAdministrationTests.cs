@@ -70,7 +70,7 @@ namespace Frontend.Test
                 await Page.GetByText("Nový lokálny katalóg").ClickAsync();
             });
 
-            DcatCatalog localCatalog = DcatCatalog.Create(new Uri("http://example.com/local-catalog/1"));
+            DcatCatalog localCatalog = DcatCatalog.Create();
             localCatalog.Type = new Uri("https://data.gov.sk/def/local-catalog-type/1");
             localCatalog.SetTitle(new Dictionary<string, string> { { "sk", string.Empty } });
             localCatalog.SetDescription(new Dictionary<string, string> { { "sk", string.Empty } });
@@ -81,7 +81,7 @@ namespace Frontend.Test
 
         private DcatCatalog CreateMinimalLocalCatalog(int? index = null)
         {
-            DcatCatalog input = DcatCatalog.Create(new Uri($"http://example.com/local-catalog/{index ?? 1}"));
+            DcatCatalog input = DcatCatalog.Create();
             input.Publisher = new Uri(PublisherId);
             input.SetTitle(new Dictionary<string, string> { { "sk", "NameSk" } });
             input.SetDescription(new Dictionary<string, string> { { "sk", "DescriptionSk" } });
@@ -259,7 +259,7 @@ namespace Frontend.Test
 
             await Page.AssertLocalCatalogForm(localCatalog);
 
-            DcatCatalog input = DcatCatalog.Create(new Uri($"http://example.com/LocalCatalog/1"));
+            DcatCatalog input = DcatCatalog.Create();
             input.Publisher = new Uri(PublisherId);
             input.SetTitle(new Dictionary<string, string> { { "sk", "NameSk2" } });
             input.SetDescription(new Dictionary<string, string> { { "sk", "DescriptionSk2" } });
@@ -301,7 +301,7 @@ namespace Frontend.Test
 
             await Page.AssertLocalCatalogForm(localCatalog);
 
-            DcatCatalog input = DcatCatalog.Create(new Uri($"http://example.com/LocalCatalog/1"));
+            DcatCatalog input = DcatCatalog.Create();
             input.Publisher = new Uri(PublisherId);
             input.SetTitle(new Dictionary<string, string> { { "sk", "NameSk2" } });
             input.SetDescription(new Dictionary<string, string> { { "sk", "DescriptionSk2" } });
@@ -401,7 +401,7 @@ namespace Frontend.Test
 
             await Page.AssertLocalCatalogForm(localCatalog);
 
-            DcatCatalog input = DcatCatalog.Create(new Uri($"http://example.com/LocalCatalog/1"));
+            DcatCatalog input = DcatCatalog.Create();
             input.Publisher = new Uri(PublisherId);
             input.SetTitle(new Dictionary<string, string> { { "sk", "NameSk2" }, { "en", "NameEn2" }, { "de", "NameDe2" } });
             input.SetDescription(new Dictionary<string, string> { { "sk", "DescriptionSk2" }, { "en", "DescriptionEn2" }, { "de", "DescriptionDe2" } });

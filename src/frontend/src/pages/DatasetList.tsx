@@ -95,7 +95,7 @@ export default function DatasetList()
                             <TableCell>
                                 <Button className="idsk-button idsk-button--secondary" style={{marginRight: '10px', marginTop: '10px', marginBottom: '10px'}} onClick={() => navigate('/sprava/datasety/upravit/' + d.id)}>{t('edit')}</Button>
                                 <Button className="idsk-button idsk-button--secondary" style={{marginTop: '10px', marginBottom: '10px'}} onClick={async () => {
-                                    if (await removeDataset(d.id, headers)) {
+                                    if (await removeDataset(t('removePrompt'), d.id, headers)) {
                                         refresh();
                                     }
                                 }}>{t('remove')}</Button>
@@ -103,7 +103,7 @@ export default function DatasetList()
                         </TableRow>)}
                     </TableBody>
                 </Table>
-                <Pagination totalItems={datasets.totalCount} pageSize={query.pageSize} currentPage={query.page} onPageChange={p => setQueryParameters({page: p})} /></> : <div className="govuk-body">V zozname sa nenachádzajú žiadne datasety.</div>}
+                <Pagination totalItems={datasets.totalCount} pageSize={query.pageSize} currentPage={query.page} onPageChange={p => setQueryParameters({page: p})} /></> : <div className="govuk-body">{t('noDatasetsInList')}</div>}
             </> : null}
         </MainContent>
         </>;

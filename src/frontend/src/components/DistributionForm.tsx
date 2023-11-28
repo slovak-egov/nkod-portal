@@ -134,7 +134,7 @@ export function DistributionForm(props: Props)
         }} />} /> : null}
 
         {uploading ? <Alert type="info">
-            Prebieha upload súboru
+            {t('fileUploadProgress')}
         </Alert> : null}
 
         {formatCodelist ? <FormElementGroup label={t('downloadFormat')} errorMessage={errors['format']} element={id => <SelectElementItems<CodelistValue> 
@@ -160,7 +160,7 @@ export function DistributionForm(props: Props)
         {mediaTypeCodelist ? <FormElementGroup label={t('compressionMediaType')} errorMessage={errors['compressformat']} element={id => <SelectElementItems<CodelistValue> 
             id={id} 
             disabled={saving}
-            options={[{id: '', label: 'nie je'}, ...mediaTypeCodelist.values]} 
+            options={[{id: '', label: t('none')}, ...mediaTypeCodelist.values]} 
             selectedValue={distribution.compressFormat ?? ''} 
             renderOption={v => v.label} 
             getValue={v => v.id}  
@@ -169,7 +169,7 @@ export function DistributionForm(props: Props)
         {mediaTypeCodelist ? <FormElementGroup label={t('packageMediaType')} errorMessage={errors['packageformat']} element={id => <SelectElementItems<CodelistValue> 
             id={id} 
             disabled={saving}
-            options={[{id: '', label: 'nie je'}, ...mediaTypeCodelist.values]} 
+            options={[{id: '', label: t('none')}, ...mediaTypeCodelist.values]} 
             selectedValue={distribution.packageFormat ?? ''} 
             renderOption={v => v.label} 
             getValue={v => v.id} 

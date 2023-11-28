@@ -24,6 +24,8 @@ namespace NkodSk.Abstractions
 
         public const string EuroVocPrefix = "http://eurovoc.europa.eu/";
 
+        private Guid? createdId;
+
         public DcatDataset(IGraph graph, IUriNode node) : base(graph, node)
         {
         }
@@ -200,15 +202,20 @@ namespace NkodSk.Abstractions
 
         public IEnumerable<Uri> Distributions => GetUrisFromUriNode("dcat:distribution");
 
-        public static DcatDataset Create(Uri uri)
+        public static DcatDataset Create()
         {
+            Guid id = Guid.NewGuid();
+            Uri uri = new Uri($"https://data.gov.sk/set/{id}");
+
             IGraph graph = new Graph();
             RdfDocument.AddDefaultNamespaces(graph);
             IUriNode subject = graph.CreateUriNode(uri);
             IUriNode rdfTypeNode = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
             IUriNode targetTypeNode = graph.CreateUriNode("dcat:Dataset");
             graph.Assert(subject, rdfTypeNode, targetTypeNode);
-            return new DcatDataset(graph, subject);
+            DcatDataset dataset = new DcatDataset(graph, subject);
+            dataset.createdId = id;
+            return dataset;
         }
 
         public static DcatDataset? Parse(string text)
@@ -224,7 +231,7 @@ namespace NkodSk.Abstractions
 
         public FileMetadata UpdateMetadata(bool isPublic, FileMetadata? metadata = null)
         {
-            Guid id = metadata?.Id ?? Guid.NewGuid();
+            Guid id = metadata?.Id ?? createdId ?? Guid.NewGuid();
             DateTimeOffset now = DateTimeOffset.UtcNow;
             Dictionary<string, string[]> values = new Dictionary<string, string[]>();
             isPublic = isPublic && ShouldBePublic;

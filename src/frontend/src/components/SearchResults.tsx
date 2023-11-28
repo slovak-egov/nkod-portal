@@ -37,6 +37,8 @@ export type Props = {
 
 function PublisherFilter(props : {facet?: Facet, selectedValues: string[], onChange: (values: string[]) => void}) {
     const [publishers] = usePublishers({pageSize: -1, orderBy: 'relevance'});
+    const {t} = useTranslation();
+    
     if (publishers && publishers.items.length > 0) {
       const facet = props.facet;
       const options: FilterValue[] = [];
@@ -64,9 +66,9 @@ function PublisherFilter(props : {facet?: Facet, selectedValues: string[], onCha
       if (options.length > 0) {
         return <SearchFilterWithQuery<FilterValue>
         key='publishers'
-        title='Poskytovatelia dát'
+        title={t('publishers')}
         dataTestId="sr-filter-publishers"
-        searchElementTitle='Poskytovatelia dát'
+        searchElementTitle={t('publishers')}
         items={options}
         getLabel={(e) => e.label}
         getValue={(e) => e.id}
@@ -163,6 +165,7 @@ function KeywordFilter(props : {facet?: Facet, selectedValues: string[], onChang
 
 export default function SearchResults(props: Props) {
   const [codelists] = useCodelists(props.filters);
+  const {t} = useTranslation();
 
     const totalCount = props.totalCount ?? 0;
     let pageSize = props.query.pageSize ?? 10;
@@ -182,18 +185,18 @@ export default function SearchResults(props: Props) {
 
       <div className="idsk-search-results__filter-header-panel govuk-grid-column-full idsk-search-results--invisible idsk-search-results--visible__mobile--inline">
             <div className="govuk-heading-xl idsk-search-results--half-width">
-            <span>Filtre
+            <span>{t('filters')}
             </span>
             </div>
             <div className="idsk-search-results--half-width">
-            <button className="idsk-search-results__button--back-to-results" type="button">Späť na výsledky
+            <button className="idsk-search-results__button--back-to-results" type="button">{t('backToResults')}
             </button>
             </div>
         </div>
 
       <GridRow>
         <GridColumn widthUnits={1} totalUnits={4}>
-          <span className="idsk-intro-block__search__span idsk-search-results--invisible__mobile">Vyhľadávanie </span>
+          <span className="idsk-intro-block__search__span idsk-search-results--invisible__mobile">{t('search')} </span>
 
           <div className="idsk-search-results__search-bar">
             <SearchBar value={props.query.queryText}
@@ -204,7 +207,7 @@ export default function SearchResults(props: Props) {
 
           {props.orderOptions.length > 0 ? <div className="idsk-search-results--order__dropdown">
             <FormElementGroup
-              label="Zoradiť podľa"
+              label={t('orderBy')}
               element={(id) => (
                 <SelectElementItems<OrderOption>
                   id={id}
@@ -285,10 +288,10 @@ export default function SearchResults(props: Props) {
                 totalUnits={4}
                 className="idsk-search-results__filter-panel--mobile govuk-clearfix"
               >
-                {/* <button className="idsk-search-results__filters__button" title="Filtre">Filtre
+                {/* <button className="idsk-search-results__filters__button" title="Filtre">{t('filters')}
                 </button>                 */}
                 <div className="idsk-search-results__per-page">
-                  <span>Výsledky na stranu</span>
+                  <span>{t('resultsOnPage')}</span>
                   <div className="govuk-form-group">
                     <SelectElementItems<number>
                       id="pageSize"
@@ -304,7 +307,7 @@ export default function SearchResults(props: Props) {
 
               <div className="idsk-search-results--order">
               <FormElementGroup
-                    label="Zoradiť podľa"
+                    label={t('orderBy')}
                     element={(id) => (
                         <SelectElementItems<OrderOption>
                         id={id}
@@ -352,11 +355,11 @@ export default function SearchResults(props: Props) {
                         }
                         return null;
                     })}
-                    <button className="idsk-search-results__button--turn-filters-off govuk-grid-column-full idsk-search-results--invisible" type="button">Vypnúť všetky filtre</button>
+                    <button className="idsk-search-results__button--turn-filters-off govuk-grid-column-full idsk-search-results--invisible" type="button">{t('removeAllFilters')}</button>
                     </div>
               
                     <div className="govuk-grid-column-full idsk-search-results__show-results__button idsk-search-results--invisible">
-                    <button className="govuk-button idsk-search-results__button-show-results" type="button">Zobraziť
+                    <button className="govuk-button idsk-search-results__button-show-results" type="button">{t('show')}
                     <ResultsCount count={props.totalCount} />
                     </button>
                     </div>
@@ -392,7 +395,7 @@ export default function SearchResults(props: Props) {
                           fill="#0065B3"
                         ></path>
                       </svg>
-                      Zobraziť predchádzajúce
+                      {t('showPrevious')}
                     </button>
                   ) : null}
                   {totalPages > props.query.page ? (
@@ -404,7 +407,7 @@ export default function SearchResults(props: Props) {
                       }
                       data-testid="sr-next-page"
                     >
-                      Zobraziť ďalšie
+                      {t('showNext')}
                       <svg
                         className="idsk-search-results__button__svg--next"
                         width="20"
@@ -423,7 +426,7 @@ export default function SearchResults(props: Props) {
 
                   <div className="idsk-search-results__page-number govuk-grid-column-full">
                     <span data-lines="Strana $value1 z $value2">
-                      Strana {props.query.page} z {totalPages}
+                      {t('page')} {props.query.page} z {totalPages}
                     </span>
                   </div>
                 </div>

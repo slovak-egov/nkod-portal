@@ -25,7 +25,7 @@ namespace Frontend.Test
 
         private Guid CreateCatalog(StorageFixture fixture, string name, bool isPublic = true)
         {
-            DcatCatalog catalog = DcatCatalog.Create(new Uri("http://example.com/catalog"));
+            DcatCatalog catalog = DcatCatalog.Create();
             catalog.SetTitle(new Dictionary<string, string> { { "sk", name } });
             catalog.SetDescription(new Dictionary<string, string> { { "sk", "Test Description" } });
             catalog.Publisher = new Uri(PublisherId);

@@ -76,7 +76,7 @@ namespace Frontend.Test
                 await Page.GetByText("Nová distribúcia").ClickAsync();
             });
 
-            DcatDistribution distribution = DcatDistribution.Create(new Uri("http://example.com/distribution/1"));
+            DcatDistribution distribution = DcatDistribution.Create(datasetId);
             distribution.SetTermsOfUse(
                 new Uri("https://creativecommons.org/licenses/by/4.0/"),
                 new Uri("https://creativecommons.org/licenses/by/4.0/"),
@@ -91,7 +91,7 @@ namespace Frontend.Test
 
         private DcatDistribution CreateMinimalDistribution(int? index = null)
         {
-            DcatDistribution input = DcatDistribution.Create(new Uri($"http://example.com/distribution/{index ?? 1}"));
+            DcatDistribution input = DcatDistribution.Create(Guid.NewGuid());
             input.SetTermsOfUse(
                 new Uri("https://creativecommons.org/licenses/by/4.0/"),
                 new Uri("https://creativecommons.org/licenses/by/4.0/"),
@@ -321,7 +321,7 @@ namespace Frontend.Test
 
             await Page.AssertDistributionForm(distribution);
 
-            DcatDistribution input = DcatDistribution.Create(new Uri($"http://example.com/dataset/1"));
+            DcatDistribution input = DcatDistribution.Create(datasetId);
             input.SetTermsOfUse(
                 new Uri("https://data.gov.sk/def/authors-work-type/1"),
                 new Uri("https://data.gov.sk/def/original-database-type/1"),
@@ -372,7 +372,7 @@ namespace Frontend.Test
 
             await Page.AssertDistributionForm(distribution);
 
-            DcatDistribution input = DcatDistribution.Create(new Uri($"http://example.com/dataset/1"));
+            DcatDistribution input = DcatDistribution.Create(datasetId);
             input.SetTermsOfUse(
                 new Uri("https://data.gov.sk/def/authors-work-type/1"),
                 new Uri("https://data.gov.sk/def/original-database-type/1"),
@@ -479,7 +479,7 @@ namespace Frontend.Test
 
             await Page.AssertDistributionForm(distribution);
 
-            DcatDistribution input = DcatDistribution.Create(new Uri($"http://example.com/dataset/1"));
+            DcatDistribution input = DcatDistribution.Create(datasetId);
             input.SetTermsOfUse(
                 new Uri("https://data.gov.sk/def/authors-work-type/1"),
                 new Uri("https://data.gov.sk/def/original-database-type/1"),
