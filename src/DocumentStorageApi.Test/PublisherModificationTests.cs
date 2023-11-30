@@ -10,6 +10,8 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Newtonsoft.Json;
+using System.Reflection;
 
 namespace DocumentStorageApi.Test
 {
@@ -451,6 +453,52 @@ namespace DocumentStorageApi.Test
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
             Assert.Equal(state, storage.GetFileState(state.Metadata.Id, StaticAccessPolicy.Allow));
+        }
+
+
+        [Theory]
+        [InlineData("Publisher")]
+        [InlineData("PublisherAdmin")]
+        public async Task ExecutableFileShouldBeDeniedAsContent(string role)
+        {
+            using Storage storage = new Storage(fixture.GetStoragePath());
+
+            FileMetadata metadata = new FileMetadata(Guid.NewGuid(), "Test", FileType.DatasetRegistration, null, "http://localhost/publisher1", true, "setup.exe", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+            string newContent = $"MZ";
+            InsertModel model = new InsertModel(newContent, metadata, false);
+
+            using DocumentStorageApplicationFactory applicationFactory = new DocumentStorageApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken(role, metadata.Publisher));
+            using HttpResponseMessage response = await client.PostAsync($"/files", JsonContent.Create(model));
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Theory]
+        [InlineData("Publisher")]
+        [InlineData("PublisherAdmin")]
+        public async Task ExecutableFileShouldBeDeniedAsStream(string role)
+        {
+            using Storage storage = new Storage(fixture.GetStoragePath());
+
+            FileMetadata metadata = new FileMetadata(Guid.NewGuid(), "Test", FileType.DatasetRegistration, null, "http://localhost/publisher1", true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+            string newContent = $"MZ";
+            InsertModel model = new InsertModel(newContent, metadata, false);
+
+            using DocumentStorageApplicationFactory applicationFactory = new DocumentStorageApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken(role, metadata.Publisher));
+
+            using Stream source = File.OpenRead(Assembly.GetExecutingAssembly().Location);
+
+            MultipartFormDataContent requestContent = new MultipartFormDataContent
+            {
+                { new StringContent(JsonConvert.SerializeObject(metadata)), "metadata" },
+                { new StreamContent(source), "file", "source" },
+                { new StringContent("false"), "enableOverwrite" }
+            };
+            using HttpResponseMessage response = await client.PostAsync($"/files/stream", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
     }
 }

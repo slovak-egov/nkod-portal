@@ -99,7 +99,7 @@ namespace NkodSk.RdfFileStorage
             return stream;
         }
 
-        public Stream? OpenReadStream()
+        public FileStreamWrap? OpenReadStream()
         {
             lock (lockObject)
             {
@@ -116,7 +116,7 @@ namespace NkodSk.RdfFileStorage
             }
         }
 
-        public Stream? OpenWriteStream()
+        public FileStreamWrap? OpenWriteStream()
         {
             lock (lockObject)
             {

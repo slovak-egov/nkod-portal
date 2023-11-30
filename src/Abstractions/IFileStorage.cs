@@ -18,9 +18,9 @@ namespace NkodSk.Abstractions
 
         Stream? OpenReadStream(Guid id, IFileStorageAccessPolicy accessPolicy);
 
-        Stream OpenWriteStream(FileMetadata metadata, bool enableOverwrite, IFileStorageAccessPolicy accessPolicy);
+        Stream OpenWriteStream(FileMetadata metadata, bool enableOverwrite, IFileStorageAccessPolicy accessPolicy, IStorageLogAdapter? logAdapter = null);
 
-        void InsertFile(string content, FileMetadata metadata, bool enableOverwrite, IFileStorageAccessPolicy accessPolicy);
+        void InsertFile(string content, FileMetadata metadata, bool enableOverwrite, IFileStorageAccessPolicy accessPolicy, IStorageLogAdapter? logAdapter = null);
 
         void UpdateMetadata(FileMetadata metadata, IFileStorageAccessPolicy accessPolicy);
 

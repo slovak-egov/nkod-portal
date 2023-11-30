@@ -32,6 +32,8 @@ using Newtonsoft.Json;
 using MySqlX.XDevAPI;
 using System.Security.Policy;
 using System.Xml.Schema;
+using Microsoft.ApplicationInsights.DataContracts;
+using Microsoft.ApplicationInsights.Extensibility;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -196,6 +198,7 @@ builder.Services.AddApplicationInsightsTelemetry(options =>
 {
     options.ConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
 });
+builder.Services.AddSingleton<ITelemetryInitializer, RequestTelementryInitializer>();
 
 builder.Logging.AddConsole();
 
@@ -763,6 +766,33 @@ app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configurat
     {
         return Results.Forbid();
     }
+});
+
+app.Use(async (context, next) =>
+{
+    if (context.Request.Method == HttpMethods.Post || context.Request.Method == HttpMethods.Put)
+    {
+        IConfiguration configuration = context.RequestServices.GetRequiredService<IConfiguration>();
+        string? logPath = configuration["LogPath"];
+        if (!string.IsNullOrEmpty(logPath) && Directory.Exists(logPath))
+        {
+            context.Request.EnableBuffering();
+            string logName = $"{DateTimeOffset.UtcNow:yyyyMMddHHiiss.fffff}_{Guid.NewGuid():N}";
+            string path = Path.Combine(logPath, logName);
+            using (FileStream fs = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                await context.Request.Body.CopyToAsync(fs);
+            }
+            context.Request.Body.Seek(0, SeekOrigin.Begin);
+
+            RequestTelemetry? requestTelemetry = context.Features.Get<RequestTelemetry>();
+            if (requestTelemetry is not null)
+            {
+                requestTelemetry.Properties["BodyLogFile"] = logName;
+            }
+        }
+    }
+    await next(context);
 });
 
 app.Run();

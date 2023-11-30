@@ -1,4 +1,7 @@
 using DocumentStorageApi;
+using ICSharpCode.SharpZipLib.Zip;
+using Microsoft.ApplicationInsights.DataContracts;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +12,11 @@ using Newtonsoft.Json;
 using NkodSk.Abstractions;
 using NkodSk.RdfFileStorage;
 using NkodSk.RdfFulltextIndex;
+using System.IO;
+using System.IO.Compression;
+using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -98,6 +105,9 @@ builder.Services.AddApplicationInsightsTelemetry(options =>
 {
     options.ConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
 });
+builder.Services.AddSingleton<ITelemetryInitializer, RequestTelementryInitializer>();
+
+builder.Services.AddTransient<StorageLogAdapter>();
 
 var app = builder.Build();
 
@@ -114,6 +124,67 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+bool ContainsExecutableFiles(FileMetadata metadata, Stream source)
+{
+    bool DetectedInvalidFileExtension(string? name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return false;
+        }
+
+        string ext = Path.GetExtension(name);
+        return ext == ".exe" || ext == ".bat" || ext == ".com" || ext == ".dll" || ext == ".vbs" || ext == ".cmd";
+    }
+
+    bool DetectExecutable(Stream source)
+    {
+        try
+        {
+            using PEReader reader = new PEReader(source, PEStreamOptions.LeaveOpen);
+            PEHeaders headers = reader.PEHeaders;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    long oldPosition = source.Position;
+
+    if (DetectedInvalidFileExtension(metadata.OriginalFileName) || DetectExecutable(source))
+    {
+        return true;
+    }
+
+    try
+    {
+        ZipArchive zipArchive = new ZipArchive(source, ZipArchiveMode.Read, true);
+        foreach (ZipArchiveEntry entry in zipArchive.Entries)
+        {
+            if (DetectedInvalidFileExtension(entry.Name))
+            {
+                return true;
+            }
+
+            using Stream zipStream = entry.Open();
+            if (DetectExecutable(zipStream))
+            {
+                return true;
+            }
+        }
+    }
+    catch
+    {
+        //ignore
+    }
+
+    source.Position = oldPosition;
+
+    return false;
+}
 
 app.MapGet("/files/{id}", [AllowAnonymous] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, Guid id) =>
 {
@@ -207,7 +278,7 @@ app.MapPost("/files/by-publisher", [AllowAnonymous] (IFileStorage storage, IFile
     return Results.Ok(response);
 });
 
-app.MapPost("/files", [Authorize] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] FulltextStorageMap fulltext,[FromBody] InsertModel insertData) =>
+app.MapPost("/files", [Authorize] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] StorageLogAdapter logAdapter, [FromServices] FulltextStorageMap fulltext, [FromBody] InsertModel insertData) =>
 {
     if (insertData.Metadata is null)
     {
@@ -218,7 +289,15 @@ app.MapPost("/files", [Authorize] (IFileStorage storage, IFileStorageAccessPolic
     {
         try
         {
-            storage.InsertFile(insertData.Content, insertData.Metadata, insertData.EnableOverwrite, accessPolicy);
+            using (MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(insertData.Content)))
+            {
+                if (ContainsExecutableFiles(insertData.Metadata, stream))
+                {
+                    return Results.BadRequest("Invalid file content detected");
+                }
+            }
+
+            storage.InsertFile(insertData.Content, insertData.Metadata, insertData.EnableOverwrite, accessPolicy, logAdapter);
             FileState? state = storage.GetFileState(insertData.Metadata.Id, accessPolicy);
             if (state is not null)
             {
@@ -238,7 +317,7 @@ app.MapPost("/files", [Authorize] (IFileStorage storage, IFileStorageAccessPolic
     return Results.Ok();
 });
 
-app.MapPost("/files/stream", [Authorize] async (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, HttpRequest request, IFormFile file) =>
+app.MapPost("/files/stream", [Authorize] async (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] StorageLogAdapter logAdapter, HttpRequest request, IFormFile file) =>
 {
     IFormCollection form = await request.ReadFormAsync();
 
@@ -275,7 +354,13 @@ app.MapPost("/files/stream", [Authorize] async (IFileStorage storage, IFileStora
         try
         {
             using Stream sourceStream = file.OpenReadStream();
-            using Stream writeStream = storage.OpenWriteStream(metadata, enableOverwrite, accessPolicy);
+
+            if (ContainsExecutableFiles(metadata, sourceStream))
+            {
+                return Results.BadRequest("Invalid file content detected");
+            }
+
+            using Stream writeStream = storage.OpenWriteStream(metadata, enableOverwrite, accessPolicy, logAdapter);
             await sourceStream.CopyToAsync(writeStream).ConfigureAwait(false);
         }
         catch (NkodSk.RdfFileStorage.UnauthorizedAccessException)
@@ -328,6 +413,33 @@ app.MapDelete("/files/{id}", [Authorize] (IFileStorage storage, IFileStorageAcce
     }
 
     return Results.Ok();
+});
+
+app.Use(async (context, next) =>
+{
+    if (context.Request.Method == HttpMethods.Post || context.Request.Method == HttpMethods.Put)
+    {
+        IConfiguration configuration = context.RequestServices.GetRequiredService<IConfiguration>();
+        string? logPath = configuration["LogPath"];
+        if (!string.IsNullOrEmpty(logPath) && Directory.Exists(logPath))
+        {
+            context.Request.EnableBuffering();
+            string logName = $"{DateTimeOffset.UtcNow:yyyyMMddHHiiss.fffff}_{Guid.NewGuid():N}";
+            string path = Path.Combine(logPath, logName);
+            using (FileStream fs = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                await context.Request.Body.CopyToAsync(fs);
+            }
+            context.Request.Body.Seek(0, SeekOrigin.Begin);
+
+            RequestTelemetry? requestTelemetry = context.Features.Get<RequestTelemetry>();
+            if (requestTelemetry is not null)
+            {
+                requestTelemetry.Properties["BodyLogFile"] = logName;
+            }
+        }
+    }
+    await next(context);
 });
 
 app.Run();

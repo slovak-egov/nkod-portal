@@ -26,6 +26,8 @@ namespace NkodSk.RdfFileStorage
 
         private readonly string protectedPath;
 
+        private readonly string? logPath;
+
         private readonly HashSet<Guid> entries;
 
         private readonly Dictionary<Guid, Entry> entryProperties;
@@ -46,7 +48,7 @@ namespace NkodSk.RdfFileStorage
 
         private int defaultCapacity;
 
-        public Storage(string path, string publicTurtleFolderName = "public", string protectedFolderName = "protected")
+        public Storage(string path, string publicTurtleFolderName = "public", string protectedFolderName = "protected", string? logPath = null)
         {
             this.storagePath = path;
 
@@ -79,6 +81,7 @@ namespace NkodSk.RdfFileStorage
             additionalFilters = new Dictionary<string, Dictionary<string, HashSet<Guid>>>();
 
             LoadEntries(files);
+            this.logPath = logPath;
         }
 
         private string[] GetAllMetadataFiles() => Directory.GetFiles(storagePath, "*.metadata", SearchOption.AllDirectories);
@@ -939,12 +942,30 @@ namespace NkodSk.RdfFileStorage
             return InsertFileEntry(metadata, path);
         }
 
-        public void InsertFile(string content, FileMetadata metadata, bool enableOverwrite, IFileStorageAccessPolicy accessPolicy)
+        private void LogFileChange(FileMetadata metadata, Action<string> copyAction, IStorageLogAdapter? logAdapter)
+        {
+            if (logPath is not null)
+            {
+                string logName = $"{metadata.Id:N}_{DateTimeOffset.UtcNow:yyyyMMddHHiiss.fffff}_{Guid.NewGuid():N}";
+                string fullPath = Path.Combine(logPath, logName);
+                copyAction(fullPath);
+                logAdapter?.LogFileCreated(fullPath);
+            }
+        }
+
+        public void InsertFile(string content, FileMetadata metadata, bool enableOverwrite, IFileStorageAccessPolicy accessPolicy, IStorageLogAdapter? logAdapter = null)
         {
             rwLock.EnterWriteLock();
             try
             {
-                InternalInsertFile(metadata, enableOverwrite, accessPolicy, path => File.WriteAllText(path, content));
+                InternalInsertFile(metadata, enableOverwrite, accessPolicy, path =>
+                {
+                    File.WriteAllText(path, content);
+                    LogFileChange(metadata, logPath =>
+                    {
+                        File.Copy(path, logPath, false);
+                    }, logAdapter);
+                });
             }
             finally
             {
@@ -1037,7 +1058,7 @@ namespace NkodSk.RdfFileStorage
             }
         }
 
-        public Stream OpenWriteStream(FileMetadata metadata, bool enableOverwrite, IFileStorageAccessPolicy accessPolicy)
+        public Stream OpenWriteStream(FileMetadata metadata, bool enableOverwrite, IFileStorageAccessPolicy accessPolicy, IStorageLogAdapter? logAdapter = null)
         {
             rwLock.EnterWriteLock();
             try
@@ -1052,7 +1073,18 @@ namespace NkodSk.RdfFileStorage
                     }
                 });
 
-                Stream? stream = entry.StreamLocks.OpenWriteStream();
+                FileStreamWrap? stream = entry.StreamLocks.OpenWriteStream();
+
+                if (stream is not null)
+                {
+                    stream.Disposed += (object? _, EventArgs _) =>
+                    {
+                        LogFileChange(metadata, logPath =>
+                        {
+                            File.Copy(GetFilePath(metadata), logPath, false);
+                        }, logAdapter);
+                    };
+                }
 
                 return stream ?? throw new Exception($"File {metadata.Id} is already locked");
             }

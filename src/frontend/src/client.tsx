@@ -367,8 +367,10 @@ export function useEntities<T>(url: string, initialQuery?: Partial<RequestQuery>
     }, []);
 
     useEffect(() => {
-        setQueryParameters({language: language.id});
-    }, [language, setQueryParameters]);
+        if (language.id !== query.language) {
+            setQueryParameters({language: language.id});
+        }
+    }, [language, setQueryParameters, query]);
 
     return [items, query, setQueryParameters, loading, error, refresh] as const;
 }

@@ -43,6 +43,18 @@ namespace NkodSk.Abstractions
                     }
                 }
 
+                datasetTypeNode = graph.GetUriNode("dcat:Distribution");
+                if (datasetTypeNode is not null)
+                {
+                    foreach (IUriNode? distributionNode in graph.GetTriplesWithPredicateObject(rdfTypeNode, datasetTypeNode).Select(x => x.Subject).OfType<IUriNode>())
+                    {
+                        if (distributionNode is not null)
+                        {
+                            rdfDocument.Distributions.Add(new DcatDistribution(graph, distributionNode));
+                        }
+                    }
+                }
+
                 datasetTypeNode = graph.GetUriNode("foaf:Agent");
                 if (datasetTypeNode is not null)
                 {
@@ -127,6 +139,8 @@ namespace NkodSk.Abstractions
         }
 
         public List<DcatDataset> Datasets { get; } = new List<DcatDataset>();
+
+        public List<DcatDistribution> Distributions { get; } = new List<DcatDistribution>();
 
         public List<DcatCatalog> Catalogs { get; } = new List<DcatCatalog>();
 
