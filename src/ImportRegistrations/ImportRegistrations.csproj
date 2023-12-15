@@ -15,9 +15,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\Abstractions\Abstractions.csproj" />
-    <ProjectReference Include="..\src\DocumentStorageClient\DocumentStorageClient.csproj" />
-    <ProjectReference Include="..\src\IAMClient\IAMClient.csproj" />
+    <ProjectReference Include="..\Abstractions\Abstractions.csproj" />
+    <ProjectReference Include="..\DocumentStorageClient\DocumentStorageClient.csproj" />
+    <ProjectReference Include="..\IAMClient\IAMClient.csproj" />
   </ItemGroup>
 
 </Project>
