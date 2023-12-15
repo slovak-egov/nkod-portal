@@ -22,6 +22,8 @@ namespace NkodSk.Abstractions
             }
         }
 
+        public bool IsHarvested => AdditionalValues is not null && AdditionalValues.TryGetValue("Harvested", out string[]? harvestedValues) && harvestedValues is not null && harvestedValues.Length == 1 && harvestedValues[0] == "true";
+
         public void SaveTo(string path)
         {
             File.WriteAllText(path, JsonConvert.SerializeObject(this));

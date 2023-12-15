@@ -27,5 +27,7 @@ namespace NkodSk.Abstractions
         Task<DelegationAuthorizationResult> GetLogin();
 
         Task<TokenResult> Consume(string content);
+
+        Task<string> LoginHarvester(string auth, string? publisherId);
     }
 }

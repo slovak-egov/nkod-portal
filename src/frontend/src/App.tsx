@@ -161,13 +161,15 @@ function App(props: Props) {
                 userInfoLoading: userInfoIsLoading
             }}
         >
-            <LanguageOptionsContext.Provider value={{
-              language: language,
-              setLanguage: setLanguage
-            }}>
+            <LanguageOptionsContext.Provider
+                value={{
+                    language: language,
+                    setLanguage: setLanguage
+                }}
+            >
                 <BrowserRouter>
                     <Alert type="warning" style={{ margin: 0 }}>
-                        Vývojová verzia Národného katalógu otvorených dát (20231121)
+                        Registrácia datasetov začína až 15.1.2024! Dovtedy použite <a href="https://data.gov.sk">data.gov.sk</a>.
                     </Alert>
                     <Header />
                     <AppNavigator {...props} />
@@ -228,7 +230,7 @@ function App(props: Props) {
                                         </>
                                     ) : null}
 
-                                    <Route path='*' Component={NotFound} />
+                                    <Route path="*" Component={NotFound} />
                                 </Routes>
                             </div>
                         </div>

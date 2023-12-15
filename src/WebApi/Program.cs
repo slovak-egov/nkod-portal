@@ -359,43 +359,6 @@ async Task<Dictionary<string, PublisherView>> FetchPublishers(IDocumentStorageCl
     return publishers;
 }
 
-async Task UpdateDatasetMetadata(IDocumentStorageClient client, Guid datasetId)
-{
-    FileState? datasetState = await client.GetFileState(datasetId).ConfigureAwait(false);
-    if (datasetState?.Content is not null)
-    {
-        DcatDataset? dataset = DcatDataset.Parse(datasetState.Content);
-
-        if (dataset is not null)
-        {
-            FileMetadata datasetMetadata = datasetState.Metadata;
-
-            FileStorageQuery query = new FileStorageQuery
-            {
-                ParentFile = datasetId,
-                OnlyTypes = new List<FileType> { FileType.DistributionRegistration },
-            };
-            FileStorageResponse response = await client.GetFileStates(query).ConfigureAwait(false);
-
-            datasetMetadata = dataset.UpdateMetadata(response.Files.Count > 0, datasetMetadata);
-
-            foreach (FileState state in response.Files)
-            {
-                if (state.Content is not null)
-                {
-                    DcatDistribution? distribution = DcatDistribution.Parse(state.Content);
-                    if (distribution is not null)
-                    {
-                        datasetMetadata = distribution.UpdateDatasetMetadata(datasetMetadata);
-                    }
-                }
-            }
-
-            await client.UpdateMetadata(datasetMetadata).ConfigureAwait(false);
-        }
-    }   
-}
-
 app.MapPost("/publishers/search", async ([FromBody] PublisherQuery query, [FromServices] IDocumentStorageClient client, [FromServices] TelemetryClient? telemetryClient) => {
     try
     {
@@ -993,7 +956,7 @@ app.MapPost("/distributions", [Authorize] async ([FromBody] DistributionInput? d
                             distribution.MapToRdf(distributionRdf);
                             FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata);
                             await client.InsertFile(distributionRdf.ToString(), false, metadata).ConfigureAwait(false);
-                            await UpdateDatasetMetadata(client, datasetId).ConfigureAwait(false);  
+                            await client.UpdateDatasetMetadata(datasetId).ConfigureAwait(false);  
                             if (distributionFileMetadata is not null)
                             {
                                 await client.UpdateMetadata(distributionFileMetadata with { ParentFile = metadata.Id }).ConfigureAwait(false);
@@ -1095,7 +1058,7 @@ app.MapPut("/distributions", [Authorize] async ([FromBody] DistributionInput dis
                                     distribution.MapToRdf(distributionRdf);
                                     FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata, state.Metadata);
                                     await client.InsertFile(distributionRdf.ToString(), true, metadata).ConfigureAwait(false);
-                                    await UpdateDatasetMetadata(client, datasetId).ConfigureAwait(false);
+                                    await client.UpdateDatasetMetadata(datasetId).ConfigureAwait(false);
 
                                     if (distributionFileMetadata is not null)
                                     {
@@ -1173,7 +1136,7 @@ app.MapDelete("/distributions", [Authorize] async ([FromQuery] string? id, [From
             {
                 Guid datasetId = metadata.ParentFile.Value;
                 await client.DeleteFile(key).ConfigureAwait(false);
-                await UpdateDatasetMetadata(client, datasetId).ConfigureAwait(false); 
+                await client.UpdateDatasetMetadata(datasetId).ConfigureAwait(false); 
             }
 
             return Results.Ok();

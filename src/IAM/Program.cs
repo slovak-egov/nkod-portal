@@ -29,7 +29,6 @@ using Microsoft.AspNetCore.Http;
 using ITfoxtec.Identity.Saml2.MvcCore;
 using Microsoft.IdentityModel.Tokens.Saml2;
 using Newtonsoft.Json;
-using MySqlX.XDevAPI;
 using System.Security.Policy;
 using System.Xml.Schema;
 using Microsoft.ApplicationInsights.DataContracts;
@@ -270,14 +269,7 @@ async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord use
 
     DateTimeOffset expires = DateTimeOffset.Now.AddMinutes(accessTokenValidInMinutes);
 
-    JwtSecurityToken jwtToken = new JwtSecurityToken(
-        configuration["Jwt:Issuer"],
-        configuration["Jwt:Audience"],
-        claims,
-        expires: expires.LocalDateTime,
-        signingCredentials: signingCredentials);
-
-    string token = new JwtSecurityTokenHandler().WriteToken(jwtToken);
+    string token = CreateJwtToken(configuration, signingCredentials, claims, expires);
 
     if (refreshTokenValidInMinutes > 0 && string.IsNullOrEmpty(user.RefreshToken) || !user.RefreshTokenExpiryTime.HasValue || user.RefreshTokenExpiryTime < DateTimeOffset.Now)
     {
@@ -299,6 +291,17 @@ async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord use
         RefreshTokenAfter = expires.AddMinutes(-5),
         RefreshToken = user.RefreshToken
     };
+}
+
+string CreateJwtToken(IConfiguration configuration, SigningCredentials signingCredentials, List<Claim> claims, DateTimeOffset expires)
+{
+    JwtSecurityToken jwtToken = new JwtSecurityToken(
+        configuration["Jwt:Issuer"],
+        configuration["Jwt:Audience"],
+        claims,
+        expires: expires.LocalDateTime,
+        signingCredentials: signingCredentials);
+    return new JwtSecurityTokenHandler().WriteToken(jwtToken);
 }
 
 app.MapGet("/users", [Authorize] async ([FromServices] ApplicationDbContext context, ClaimsPrincipal user, int? limit, int? offset, string? id) =>
@@ -367,12 +370,13 @@ app.MapPost("/users", [Authorize] async ([FromServices] ApplicationDbContext con
             {
                 UserRecord record = new UserRecord
                 {
-                    Id = input.IdentificationNumber,
+                    Id = Guid.NewGuid().ToString(),
                     Email = input.Email ?? string.Empty,
                     Role = input.Role,
                     Publisher = publisherId,
                     FirstName = input.FirstName,
                     LastName = input.LastName,
+                    IdentificationNumber = input.IdentificationNumber
                 };
                 context.Users.Add(record);
                 await context.SaveChangesAsync();
@@ -652,7 +656,7 @@ app.MapGet("/logout", [Authorize] async ([FromServices] ApplicationDbContext con
             Saml2RedirectBinding binding = new Saml2RedirectBinding();
             CustomLogoutRequest logoutRequest = new CustomLogoutRequest(saml2Configuration, user);
             logoutRequest.Issuer = configuration["Saml2:EntityId"];
-            logoutRequest.NameId.NameQualifier = "https://prihlasenie.upvsfix.gov.sk/oam/fed";
+            logoutRequest.NameId.NameQualifier = configuration["Saml2:Issuer"];
             logoutRequest.NameId.SPNameQualifier = configuration["Saml2:EntityId"];
 
             Saml2RedirectBinding redirectBinding = binding.Bind(logoutRequest);
@@ -741,9 +745,10 @@ app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configurat
     string? email = saml2AuthnResponse.ClaimsIdentity.FindFirst("Actor.Email")?.Value;
     string? ico = saml2AuthnResponse.ClaimsIdentity.FindFirst("Subject.ICO")?.Value;
     string? companyName = saml2AuthnResponse.ClaimsIdentity.FindFirst("Subject.FormattedName")?.Value;
+    string? identificationNumber = saml2AuthnResponse.ClaimsIdentity.FindFirst("ActorID")?.Value;
 
     string? publisher = null;
-    bool hasExplicitDelegation = false;
+    bool hasExplicitDelegation = true;
     if (!string.IsNullOrEmpty(ico))
     {
         publisher = $"https://data.gov.sk/id/legal-subject/{ico}";
@@ -752,7 +757,7 @@ app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configurat
 
     if (!string.IsNullOrEmpty(id))
     {
-        UserRecord? user = await context.GetOrCreateUser(id, firstName, lastName, email, publisher).ConfigureAwait(false);
+        UserRecord? user = await context.GetOrCreateUser(id, firstName, lastName, email, publisher, identificationNumber).ConfigureAwait(false);
         if (user is not null)
         {
             return Results.Ok(await CreateToken(context, user, configuration, signingCredentials, hasExplicitDelegation, saml2AuthnResponse.ClaimsIdentity.Claims, companyName: companyName));
@@ -761,6 +766,29 @@ app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configurat
         {
             return Results.Forbid();
         }
+    }
+    else
+    {
+        return Results.Forbid();
+    }
+});
+
+app.MapPost("/harvester-login", (IConfiguration configuration, [FromServices] SigningCredentials signingCredentials, [FromBody] HarvesterAuthMessage? message) =>
+{
+    string? requiredAuth = configuration["HarvesterAuth"];
+    if (!string.IsNullOrEmpty(requiredAuth) && string.Equals(requiredAuth, message?.Auth, StringComparison.Ordinal))
+    {
+        List<Claim> claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Role, "Harvester"),
+        };
+
+        if (message?.PublisherId is not null)
+        {
+            claims.Add(new Claim("Publisher", message.PublisherId));
+        }
+
+        return Results.Ok(CreateJwtToken(configuration, signingCredentials, claims, DateTimeOffset.UtcNow.AddMinutes(accessTokenValidInMinutes)));
     }
     else
     {

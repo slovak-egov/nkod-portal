@@ -223,6 +223,16 @@ app.MapPost("/files/query", [AllowAnonymous] ([FromServices] IFileStorage storag
                 OnlyPublished = query.OnlyPublished,
                 RequiredFacets = query.RequiredFacets,
                 OrderDefinitions = query.OrderDefinitions,
+                AdditionalFilters = query.AdditionalFilters,
+                OnlyTypes = query.OnlyTypes,
+                ParentFile = query.ParentFile,
+                ExcludeIds = query.ExcludeIds,
+                IncludeDependentFiles = query.IncludeDependentFiles,
+                MaxResults = query.MaxResults,
+                SkipResults = query.SkipResults,
+                DateFrom = query.DateFrom,
+                DateTo = query.DateTo,
+                Language = query.Language,                
             };
             response = storage.GetFileStates(internalQuery, accessPolicy);
         }

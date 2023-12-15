@@ -334,7 +334,7 @@ namespace NkodSk.RdfFileStorage
             metadata.Type == FileType.LocalCatalogRegistration ||
             metadata.Type == FileType.PublisherRegistration;
 
-        public static bool ShouldBePublic(FileMetadata metadata) => metadata.IsPublic && IsTurtleFile(metadata);
+        public static bool ShouldBePublic(FileMetadata metadata) => metadata.IsPublic && IsTurtleFile(metadata) && !metadata.IsHarvested;
 
         private string GetFilePath(FileMetadata metadata)
         {

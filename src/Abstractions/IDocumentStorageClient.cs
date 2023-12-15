@@ -25,5 +25,42 @@ namespace NkodSk.Abstractions
         Task UpdateMetadata(FileMetadata metadata);
 
         Task DeleteFile(Guid id);
+
+        async Task UpdateDatasetMetadata(Guid datasetId)
+        {
+            FileState? datasetState = await GetFileState(datasetId).ConfigureAwait(false);
+            if (datasetState?.Content is not null)
+            {
+                DcatDataset? dataset = DcatDataset.Parse(datasetState.Content);
+
+                if (dataset is not null)
+                {
+                    FileMetadata datasetMetadata = datasetState.Metadata;
+
+                    FileStorageQuery query = new FileStorageQuery
+                    {
+                        ParentFile = datasetId,
+                        OnlyTypes = new List<FileType> { FileType.DistributionRegistration },
+                    };
+                    FileStorageResponse response = await GetFileStates(query).ConfigureAwait(false);
+
+                    datasetMetadata = dataset.UpdateMetadata(response.Files.Count > 0, datasetMetadata);
+
+                    foreach (FileState state in response.Files)
+                    {
+                        if (state.Content is not null)
+                        {
+                            DcatDistribution? distribution = DcatDistribution.Parse(state.Content);
+                            if (distribution is not null)
+                            {
+                                datasetMetadata = distribution.UpdateDatasetMetadata(datasetMetadata);
+                            }
+                        }
+                    }
+
+                    await UpdateMetadata(datasetMetadata).ConfigureAwait(false);
+                }
+            }
+        }
     }
 }

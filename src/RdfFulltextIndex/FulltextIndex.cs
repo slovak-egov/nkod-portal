@@ -218,28 +218,28 @@ namespace NkodSk.RdfFulltextIndex
 
             if (externalQuery.OnlyTypes is not null && externalQuery.OnlyTypes.Count > 0)
             {
-                BooleanQuery valueQuery = new BooleanQuery();
-                foreach (FileType fileType in externalQuery.OnlyTypes)
-                {
-                    valueQuery.Add(new TermQuery(new Term("type", Enum.GetName(fileType))), Occur.SHOULD);
-                }
-                booleanClauses.Add(valueQuery, Occur.MUST);
+                //BooleanQuery valueQuery = new BooleanQuery();
+                //foreach (FileType fileType in externalQuery.OnlyTypes)
+                //{
+                //    valueQuery.Add(new TermQuery(new Term("type", Enum.GetName(fileType))), Occur.SHOULD);
+                //}
+                //booleanClauses.Add(valueQuery, Occur.MUST);
             }
 
             if (externalQuery.AdditionalFilters is not null)
             {
-                foreach ((string key, string[] values) in externalQuery.AdditionalFilters)
-                {
-                    if (values.Length > 0)
-                    {
-                        BooleanQuery valueQuery = new BooleanQuery();
-                        foreach (string value in values)
-                        {
-                            valueQuery.Add(new TermQuery(new Term(key, value)), Occur.SHOULD);
-                        }
-                        booleanClauses.Add(valueQuery, Occur.MUST);
-                    }
-                }
+                //foreach ((string key, string[] values) in externalQuery.AdditionalFilters)
+                //{
+                //    if (values.Length > 0)
+                //    {
+                //        BooleanQuery valueQuery = new BooleanQuery();
+                //        foreach (string value in values)
+                //        {
+                //            valueQuery.Add(new TermQuery(new Term(key, value)), Occur.SHOULD);
+                //        }
+                //        booleanClauses.Add(valueQuery, Occur.MUST);
+                //    }
+                //}
             }
 
             if (externalQuery.DateTo.HasValue)

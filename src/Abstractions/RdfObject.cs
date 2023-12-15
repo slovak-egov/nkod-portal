@@ -241,9 +241,9 @@ namespace NkodSk.Abstractions
             return null;
         }
 
-        public IUriNode CreateSubject(string name, string type)
+        public IUriNode CreateSubject(string name, string type, string suffix)
         {
-            return CreateSubject(name, type, new Uri($"http://data.gov.sk/temp/{Guid.NewGuid().ToString("N").ToLowerInvariant()}"));
+            return CreateSubject(name, type, new Uri($"{Uri}/{suffix}"));
         }
 
         public IUriNode CreateSubject(string name, string type, Uri id)
@@ -252,6 +252,12 @@ namespace NkodSk.Abstractions
             Graph.Assert(subject, Graph.GetUriNode(new Uri(RdfSpecsHelper.RdfType)), Graph.CreateUriNode(type));
             Graph.Assert(Node, GetOrCreateUriNode(name), subject);
             return subject;
+        }
+
+        public bool IsHarvested
+        {
+            get => GetBooleanFromUriNode("custom:isHarvested") ?? false;
+            set => SetBooleanToUriNode("custom:isHarvested", value);
         }
 
         protected static (IGraph, IEnumerable<IUriNode>) Parse(string text, string nodeType)
@@ -295,6 +301,79 @@ namespace NkodSk.Abstractions
             using System.IO.StringWriter writer = new System.IO.StringWriter();
             newGraph.SaveToStream(writer, new CompressingTurtleWriter());
             return writer.ToString();
+        }
+
+        private static void RemoveNullValues(Dictionary<string, string> values)
+        {
+            foreach (string key in values.Keys.ToArray())
+            {
+                if (string.IsNullOrEmpty(values[key]))
+                {
+                    values.Remove(key);
+                }
+            }
+        }
+
+        private static void RemoveNullValues(Dictionary<string, List<string>> values)
+        {
+            foreach (string key in values.Keys.ToArray())
+            {
+                List<string> list = values[key];
+                list.RemoveAll(string.IsNullOrEmpty);
+
+                if (list.Count == 0)
+                {
+                    values.Remove(key);
+                }
+            }
+        }
+
+        protected static bool AreEquivalent<T>(IEnumerable<T> values1, IEnumerable<T> values2)
+        {
+            HashSet<T> set1 = new HashSet<T>(values1);
+            HashSet<T> set2 = new HashSet<T>(values2);
+            return set1.SetEquals(set2);
+        }
+
+        public static bool AreLaguagesEqual(Dictionary<string, string>? values1, Dictionary<string, string>? values2)
+        {
+            values1 ??= new Dictionary<string, string>();
+            values2 ??= new Dictionary<string, string>();
+            RemoveNullValues(values1);
+            RemoveNullValues(values2);
+
+            return AreLaguagesEqual(values1, values2, (a, b) => string.Equals(a, b, StringComparison.Ordinal));
+        }
+
+        public static bool AreLaguagesEqual(Dictionary<string, List<string>>? values1, Dictionary<string, List<string>>? values2)
+        {
+            values1 ??= new Dictionary<string, List<string>>();
+            values2 ??= new Dictionary<string, List<string>>();
+            RemoveNullValues(values1);
+            RemoveNullValues(values2);
+
+            return AreLaguagesEqual(values1, values2, AreEquivalent);
+        }
+
+        public static bool AreLaguagesEqual<T>(Dictionary<string, T>? values1, Dictionary<string, T>? values2, Func<T, T, bool> comparer)
+        {
+            values1 ??= new Dictionary<string, T>();
+            values2 ??= new Dictionary<string, T>();
+
+            if (!AreEquivalent(values1.Keys, values2.Keys))
+            {
+                return false;
+            }
+
+            foreach (string key in values1.Keys)
+            {
+                if (!comparer(values1[key], values2[key]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

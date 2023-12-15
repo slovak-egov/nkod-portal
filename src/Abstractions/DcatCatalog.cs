@@ -65,7 +65,7 @@ namespace NkodSk.Abstractions
             RemoveUriNodes("dcat:contactPoint");
             if (name is not null || email is not null)
             {
-                VcardKind contactPoint = new VcardKind(Graph, CreateSubject("dcat:contactPoint", "vcard:Individual"));
+                VcardKind contactPoint = new VcardKind(Graph, CreateSubject("dcat:contactPoint", "vcard:Individual", "contact-point"));
                 contactPoint.SetNames(name);
                 contactPoint.Email = !string.IsNullOrEmpty(email) ? email : null;
             }

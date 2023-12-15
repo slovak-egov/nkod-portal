@@ -16,6 +16,8 @@
 
         public string LastName { get; set; } = string.Empty;
 
+        public string? IdentificationNumber { get; set; }
+
         public DateTimeOffset? RefreshTokenExpiryTime { get; set; }
     }
 }

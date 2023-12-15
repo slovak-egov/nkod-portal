@@ -56,6 +56,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IAMClient.Test", "IAMClient
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Frontend.Test", "Frontend.Test\Frontend.Test.csproj", "{FA57FF55-E63A-4290-9654-6101A53E108C}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImportRegistrations", "ImportRegistrations\ImportRegistrations.csproj", "{CF93B7E0-23FB-4419-A381-B3850EC11557}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImportRegistrations.Test", "ImportRegistrations.Test\ImportRegistrations.Test.csproj", "{8D1F7EF8-C609-429B-BEC2-B081C11A0859}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -160,6 +164,14 @@ Global
 		{FA57FF55-E63A-4290-9654-6101A53E108C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FA57FF55-E63A-4290-9654-6101A53E108C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FA57FF55-E63A-4290-9654-6101A53E108C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CF93B7E0-23FB-4419-A381-B3850EC11557}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CF93B7E0-23FB-4419-A381-B3850EC11557}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CF93B7E0-23FB-4419-A381-B3850EC11557}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CF93B7E0-23FB-4419-A381-B3850EC11557}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D1F7EF8-C609-429B-BEC2-B081C11A0859}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D1F7EF8-C609-429B-BEC2-B081C11A0859}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D1F7EF8-C609-429B-BEC2-B081C11A0859}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D1F7EF8-C609-429B-BEC2-B081C11A0859}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -22,6 +22,11 @@ namespace NkodSk.Abstractions
             {
                 return true;
             }
+                        
+            if (httpContextAccessor.HasRole("Harvester") && metadata.Type == FileType.LocalCatalogRegistration)
+            {
+                return true;
+            }
 
             if (!string.IsNullOrEmpty(metadata.Publisher) && (httpContextAccessor.HasRole("Publisher") || httpContextAccessor.HasRole("PublisherAdmin")))
             {
@@ -34,6 +39,11 @@ namespace NkodSk.Abstractions
         public bool HasModifyAccessToFile(FileMetadata metadata)
         {
             if (httpContextAccessor.HasRole("Superadmin"))
+            {
+                return true;
+            }
+
+            if (httpContextAccessor.HasRole("Harvester") && metadata.IsHarvested)
             {
                 return true;
             }
@@ -56,6 +66,11 @@ namespace NkodSk.Abstractions
         public bool HasDeleteAccessToFile(FileMetadata metadata)
         {
             if (httpContextAccessor.HasRole("Superadmin"))
+            {
+                return true;
+            }
+
+            if (httpContextAccessor.HasRole("Harvester") && metadata.IsHarvested)
             {
                 return true;
             }

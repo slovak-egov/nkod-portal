@@ -16,9 +16,9 @@ namespace TestBase
 
         private readonly IHttpContextValueAccessor httpContextValueAccessor;
 
-        private readonly ITokenService tokenService;
+        private readonly ITokenService? tokenService;
 
-        public TestIdentityAccessManagementClient(IHttpContextValueAccessor httpContextValueAccessor, ITokenService tokenService)
+        public TestIdentityAccessManagementClient(IHttpContextValueAccessor httpContextValueAccessor, ITokenService? tokenService)
         {
             this.httpContextValueAccessor = httpContextValueAccessor;
             this.tokenService = tokenService;
@@ -183,7 +183,7 @@ namespace TestBase
 
         public Task<TokenResult> RefreshToken(string token, string refreshToken)
         {
-            return tokenService.RefreshToken(token, refreshToken);
+            return tokenService?.RefreshToken(token, refreshToken) ?? throw new Exception("No token service registered");
         }
 
         public Task<DelegationAuthorizationResult?> Logout(string? content)
@@ -193,7 +193,7 @@ namespace TestBase
 
         public Task<TokenResult> DelegatePublisher(string publisherId)
         {
-            return tokenService.DelegateToken(httpContextValueAccessor, publisherId);
+            return tokenService?.DelegateToken(httpContextValueAccessor, publisherId) ?? throw new Exception("No token service registered");
         }
 
         public Task<UserInfo> GetUserInfo()
@@ -237,6 +237,11 @@ namespace TestBase
 
                 return Task.FromResult(new TokenResult { Token = content[6..], RefreshToken = "1", Expires = refreshTokenAfter.AddMinutes(30), RefreshTokenAfter = refreshTokenAfter });
             }
+        }
+
+        public Task<string> LoginHarvester(string auth, string? publisherId)
+        {
+            return Task.FromResult("-");
         }
 
         private record Entry(PersistentUserInfo UserInfo, DateTimeOffset Updated) { }

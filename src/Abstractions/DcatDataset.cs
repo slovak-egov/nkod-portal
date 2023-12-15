@@ -114,12 +114,12 @@ namespace NkodSk.Abstractions
         public void SetTemporal(DateOnly? startDate, DateOnly? endDate)
         {
             RemoveUriNodes("dct:temporal");
-            if (startDate.HasValue && endDate.HasValue)
+            if (startDate.HasValue || endDate.HasValue)
             {
-                DctTemporal temporal = new DctTemporal(Graph, CreateSubject("dct:temporal", "dct:PeriodOfTime"));
+                DctTemporal temporal = new DctTemporal(Graph, CreateSubject("dct:temporal", "dct:PeriodOfTime", "temporal"));
 
-                temporal.StartDate = startDate.Value;
-                temporal.EndDate = endDate.Value;
+                temporal.StartDate = startDate;
+                temporal.EndDate = endDate;
             }
         }
 
@@ -145,7 +145,7 @@ namespace NkodSk.Abstractions
             RemoveUriNodes("dcat:contactPoint");
             if (name is not null || email is not null)
             {
-                VcardKind contactPoint = new VcardKind(Graph, CreateSubject("dcat:contactPoint", "vcard:Individual"));
+                VcardKind contactPoint = new VcardKind(Graph, CreateSubject("dcat:contactPoint", "vcard:Individual", "contact-point"));
                 contactPoint.SetNames(name ?? new LanguageDependedTexts());
                 contactPoint.Email = !string.IsNullOrEmpty(email) ? email : null;
             }
@@ -242,12 +242,17 @@ namespace NkodSk.Abstractions
             values["serie"] = new string[] { IsSerie ? "1" : "0" };
             values["key"] = new string[] { Uri.ToString() };
 
+            if (IsHarvested)
+            {
+                values["Harvested"] = new string[] { "true" };
+            }
+
             foreach ((string language, List<string> texts) in Keywords)
             {
                 values["keywords_" + language] = texts.ToArray();
             }
 
-            Guid? parentId = null;
+            Guid? parentId = metadata?.ParentFile;
             if (!string.IsNullOrEmpty(IsPartOfInternalId) && Guid.TryParse(IsPartOfInternalId, out Guid parentIdValue))
             {
                 parentId = parentIdValue;
@@ -288,6 +293,35 @@ namespace NkodSk.Abstractions
             }
 
             return metadata with { ParentFile = parentId };
+        }
+
+        public bool IsEqualTo(DcatDataset dataset)
+        {
+            if (!AreLaguagesEqual(Title, dataset.Title) ||
+                !AreLaguagesEqual(Description, dataset.Description) ||
+                !Equals(AccrualPeriodicity, dataset.AccrualPeriodicity) ||
+                !AreEquivalent(Themes.ToList(), dataset.Themes.ToList()) ||
+                !AreLaguagesEqual(Keywords, dataset.Keywords) ||
+                !AreEquivalent(Spatial.ToList(), dataset.Spatial.ToList()) ||
+                !Equals(Temporal?.StartDate, dataset.Temporal?.StartDate) ||
+                !Equals(Temporal?.EndDate, dataset.Temporal?.EndDate) ||
+                !AreLaguagesEqual(ContactPoint?.Name, dataset.ContactPoint?.Name) ||
+                !Equals(ContactPoint?.Email, dataset.ContactPoint?.Email) ||
+                !Equals(Documentation, dataset.Documentation) ||
+                !Equals(Specification, dataset.Specification) ||
+                !Equals(SpatialResolutionInMeters, dataset.SpatialResolutionInMeters) ||
+                !Equals(TemporalResolution, dataset.TemporalResolution) ||
+                !AreLaguagesEqual(EuroVocThemeLabels, dataset.EuroVocThemeLabels) ||
+                !Equals(IsSerie, dataset.IsSerie) ||
+                !Equals(IsPartOf, dataset.IsPartOf) ||
+                !Equals(IsPartOfInternalId, dataset.IsPartOfInternalId) ||
+                !Equals(ShouldBePublic, dataset.ShouldBePublic) ||
+                !Equals(Publisher, dataset.Publisher))
+            {
+                return false;
+            }
+
+            return true;
         }
     }
 }

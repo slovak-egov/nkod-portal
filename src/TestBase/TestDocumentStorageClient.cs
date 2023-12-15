@@ -50,18 +50,11 @@ namespace TestBase
         {
             if (!string.IsNullOrWhiteSpace(query.QueryText))
             {
-                FulltextResponse fulltextResponse = fulltextIndex.Search(query);
+                FulltextResponse fulltextResponse = fulltextIndex.Search(new FileStorageQuery { QueryText = query.QueryText });
                 if (fulltextResponse.Documents.Count > 0)
                 {
-                    FileStorageQuery internalQuery = new FileStorageQuery
-                    {
-                        OnlyIds = fulltextResponse.Documents.Select(d => d.Id).ToList(),
-                        QueryText = null,
-                        OnlyPublishers = query.OnlyPublishers,
-                        OnlyPublished = query.OnlyPublished,
-                        RequiredFacets = query.RequiredFacets,
-                    };
-                    return Task.FromResult(fileStorage.GetFileStates(internalQuery, accessPolicy));
+                    query.OnlyIds = fulltextResponse.Documents.Select(d => d.Id).ToList();
+                    return Task.FromResult(fileStorage.GetFileStates(query, accessPolicy));
                 }
                 else
                 {

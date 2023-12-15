@@ -1,22 +1,20 @@
-import { ButtonHTMLAttributes, useCallback } from "react";
-import { initializeNode } from "./IdSkModule";
+import { ButtonHTMLAttributes, useCallback } from 'react';
+import { initializeNode } from './IdSkModule';
 
-type Props = 
-{
+type Props = {
     buttonType: 'primary' | 'secondary' | 'warning';
-} & ButtonHTMLAttributes<HTMLButtonElement>
+} & ButtonHTMLAttributes<HTMLButtonElement>;
 
-export default function Button(props: Props)
-{
+export default function Button(props: Props) {
     const initialize = useCallback((node: HTMLButtonElement) => {
+        if (node == null) return;
         initializeNode(node);
     }, []);
 
-    const {buttonType, className, ...buttonProperties} = props;
+    const { buttonType, className, ...buttonProperties } = props;
     let effectiveClassName = 'idsk-button';
 
-    switch (buttonType)
-    {
+    switch (buttonType) {
         case 'secondary':
             effectiveClassName += ' idsk-button--secondary';
             break;
@@ -27,11 +25,13 @@ export default function Button(props: Props)
 
     effectiveClassName += ' ' + className;
 
-    return <button ref={initialize} className={effectiveClassName} data-module="idsk-button" {...buttonProperties}>
-        {props.children}
-    </button>;
+    return (
+        <button ref={initialize} className={effectiveClassName} data-module="idsk-button" {...buttonProperties}>
+            {props.children}
+        </button>
+    );
 }
 
 Button.defaultProps = {
     buttonType: 'primary'
-}
+};

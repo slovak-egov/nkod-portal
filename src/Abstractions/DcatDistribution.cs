@@ -49,7 +49,7 @@ namespace NkodSk.Abstractions
         public void SetTermsOfUse(Uri? authorsWorkType, Uri? originalDatabaseType, Uri? databaseProtectedBySpecialRightsType, Uri? personalDataContainmentType)
         {
             RemoveUriNodes("leg:termsOfUse");
-            LegTermsOfUse termsOfUse = new LegTermsOfUse(Graph, CreateSubject("leg:termsOfUse", "leg:TermsOfUse"));
+            LegTermsOfUse termsOfUse = new LegTermsOfUse(Graph, CreateSubject("leg:termsOfUse", "leg:TermsOfUse", "terms"));
             termsOfUse.AuthorsWorkType = authorsWorkType;
             termsOfUse.OriginalDatabaseType = originalDatabaseType;
             termsOfUse.DatabaseProtectedBySpecialRightsType = databaseProtectedBySpecialRightsType;
@@ -146,6 +146,12 @@ namespace NkodSk.Abstractions
             Guid id = metadata?.Id ?? createdId ?? Guid.NewGuid();
             DateTimeOffset now = DateTimeOffset.UtcNow;
             Dictionary<string, string[]> values = new Dictionary<string, string[]>();
+
+            if (IsHarvested)
+            {
+                values["Harvested"] = new string[] { "true" };
+            }
+
             if (metadata is null)
             {
                 metadata = new FileMetadata(id, Format?.ToString() ?? id.ToString(), FileType.DistributionRegistration, datasetId, publisher, true, null, now, now, values);
@@ -176,6 +182,26 @@ namespace NkodSk.Abstractions
             values[FormatCodelist] = formatsAsArray;
 
             return metadata with { AdditionalValues = values };
+        }
+
+        public bool IsEqualTo(DcatDistribution distribution)
+        {
+            if (!Equals(TermsOfUse?.AuthorsWorkType, distribution.TermsOfUse?.AuthorsWorkType) ||
+                !Equals(TermsOfUse?.OriginalDatabaseType, distribution.TermsOfUse?.OriginalDatabaseType) ||
+                !Equals(TermsOfUse?.DatabaseProtectedBySpecialRightsType, distribution.TermsOfUse?.DatabaseProtectedBySpecialRightsType) ||
+                !Equals(TermsOfUse?.PersonalDataContainmentType, distribution.TermsOfUse?.PersonalDataContainmentType) ||
+                !Equals(DownloadUrl, distribution.DownloadUrl) ||
+                !Equals(AccessUrl, distribution.AccessUrl) ||
+                !Equals(Format, distribution.Format) ||
+                !Equals(MediaType, distribution.MediaType) ||
+                !Equals(ConformsTo, distribution.ConformsTo) ||
+                !Equals(CompressFormat, distribution.CompressFormat) ||
+                !Equals(PackageFormat, distribution.PackageFormat) ||
+                !AreLaguagesEqual(Title, distribution.Title))
+            {
+                return false;
+            }
+            return true;
         }
     }
 }

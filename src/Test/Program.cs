@@ -8,6 +8,10 @@ using System.Globalization;
 using System.Xml;
 using TestBase;
 using System.Xml.Linq;
+using Abstractions;
+using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
+using System;
 
 string sourceDir = args[0];
 string targetDir = args[1];
@@ -19,214 +23,93 @@ foreach (string path in Directory.EnumerateDirectories(targetDir))
 }
 Storage storage = new Storage(targetDir);
 
-foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Agent")))
-{
-    string content = File.ReadAllText(path);
-    FoafAgent catalog = FoafAgent.Parse(content)!;
-
-    Guid id = Guid.NewGuid();
-
-    storage.InsertFile(
-      content, new FileMetadata(id, catalog.GetName("sk") ?? id.ToString(), FileType.PublisherRegistration, null, catalog.Uri.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy
-  );
-}
-
-Dictionary<Uri, Guid> distributionUriToDataset = new Dictionary<Uri, Guid>();
-Dictionary<Guid, FileMetadata> datasetMetadatas = new Dictionary<Guid, FileMetadata>();
-
-foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Dataset")))
-{
-    string content = File.ReadAllText(path);
-    DcatDataset catalog = DcatDataset.Parse(content)!;
-
-    FileMetadata metadata = catalog.UpdateMetadata(true);
-
-    foreach (Uri uri in catalog.Distributions)
-    {
-        distributionUriToDataset[uri] = metadata.Id;
-    }
-    datasetMetadatas[metadata.Id] = metadata;
-
-    storage.InsertFile(
-        content, metadata, true, accessPolicy
-    );
-}
-
-foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Distribution")))
-{
-    string content = File.ReadAllText(path);
-    DcatDistribution catalog = DcatDistribution.Parse(content)!;
-
-    if (distributionUriToDataset.TryGetValue(catalog.Uri, out Guid datasetId))
-    {
-        FileMetadata datasetMetadata = datasetMetadatas[datasetId];
-
-        FileMetadata metadata = catalog.UpdateMetadata(datasetMetadata);
-        datasetMetadata = catalog.UpdateDatasetMetadata(datasetMetadata);
-
-        storage.InsertFile(
-            content, metadata, true, accessPolicy
-        );
-        storage.UpdateMetadata(datasetMetadata, accessPolicy);
-        datasetMetadatas[datasetId] = datasetMetadata;
-    }
-    else
-    {
-        Console.WriteLine("Dataset not found: " + catalog.Uri);
-    }
-}
-
-foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Catalog")))
-{
-    string content = File.ReadAllText(path);
-    DcatCatalog catalog = DcatCatalog.Parse(content)!;
-
-    FileMetadata metadata = catalog.UpdateMetadata();
-
-    storage.InsertFile(
-        content, metadata, true, accessPolicy
-    );
-}
-
 foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "ConceptScheme"), "*.ttl"))
 {
-    string content = File.ReadAllText(path);
+string content = File.ReadAllText(path);
 
-    storage.InsertFile(
-        content, new FileMetadata(Guid.NewGuid(), Path.GetFileName(path), FileType.Codelist, null, null, true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy
-    );
+storage.InsertFile(
+    content, new FileMetadata(Guid.NewGuid(), Path.GetFileName(path), FileType.Codelist, null, null, true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy
+);
 }
 
 foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "ConceptScheme"), "*.txt"))
 {
-    string[] lines = File.ReadAllLines(path);
+string[] lines = File.ReadAllLines(path);
 
-    SkosConceptScheme conceptScheme = SkosConceptScheme.Create(new Uri(lines[0]));
-    conceptScheme.SetLabel(new LanguageDependedTexts { { "sk", lines[1] } });
+SkosConceptScheme conceptScheme = SkosConceptScheme.Create(new Uri(lines[0]));
+conceptScheme.SetLabel(new LanguageDependedTexts { { "sk", lines[1] } });
 
-    for (int i = 2; i < lines.Length; i += 2)
-    {
-        SkosConcept concept = conceptScheme.CreateConcept(new Uri(lines[i]));
-        concept.SetLabel(new LanguageDependedTexts { { "sk", lines[i + 1] } });
-    }
-
-    storage.InsertFile(
-       conceptScheme.ToString(), new FileMetadata(Guid.NewGuid(), Path.GetFileName(path), FileType.Codelist, null, null, true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy
-   );
+for (int i = 2; i < lines.Length; i += 2)
+{
+SkosConcept concept = conceptScheme.CreateConcept(new Uri(lines[i]));
+concept.SetLabel(new LanguageDependedTexts { { "sk", lines[i + 1] } });
 }
 
-//void PrepareXml(string path)
-//{
-//    XmlDocument document = new XmlDocument();
-//    document.Load(path);
-//    XmlNamespaceManager nsmgr = new XmlNamespaceManager(document.NameTable);
-//    nsmgr.AddNamespace("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-//    nsmgr.AddNamespace("skos", "http://www.w3.org/2008/05/skos-xl#");
-
-//    XmlNodeList? nodes = document.SelectNodes("//rdf:Description", nsmgr);
-
-//    if (nodes is not null)
-//    {
-//        foreach (XmlNode node in nodes)
-//        {
-//            bool isValid = false;
-//            XmlNodeList? literals = node.ChildNodes;
-//            if (literals is not null)
-//            {
-//                foreach (XmlNode literal in literals)
-//                {
-//                    string? lang = literal.Attributes?["xml:lang"]?.Value;
-//                    if (lang == "sk")
-//                    {
-//                        isValid = true;
-//                        break;
-//                    }
-//                }
-//            }
-//            if (!isValid)
-//            {
-//                node.ParentNode!.RemoveChild(node);
-//            }
-//        }
-//    }
-
-//    File.WriteAllText(path, document.OuterXml);
-//}
+storage.InsertFile(
+   conceptScheme.ToString(), new FileMetadata(Guid.NewGuid(), Path.GetFileName(path), FileType.Codelist, null, null, true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy
+);
+}
 
 void SaveGraph(IGraph g, string name, int? max)
 {
-    IUriNode type = g.CreateUriNode("skos:Concept");
-    int index = 0;
-    foreach (Triple t in g.GetTriplesWithPredicateObject(g.CreateUriNode("rdf:type"), type))
-    {
-        IUriNode subject = (IUriNode)t.Subject;
+IUriNode type = g.CreateUriNode("skos:Concept");
+int index = 0;
+foreach (Triple t in g.GetTriplesWithPredicateObject(g.CreateUriNode("rdf:type"), type))
+{
+IUriNode subject = (IUriNode)t.Subject;
 
-        List<Triple> labels = g.GetTriplesWithSubjectPredicate(subject, g.GetUriNode("skos:prefLabel")).ToList();
-        bool hasSk = labels.Select(t => t.Object).OfType<ILiteralNode>().Any(n => n.Language == "sk");
-        if (hasSk && (!max.HasValue || index < max.Value))
-        {
-            index++;
-        }
-        else
-        {
-            g.Retract(t);
-        }
-    }
+List<Triple> labels = g.GetTriplesWithSubjectPredicate(subject, g.GetUriNode("skos:prefLabel")).ToList();
+bool hasSk = labels.Select(t => t.Object).OfType<ILiteralNode>().Any(n => n.Language == "sk");
+if (hasSk && (!max.HasValue || index < max.Value))
+{
+index++;
+}
+else
+{
+g.Retract(t);
+}
+}
 
-    IUriNode schemeType = g.GetUriNode("skos:ConceptScheme");
-    IUriNode rdfTypeNode = g.GetUriNode(new Uri(RdfSpecsHelper.RdfType));
-    IUriNode skosConceptId = g.GetTriplesWithPredicateObject(rdfTypeNode, schemeType).Select(t => t.Subject).OfType<IUriNode>().First();
-    SkosConceptScheme original = new SkosConceptScheme(g, skosConceptId);
+IUriNode schemeType = g.GetUriNode("skos:ConceptScheme");
+IUriNode rdfTypeNode = g.GetUriNode(new Uri(RdfSpecsHelper.RdfType));
+IUriNode skosConceptId = g.GetTriplesWithPredicateObject(rdfTypeNode, schemeType).Select(t => t.Subject).OfType<IUriNode>().First();
+SkosConceptScheme original = new SkosConceptScheme(g, skosConceptId);
 
-    SkosConceptScheme conceptScheme = SkosConceptScheme.Create(skosConceptId.Uri);
-    conceptScheme.SetLabel(new LanguageDependedTexts { { "sk", name } });
+SkosConceptScheme conceptScheme = SkosConceptScheme.Create(skosConceptId.Uri);
+conceptScheme.SetLabel(new LanguageDependedTexts { { "sk", name } });
 
-    foreach (SkosConcept originalConcept in original.Concepts)
-    {
-        SkosConcept concept = conceptScheme.CreateConcept(originalConcept.Uri);
-        string? label = originalConcept.GetLabel("sk");
-        if (label != null)
-        {
-            concept.SetLabel(new LanguageDependedTexts { { "sk", label } });
-        }
-    }
+foreach (SkosConcept originalConcept in original.Concepts)
+{
+SkosConcept concept = conceptScheme.CreateConcept(originalConcept.Uri);
+string? label = originalConcept.GetLabel("sk");
+if (label != null)
+{
+concept.SetLabel(new LanguageDependedTexts { { "sk", label } });
+}
+}
 
-    string content = conceptScheme.ToString();
+string content = conceptScheme.ToString();
 
-    storage.InsertFile(
-       content, new FileMetadata(Guid.NewGuid(), name, FileType.Codelist, null, null, true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy);
-    Console.WriteLine(content.Length);
+storage.InsertFile(
+   content, new FileMetadata(Guid.NewGuid(), name, FileType.Codelist, null, null, true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy);
+Console.WriteLine(content.Length);
 }
 
 {
-    //PrepareXml(Path.Combine(sourceDir, "ConceptScheme", "eurovoc.rdf"));
+//PrepareXml(Path.Combine(sourceDir, "ConceptScheme", "eurovoc.rdf"));
 
-    IGraph g = new Graph();
-    SkosConceptScheme.AddDefaultNamespaces(g);
+IGraph g = new Graph();
+SkosConceptScheme.AddDefaultNamespaces(g);
 
-    SkosConceptScheme conceptScheme = SkosConceptScheme.Create(new Uri(DcatDataset.EuroVocThemeCodelist));
-    conceptScheme.SetLabel(new Dictionary<string, string> { { "sk", "EuroVoc" } });
+SkosConceptScheme conceptScheme = SkosConceptScheme.Create(new Uri(DcatDataset.EuroVocThemeCodelist));
+conceptScheme.SetLabel(new Dictionary<string, string> { { "sk", "EuroVoc" } });
 
-    string content = conceptScheme.ToString();
+string content = conceptScheme.ToString();
 
-    storage.InsertFile(
-       content, new FileMetadata(Guid.NewGuid(), "eurovoc", FileType.Codelist, null, null, true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy);
-    Console.WriteLine(content.Length);
-
-    /*FileLoader.Load(g, Path.Combine(sourceDir, "ConceptScheme", "eurovoc.rdf"));
-    SaveGraph(g, "eurovoc", 0);*/
+storage.InsertFile(
+   content, new FileMetadata(Guid.NewGuid(), "eurovoc", FileType.Codelist, null, null, true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy);
+Console.WriteLine(content.Length);
 }
-
-//{
-//    PrepareXml(Path.Combine(sourceDir, "ConceptScheme", "places-skos.rdf"));
-//    PrepareXml(Path.Combine(sourceDir, "ConceptScheme", "countries-skos.rdf"));
-
-//    IGraph g = new Graph();
-//    SkosConceptScheme.AddDefaultNamespaces(g);
-//    FileLoader.Load(g, Path.Combine(sourceDir, "ConceptScheme", "places-skos.rdf"));
-//    FileLoader.Load(g, Path.Combine(sourceDir, "ConceptScheme", "countries-skos.rdf"));
-//    SaveGraph(g, "places", 1000);
-//}
 
 {
     IGraph g = new Graph();
@@ -238,7 +121,7 @@ void SaveGraph(IGraph g, string name, int? max)
     conceptScheme.SetLabel(new LanguageDependedTexts { { "sk", "Geografické územie" } });
 
     IUriNode rdfTypeNode = g.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
-    
+
     void LoadNodes(string type)
     {
         IUriNode ontologyType = g.CreateUriNode(new Uri(type));
@@ -250,9 +133,14 @@ void SaveGraph(IGraph g, string name, int? max)
         }
     }
 
+    LoadNodes("https://data.gov.sk/def/ontology/location/NUTS1");
     LoadNodes("https://data.gov.sk/def/ontology/location/NUTS3");
     LoadNodes("https://data.gov.sk/def/ontology/location/LAU1");
     LoadNodes("https://data.gov.sk/def/ontology/location/LAU2");
+
+    SkosConcept concept = conceptScheme.CreateConcept(new Uri("http://publications.europa.eu/resource/authority/continent/EUROPE"));
+    concept.SetLabel(new LanguageDependedTexts { { "sk", "Európa" } });
+
 
     string content = conceptScheme.ToString();
 
@@ -269,7 +157,7 @@ void SaveGraph(IGraph g, string name, int? max)
     {
         using (FileStream fs = File.OpenRead(path))
         using (TextReader tr = new StreamReader(fs))
-        using (CsvReader csvReader = new CsvReader(tr, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = ",", HasHeaderRecord = true}))
+        using (CsvReader csvReader = new CsvReader(tr, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = ",", HasHeaderRecord = true }))
         {
             while (csvReader.Read())
             {
@@ -280,4 +168,429 @@ void SaveGraph(IGraph g, string name, int? max)
     }
 
     SaveGraph(conceptScheme.Graph, "iana", null);
+}
+
+
+
+
+
+TestDocumentStorageClient documentStorageClient = new TestDocumentStorageClient(storage, new AllAccessFilePolicy());
+InternalCodelistProvider codelistProvider = new InternalCodelistProvider(documentStorageClient, new DefaultLanguagesSource(), null);
+
+
+
+
+
+
+
+
+
+HashSet<string> publishers = new HashSet<string>();
+
+foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Agent")))
+{
+    string content = File.ReadAllText(path);
+    FoafAgent catalog = FoafAgent.Parse(content)!;
+
+    Guid id = Guid.NewGuid();
+
+    publishers.Add(catalog.Uri.ToString());
+
+    storage.InsertFile(
+      content, new FileMetadata(id, catalog.GetName("sk") ?? id.ToString(), FileType.PublisherRegistration, null, catalog.Uri.ToString(), true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), true, accessPolicy
+  );
+}
+
+void RemoveEmptyTexts(Dictionary<string, string> texts, Action<Dictionary<string, string>> setAction)
+{
+    if (texts.Values.Any(string.IsNullOrWhiteSpace))
+    {
+        Dictionary<string, string> newValues = new Dictionary<string, string>();
+        foreach (KeyValuePair<string, string> pair in texts)
+        {
+            if (!string.IsNullOrWhiteSpace(pair.Value))
+            {
+                newValues[pair.Key] = pair.Value;
+            }
+        }
+        setAction(newValues);
+    }
+}
+
+void RemoveEmptyTextsCollection(Dictionary<string, List<string>> texts, Action<Dictionary<string, List<string>>> setAction)
+{
+    if (texts.Values.Any(v => v.Count == 0 || v.Any(string.IsNullOrWhiteSpace)))
+    {
+        Dictionary<string, List<string>> newValues = new Dictionary<string, List<string>>();
+        foreach (KeyValuePair<string, List<string>> pair in texts)
+        {
+            List<string> newList = new List<string>(pair.Value.Where(v => !string.IsNullOrWhiteSpace(v)));
+            if (newValues.Count > 0)
+            {
+                newValues[pair.Key] = newList;
+            }
+        }
+        setAction(newValues);
+    }
+}
+
+async Task<bool> CheckCodelistValue(string codelistId, Uri? uri, bool required)
+{
+    if (uri is not null)
+    {
+        CodelistItem? codelistItem = await codelistProvider.GetCodelistItem(codelistId, uri.ToString());
+        return codelistItem is not null;
+    }
+    return !required;
+}
+
+
+Dictionary<Uri, Guid> distributionUriToDataset = new Dictionary<Uri, Guid>();
+Dictionary<Guid, FileMetadata> datasetMetadatas = new Dictionary<Guid, FileMetadata>();
+
+foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Dataset")))
+{
+    string content = File.ReadAllText(path);
+    DcatDataset catalog = DcatDataset.Parse(content)!;
+
+    RemoveEmptyTexts(catalog.Title, catalog.SetTitle);
+    RemoveEmptyTexts(catalog.Description, catalog.SetDescription);
+    RemoveEmptyTextsCollection(catalog.Keywords, catalog.SetKeywords);
+
+    string title = catalog.Title.GetValueOrDefault("sk", string.Empty);
+    if (title.Length == 0)
+    {
+        Console.WriteLine("Dataset without sk title: " + catalog.Uri);
+        continue;
+    }
+    if (title.Length > 500)
+    {
+        Console.WriteLine("Dataset with large sk title: " + catalog.Uri + $" {title}");
+        continue;
+    }
+
+    string description = catalog.Description.GetValueOrDefault("sk", string.Empty);
+    //if (description.Length == 0)
+    //{
+    //    Console.WriteLine("Dataset without sk description: " + catalog.Uri);
+    //    continue;
+    //}
+    if (description.Length > 4000)
+    {
+        Console.WriteLine("Dataset with large sk description: " + catalog.Uri);
+        continue;
+    }
+
+    if (catalog.Publisher == null)
+    {
+        Console.WriteLine("Dataset without publisher: " + catalog.Uri);
+        continue;
+    }
+
+    if (!publishers.Contains(catalog.Publisher.ToString()))
+    {
+        Console.WriteLine("Dataset with unknown publisher: " + catalog.Uri + $" {catalog.Publisher}");
+        continue;
+    }
+
+    //List<string> keywords = catalog.Keywords.GetValueOrDefault("sk", new List<string>());
+    //if (keywords.Count == 0)
+    //{
+    //    Console.WriteLine("Dataset without sk keywords: " + catalog.Uri);
+    //    continue;
+    //}
+
+    foreach (Uri uri in catalog.Type)
+    {
+        if (!await CheckCodelistValue(DcatDataset.TypeCodelist, uri, false))
+        {
+            Console.WriteLine("Dataset with unknown type: " + catalog.Uri + $" ({uri})");
+            continue;
+        }
+    }
+
+    foreach (Uri uri in catalog.NonEuroVocThemes)
+    {
+        if (!await CheckCodelistValue(DcatDataset.ThemeCodelist, uri, true))
+        {
+            Console.WriteLine("Dataset with unknown theme: " + catalog.Uri + $" ({uri})");
+            continue;
+        }
+    }
+
+    if (!await CheckCodelistValue(DcatDataset.AccrualPeriodicityCodelist, catalog.AccrualPeriodicity, false))
+    {
+        Console.WriteLine("Dataset with unknown AccrualPeriodicity: " + catalog.Uri + $" ({catalog.AccrualPeriodicity})");
+        continue;
+    }
+
+    if (catalog.Spatial.Any(s => s.Host == "data.gov.sk" && s.LocalPath.StartsWith("/def/")))
+    {
+        List<Uri> newSpatial = new List<Uri>();
+        foreach (Uri uri in catalog.Spatial)
+        {
+            if (uri.Host == "data.gov.sk" && uri.LocalPath.StartsWith("/def/"))
+            {
+                UriBuilder builder = new UriBuilder(uri);
+                builder.Path = "/id/" + builder.Path.Substring(5);
+                newSpatial.Add(builder.Uri);
+            }
+            else
+            {
+                newSpatial.Add(uri);
+            }
+        }
+        catalog.Spatial = newSpatial;
+    }
+
+    foreach (Uri uri in catalog.Spatial)
+    {
+        if (!await CheckCodelistValue(DcatDataset.SpatialCodelist, uri, false))
+        {
+            Console.WriteLine("Dataset with unknown spatial: " + catalog.Uri + $" ({uri})");
+            continue;
+        }
+    }
+
+    if (catalog.Temporal is not null)
+    {
+        if (!catalog.Temporal.StartDate.HasValue && !catalog.Temporal.EndDate.HasValue)
+        {
+            catalog.SetTemporal(null, null);
+        }
+    }
+
+    if (catalog.ContactPoint is not null)
+    {
+        RemoveEmptyTexts(catalog.ContactPoint.Name, catalog.ContactPoint.SetNames);
+        if (catalog.ContactPoint.Email is not null)
+        {
+            if (string.IsNullOrWhiteSpace(catalog.ContactPoint.Email))
+            {
+                catalog.ContactPoint.Email = null;
+            }
+            else if (!Regex.IsMatch(catalog.ContactPoint.Email, @"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|""(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*"")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])"))
+            {
+                Console.WriteLine("Dataset with invalid email: " + catalog.Uri);
+                continue;
+            }
+        }        
+    }
+
+    content = catalog.ToString();
+
+    FileMetadata metadata = catalog.UpdateMetadata(true);
+
+    foreach (Uri uri in catalog.Distributions)
+    {
+        distributionUriToDataset[uri] = metadata.Id;
+    }
+    datasetMetadatas[metadata.Id] = metadata;
+
+    storage.InsertFile(
+        content, metadata, true, accessPolicy
+    );
+}
+
+string filesDir = @"F:\Backup\DataGov2\files";
+
+foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Distribution")))
+{
+    string content = File.ReadAllText(path);
+    DcatDistribution catalog = DcatDistribution.Parse(content)!;
+
+    if (distributionUriToDataset.TryGetValue(catalog.Uri, out Guid datasetId))
+    {
+        RemoveEmptyTexts(catalog.Title, catalog.SetTitle);
+
+        if (catalog.TermsOfUse is not null)
+        {
+            if (!await CheckCodelistValue(DcatDistribution.AuthorsWorkTypeCodelist, catalog.TermsOfUse.AuthorsWorkType, true))
+            {
+                Console.WriteLine("Distribution with unknown AuthorsWorkType: " + catalog.Uri + $" ({catalog.TermsOfUse.AuthorsWorkType})");
+                continue;
+            }
+
+            if (!await CheckCodelistValue(DcatDistribution.OriginalDatabaseTypeCodelist, catalog.TermsOfUse.OriginalDatabaseType, true))
+            {
+                Console.WriteLine("Distribution with unknown OriginalDatabaseType: " + catalog.Uri + $" ({catalog.TermsOfUse.OriginalDatabaseType})");
+                continue;
+            }
+
+            if (!await CheckCodelistValue(DcatDistribution.DatabaseProtectedBySpecialRightsTypeCodelist, catalog.TermsOfUse.DatabaseProtectedBySpecialRightsType, true))
+            {
+                Console.WriteLine("Distribution with unknown DatabaseProtectedBySpecialRightsType: " + catalog.Uri + $" ({catalog.TermsOfUse.DatabaseProtectedBySpecialRightsType})");
+                continue;
+            }
+
+            if (!await CheckCodelistValue(DcatDistribution.PersonalDataContainmentTypeCodelist, catalog.TermsOfUse.PersonalDataContainmentType, true))
+            {
+                Console.WriteLine("Distribution with unknown PersonalDataContainmentType: " + catalog.Uri + $" ({catalog.TermsOfUse.PersonalDataContainmentType})");
+                continue;
+            }
+        }
+
+        void FilterMediaType(Uri? format, Action<Uri> setFormat)
+        {
+            if (format is not null)
+            {
+                string address = format.ToString();
+                int index = address.IndexOf(";");
+                if (index >= 0)
+                {
+                    address = address.Substring(0, index);
+                }
+                setFormat(new Uri(address));
+            }
+        }
+
+        if (catalog.Format is not null && !await CheckCodelistValue(DcatDistribution.FormatCodelist, catalog.Format, false))
+        {
+            string address = catalog.Format.ToString();
+            int index = address.LastIndexOf("/");
+            if (index >= 0)
+            {
+                address = address.Substring(0, index + 1) + address.Substring(index + 1).ToUpperInvariant();
+                catalog.Format = new Uri(address);
+            }
+        }
+
+        if (!await CheckCodelistValue(DcatDistribution.FormatCodelist, catalog.Format, false))
+        {
+            Console.WriteLine("Distribution with unknown Format: " + catalog.Uri + $" ({catalog.Format})");
+            continue;
+        }
+
+
+
+        FilterMediaType(catalog.MediaType, v => catalog.MediaType = v);
+        FilterMediaType(catalog.CompressFormat, v => catalog.CompressFormat = v);
+        FilterMediaType(catalog.PackageFormat, v => catalog.PackageFormat = v);
+        
+
+        if (!await CheckCodelistValue(DcatDistribution.MediaTypeCodelist, catalog.MediaType, false))
+        {
+            Console.WriteLine("Distribution with unknown MediaType: " + catalog.Uri + $" ({catalog.MediaType})");
+            continue;
+        }
+
+        if (!await CheckCodelistValue(DcatDistribution.MediaTypeCodelist, catalog.CompressFormat, false))
+        {
+            Console.WriteLine("Distribution with unknown CompressFormat: " + catalog.Uri + $" ({catalog.CompressFormat})");
+            continue;
+        }
+
+        if (!await CheckCodelistValue(DcatDistribution.MediaTypeCodelist, catalog.PackageFormat, false))
+        {
+            Console.WriteLine("Distribution with unknown PackageFormat: " + catalog.Uri + $" ({catalog.PackageFormat})");
+            continue;
+        }
+        
+        FileMetadata datasetMetadata = datasetMetadatas[datasetId];
+
+        FileMetadata metadata = catalog.UpdateMetadata(datasetMetadata);
+        datasetMetadata = catalog.UpdateDatasetMetadata(datasetMetadata);
+
+        storage.InsertFile(
+            content, metadata, true, accessPolicy
+        );
+
+
+        if (catalog.DownloadUrl is not null && catalog.DownloadUrl.Host == "data.gov.sk")
+        {
+            int index = catalog.DownloadUrl.LocalPath.LastIndexOf("/");
+            string fileName = index >= 0 ? catalog.DownloadUrl.LocalPath.Substring(index + 1) : catalog.DownloadUrl.LocalPath;
+            string downloadPath = Path.Combine(filesDir, Path.GetFileName(path));
+            if (File.Exists(downloadPath))
+            {
+                FileMetadata downloadMetadata = new FileMetadata(Guid.NewGuid(), fileName, FileType.DistributionFile, metadata.Id, metadata.Publisher, true, fileName, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+                storage.InsertFile("", downloadMetadata, false, accessPolicy);
+                string targetPath = Path.Combine(targetDir, "protected", downloadMetadata.Id.ToString("N"));
+                File.Copy(downloadPath, targetPath, true);
+
+                catalog.DownloadUrl = new Uri("https://data.slovensko.sk/download?id=" + downloadMetadata.Id);   
+
+                content = catalog.ToString();
+                storage.InsertFile(content, metadata, true, accessPolicy);
+            }
+        }
+
+        storage.UpdateMetadata(datasetMetadata, accessPolicy);
+        datasetMetadatas[datasetId] = datasetMetadata;
+    }
+    else
+    {
+        Console.WriteLine("Dataset not found: " + catalog.Uri);
+    }
+}
+
+foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Catalog")))
+{
+    string content = File.ReadAllText(path);
+    DcatCatalog catalog = DcatCatalog.Parse(content)!;
+
+    RemoveEmptyTexts(catalog.Title, catalog.SetTitle);
+    RemoveEmptyTexts(catalog.Description, catalog.SetDescription);
+
+   
+    string title = catalog.Title.GetValueOrDefault("sk", string.Empty);
+    if (title.Length == 0)
+    {
+        Console.WriteLine("Catalog without sk title: " + catalog.Uri);
+        continue;
+    }
+    if (title.Length > 200)
+    {
+        Console.WriteLine("Catalog with large sk title: " + catalog.Uri);
+        continue;
+    }
+
+    string description = catalog.Description.GetValueOrDefault("sk", string.Empty);
+    //if (description.Length == 0)
+    //{
+    //    Console.WriteLine("Catalog without sk description: " + catalog.Uri);
+    //    continue;
+    //}
+    if (description.Length > 4000)
+    {
+        Console.WriteLine("Catalog with large sk description: " + catalog.Uri);
+        continue;
+    }
+
+    if (catalog.Publisher == null)
+    {
+        Console.WriteLine("Catalog without publisher: " + catalog.Uri);
+        continue;
+    }
+
+    if (catalog.ContactPoint is not null)
+    {
+        RemoveEmptyTexts(catalog.ContactPoint.Name, catalog.ContactPoint.SetNames);
+        if (catalog.ContactPoint.Email is not null)
+        {
+            if (string.IsNullOrWhiteSpace(catalog.ContactPoint.Email))
+            {
+                catalog.ContactPoint.Email = null;
+            }
+            else if (!Regex.IsMatch(catalog.ContactPoint.Email, @"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|""(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*"")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])"))
+            {
+                Console.WriteLine("Dataset with invalid email: " + catalog.Uri);
+                continue;
+            }
+        }
+    }
+
+    if (!await CheckCodelistValue(DcatCatalog.LocalCatalogTypeCodelist, catalog.Type, true))
+    {
+        Console.WriteLine("Catalog with unknown Type: " + catalog.Uri + $" ({catalog.Type})");
+        continue;
+    }
+
+
+
+    FileMetadata metadata = catalog.UpdateMetadata();
+
+    storage.InsertFile(
+        content, metadata, true, accessPolicy
+    );
 }

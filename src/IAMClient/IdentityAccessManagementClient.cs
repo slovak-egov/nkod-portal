@@ -148,5 +148,15 @@ namespace IAMClient
             return JsonConvert.DeserializeObject<TokenResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
                 ?? throw new HttpRequestException("Invalid response");
         }
+
+        public async Task<string> LoginHarvester(string auth, string? publisherId)
+        {
+            HttpClient client = CreateClient();
+            using JsonContent requestContent = JsonContent.Create(new HarvesterAuthMessage { Auth = auth, PublisherId = publisherId });
+            using HttpResponseMessage response = await client.PostAsync($"/harvester-login", requestContent);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsStringAsync().ConfigureAwait(false)
+                ?? throw new HttpRequestException("Invalid response");
+        }
     }
 }
