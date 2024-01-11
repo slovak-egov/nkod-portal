@@ -33,6 +33,8 @@ using System.Security.Policy;
 using System.Xml.Schema;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.ApplicationInsights;
+using ITfoxtec.Identity.Saml2.Claims;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -217,15 +219,18 @@ app.UseSaml2();
 app.UseAuthentication();
 app.UseAuthorization();
 
-async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord user, IConfiguration configuration, SigningCredentials signingCredentials, bool hasExplicitDelegation, IEnumerable<Claim>? customClaims, string? publisher = null, string? companyName = null)
+async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord? user, IConfiguration configuration, SigningCredentials signingCredentials, bool hasExplicitDelegation, IEnumerable<Claim>? customClaims, string? publisher = null, string? companyName = null)
 {
-    List<Claim> claims = new List<Claim>
+    List<Claim> claims = new List<Claim>();
+
+    if (user is not null)
     {
-        new Claim(ClaimTypes.NameIdentifier, user.Id),
-        new Claim(ClaimTypes.GivenName, user.FirstName),
-        new Claim(ClaimTypes.Surname, user.LastName),
-        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-    };
+        claims.Add(new Claim(ClaimTypes.NameIdentifier, user.Id));
+        claims.Add(new Claim(ClaimTypes.GivenName, user.FirstName));
+        claims.Add(new Claim(ClaimTypes.Surname, user.LastName));
+    }
+
+    claims.Add(new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()));
 
     if (customClaims is not null)
     {
@@ -238,12 +243,12 @@ async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord use
         }
     }
     
-    if (user.Email is not null)
+    if (user?.Email is not null)
     {
         claims.Add(new Claim(ClaimTypes.Email, user.Email));
     }
 
-    if (user.Role is not null)
+    if (user?.Role is not null)
     {
         string effectiveRole = user.Role;
 
@@ -255,7 +260,7 @@ async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord use
         claims.Add(new Claim(ClaimTypes.Role, effectiveRole));
     }
 
-    publisher ??= user.Publisher;
+    publisher ??= user?.Publisher;
 
     if (publisher is not null)
     {
@@ -271,17 +276,20 @@ async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord use
 
     string token = CreateJwtToken(configuration, signingCredentials, claims, expires);
 
-    if (refreshTokenValidInMinutes > 0 && string.IsNullOrEmpty(user.RefreshToken) || !user.RefreshTokenExpiryTime.HasValue || user.RefreshTokenExpiryTime < DateTimeOffset.Now)
+    if (user is not null)
     {
-        byte[] refreshTokenBytes = new byte[64];
-        using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
+        if (refreshTokenValidInMinutes > 0 && string.IsNullOrEmpty(user.RefreshToken) || !user.RefreshTokenExpiryTime.HasValue || user.RefreshTokenExpiryTime < DateTimeOffset.Now)
         {
-            rng.GetBytes(refreshTokenBytes);
+            byte[] refreshTokenBytes = new byte[64];
+            using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(refreshTokenBytes);
+            }
+            string refreshToken = Convert.ToBase64String(refreshTokenBytes);
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiryTime = DateTimeOffset.Now.AddMinutes(refreshTokenValidInMinutes);
+            await context.SaveChangesAsync();
         }
-        string refreshToken = Convert.ToBase64String(refreshTokenBytes);
-        user.RefreshToken = refreshToken;
-        user.RefreshTokenExpiryTime = DateTimeOffset.Now.AddMinutes(refreshTokenValidInMinutes);
-        await context.SaveChangesAsync();
     }
 
     return new TokenResult
@@ -289,7 +297,7 @@ async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord use
         Token = token,
         Expires = expires,
         RefreshTokenAfter = expires.AddMinutes(-5),
-        RefreshToken = user.RefreshToken
+        RefreshToken = user?.RefreshToken
     };
 }
 
@@ -343,7 +351,9 @@ app.MapGet("/users", [Authorize] async ([FromServices] ApplicationDbContext cont
                 Email = record.Email,
                 Role = record.Role,
                 FirstName = record.FirstName,
-                LastName = record.LastName
+                LastName = record.LastName,
+                IsActive = record.IsActive,
+                InvitationExpiresAt = record.InvitedAt?.AddHours(48)
             });
         }
 
@@ -364,9 +374,9 @@ app.MapPost("/users", [Authorize] async ([FromServices] ApplicationDbContext con
     {
         if (input is not null)
         {
-            SaveResult result = new SaveResult();
+            UserSaveResult result = new UserSaveResult();
             ValidationResults validationResults = input.Validate();
-            if (validationResults.IsValid && input.IdentificationNumber is not null)
+            if (validationResults.IsValid)
             {
                 UserRecord record = new UserRecord
                 {
@@ -376,12 +386,27 @@ app.MapPost("/users", [Authorize] async ([FromServices] ApplicationDbContext con
                     Publisher = publisherId,
                     FirstName = input.FirstName,
                     LastName = input.LastName,
-                    IdentificationNumber = input.IdentificationNumber
                 };
+
+                byte[] invitationTokenBytes = new byte[64];
+                using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
+                {
+                    rng.GetBytes(invitationTokenBytes);
+                }
+
+                record.InvitationToken = string.Concat(Array.ConvertAll(invitationTokenBytes, b => b.ToString("x2")));
+                record.InvitedAt = DateTimeOffset.Now;
+                if (Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out Guid userId))
+                {
+                    record.InvitedBy = userId;
+                }
+
                 context.Users.Add(record);
                 await context.SaveChangesAsync();
+
                 result.Id = record.Id;
                 result.Success = true;
+                result.InvitationToken = record.InvitationToken;
             }
             else
             {
@@ -409,7 +434,7 @@ app.MapPut("/users", [Authorize] async ([FromServices] ApplicationDbContext cont
     {
         if (input?.Id is not null)
         {
-            SaveResult result = new SaveResult();
+            UserSaveResult result = new UserSaveResult();
             UserRecord? record = await context.FindUser(input.Id, publisherId);
             if (record is not null)
             {
@@ -420,9 +445,11 @@ app.MapPut("/users", [Authorize] async ([FromServices] ApplicationDbContext cont
                     record.Role = input.Role;
                     record.FirstName = input.FirstName ?? string.Empty;
                     record.LastName = input.LastName ?? string.Empty;
+                    record.InvitedAt = DateTimeOffset.Now;
                     await context.SaveChangesAsync();
                     result.Id = record.Id;
                     result.Success = true;
+                    result.InvitationToken = record.InvitationToken;
                 }
                 else
                 {
@@ -511,7 +538,16 @@ app.MapGet("/user-info", [Authorize] async ([FromServices] ApplicationDbContext 
         }
         else
         {
-            return Results.NotFound();
+            return Results.Ok(new UserInfo
+            {
+                Id = id,
+                Publisher = null,
+                Role = null,
+                FirstName = user.FindFirstValue(ClaimTypes.GivenName) ?? string.Empty,
+                LastName = user.FindFirstValue(ClaimTypes.Surname) ?? string.Empty,
+                Email = null,
+                CompanyName = null,
+            });
         }
     }
     else
@@ -723,7 +759,7 @@ app.MapGet("/login", ([FromServices] Saml2Configuration saml2Configuration, ICon
     });
 });
 
-app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configuration, [FromServices] ApplicationDbContext context, HttpRequest request, [FromServices] SigningCredentials signingCredentials, IConfiguration configuration, [FromServices] ILogger<Program> logger) =>
+app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configuration, [FromServices] ApplicationDbContext context, HttpRequest request, [FromServices] SigningCredentials signingCredentials, IConfiguration configuration, [FromServices] ILogger<Program> logger, [FromServices] TelemetryClient? telemetryClient) =>
 {
     Saml2AuthnResponse saml2AuthnResponse = new Saml2AuthnResponse(saml2Configuration);
 
@@ -738,7 +774,6 @@ app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configurat
     binding.Unbind(genericRequest, saml2AuthnResponse);
     logger.LogInformation(saml2AuthnResponse.XmlDocument.OuterXml);
 
-
     string? id = saml2AuthnResponse.ClaimsIdentity.FindFirst("Actor.UPVSIdentityID")?.Value;
     string? firstName = saml2AuthnResponse.ClaimsIdentity.FindFirst("Actor.FirstName")?.Value;
     string? lastName = saml2AuthnResponse.ClaimsIdentity.FindFirst("Actor.LastName")?.Value;
@@ -746,25 +781,44 @@ app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configurat
     string? ico = saml2AuthnResponse.ClaimsIdentity.FindFirst("Subject.ICO")?.Value;
     string? companyName = saml2AuthnResponse.ClaimsIdentity.FindFirst("Subject.FormattedName")?.Value;
     string? identificationNumber = saml2AuthnResponse.ClaimsIdentity.FindFirst("ActorID")?.Value;
+    string? delegationType = saml2AuthnResponse.ClaimsIdentity.FindFirst("DelegationType")?.Value;
+
+    if (telemetryClient is not null)
+    {
+        foreach (Claim claim in saml2AuthnResponse.ClaimsIdentity.Claims)
+        {
+            telemetryClient.TrackTrace($"Claim: {claim.Type} = {claim.Value}");
+        }
+    }
+
+    string? invitation = request.Cookies["invitation"];
 
     string? publisher = null;
     bool hasExplicitDelegation = true;
-    if (!string.IsNullOrEmpty(ico))
+    if (!string.IsNullOrEmpty(ico) && delegationType == "0")
     {
         publisher = $"https://data.gov.sk/id/legal-subject/{ico}";
         hasExplicitDelegation = true;
     }
 
+    List<Claim> customClaims = new List<Claim>();
+    customClaims.AddRange(saml2AuthnResponse.ClaimsIdentity.Claims.Where(c => c.Type == Saml2ClaimTypes.NameId));
+    customClaims.AddRange(saml2AuthnResponse.ClaimsIdentity.Claims.Where(c => c.Type == Saml2ClaimTypes.SessionIndex));
+    customClaims.AddRange(saml2AuthnResponse.ClaimsIdentity.Claims.Where(c => c.Type == Saml2ClaimTypes.NameIdFormat));
+   
     if (!string.IsNullOrEmpty(id))
     {
-        UserRecord? user = await context.GetOrCreateUser(id, firstName, lastName, email, publisher, identificationNumber).ConfigureAwait(false);
-        if (user is not null)
+        UserRecord? user = await context.GetOrCreateUser(id, firstName, lastName, email, publisher, invitation).ConfigureAwait(false);
+        if (user is not null && user.IsActive)
         {
-            return Results.Ok(await CreateToken(context, user, configuration, signingCredentials, hasExplicitDelegation, saml2AuthnResponse.ClaimsIdentity.Claims, companyName: companyName));
+            return Results.Ok(await CreateToken(context, user, configuration, signingCredentials, hasExplicitDelegation, customClaims, companyName: companyName));
         }
         else
         {
-            return Results.Forbid();
+            customClaims.Add(new Claim(ClaimTypes.NameIdentifier, id));
+            customClaims.Add(new Claim(ClaimTypes.GivenName, firstName ?? string.Empty));
+            customClaims.Add(new Claim(ClaimTypes.Surname, lastName ?? string.Empty));
+            return Results.Ok(await CreateToken(context, null, configuration, signingCredentials, false, customClaims));
         }
     }
     else
@@ -794,6 +848,28 @@ app.MapPost("/harvester-login", (IConfiguration configuration, [FromServices] Si
     {
         return Results.Forbid();
     }
+});
+
+app.MapPost("/validate-invitation", async (IConfiguration configuration, [FromServices] ApplicationDbContext context, HttpRequest request, [FromServices] ILogger<Program> logger) =>
+{
+    CheckInvitationResult result = new CheckInvitationResult();
+    string? invitation = request.Cookies["invitation"];
+    if (!string.IsNullOrWhiteSpace(invitation))
+    {
+        UserRecord? user = await context.GetUserByInvitation(invitation);
+        if (user is not null)
+        {
+            DateTimeOffset? expires = user.InvitedAt?.AddHours(48);
+
+            result.FirstName = user.FirstName;
+            result.LastName = user.LastName;
+            result.ExpiresAt = expires;
+            result.Publisher = user.Publisher;
+            result.Role = user.Role;
+            result.IsValid = expires.HasValue && DateTimeOffset.UtcNow <= expires.Value;
+        }
+    }
+    return Results.Ok(result);
 });
 
 app.Use(async (context, next) =>

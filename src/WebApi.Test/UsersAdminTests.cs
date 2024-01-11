@@ -55,7 +55,6 @@ namespace WebApi.Test
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Email = "test@example.com",
-                IdentificationNumber = "12345",
                 Role = "PublisherAdmin",
             });
             using HttpResponseMessage response = await client.PostAsync("/users", requestContent);
@@ -76,7 +75,6 @@ namespace WebApi.Test
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Email = "test@example.com",
-                IdentificationNumber = "12345",
                 Role = "PublisherAdmin",
             }, PublisherId)).Id!;
 
@@ -106,7 +104,6 @@ namespace WebApi.Test
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Email = "test@example.com",
-                IdentificationNumber = "12345",
                 Role = "PublisherAdmin",
             }, PublisherId)).Id!;
 
@@ -146,7 +143,6 @@ namespace WebApi.Test
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Email = "test@example.com",
-                IdentificationNumber = "12345",
                 Role = "PublisherAdmin",
             });
             using HttpResponseMessage response = await client.PostAsync("/users", requestContent);
@@ -167,7 +163,6 @@ namespace WebApi.Test
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Email = "test@example.com",
-                IdentificationNumber = "12345",
                 Role = "PublisherAdmin",
             }, PublisherId)).Id!;
 
@@ -198,7 +193,6 @@ namespace WebApi.Test
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Email = "test@example.com",
-                IdentificationNumber = "12345",
                 Role = "PublisherAdmin",
             }, PublisherId)).Id!;
 
@@ -246,7 +240,6 @@ namespace WebApi.Test
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Email = "test@example.com",
-                IdentificationNumber = "12345",
                 Role = "PublisherAdmin",
             });
             using HttpResponseMessage response = await client.PostAsync("/users", requestContent);
@@ -279,7 +272,6 @@ namespace WebApi.Test
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Email = "test@example.com",
-                IdentificationNumber = "12345",
                 Role = "PublisherAdmin",
             }, PublisherId)).Id!;
 
@@ -321,7 +313,6 @@ namespace WebApi.Test
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Email = "test@example.com",
-                IdentificationNumber = "12345",
                 Role = "PublisherAdmin",
             }, PublisherId)).Id!;
 
@@ -371,7 +362,6 @@ namespace WebApi.Test
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Email = "test@example.com",
-                IdentificationNumber = "12345",
                 Role = "PublisherAdmin",
             });
             using HttpResponseMessage response = await client.PostAsync("/users", requestContent);
@@ -404,7 +394,6 @@ namespace WebApi.Test
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Email = "test@example.com",
-                IdentificationNumber = "12345",
                 Role = "PublisherAdmin",
             }, PublisherId)).Id!;
 
@@ -446,7 +435,6 @@ namespace WebApi.Test
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Email = "test@example.com",
-                IdentificationNumber = "12345",
                 Role = "PublisherAdmin",
             }, PublisherId)).Id!;
 

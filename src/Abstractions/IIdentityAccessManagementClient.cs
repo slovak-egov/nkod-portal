@@ -10,9 +10,9 @@ namespace NkodSk.Abstractions
     {
         Task<UserInfoResult> GetUsers(UserInfoQuery query);
 
-        Task<SaveResult> CreateUser(NewUserInput input);
+        Task<UserSaveResult> CreateUser(NewUserInput input);
 
-        Task<SaveResult> UpdateUser(EditUserInput input);
+        Task<UserSaveResult> UpdateUser(EditUserInput input);
 
         Task DeleteUser(string id);
 
@@ -29,5 +29,7 @@ namespace NkodSk.Abstractions
         Task<TokenResult> Consume(string content);
 
         Task<string> LoginHarvester(string auth, string? publisherId);
+
+        Task<CheckInvitationResult> CheckInvitation();
     }
 }

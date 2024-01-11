@@ -34,6 +34,7 @@ using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using System;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.DataContracts;
+using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -55,6 +56,11 @@ if (!Uri.IsWellFormedUriString(iamClientUrl, UriKind.Absolute))
     throw new Exception("Unable to get IAMUrl");
 }
 
+builder.Services.AddHeaderPropagation(options =>
+{
+    options.Headers.Add("Cookie");
+});
+
 builder.Services.AddHttpClient(DocumentStorageClient.DocumentStorageClient.HttpClientName, c =>
 {
     c.BaseAddress = new Uri(documentStorageUrl);
@@ -72,7 +78,7 @@ builder.Services.AddTransient<ICodelistProviderClient, CodelistProviderClient.Co
 builder.Services.AddHttpClient(IdentityAccessManagementClient.HttpClientName, c =>
 {
     c.BaseAddress = new Uri(iamClientUrl);
-});
+}).AddHeaderPropagation();
 builder.Services.AddTransient<IIdentityAccessManagementClient, IdentityAccessManagementClient>();
 
 builder.Services.AddAuthentication(o =>
@@ -166,6 +172,7 @@ var app = builder.Build();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseHeaderPropagation();
 
 app.UseStaticFiles();
 
@@ -1974,20 +1981,32 @@ app.MapGet("/saml/logout", async ([FromServices] IIdentityAccessManagementClient
     }
     catch (HttpRequestException e)
     {
-        telemetryClient?.TrackException(e);
-        return e.StatusCode switch
+        response.Cookies.Delete("accessToken");
+        if (e.StatusCode == System.Net.HttpStatusCode.Unauthorized || e.StatusCode == System.Net.HttpStatusCode.Forbidden)
         {
-            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
-            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
-            _ => Results.Problem()
-        };
+            return Results.Redirect("/");
+        }
+
+        telemetryClient?.TrackException(e);
+        return Results.Redirect("/");
     }
     catch (Exception e)
     {
         telemetryClient?.TrackException(e);
-        return Results.Problem();
+        return Results.Redirect("/");
     }
 });
+
+IResult ReturnSpaPage(IWebHostEnvironment environment)
+{
+    string mainPage = Path.Combine(environment.WebRootPath, "index.html");
+    string content = string.Empty;
+    if (File.Exists(mainPage))
+    {
+        content = File.ReadAllText(mainPage);
+    }
+    return Results.Content(content, new Microsoft.Net.Http.Headers.MediaTypeHeaderValue("text/html"));
+}
 
 app.MapPost("/saml/consume", async ([FromServices] IIdentityAccessManagementClient client, HttpRequest request, HttpResponse response, IWebHostEnvironment environment, [FromServices] TelemetryClient? telemetryClient) =>
 {
@@ -2010,6 +2029,34 @@ app.MapPost("/saml/consume", async ([FromServices] IIdentityAccessManagementClie
     }
     catch (HttpRequestException e)
     {
+        if (e.StatusCode == System.Net.HttpStatusCode.Unauthorized || e.StatusCode == System.Net.HttpStatusCode.Forbidden)
+        {
+            return Results.Redirect("/");
+        }
+
+        telemetryClient?.TrackException(e);
+        return Results.Redirect("/");
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Redirect("/");
+    }
+});
+
+app.MapGet("/sparql-endpoint-url", (IConfiguration configuration) =>
+{
+    return Results.Ok(configuration["PublicSparqlEndpoint"]);
+});
+
+app.MapGet("/validate-inviation", async ([FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        return Results.Ok(await client.CheckInvitation().ConfigureAwait(false));
+    }
+    catch (HttpRequestException e)
+    {
         telemetryClient?.TrackException(e);
         return e.StatusCode switch
         {
@@ -2023,11 +2070,6 @@ app.MapPost("/saml/consume", async ([FromServices] IIdentityAccessManagementClie
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
-});
-
-app.MapGet("/sparql-endpoint-url", (IConfiguration configuration) =>
-{
-    return Results.Ok(configuration["PublicSparqlEndpoint"]);
 });
 
 app.Use(async (context, next) =>

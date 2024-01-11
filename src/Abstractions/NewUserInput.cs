@@ -13,8 +13,6 @@ namespace NkodSk.Abstractions
 
         public string? Role { get; set; }
 
-        public string? IdentificationNumber { get; set; }
-
         public ValidationResults Validate()
         {
             ValidationResults results = new ValidationResults();

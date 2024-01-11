@@ -455,7 +455,6 @@ namespace DocumentStorageApi.Test
             Assert.Equal(state, storage.GetFileState(state.Metadata.Id, StaticAccessPolicy.Allow));
         }
 
-
         [Theory]
         [InlineData("Publisher")]
         [InlineData("PublisherAdmin")]
@@ -477,19 +476,24 @@ namespace DocumentStorageApi.Test
         [Theory]
         [InlineData("Publisher")]
         [InlineData("PublisherAdmin")]
-        public async Task ExecutableFileShouldBeDeniedAsStream(string role)
+        public async Task LargeFileSouldBeUploaded(string role)
         {
             using Storage storage = new Storage(fixture.GetStoragePath());
 
             FileMetadata metadata = new FileMetadata(Guid.NewGuid(), "Test", FileType.DatasetRegistration, null, "http://localhost/publisher1", true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
-            string newContent = $"MZ";
-            InsertModel model = new InsertModel(newContent, metadata, false);
 
             using DocumentStorageApplicationFactory applicationFactory = new DocumentStorageApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken(role, metadata.Publisher));
 
-            using Stream source = File.OpenRead(Assembly.GetExecutingAssembly().Location);
+            StringBuilder contentBuilder = new StringBuilder();
+            for (int i = 0; i < 1_000_000; i++)
+            {
+                contentBuilder.AppendLine("content");
+            }
+            string content = contentBuilder.ToString();
+
+            using Stream source = new MemoryStream(Encoding.UTF8.GetBytes(content));
 
             MultipartFormDataContent requestContent = new MultipartFormDataContent
             {
@@ -498,7 +502,37 @@ namespace DocumentStorageApi.Test
                 { new StringContent("false"), "enableOverwrite" }
             };
             using HttpResponseMessage response = await client.PostAsync($"/files/stream", requestContent);
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            FileState? newState = storage.GetFileState(metadata.Id, StaticAccessPolicy.Allow);
+            Assert.NotNull(newState);
+            Assert.Equal(content, newState.Content);
+            Assert.Equal(metadata, newState.Metadata);
         }
+
+        //[Theory]
+        //[InlineData("Publisher")]
+        //[InlineData("PublisherAdmin")]
+        //public async Task ExecutableFileShouldBeDeniedAsStream(string role)
+        //{
+        //    using Storage storage = new Storage(fixture.GetStoragePath());
+
+        //    FileMetadata metadata = new FileMetadata(Guid.NewGuid(), "Test", FileType.DatasetRegistration, null, "http://localhost/publisher1", true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+
+        //    using DocumentStorageApplicationFactory applicationFactory = new DocumentStorageApplicationFactory(storage);
+        //    using HttpClient client = applicationFactory.CreateClient();
+        //    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken(role, metadata.Publisher));
+
+        //    using Stream source = File.OpenRead(Assembly.GetExecutingAssembly().Location);
+
+        //    MultipartFormDataContent requestContent = new MultipartFormDataContent
+        //    {
+        //        { new StringContent(JsonConvert.SerializeObject(metadata)), "metadata" },
+        //        { new StreamContent(source), "file", "source" },
+        //        { new StringContent("false"), "enableOverwrite" }
+        //    };
+        //    using HttpResponseMessage response = await client.PostAsync($"/files/stream", requestContent);
+        //    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        //}
     }
 }

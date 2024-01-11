@@ -1130,7 +1130,6 @@ namespace Frontend.Test
             Assert.AreEqual(input.FirstName, await (await test.GetInputInFormElementGroup("Meno")).GetAttributeAsync("value"));
             Assert.AreEqual(input.LastName, await (await test.GetInputInFormElementGroup("Priezvisko")).GetAttributeAsync("value"));
             Assert.AreEqual(input.Email, await (await test.GetInputInFormElementGroup("E-mailová adresa")).GetAttributeAsync("value"));
-            Assert.AreEqual(input.IdentificationNumber, await (await test.GetInputInFormElementGroup("Identifikačné číslo")).GetAttributeAsync("value"));
 
             Assert.AreEqual(GetRoleName(input.Role), await test.GetMultiRadioSelectedLabel("Rola"));
         }
@@ -1151,7 +1150,6 @@ namespace Frontend.Test
             await (await test.GetInputInFormElementGroup("Meno"))!.FillAsync(input.FirstName);
             await (await test.GetInputInFormElementGroup("Priezvisko"))!.FillAsync(input.LastName);
             await (await test.GetInputInFormElementGroup("E-mailová adresa"))!.FillAsync(input.Email ?? string.Empty);
-            await (await test.GetInputInFormElementGroup("Identifikačné číslo"))!.FillAsync(input.IdentificationNumber ?? string.Empty);
             await test.FillUserRole(input.Role);
         }
 

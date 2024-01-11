@@ -15,6 +15,8 @@ namespace TestBase
 
         public bool HasRole(string role) => false;
 
+        public string? InvitationToken => null;
+
         public string? UserId => null;
     }
 }

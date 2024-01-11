@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Security.Policy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.ApplicationInsights.WindowsServer;
 
 namespace IAM.Test
 {
@@ -18,15 +19,24 @@ namespace IAM.Test
     {
         private const string PublisherId = "http://example.com/publisher";
 
-        private async Task<UserRecord> CreateDefaultUser(ApplicationDbContext context)
+        private async Task<UserRecord> CreateDefaultUser(ApplicationDbContext context, bool isActive)
         {
             UserRecord record = new UserRecord
             {
                 Id = Guid.NewGuid().ToString(),
                 Publisher = PublisherId,
                 Email = "test@example.com",
-                Role = "Publisher"
+                Role = "Publisher",
+                IsActive = isActive
             };
+
+            if (!isActive)
+            {
+                record.InvitationToken = Guid.NewGuid().ToString();
+                record.InvitedBy = Guid.NewGuid();
+                record.InvitedAt = DateTimeOffset.UtcNow;
+            }
+
             context.Users.Add(record);
             await context.SaveChangesAsync();
             return record;
@@ -41,7 +51,7 @@ namespace IAM.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             using HttpClient client = applicationFactory.CreateClient();
@@ -55,11 +65,9 @@ namespace IAM.Test
         {
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
 
-            UserRecord record;
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
             }
 
             using HttpClient client = applicationFactory.CreateClient();
@@ -67,7 +75,6 @@ namespace IAM.Test
             using JsonContent requestContent = JsonContent.Create(new NewUserInput
             {
                 Email = "test@example.com",
-                IdentificationNumber = "1234567890",
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Role = "Publisher",
@@ -85,7 +92,7 @@ namespace IAM.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             using HttpClient client = applicationFactory.CreateClient();
@@ -109,7 +116,7 @@ namespace IAM.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             using HttpClient client = applicationFactory.CreateClient();
@@ -127,7 +134,7 @@ namespace IAM.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             using HttpClient client = applicationFactory.CreateClient();
@@ -142,11 +149,9 @@ namespace IAM.Test
         {
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
 
-            UserRecord record;
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
             }
 
             using HttpClient client = applicationFactory.CreateClient();
@@ -155,7 +160,6 @@ namespace IAM.Test
             using JsonContent requestContent = JsonContent.Create(new NewUserInput
             {
                 Email = "test@example.com",
-                IdentificationNumber = "1234567890",
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Role = "Publisher",
@@ -173,7 +177,7 @@ namespace IAM.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             using HttpClient client = applicationFactory.CreateClient();
@@ -198,7 +202,7 @@ namespace IAM.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             using HttpClient client = applicationFactory.CreateClient();
@@ -217,7 +221,7 @@ namespace IAM.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             using HttpClient client = applicationFactory.CreateClient();
@@ -237,20 +241,19 @@ namespace IAM.Test
         {
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
 
-            UserRecord record;
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
             }
 
+            Guid id = Guid.NewGuid();
+
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId, id: id.ToString()));
 
             NewUserInput input = new NewUserInput
             {
                 Email = "test@example.com",
-                IdentificationNumber = "1234567890",
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Role = "Publisher",
@@ -259,16 +262,17 @@ namespace IAM.Test
             using HttpResponseMessage response = await client.PostAsync("/users", requestContent);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-            SaveResult? result = await response.Content.ReadFromJsonAsync<SaveResult>();
+            UserSaveResult? result = await response.Content.ReadFromJsonAsync<UserSaveResult>();
             Assert.NotNull(result);
             Assert.False(string.IsNullOrEmpty(result.Id));
             Assert.True(result.Success);
             Assert.Null(result.Errors);
+            Assert.NotNull(result.InvitationToken);
 
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                Assert.Equal(2, await context.Users.CountAsync());
+                Assert.Equal(1, await context.Users.CountAsync());
 
                 UserRecord? user = await context.Users.FirstOrDefaultAsync(u => u.Id == result.Id);
                 Assert.NotNull(user);
@@ -277,6 +281,11 @@ namespace IAM.Test
                 Assert.Equal(input.Role, user.Role);
                 Assert.Null(user.RefreshToken);
                 Assert.Null(user.RefreshTokenExpiryTime);
+                Assert.False(string.IsNullOrEmpty(user.InvitationToken));
+                Assert.Equal(id, user.InvitedBy);
+                Assert.NotNull(user.InvitedAt);
+                Assert.Null(user.ActivatedAt);
+                Assert.False(user.IsActive);
             }
         }
 
@@ -289,7 +298,7 @@ namespace IAM.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             using HttpClient client = applicationFactory.CreateClient();
@@ -307,11 +316,12 @@ namespace IAM.Test
             using HttpResponseMessage response = await client.PutAsync("/users", requestContent);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-            SaveResult? result = await response.Content.ReadFromJsonAsync<SaveResult>();
+            UserSaveResult? result = await response.Content.ReadFromJsonAsync<UserSaveResult>();
             Assert.NotNull(result);
             Assert.Equal(record.Id, result.Id);
             Assert.True(result.Success);
             Assert.Null(result.Errors);
+            Assert.Null(result.InvitationToken);
 
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
@@ -325,6 +335,8 @@ namespace IAM.Test
                 Assert.Equal(input.Role, user.Role);
                 Assert.Null(user.RefreshToken);
                 Assert.Null(user.RefreshTokenExpiryTime);
+                Assert.Null(user.InvitationToken);
+                Assert.True(user.IsActive);
             }
         }
 
@@ -337,7 +349,85 @@ namespace IAM.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
+            }
+
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+
+            using HttpResponseMessage response = await client.DeleteAsync($"/users?id={HttpUtility.UrlEncode(record.Id)}");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                Assert.Equal(0, await context.Users.CountAsync());
+            }
+        }
+
+        [Fact]
+        public async Task EditUserNotActiveShouldBeAllowedForPublisherAdmin()
+        {
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
+
+            UserRecord record;
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                record = await CreateDefaultUser(context, false);
+            }
+
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+
+            EditUserInput input = new EditUserInput
+            {
+                Id = record.Id,
+                Email = "test@example.com",
+                Role = "Publisher",
+                FirstName = "Meno",
+                LastName = "Priezvisko"
+            };
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/users", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            UserSaveResult? result = await response.Content.ReadFromJsonAsync<UserSaveResult>();
+            Assert.NotNull(result);
+            Assert.Equal(record.Id, result.Id);
+            Assert.True(result.Success);
+            Assert.Null(result.Errors);
+            Assert.Equal(record.InvitationToken, result.InvitationToken);
+
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                Assert.Equal(1, await context.Users.CountAsync());
+
+                UserRecord? user = await context.Users.FirstOrDefaultAsync(u => u.Id == result.Id);
+                Assert.NotNull(user);
+                Assert.Equal(PublisherId, user.Publisher);
+                Assert.Equal(input.Email, user.Email);
+                Assert.Equal(input.Role, user.Role);
+                Assert.Null(user.RefreshToken);
+                Assert.Null(user.RefreshTokenExpiryTime);
+                Assert.Equal(user.InvitedBy, record.InvitedBy);
+                Assert.True(user.InvitedAt > record.InvitedAt);
+                Assert.Equal(user.InvitationToken, record.InvitationToken);
+                Assert.False(user.IsActive);
+            }
+        }
+
+        [Fact]
+        public async Task DeleteUserNotActiveShouldBeAllowedForPublisherAdmin()
+        {
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
+
+            UserRecord record;
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                record = await CreateDefaultUser(context, true);
             }
 
             using HttpClient client = applicationFactory.CreateClient();
@@ -362,7 +452,7 @@ namespace IAM.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             using HttpClient client = applicationFactory.CreateClient();
@@ -382,20 +472,19 @@ namespace IAM.Test
         {
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
 
-            UserRecord record;
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
             }
 
+            Guid id = Guid.NewGuid();
+
             using HttpClient client = applicationFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("Superadmin", PublisherId));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("Superadmin", PublisherId, id: id.ToString()));
 
             NewUserInput input = new NewUserInput
             {
                 Email = "test@example.com",
-                IdentificationNumber = "1234567890",
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Role = "Publisher",
@@ -404,16 +493,17 @@ namespace IAM.Test
             using HttpResponseMessage response = await client.PostAsync("/users", requestContent);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-            SaveResult? result = await response.Content.ReadFromJsonAsync<SaveResult>();
+            UserSaveResult? result = await response.Content.ReadFromJsonAsync<UserSaveResult>();
             Assert.NotNull(result);
             Assert.False(string.IsNullOrEmpty(result.Id));
             Assert.True(result.Success);
             Assert.Null(result.Errors);
+            Assert.False(string.IsNullOrEmpty(result.InvitationToken));
 
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                Assert.Equal(2, await context.Users.CountAsync());
+                Assert.Equal(1, await context.Users.CountAsync());
 
                 UserRecord? user = await context.Users.FirstOrDefaultAsync(u => u.Id == result.Id);
                 Assert.NotNull(user);
@@ -422,6 +512,11 @@ namespace IAM.Test
                 Assert.Equal(input.Role, user.Role);
                 Assert.Null(user.RefreshToken);
                 Assert.Null(user.RefreshTokenExpiryTime);
+                Assert.False(string.IsNullOrEmpty(user.InvitationToken));
+                Assert.Equal(id, user.InvitedBy);
+                Assert.NotNull(user.InvitedAt);
+                Assert.Null(user.ActivatedAt);
+                Assert.False(user.IsActive);
             }
         }
 
@@ -434,7 +529,7 @@ namespace IAM.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             using HttpClient client = applicationFactory.CreateClient();
@@ -452,11 +547,12 @@ namespace IAM.Test
             using HttpResponseMessage response = await client.PutAsync("/users", requestContent);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-            SaveResult? result = await response.Content.ReadFromJsonAsync<SaveResult>();
+            UserSaveResult? result = await response.Content.ReadFromJsonAsync<UserSaveResult>();
             Assert.NotNull(result);
             Assert.Equal(record.Id, result.Id);
             Assert.True(result.Success);
             Assert.Null(result.Errors);
+            Assert.Null(result.InvitationToken);
 
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
@@ -470,6 +566,8 @@ namespace IAM.Test
                 Assert.Equal(input.Role, user.Role);
                 Assert.Null(user.RefreshToken);
                 Assert.Null(user.RefreshTokenExpiryTime);
+                Assert.Null(user.InvitationToken);
+                Assert.True(user.IsActive);
             }
         }
 
@@ -482,7 +580,85 @@ namespace IAM.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
+            }
+
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("Superadmin", PublisherId));
+
+            using HttpResponseMessage response = await client.DeleteAsync($"/users?id={HttpUtility.UrlEncode(record.Id)}");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                Assert.Equal(0, await context.Users.CountAsync());
+            }
+        }
+
+        [Fact]
+        public async Task EditUserNotActiveShouldBeAllowedForSuperadmin()
+        {
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
+
+            UserRecord record;
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                record = await CreateDefaultUser(context, false);
+            }
+
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("Superadmin", PublisherId));
+
+            EditUserInput input = new EditUserInput
+            {
+                Id = record.Id,
+                Email = "test@example.com",
+                Role = "Publisher",
+                FirstName = "Meno",
+                LastName = "Priezvisko"
+            };
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/users", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            UserSaveResult? result = await response.Content.ReadFromJsonAsync<UserSaveResult>();
+            Assert.NotNull(result);
+            Assert.Equal(record.Id, result.Id);
+            Assert.True(result.Success);
+            Assert.Null(result.Errors);
+            Assert.Equal(record.InvitationToken, result.InvitationToken);
+
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                Assert.Equal(1, await context.Users.CountAsync());
+
+                UserRecord? user = await context.Users.FirstOrDefaultAsync(u => u.Id == result.Id);
+                Assert.NotNull(user);
+                Assert.Equal(PublisherId, user.Publisher);
+                Assert.Equal(input.Email, user.Email);
+                Assert.Equal(input.Role, user.Role);
+                Assert.Null(user.RefreshToken);
+                Assert.Null(user.RefreshTokenExpiryTime);
+                Assert.Equal(user.InvitedBy, record.InvitedBy);
+                Assert.True(user.InvitedAt > record.InvitedAt);
+                Assert.Equal(user.InvitationToken, record.InvitationToken);
+                Assert.False(user.IsActive);
+            }
+        }
+
+        [Fact]
+        public async Task DeleteUserNotActiveShouldBeAllowedForSuperadmin()
+        {
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
+
+            UserRecord record;
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                record = await CreateDefaultUser(context, false);
             }
 
             using HttpClient client = applicationFactory.CreateClient();

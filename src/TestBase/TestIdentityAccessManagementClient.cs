@@ -86,16 +86,16 @@ namespace TestBase
             return null;
         }
 
-        public Task<SaveResult> CreateUser(NewUserInput input)
+        public Task<UserSaveResult> CreateUser(NewUserInput input)
         {
             return Task.FromResult(CreateUser(input, PublisherId));
         }
 
-        public SaveResult CreateUser(NewUserInput input, string? publisherId)
+        public UserSaveResult CreateUser(NewUserInput input, string? publisherId)
         {
             publisherId ??= string.Empty;
 
-            SaveResult result = new SaveResult();
+            UserSaveResult result = new UserSaveResult();
             if (!users.TryGetValue(publisherId, out List<Entry>? list))
             {
                 list = new List<Entry>();
@@ -104,7 +104,7 @@ namespace TestBase
 
             PersistentUserInfo userInfo = new PersistentUserInfo
             {
-                Id = input.IdentificationNumber!,
+                Id = Guid.NewGuid().ToString(),
                 Email = input.Email,
                 Role = input.Role,
                 FirstName = input.FirstName,
@@ -131,16 +131,16 @@ namespace TestBase
             list.Add(new Entry(userInfo, DateTimeOffset.UtcNow));
         }
 
-        public Task<SaveResult> UpdateUser(EditUserInput input)
+        public Task<UserSaveResult> UpdateUser(EditUserInput input)
         {
             return Task.FromResult(UpdateUser(input, PublisherId));
         }
 
-        public SaveResult UpdateUser(EditUserInput input, string publisherId)
+        public UserSaveResult UpdateUser(EditUserInput input, string publisherId)
         {
             publisherId ??= string.Empty;
 
-            SaveResult result = new SaveResult();
+            UserSaveResult result = new UserSaveResult();
             if (!users.TryGetValue(publisherId, out List<Entry>? list))
             {
                 list = new List<Entry>();
@@ -242,6 +242,11 @@ namespace TestBase
         public Task<string> LoginHarvester(string auth, string? publisherId)
         {
             return Task.FromResult("-");
+        }
+
+        public Task<CheckInvitationResult> CheckInvitation()
+        {
+            throw new NotImplementedException();
         }
 
         private record Entry(PersistentUserInfo UserInfo, DateTimeOffset Updated) { }

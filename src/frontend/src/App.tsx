@@ -32,6 +32,8 @@ import InfoPageInvalidDelegation from './pages/InfoPageInvalidDelegation';
 import InfoPageWaitingForApprove from './pages/InfoPageWaitingForApprove';
 import { AxiosResponse, RawAxiosRequestHeaders } from 'axios';
 import NotFound from './pages/NotFound';
+import Invitation from './pages/Invitation';
+import LoginInProgress from './pages/LoginInProgress';
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -186,6 +188,9 @@ function App(props: Props) {
                                     <Route path="/lokalne-katalogy" element={<PublicLocalCatalogList />} />
                                     <Route path="/sparql" Component={Sparql} />
                                     <Route path="/kvalita-metadat" Component={Quality} />
+
+                                    <Route path="/pozvanka" Component={Invitation} />
+                                    <Route path="/saml/consume" Component={LoginInProgress} />
 
                                     {userInfo ? (
                                         <>

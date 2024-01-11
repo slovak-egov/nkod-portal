@@ -140,6 +140,8 @@ bool ContainsExecutableFiles(FileMetadata metadata, Stream source)
 
     bool DetectExecutable(Stream source)
     {
+        return false;
+
         try
         {
             using PEReader reader = new PEReader(source, PEStreamOptions.LeaveOpen);

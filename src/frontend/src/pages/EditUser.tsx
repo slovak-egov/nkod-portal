@@ -9,6 +9,8 @@ import MultiRadio from "../components/MultiRadio";
 import Loading from "../components/Loading";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import { useState } from "react";
+import Invitation from "../components/Invitation";
 
 type Role = {
     id: string|null;
@@ -22,6 +24,7 @@ export default function EditUser()
     const navigate = useNavigate();
     const {t} = useTranslation();
     useDocumentTitle(t('editUser'));
+    const [invitationToken, setInvitationToken] = useState<string | null>(null);
 
     const roles: Role[] = [
         {
@@ -39,6 +42,11 @@ export default function EditUser()
     ];
 
     return <>
+            {invitationToken ? (
+                <div>
+                    <Invitation invitationToken={invitationToken} />
+                </div>
+            ) : <>
         <Breadcrumbs items={[{title: t('nkod'), link: '/'}, {title: t('userList'), link: '/sprava/pouzivatelia'}, {title: t('editUser')}]} />
             <MainContent>
             <PageHeader>{t('editUser')}</PageHeader>
@@ -68,11 +76,15 @@ export default function EditUser()
                     <Button style={{marginRight: '20px'}} disabled={saving} onClick={async () => {
                         const result = await save();
                         if (result?.success) {
-                            navigate('/sprava/pouzivatelia');
+                             if (result.invitationToken) {
+                                 setInvitationToken(result.invitationToken);
+                             } else {
+                                 navigate('/sprava/pouzivatelia');
+                             }
                         }
                     }}>
                         {t('save')} 
                     </Button>
             </MainContent>
-        </>;
+        </>}</>;
 }

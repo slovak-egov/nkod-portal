@@ -141,7 +141,7 @@
     "contacts": "Kontakty",
     "websiteOwner": "Prevádzkovateľom služby je Ministerstvo investícií, regionálneho rozvoja a informatizácie SR.",
     "nkodPart": "Národný katalóg otvorených dát je súčasťou projektu",
-    "idsk": "Jednotným dizajn manuálom elektronických služieb",    
+    "idsk": "Jednotným dizajn manuálom elektronických služieb",
     "createdWith": "Vytvorené v súlade s",
     "openData20": "Otvorené údaje 2.0 - Rozvoj centrálnych komponentov pre kvalitné zabezpečenie otvorených údajov",
     "expandLanguageMenu": "Rozbaliť jazykové menu",
@@ -196,5 +196,16 @@
     "removeLanguageVersion": "Odstrániť jazykovú verziu",
     "addLanguageVersion": "Pridať jazykovú verziu",
     "addToList": "Pridať do zoznamu",
-    "filters": "Filtre"
+    "filters": "Filtre",
+    "invitationWasCreated": "Pozvánka bola vytvorená",
+    "invitation": "Pozvánka",
+    "invitationIsNotValid": "Pozvánka nie je platná, kontaktujte správcu.",
+    "invitationIsValid": "Pozvánka je platná, môžete sa zaregistrovať.",
+    "forRegistrationDoLogin": "Pre pokračovanie v registrácii sa prosím prihláste na portáli slovensko.sk pomocou eID alebo pomocou aplikácie Slovensko v mobile.",
+    "invitationWasCreatedForPerson": "Pozvánka bola vytvorená pre osobu s nasledovnými údajmi",
+    "active": "Aktívny",
+    "invitationIsValidTill": "Pozvánka je platná do",
+    "yes": "áno",
+    "no": "nie",
+    "loginInProgress": "Prebieha prihlasovanie"
 }

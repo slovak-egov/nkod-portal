@@ -57,7 +57,6 @@ namespace Frontend.Test
                 LastName = string.Empty,
                 Email = string.Empty,
                 Role = "Publisher",
-                IdentificationNumber = string.Empty
             });
         }
 
@@ -65,10 +64,9 @@ namespace Frontend.Test
         {
             return new NewUserInput
             {
-                Email = "test@example.com",
+                Email = "test2@example.com",
                 FirstName = "Meno",
                 LastName = "Priezvisko",
-                IdentificationNumber = "12345",
                 Role = "Publisher",
             };
         }
@@ -98,7 +96,8 @@ namespace Frontend.Test
 
             await Page.AssertTableRowsCount(2);
 
-            Extensions.AssertAreEqual(input, f.Services.GetRequiredService<TestIdentityAccessManagementClient>().GetUser(PublisherId, input.IdentificationNumber!)!);
+            UserInfoResult users = await f.Services.GetRequiredService<TestIdentityAccessManagementClient>().GetUsers(new UserInfoQuery(), PublisherId);
+            Extensions.AssertAreEqual(input, users.Items.Single(u => u.Email == input.Email));
         }
 
         [TestMethod]
@@ -110,12 +109,12 @@ namespace Frontend.Test
             using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
 
             NewUserInput newUser = CreatelUserInput();
-            f.Services.GetRequiredService<TestIdentityAccessManagementClient>().CreateUser(newUser, PublisherId);
+            UserSaveResult saveResult = f.Services.GetRequiredService<TestIdentityAccessManagementClient>().CreateUser(newUser, PublisherId);
 
             await Page.Login(f, PublisherId, "PublisherAdmin");
 
             await Page.OpenUsersAdmin();
-            await Page.RunAndWaitForUserEdit(newUser.IdentificationNumber!, async () =>
+            await Page.RunAndWaitForUserEdit(saveResult.Id!, async () =>
             {
                 await Page.ClickOnTableButton(1, "Upraviť");
             });
@@ -127,7 +126,7 @@ namespace Frontend.Test
 
             await Page.AssertTableRowsCount(2);
 
-            Extensions.AssertAreEqual(newUser, f.Services.GetRequiredService<TestIdentityAccessManagementClient>().GetUser(PublisherId, newUser.IdentificationNumber!)!);
+            Extensions.AssertAreEqual(newUser, f.Services.GetRequiredService<TestIdentityAccessManagementClient>().GetUser(PublisherId, saveResult.Id!)!);
         }
 
         [TestMethod]
@@ -139,12 +138,12 @@ namespace Frontend.Test
             using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
 
             NewUserInput newUser = CreatelUserInput();
-            f.Services.GetRequiredService<TestIdentityAccessManagementClient>().CreateUser(newUser, PublisherId);
+            UserSaveResult saveResult = f.Services.GetRequiredService<TestIdentityAccessManagementClient>().CreateUser(newUser, PublisherId);
 
             await Page.Login(f, PublisherId, "PublisherAdmin");
 
             await Page.OpenUsersAdmin();
-            await Page.RunAndWaitForUserEdit(newUser.IdentificationNumber!, async () =>
+            await Page.RunAndWaitForUserEdit(saveResult.Id!, async () =>
             {
                 await Page.ClickOnTableButton(1, "Upraviť");
             });
@@ -153,7 +152,7 @@ namespace Frontend.Test
 
             EditUserInput input = new EditUserInput
             {
-                Id = newUser.IdentificationNumber,
+                Id = saveResult.Id!,
                 Email = "new@example.com",
                 FirstName = "Meno2",
                 LastName = "Priezvisko2",
@@ -169,7 +168,7 @@ namespace Frontend.Test
 
             await Page.AssertTableRowsCount(2);
 
-            Extensions.AssertAreEqual(input, f.Services.GetRequiredService<TestIdentityAccessManagementClient>().GetUser(PublisherId, newUser.IdentificationNumber!)!);
+            Extensions.AssertAreEqual(input, f.Services.GetRequiredService<TestIdentityAccessManagementClient>().GetUser(PublisherId, saveResult.Id!)!);
         }
 
         [TestMethod]
@@ -181,12 +180,12 @@ namespace Frontend.Test
             using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
 
             NewUserInput newUser = CreatelUserInput();
-            f.Services.GetRequiredService<TestIdentityAccessManagementClient>().CreateUser(newUser, PublisherId);
+            UserSaveResult saveResult = f.Services.GetRequiredService<TestIdentityAccessManagementClient>().CreateUser(newUser, PublisherId);
 
             await Page.Login(f, PublisherId, "PublisherAdmin");
 
             await Page.OpenUsersAdmin();
-            await Page.RunAndWaitForUserEdit(newUser.IdentificationNumber!, async () =>
+            await Page.RunAndWaitForUserEdit(saveResult.Id!, async () =>
             {
                 await Page.ClickOnTableButton(1, "Upraviť");
             });
@@ -195,7 +194,7 @@ namespace Frontend.Test
 
             EditUserInput input = new EditUserInput
             {
-                Id = newUser.IdentificationNumber,
+                Id = saveResult.Id!,
                 Email = "new@example.com",
                 FirstName = "Meno2",
                 LastName = "Priezvisko2",
@@ -211,7 +210,7 @@ namespace Frontend.Test
 
             await Page.AssertTableRowsCount(2);
 
-            Extensions.AssertAreEqual(input, f.Services.GetRequiredService<TestIdentityAccessManagementClient>().GetUser(PublisherId, newUser.IdentificationNumber!)!);
+            Extensions.AssertAreEqual(input, f.Services.GetRequiredService<TestIdentityAccessManagementClient>().GetUser(PublisherId, saveResult.Id!)!);
         }
 
         [TestMethod]
@@ -223,7 +222,7 @@ namespace Frontend.Test
             using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
 
             NewUserInput newUser = CreatelUserInput();
-            f.Services.GetRequiredService<TestIdentityAccessManagementClient>().CreateUser(newUser, PublisherId);
+            UserSaveResult saveResult = f.Services.GetRequiredService<TestIdentityAccessManagementClient>().CreateUser(newUser, PublisherId);
 
             await Page.Login(f, PublisherId, "PublisherAdmin");
 
@@ -236,7 +235,7 @@ namespace Frontend.Test
             });
 
             await Page.AssertTableRowsCount(1);
-            Assert.IsNull(f.Services.GetRequiredService<TestIdentityAccessManagementClient>().GetUser(PublisherId, newUser.IdentificationNumber!));
+            Assert.IsNull(f.Services.GetRequiredService<TestIdentityAccessManagementClient>().GetUser(PublisherId, saveResult.Id!));
         }
     }
 }

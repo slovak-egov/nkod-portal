@@ -17,5 +17,9 @@ namespace NkodSk.Abstractions
         public string? Email { get; set; }
 
         public string? Role { get; set; }
+
+        public bool IsActive { get; set; }
+
+        public DateTimeOffset? InvitationExpiresAt { get; set; }
     }
 }

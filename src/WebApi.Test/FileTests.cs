@@ -98,5 +98,46 @@ namespace WebApi.Test
 
             Assert.Equal(content, state.Content);
         }
+
+        [Fact]
+        public async Task LargeFileShouldBeUploaded()
+        {
+            string path = fixture.GetStoragePath();
+
+            StringBuilder contentBuilder = new StringBuilder();
+            for (int i = 0; i < 1_000_000; i++)
+            {
+                contentBuilder.AppendLine("content");
+            }
+            string content = contentBuilder.ToString();
+
+            byte[] bytes = Encoding.UTF8.GetBytes(content);
+            string name = "test.txt";
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            using MultipartFormDataContent requestContent = new MultipartFormDataContent();
+            requestContent.Add(new ByteArrayContent(bytes, 0, bytes.Length), "file", name);
+            using HttpResponseMessage response = await client.PostAsync("/upload", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            string responseContent = await response.Content.ReadAsStringAsync();
+            FileUploadResult? result = JsonConvert.DeserializeObject<FileUploadResult>(responseContent);
+            Assert.NotNull(result);
+            Assert.NotEmpty(result.Id);
+            Assert.NotEmpty(result.Url);
+
+            FileState? state = storage.GetFileState(Guid.Parse(result.Id), AnonymousAccessPolicy.Default);
+            Assert.NotNull(state);
+            Assert.Equal(name, state.Metadata.Name);
+            Assert.Equal(name, state.Metadata.OriginalFileName);
+            Assert.Equal(PublisherId, state.Metadata.Publisher);
+            Assert.Equal(FileType.DistributionFile, state.Metadata.Type);
+            Assert.Null(state.Metadata.ParentFile);
+            Assert.Null(state.Metadata.AdditionalValues);
+            Assert.True(state.Metadata.IsPublic);
+
+            Assert.Equal(content, state.Content);
+        }
     }
 }
