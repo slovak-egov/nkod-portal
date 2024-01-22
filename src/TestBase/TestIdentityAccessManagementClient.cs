@@ -235,7 +235,7 @@ namespace TestBase
             {
                 DateTimeOffset refreshTokenAfter = DateTimeOffset.UtcNow.Add(RefreshTokenAfter);
 
-                return Task.FromResult(new TokenResult { Token = content[6..], RefreshToken = "1", Expires = refreshTokenAfter.AddMinutes(30), RefreshTokenAfter = refreshTokenAfter });
+                return Task.FromResult(new TokenResult { Token = content[6..], RefreshToken = "1", Expires = refreshTokenAfter.AddMinutes(30), RefreshTokenAfter = refreshTokenAfter, RefreshTokenInSeconds = (int)RefreshTokenAfter.TotalSeconds });
             }
         }
 

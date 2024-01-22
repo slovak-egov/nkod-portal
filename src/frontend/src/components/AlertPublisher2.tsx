@@ -22,7 +22,7 @@ export default function AlertPublisher2() {
                         }}
                     >
                         <p className="govuk-body">
-                            Datasety vložené do 15.1.2024 budú vymazané! Pre vkladanie údajov prosím používatejte stále pôvodný portál{' '}
+                            Datasety vložené do 5.2.2024 budú vymazané! Pre vkladanie údajov prosím používatejte stále pôvodný portál{' '}
                             <a href="https://data.gov.sk">data.gov.sk</a>, až jeho do odstávky.
                         </p>
 

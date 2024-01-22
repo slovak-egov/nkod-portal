@@ -25,6 +25,7 @@ export type TokenResult = {
     token: string;
     expires: string | null;
     refreshTokenAfter: string | null;
+    refreshTokenInSeconds: number;
     refreshToken: string | null;
     redirectUrl: string | null;
 };

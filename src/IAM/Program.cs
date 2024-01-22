@@ -278,7 +278,7 @@ async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord? us
 
     if (user is not null)
     {
-        if (refreshTokenValidInMinutes > 0 && string.IsNullOrEmpty(user.RefreshToken) || !user.RefreshTokenExpiryTime.HasValue || user.RefreshTokenExpiryTime < DateTimeOffset.Now)
+        if (refreshTokenValidInMinutes > 0 && (string.IsNullOrEmpty(user.RefreshToken) || !user.RefreshTokenExpiryTime.HasValue || user.RefreshTokenExpiryTime < DateTimeOffset.Now))
         {
             byte[] refreshTokenBytes = new byte[64];
             using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
@@ -297,6 +297,7 @@ async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord? us
         Token = token,
         Expires = expires,
         RefreshTokenAfter = expires.AddMinutes(-5),
+        RefreshTokenInSeconds = Math.Max(accessTokenValidInMinutes - 5, 0) * 60,
         RefreshToken = user?.RefreshToken
     };
 }

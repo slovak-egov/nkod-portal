@@ -207,5 +207,6 @@
     "invitationIsValidTill": "Pozvánka je platná do",
     "yes": "áno",
     "no": "nie",
-    "loginInProgress": "Prebieha prihlasovanie"
+    "loginInProgress": "Prebieha prihlasovanie",
+    "technicalSupport": "Technická podpora"
 }

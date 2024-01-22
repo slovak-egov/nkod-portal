@@ -262,37 +262,60 @@ namespace NkodSk.Abstractions
             RemoveEmptyValues(values);
             if (values is not null && values.Count > 0)
             {
-                using HttpClient client = new HttpClient();
+                using HttpClient client = new HttpClient(new HttpClientHandler { AllowAutoRedirect = true });
 
                 string[] languages = new[] { "sk", "en" };
 
                 bool isValid = true;
                 foreach (string? value in values)
                 {
-                    if (!string.IsNullOrEmpty(value) && value.StartsWith(DcatDataset.EuroVocPrefix) && Regex.IsMatch(value, "^" + Regex.Escape(DcatDataset.EuroVocPrefix) + @"[0-9]+$"))
+                    string? uri = value;
+
+                    for (int maxRedirect = 0; maxRedirect < 10; maxRedirect++)
                     {
-                        try
+                        if (!string.IsNullOrEmpty(uri) && Uri.IsWellFormedUriString(uri, UriKind.Absolute))
                         {
-                            using Stream stream = await client.GetStreamAsync(value);
-                            SkosConcept? concept = SkosConcept.ParseXml(stream);
-                            if (concept is not null)
+                            UriBuilder uriBuilder = new UriBuilder(uri);
+                            if (uriBuilder.Scheme == "http")
                             {
-                                foreach (string language in languages)
+                                uriBuilder.Scheme = "https";
+                                uriBuilder.Port = 443;
+                                uri = uriBuilder.Uri.ToString();
+                            }
+
+                            using HttpResponseMessage response = await client.GetAsync(uri);
+
+                            if ((int)response.StatusCode >= 300 && (int)response.StatusCode < 400)
+                            {
+                                uri = response.Headers.Location?.ToString();
+                            }
+                            else if (response.IsSuccessStatusCode)
+                            {
+                                using Stream stream = await response.Content.ReadAsStreamAsync();
+                                SkosConcept? concept = SkosConcept.ParseXml(stream);
+                                if (concept is not null)
                                 {
-                                    string? label = concept.GetLabel(language);
-                                    if (!string.IsNullOrEmpty(label))
+                                    foreach (string language in languages)
                                     {
-                                        if (!labels.TryGetValue(language, out List<string>? languageLabels))
+                                        string? label = concept.GetLabel(language);
+                                        if (!string.IsNullOrEmpty(label))
                                         {
-                                            languageLabels = new List<string>();
-                                            labels[language] = languageLabels;
+                                            if (!labels.TryGetValue(language, out List<string>? languageLabels))
+                                            {
+                                                languageLabels = new List<string>();
+                                                labels[language] = languageLabels;
+                                            }
+                                            languageLabels.Add(label);
                                         }
-                                        languageLabels.Add(label);
+                                        else
+                                        {
+                                            isValid = false;
+                                        }
                                     }
-                                    else
-                                    {
-                                        isValid = false;
-                                    }
+                                }
+                                else
+                                {
+                                    isValid = false;
                                 }
                             }
                             else
@@ -300,14 +323,10 @@ namespace NkodSk.Abstractions
                                 isValid = false;
                             }
                         }
-                        catch
+                        else
                         {
                             isValid = false;
                         }
-                    }
-                    else
-                    {
-                        isValid = false;
                     }
                 }
                 if (!isValid)

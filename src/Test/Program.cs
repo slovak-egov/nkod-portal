@@ -12,6 +12,7 @@ using Abstractions;
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 using System;
+using VDS.RDF.Query.Expressions.Functions.Sparql.Boolean;
 
 string sourceDir = args[0];
 string targetDir = args[1];
@@ -247,6 +248,8 @@ async Task<bool> CheckCodelistValue(string codelistId, Uri? uri, bool required)
 
 Dictionary<Uri, Guid> distributionUriToDataset = new Dictionary<Uri, Guid>();
 Dictionary<Guid, FileMetadata> datasetMetadatas = new Dictionary<Guid, FileMetadata>();
+Dictionary<Uri, FileMetadata> datasetMetadataByUri = new Dictionary<Uri, FileMetadata>();
+Dictionary<Guid, Uri> datasetPartOf = new Dictionary<Guid, Uri>();
 
 foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Dataset")))
 {
@@ -379,17 +382,43 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Datase
 
     content = catalog.ToString();
 
-    FileMetadata metadata = catalog.UpdateMetadata(true);
+    FileMetadata metadata = catalog.UpdateMetadata(catalog.Distributions.Any());
+
+    Match m = Regex.Match(catalog.Uri.ToString(), "^https://data.gov.sk/set/(.+)$");
+    if (m.Success && m.Groups.Count >= 2 && Guid.TryParse(m.Groups[1].Value, out Guid id))
+    {
+        metadata = metadata with { Id = id };
+    }
+
+    if (catalog.IsPartOf is not null)
+    {
+        datasetPartOf[metadata.Id] = catalog.IsPartOf;
+    }
 
     foreach (Uri uri in catalog.Distributions)
     {
         distributionUriToDataset[uri] = metadata.Id;
     }
     datasetMetadatas[metadata.Id] = metadata;
+    datasetMetadataByUri[catalog.Uri] = metadata;
 
     storage.InsertFile(
         content, metadata, true, accessPolicy
     );
+}
+
+foreach ((Guid childId, Uri parentUri) in datasetPartOf)
+{
+    if (datasetMetadataByUri.TryGetValue(parentUri, out FileMetadata? parentMetadata) && datasetMetadatas.TryGetValue(childId, out FileMetadata? childMetadata))
+    {
+        childMetadata = childMetadata with { ParentFile = parentMetadata.Id };
+        storage.UpdateMetadata(childMetadata, accessPolicy);
+        datasetMetadatas[childId] = childMetadata;
+    }
+    else
+    {
+        Console.WriteLine("Parent not found: " + parentUri);
+    }
 }
 
 string filesDir = @"F:\Backup\DataGov2\files";
@@ -593,4 +622,13 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Catalo
     storage.InsertFile(
         content, metadata, true, accessPolicy
     );
+
+    foreach (Uri uri in catalog.GetUrisFromUriNode("dcat:dataset"))
+    {
+        if (datasetMetadataByUri.TryGetValue(uri, out FileMetadata? datasetMetadata))
+        {
+            datasetMetadata = datasetMetadata with { ParentFile = metadata.Id };
+            storage.UpdateMetadata(datasetMetadata, accessPolicy);
+        }
+    }
 }

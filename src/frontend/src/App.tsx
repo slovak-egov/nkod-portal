@@ -21,7 +21,7 @@ import Sparql from './pages/Sparql';
 import Quality from './pages/Quality';
 import Profile from './pages/Profile';
 import { Language, LanguageOptionsContext, TokenContext, TokenResult, UserInfo, sendPost, supportedLanguages, useUserInfo } from './client';
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useCallback } from 'react';
 import PublisherList from './pages/PublisherList';
 import UserList from './pages/UserList';
 import EditUser from './pages/EditUser';
@@ -76,6 +76,7 @@ const defaultHeaders: RawAxiosRequestHeaders = {};
 
 function App(props: Props) {
     const [token, setToken] = useState(props.extenalToken);
+    const [tokenRefreshPlanned, setTokenRefreshPlanned] = useState<boolean>(false);
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
     const [headers, setHeaders] = useState<RawAxiosRequestHeaders>(defaultHeaders);
     const [userInfoIsLoading, setUserInfoIsLoading] = useState<boolean>(true);
@@ -91,8 +92,8 @@ function App(props: Props) {
         }
     }, [token]);
 
-    useEffect(() => {
-        async function load() {
+    const refreshToken = useCallback(
+        async function () {
             try {
                 if (token?.refreshToken) {
                     const response: AxiosResponse<TokenResult> = await sendPost(
@@ -105,31 +106,31 @@ function App(props: Props) {
                     );
                     if (response.data?.token) {
                         setToken(response.data);
+                        if (response.data.refreshTokenInSeconds > 0) {
+                            setTimeout(refreshToken, response.data.refreshTokenInSeconds * 1000);
+                        }
                     }
                 }
             } catch (err) {}
-        }
+        },
+        [token, headers]
+    );
 
-        let timer: NodeJS.Timeout | null = null;
-        if (token?.refreshTokenAfter) {
+    useEffect(() => {
+        if (token?.refreshTokenAfter && !tokenRefreshPlanned) {
+            setTokenRefreshPlanned(true);
             const refreshTokenAfter = new Date(token.refreshTokenAfter);
             const now = new Date();
-            if (refreshTokenAfter.getTime() > now.getTime()) {
-                const diff = refreshTokenAfter.getTime() - now.getTime();
-                timer = setTimeout(() => {
-                    load();
+            const diff = refreshTokenAfter.getTime() - now.getTime();
+            if (diff > 0) {
+                setTimeout(() => {
+                    refreshToken();
                 }, diff);
             } else {
-                load();
+                refreshToken();
             }
         }
-
-        return () => {
-            if (timer) {
-                clearInterval(timer);
-            }
-        };
-    }, [token, headers]);
+    }, [token, tokenRefreshPlanned, refreshToken]);
 
     useEffect(() => {
         async function load() {
@@ -171,7 +172,7 @@ function App(props: Props) {
             >
                 <BrowserRouter>
                     <Alert type="warning" style={{ margin: 0 }}>
-                        Registrácia datasetov začína až 15.1.2024! Dovtedy použite <a href="https://data.gov.sk">data.gov.sk</a>.
+                        Registrácia datasetov začína až 5.2.2024! Dovtedy použite <a href="https://data.gov.sk">data.gov.sk</a>.
                     </Alert>
                     <Header />
                     <AppNavigator {...props} />

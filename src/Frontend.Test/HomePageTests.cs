@@ -150,6 +150,8 @@ namespace Frontend.Test
 
             await Page.Login(f, PublisherId, "Publisher");
 
+            await Page.TakeScreenshot();
+
             await Page.WaitForRefershToken();
         }
     }
