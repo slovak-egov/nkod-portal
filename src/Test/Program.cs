@@ -42,8 +42,8 @@ conceptScheme.SetLabel(new LanguageDependedTexts { { "sk", lines[1] } });
 
 for (int i = 2; i < lines.Length; i += 2)
 {
-SkosConcept concept = conceptScheme.CreateConcept(new Uri(lines[i]));
-concept.SetLabel(new LanguageDependedTexts { { "sk", lines[i + 1] } });
+SkosConcept concept = conceptScheme.CreateConcept(new Uri(lines[i].Trim()));
+concept.SetLabel(new LanguageDependedTexts { { "sk", lines[i + 1].Trim() } });
 }
 
 storage.InsertFile(

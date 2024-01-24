@@ -759,8 +759,6 @@ namespace Frontend.Test
             await Page.RunAndWaitForDatasetList(async () =>
             {
                 await Page.GetByText("Uložiť dataset", new PageGetByTextOptions { Exact = true }).ClickAsync();
-
-                await Page.TakeScreenshot();
             });
 
             await Page.AssertTableRowsCount(1);

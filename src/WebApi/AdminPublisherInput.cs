@@ -1,12 +1,16 @@
-﻿using Microsoft.AspNetCore.Mvc.Formatters;
-using NkodSk.Abstractions;
-using System.Xml.Linq;
-using static Lucene.Net.Util.Packed.PackedInt32s;
+﻿using NkodSk.Abstractions;
+using System.Data;
 
 namespace WebApi
 {
-    public class RegistrationInput
+    public class AdminPublisherInput
     {
+        public string? Id { get; set; }
+
+        public string? Uri { get; set; }
+
+        public Dictionary<string, string>? Name { get; set; }
+
         public string? Website { get; set; }
 
         public string? Email { get; set; }
@@ -15,10 +19,20 @@ namespace WebApi
 
         public string? LegalForm { get; set; }
 
+        public bool IsEnabled { get; set; }
+
         public async Task<ValidationResults> Validate(ICodelistProviderClient codelistProvider)
         {
             ValidationResults results = new ValidationResults();
 
+            List<string> languages = Name?.Keys.ToList() ?? new List<string>();
+            if (!languages.Contains("sk"))
+            {
+                languages.Add("sk");
+            }
+
+            results.ValidateUrl(nameof(Uri), Uri, true);
+            results.ValidateLanguageTexts(nameof(Name), Name, languages, true);
             results.ValidateUrl(nameof(Website), Website, true);
             results.ValidateEmail(nameof(Email), Email, true);
             results.ValidateRequiredText(nameof(Phone), Phone);
@@ -27,12 +41,9 @@ namespace WebApi
             return results;
         }
 
-        public void MapToRdf(FoafAgent agent, string? name = null)
+        public void MapToRdf(FoafAgent agent)
         {
-            if (name is not null)
-            {
-                agent.SetNames(new Dictionary<string, string> { { "sk", name } });
-            }
+            agent.SetNames(Name ?? new Dictionary<string, string>());
             agent.HomePage = Website.AsUri();
             agent.EmailAddress = Email;
             agent.Phone = Phone;

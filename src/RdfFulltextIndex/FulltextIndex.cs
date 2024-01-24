@@ -205,7 +205,7 @@ namespace NkodSk.RdfFulltextIndex
             {
                 BooleanQuery textQueries = new BooleanQuery();
 
-                string escapedQuery = QueryParserBase.Escape(externalQuery.QueryText);
+                string escapedQuery = QueryParserBase.Escape(externalQuery.QueryText.Trim()) + "*";
 
                 QueryParser queryParserTitle = new QueryParser(Version, "title", analyzer);
                 textQueries.Add(queryParserTitle.Parse(escapedQuery), Occur.SHOULD);

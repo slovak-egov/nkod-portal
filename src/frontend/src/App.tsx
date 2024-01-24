@@ -34,6 +34,8 @@ import { AxiosResponse, RawAxiosRequestHeaders } from 'axios';
 import NotFound from './pages/NotFound';
 import Invitation from './pages/Invitation';
 import LoginInProgress from './pages/LoginInProgress';
+import EditPublisher from './pages/EditPublisher';
+import PublisherRegistration from './pages/PublisherRegistration';
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -200,7 +202,9 @@ function App(props: Props) {
                                         </>
                                     ) : null}
 
-                                    {userInfo?.publisher && userInfo.publisherView == null ? <Route path="/registracia" Component={AddPublisher} /> : null}
+                                    {userInfo?.publisher && userInfo.publisherView == null ? (
+                                        <Route path="/registracia" Component={PublisherRegistration} />
+                                    ) : null}
 
                                     {userInfo?.publisher && userInfo.publisherActive && userInfo.role ? (
                                         <>
@@ -232,6 +236,8 @@ function App(props: Props) {
                                     {userInfo?.role === 'Superadmin' ? (
                                         <>
                                             <Route path="/sprava/poskytovatelia" Component={PublisherList} />
+                                            <Route path="/sprava/poskytovatelia/pridat" Component={AddPublisher} />
+                                            <Route path="/sprava/poskytovatelia/upravit/:id" Component={EditPublisher} />
                                             <Route path="/sprava/ciselniky" Component={Codelists} />
                                         </>
                                     ) : null}

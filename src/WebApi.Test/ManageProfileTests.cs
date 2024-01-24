@@ -32,7 +32,8 @@ namespace WebApi.Test
             {
                 Website = "http://example.com/",
                 Email = "info@example.sk",
-                Phone = "+421 123 456 789"
+                Phone = "+421 123 456 789",
+                LegalForm = "https://data.gov.sk/def/legal-form-type/321"
             };
         }
 
@@ -41,6 +42,7 @@ namespace WebApi.Test
         {
             string path = fixture.GetStoragePath();
 
+            fixture.CreatePublisherCodelists();
             fixture.CreatePublisher("Test", PublisherId, isPublic: true);
 
             using Storage storage = new Storage(path);
@@ -57,6 +59,7 @@ namespace WebApi.Test
         {
             string path = fixture.GetStoragePath();
 
+            fixture.CreatePublisherCodelists();
             fixture.CreatePublisher("Test", PublisherId, isPublic: true);
 
             using Storage storage = new Storage(path);
@@ -74,6 +77,7 @@ namespace WebApi.Test
         {
             string path = fixture.GetStoragePath();
 
+            fixture.CreatePublisherCodelists();
             fixture.CreatePublisher("Test", PublisherId, isPublic: true);
 
             using Storage storage = new Storage(path);
@@ -113,6 +117,7 @@ namespace WebApi.Test
         {
             string path = fixture.GetStoragePath();
 
+            fixture.CreatePublisherCodelists();
             fixture.CreatePublisher("Test", PublisherId, isPublic: true);
 
             using Storage storage = new Storage(path);
@@ -139,6 +144,7 @@ namespace WebApi.Test
         {
             string path = fixture.GetStoragePath();
 
+            fixture.CreatePublisherCodelists();
             fixture.CreatePublisher("Test", PublisherId, isPublic: true);
 
             using Storage storage = new Storage(path);
@@ -164,7 +170,8 @@ namespace WebApi.Test
         public async Task UpdateProfilePhoneIsRequired()
         {
             string path = fixture.GetStoragePath();
-            
+
+            fixture.CreatePublisherCodelists();
             fixture.CreatePublisher("Test", PublisherId, isPublic: true);
 
             using Storage storage = new Storage(path);

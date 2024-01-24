@@ -32,6 +32,18 @@ namespace RdfFulltextIndex.Test
         }
 
         [Fact]
+        public void DocumentShouldBeFoundByPartOfTitle()
+        {
+            FileStorageQuery query = new FileStorageQuery { QueryText = "poriadk" };
+            query.RequiredFacets = new List<string>
+            {
+                "publisher"
+            };
+            FulltextResponse list = fixture.Index.Search(query);
+            Assert.Single(list.Documents);
+        }
+
+        [Fact]
         public void DocumentShouldNotBeFoundByTitle()
         {
             FileStorageQuery query = new FileStorageQuery { QueryText = "xxxx" };

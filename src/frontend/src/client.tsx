@@ -48,6 +48,9 @@ export const knownCodelists = {
     },
     catalog: {
         type: 'https://data.gov.sk/def/local-catalog-type'
+    },
+    publisher: {
+        legalForm: 'https://data.gov.sk/set/codelist/CL000056'
     }
 };
 
@@ -58,13 +61,26 @@ export type Publisher = {
     name: string;
     datasetCount: number;
     themes: { [id: string]: number } | null;
+    nameAll: LanguageDependentTexts | null;
+    website: string | null;
+    email: string | null;
+    phone: string | null;
+    legalForm: string | null;
 };
 
-export type NewPublisher = {
+export type PublisherInput = {
     website: string;
     email: string;
     phone: string;
+    legalForm: string;
 };
+
+export type AdminPublisherInput = {
+    id: string | null;
+    name: LanguageDependentTexts;
+    uri: string;
+    isEnabled: boolean;
+} & PublisherInput;
 
 type Temporal = {
     startDate: string | null;
@@ -115,6 +131,7 @@ export type UserInfo = {
     publisherHomePage: string | null;
     publisherPhone: string | null;
     publisherActive: boolean;
+    publisherLegalForm: string | null;
     id: string;
     firstName: string;
     lastName: string;
@@ -993,10 +1010,6 @@ export function useUserEdit() {
     );
 
     return [entity, item, loading, setEntityProperties, errors, saving, save] as const;
-}
-
-export function usePublisherAdd(initialValue: NewPublisher) {
-    return useEntityAdd<NewPublisher>('registration', initialValue);
 }
 
 export function useDocumentTitle(text: string) {

@@ -1225,5 +1225,84 @@ namespace Frontend.Test
                 return requiredRequests.Count == 0;
             });
         }
+
+        public static async Task AssertAdminPublisherForm(this IPage test, FoafAgent rdf, bool isEnabled)
+        {
+            await test.WaitForLoadingDone();
+
+            Assert.AreEqual(isEnabled ? "publikovaný" : "nepublikovaný", await test.GetMultiRadioSelectedLabel("Stav"));
+            await test.AssertLangaugeValuesInput("Názov poskytovateľa dát", rdf.Name);
+            Assert.AreEqual(rdf.Uri.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("URI")).GetAttributeAsync("value"));
+            await test.AssertPublisherForm(rdf);
+        }
+
+        public static async Task AssertPublisherForm(this IPage test, FoafAgent rdf)
+        {
+            await test.WaitForLoadingDone();
+            
+            Assert.AreEqual(rdf.HomePage?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Adresa webového sídla")).GetAttributeAsync("value"));
+            Assert.AreEqual(rdf.EmailAddress?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("E-mailová adresa kontaktnej osoby")).GetAttributeAsync("value"));
+            Assert.AreEqual(rdf.Phone?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Telefónne číslo kontaktnej osoby")).GetAttributeAsync("value"));
+
+            Assert.AreEqual(rdf.LegalForm?.ToString(), await test.GetSelectItemFormElementGroup("Právna forma"));
+        }
+
+        public static async Task FillAdminPublisherForm(this IPage test, FoafAgent rdf, bool isEnabled)
+        {
+            IElementHandle? fieldset = await test.GetByFieldsetLegend("Stav");
+            Assert.IsNotNull(fieldset);
+
+            IElementHandle? input = await GetInputByLabel(fieldset, isEnabled ? "publikovaný" : "nepublikovaný");
+            Assert.IsNotNull(input);
+
+            await input.CheckAsync();
+
+            await test.FillLangaugeValuesInput("Názov", rdf.Name);
+            await (await test.GetInputInFormElementGroup("URI")).FillAsync(rdf.Uri.ToString());
+
+            await test.FillPublisherForm(rdf);
+        }
+
+        public static async Task FillPublisherForm(this IPage test, FoafAgent rdf)
+        {
+            await (await test.GetInputInFormElementGroup("Adresa webového sídla")).FillAsync(rdf.HomePage?.ToString() ?? string.Empty);
+            await (await test.GetInputInFormElementGroup("E-mailová adresa kontaktnej osoby")).FillAsync(rdf.EmailAddress ?? string.Empty);
+            await (await test.GetInputInFormElementGroup("Telefónne číslo kontaktnej osoby")).FillAsync(rdf.Phone ?? string.Empty);
+            await (await test.GetSelectInFormElementGroup("Právna forma"))!.SelectOptionAsync(rdf.LegalForm?.ToString() ?? string.Empty);
+        }
+
+        public static void AssertAreEqual(FoafAgent expected, FileState state, bool isEnabled)
+        {
+            FoafAgent actual = FoafAgent.Parse(state.Content!)!;
+
+            AssertAreEqualLanguage(expected.Name, actual.Name);
+            Assert.AreEqual(expected.Uri, actual.Uri);
+            Assert.AreEqual(expected.HomePage, actual.HomePage);
+            Assert.AreEqual(expected.EmailAddress, actual.EmailAddress);
+            Assert.AreEqual(expected.Phone, actual.Phone);
+            Assert.AreEqual(expected.LegalForm, actual.LegalForm);
+            Assert.AreEqual(isEnabled, state.Metadata.IsPublic);
+        }
+
+
+        public static async Task RunAndWaitForPublisherCreate(this IPage page, Func<Task> action)
+        {
+            await page.RunAndWaitForRequests(action, new List<string>
+            {
+                "codelists"
+            });
+            await page.WaitForURLAsync($"http://localhost:6001/sprava/poskytovatelia/pridat");
+        }
+
+        public static async Task RunAndWaitForPublisherEdit(this IPage page, Guid id, Func<Task> action)
+        {
+            await page.RunAndWaitForRequests(action, new List<string>
+            {
+                "publishers/search",
+                "codelists"
+            });
+            await page.WaitForURLAsync($"http://localhost:6001/sprava/poskytovatelia/upravit/{id}");
+        }
+
     }
 }

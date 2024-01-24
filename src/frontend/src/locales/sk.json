@@ -84,7 +84,7 @@
     "identificationNumber": "Identifikačné číslo",
     "register": "Registrovať",
     "publisherRegistration": "Registrácia poskytovateľa dát",
-    "contantEmailAddress": "E-mailová adresa kontaktnej osoby",
+    "contactEmailAddress": "E-mailová adresa kontaktnej osoby",
     "contactPhoneNumber": "Telefónne číslo kontaktnej osoby",
     "saveDataset": "Uložiť dataset",
     "saveAndAddDistribution": "Uložiť dataset a pridať distribúciu",
@@ -208,5 +208,8 @@
     "yes": "áno",
     "no": "nie",
     "loginInProgress": "Prebieha prihlasovanie",
-    "technicalSupport": "Technická podpora"
+    "technicalSupport": "Technická podpora",
+    "legalForm": "Právna forma",
+    "newPublisher": "Nový poskytovateľ dát",
+    "editPublisher": "Upraviť poskytovateľa dát"
 }

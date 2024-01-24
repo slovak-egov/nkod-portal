@@ -32,7 +32,8 @@ namespace WebApi.Test
             {
                 Website = "http://example.com/",
                 Email = "info@example.sk",
-                Phone = "+421 123 456 789"
+                Phone = "+421 123 456 789",
+                LegalForm = "https://data.gov.sk/def/legal-form-type/331",
             };
         }
 
@@ -40,6 +41,8 @@ namespace WebApi.Test
         public async Task RegistrationIsNotAllowedWithoutToken()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisherCodelists();
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -53,6 +56,8 @@ namespace WebApi.Test
         public async Task RegistrationIsNotAllowedWithoutPublisher()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisherCodelists();
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -67,6 +72,8 @@ namespace WebApi.Test
         public async Task RegistrationIsPerformed()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisherCodelists();
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -104,6 +111,7 @@ namespace WebApi.Test
         {
             string path = fixture.GetStoragePath();
 
+            fixture.CreatePublisherCodelists();
             fixture.CreatePublisher("Test", PublisherId, isPublic: false);
 
             using Storage storage = new Storage(path);
@@ -128,6 +136,8 @@ namespace WebApi.Test
         public async Task RegistrationWebsiteIsRequired()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisherCodelists();
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -151,6 +161,8 @@ namespace WebApi.Test
         public async Task RegistrationEmailIsRequired()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisherCodelists();
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -174,6 +186,8 @@ namespace WebApi.Test
         public async Task RegistrationPhoneIsRequired()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisherCodelists();
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();

@@ -188,6 +188,15 @@ namespace Frontend.Test
             });
         }
 
+        public void CreatePublisherCodelists()
+        {
+            CreateCodelistFile(FoafAgent.LegalFormCodelist, new Dictionary<string, LanguageDependedTexts>
+            {
+                { "https://data.gov.sk/def/legal-form-type/321", new LanguageDependedTexts{ { "sk", "Rozpočtová organizácia" }, { "en", "Rozpočtová organizácia EN" } } },
+                { "https://data.gov.sk/def/legal-form-type/331", new LanguageDependedTexts{ { "sk", "Príspevková organizácia" }, { "en", "Príspevková organizácia EN" } } },
+            });
+        }
+
         public string GetStoragePath(bool includeFiles = true)
         {
             if (!Directory.Exists(path))

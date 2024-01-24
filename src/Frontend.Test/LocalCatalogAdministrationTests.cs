@@ -169,8 +169,6 @@ namespace Frontend.Test
             await Page.RunAndWaitForLocalCatalogList(async () =>
             {
                 await Page.GetByText("Uložiť", new PageGetByTextOptions { Exact = true }).ClickAsync();
-
-                await Page.TakeScreenshot();
             });
 
             await Page.AssertTableRowsCount(1);
@@ -370,8 +368,6 @@ namespace Frontend.Test
             await Page.RunAndWaitForLocalCatalogList(async () =>
             {
                 await Page.GetByText("Uložiť", new PageGetByTextOptions { Exact = true }).ClickAsync();
-
-                await Page.TakeScreenshot();
             });
 
             await Page.AssertTableRowsCount(1);

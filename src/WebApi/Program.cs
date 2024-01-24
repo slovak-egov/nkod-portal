@@ -173,6 +173,7 @@ var app = builder.Build();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseHeaderPropagation();
+app.UseRequestLocalization();
 
 app.UseStaticFiles();
 
@@ -357,7 +358,7 @@ async Task<Dictionary<string, PublisherView>> FetchPublishers(IDocumentStorageCl
                 FoafAgent? agent = FoafAgent.Parse(fileState.Content);
                 if (agent is not null)
                 {
-                    publishers[agent.Uri.ToString()] = PublisherView.MapFromRdf(fileState.Metadata.Id, fileState.Metadata.IsPublic, 0, agent, null, language);
+                    publishers[agent.Uri.ToString()] = PublisherView.MapFromRdf(fileState.Metadata.Id, fileState.Metadata.IsPublic, 0, agent, null, language, false);
                 }
             }
         }
@@ -387,7 +388,7 @@ app.MapPost("/publishers/search", async ([FromBody] PublisherQuery query, [FromS
                 FoafAgent? agent = FoafAgent.Parse(group.PublisherFileState.Content);
                 if (agent is not null)
                 {
-                    response.Items.Add(PublisherView.MapFromRdf(group.PublisherFileState.Metadata.Id, group.PublisherFileState.Metadata.IsPublic, group.Count, agent, group.Themes, language));
+                    response.Items.Add(PublisherView.MapFromRdf(group.PublisherFileState.Metadata.Id, group.PublisherFileState.Metadata.IsPublic, group.Count, agent, group.Themes, language, true));
                 }
             }
         }
@@ -609,16 +610,19 @@ app.MapGet("/codelists", async ([FromQuery(Name = "keys[]")] string[] keys, [Fro
         List<CodelistView> codelists = new List<CodelistView>();
         foreach (string key in keys)
         {
-            Codelist? codelist = await codelistProviderClient.GetCodelist(key).ConfigureAwait(false);
-            if (codelist is not null)
+            if (Uri.IsWellFormedUriString(key, UriKind.Absolute))
             {
-                List<CodelistItemView> values = new List<CodelistItemView>(codelist.Items.Count);
-                foreach (CodelistItem item in codelist.Items.Values)
+                Codelist? codelist = await codelistProviderClient.GetCodelist(key).ConfigureAwait(false);
+                if (codelist is not null)
                 {
-                    values.Add(new CodelistItemView(item.Id, item.GetCodelistValueLabel(language)));
+                    List<CodelistItemView> values = new List<CodelistItemView>(codelist.Items.Count);
+                    foreach (CodelistItem item in codelist.Items.Values)
+                    {
+                        values.Add(new CodelistItemView(item.Id, item.GetCodelistValueLabel(language)));
+                    }
+                    values.Sort((a, b) => StringComparer.CurrentCultureIgnoreCase.Compare(a.Label, b.Label));
+                    codelists.Add(new CodelistView(codelist.Id, codelist.GetLabel(language), values));
                 }
-                values.Sort((a, b) => StringComparer.CurrentCultureIgnoreCase.Compare(a.Label, b.Label));
-                codelists.Add(new CodelistView(codelist.Id, codelist.GetLabel(language), values));
             }
         }
         return Results.Ok(codelists);
@@ -1333,46 +1337,135 @@ app.MapDelete("/local-catalogs", [Authorize] async ([FromQuery] string? id, [Fro
     }
 });
 
-app.MapPut("/publishers", [Authorize] async ([FromBody] PublisherInput input, [FromServices] IDocumentStorageClient client, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/publishers", [Authorize] async ([FromBody] AdminPublisherInput? input, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
     {
         if (user.IsInRole("Superadmin"))
         {
-            if (!string.IsNullOrEmpty(input?.PublisherId) && Guid.TryParse(input.PublisherId, out Guid id))
+            SaveResult result = new SaveResult();
+            try
             {
-                FileState? state = await client.GetFileState(id).ConfigureAwait(false);
-                if (state is not null)
+                if (input is not null)
                 {
-                    FileMetadata metadata = state.Metadata with { IsPublic = input.IsEnabled };
-                    await client.UpdateMetadata(metadata).ConfigureAwait(false);
-
-                    if (!input.IsEnabled && state.Metadata.Publisher is not null)
+                    ValidationResults validationResults = await input.Validate(codelistProviderClient);
+                    if (validationResults.IsValid && input.Uri is not null)
                     {
-                        FileStorageQuery query = new FileStorageQuery
+                        FileState? existingPublisher = await client.GetPublisherFileState(input.Uri);
+                        if (existingPublisher is null)
                         {
-                            OnlyPublished = true,
-                            OnlyPublishers = new List<string> { state.Metadata.Publisher },
-                            OnlyTypes = new List<FileType> { FileType.DatasetRegistration, FileType.LocalCatalogRegistration }
-                        };
-                        FileStorageResponse response = await client.GetFileStates(query).ConfigureAwait(false);
-                        foreach (FileState fileState in response.Files)
+                            FoafAgent agent = FoafAgent.Create(new Uri(input.Uri));
+                            input.MapToRdf(agent);
+                            FileMetadata metadata = agent.UpdateMetadata();
+                            metadata = metadata with { IsPublic = input.IsEnabled };
+                            await client.InsertFile(agent.ToString(), false, metadata).ConfigureAwait(false);
+                            result.Id = metadata.Id.ToString();
+                            result.Success = true;
+                        }
+                        else
                         {
-                            await client.UpdateMetadata(fileState.Metadata with { IsPublic = false }).ConfigureAwait(false);
+                            result.Errors ??= new Dictionary<string, string>();
+                            result.Errors["generic"] = "Poskytovateľ dát už existuje";
                         }
                     }
-
-                    return Results.Ok();
+                    else
+                    {
+                        result.Errors = validationResults;
+                    }
                 }
                 else
                 {
-                    return Results.NotFound();
+                    result.Errors ??= new Dictionary<string, string>();
+                    result.Errors["generic"] = "Bad request";
                 }
             }
-            else
+            catch (Exception e)
             {
-                return Results.BadRequest();
+                telemetryClient?.TrackException(e);
+                result.Errors ??= new Dictionary<string, string>();
+                result.Errors["generic"] = "Generic error";
             }
+            return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
+        }
+        else
+        {
+            return Results.Forbid();
+        }
+    }
+    catch (HttpRequestException e)
+    {
+        telemetryClient?.TrackException(e);
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+});
+
+app.MapPut("/publishers", [Authorize] async ([FromBody] AdminPublisherInput input, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        if (user.IsInRole("Superadmin"))
+        {
+            SaveResult result = new SaveResult();
+
+            try
+            {
+                if (!string.IsNullOrEmpty(input?.Id) && Guid.TryParse(input.Id, out Guid id))
+                {
+                    FileState? state = await client.GetFileState(id).ConfigureAwait(false);
+                    if (state is not null)
+                    {
+                        if (input is not null)
+                        {
+                            ValidationResults validationResults = await input.Validate(codelistProviderClient);
+                            if (validationResults.IsValid && input.Uri is not null)
+                            {
+                                FileState? existingPublisher = await client.GetPublisherFileState(input.Uri);
+                                if (existingPublisher is null || existingPublisher.Metadata.Id == state.Metadata.Id)
+                                {
+                                    FoafAgent agent = FoafAgent.Create(new Uri(input.Uri));
+                                    input.MapToRdf(agent);
+                                    FileMetadata metadata = agent.UpdateMetadata(state.Metadata);
+                                    metadata = metadata with { IsPublic = input.IsEnabled };
+                                    await client.InsertFile(agent.ToString(), true, metadata).ConfigureAwait(false);
+                                    result.Id = metadata.Id.ToString();
+                                    result.Success = true;
+                                }
+                                else
+                                {
+                                    result.Errors ??= new Dictionary<string, string>();
+                                    result.Errors["generic"] = "Poskytovateľ dát už existuje";
+                                }                                    
+                            }
+                            else
+                            {
+                                result.Errors = validationResults;
+                            }
+                        }
+                        else
+                        {
+                            result.Errors ??= new Dictionary<string, string>();
+                            result.Errors["generic"] = "Bad request";
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                telemetryClient?.TrackException(e);
+                result.Errors ??= new Dictionary<string, string>();
+                result.Errors["generic"] = "Generic error";
+            }
+            return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
         }
         else
         {
@@ -1446,7 +1539,7 @@ app.MapPost("user-info", [Authorize] async ([FromServices] IDocumentStorageClien
                     agent = FoafAgent.Parse(state.Content);
                     if (agent is not null)
                     {
-                        publisherView = PublisherView.MapFromRdf(state.Metadata.Id, state.Metadata.IsPublic, 0, agent, null, "sk");
+                        publisherView = PublisherView.MapFromRdf(state.Metadata.Id, state.Metadata.IsPublic, 0, agent, null, "sk", true);
                     }
                 }
             }
@@ -1463,7 +1556,8 @@ app.MapPost("user-info", [Authorize] async ([FromServices] IDocumentStorageClien
             PublisherEmail = agent?.EmailAddress,
             PublisherHomePage = agent?.HomePage?.ToString(),
             PublisherPhone = agent?.Phone,
-            PublisherActive = publisherActive
+            PublisherActive = publisherActive,
+            PublisherLegalForm = agent?.LegalForm?.ToString()
         });
     }
     catch (HttpRequestException e)
@@ -1556,7 +1650,7 @@ app.MapPost("/codelists/search", [Authorize] async ([FromServices] ICodelistProv
     }
 });
 
-app.MapPut("/codelists", [Authorize] async ([FromServices] ICodelistProviderClient codelistProviderClient, IFormFile file, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/codelists", [Authorize] async ([FromServices] ICodelistProviderClient codelistProviderClient, IFormFile file, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
 {
     if (user.IsInRole("Superadmin"))
     {
@@ -1692,7 +1786,7 @@ app.MapDelete("/users", [Authorize] async ([FromQuery] string? id, [FromServices
     return Results.NotFound();
 });
 
-app.MapPost("/registration", [Authorize] async ([FromServices] IDocumentStorageClient documentStorageClient, RegistrationInput? input, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/registration", [Authorize] async ([FromServices] IDocumentStorageClient documentStorageClient, RegistrationInput? input, ClaimsPrincipal user, [FromServices] ICodelistProviderClient codelistProviderClient, [FromServices] TelemetryClient? telemetryClient) =>
 {
     string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
     if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
@@ -1711,7 +1805,7 @@ app.MapPost("/registration", [Authorize] async ([FromServices] IDocumentStorageC
     {
         if (input is not null)
         {
-            ValidationResults validationResults = input.Validate();
+            ValidationResults validationResults = await input.Validate(codelistProviderClient);
             if (validationResults.IsValid)
             {
                 FileState? state = await documentStorageClient.GetPublisherFileState(publisherId).ConfigureAwait(false);
@@ -1750,7 +1844,7 @@ app.MapPost("/registration", [Authorize] async ([FromServices] IDocumentStorageC
     return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapPut("/profile", [Authorize] async ([FromServices] IDocumentStorageClient documentStorageClient, RegistrationInput? input, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPut("/profile", [Authorize] async ([FromServices] IDocumentStorageClient documentStorageClient, RegistrationInput? input, ClaimsPrincipal user, [FromServices] ICodelistProviderClient codelistProviderClient, [FromServices] TelemetryClient? telemetryClient) =>
 {
     string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
     if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
@@ -1769,7 +1863,7 @@ app.MapPut("/profile", [Authorize] async ([FromServices] IDocumentStorageClient 
     {
         if (input is not null)
         {
-            ValidationResults validationResults = input.Validate();
+            ValidationResults validationResults = await input.Validate(codelistProviderClient);
             if (validationResults.IsValid)
             {
                 FileState? state = await documentStorageClient.GetPublisherFileState(publisherId).ConfigureAwait(false);
