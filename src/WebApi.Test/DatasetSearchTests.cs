@@ -596,7 +596,7 @@ namespace WebApi.Test
             Assert.NotNull(view.ContactPoint);
             Assert.Equal("nameSk", view.ContactPoint.Name);
             Assert.Equal("test@example.com", view.ContactPoint.Email);
-            Assert.Equal(new Uri("http://example.com/documentation"), view.Documentation);
+            Assert.Equal(new Uri("http://example.com/documentation"), view.LandingPage);
             Assert.Equal(new Uri("http://example.com/specification"), view.Specification);
             Assert.Equal(new[] { new Uri("http://eurovoc.europa.eu/6409"), new Uri("http://eurovoc.europa.eu/6410") }, view.EuroVocThemes);
             Assert.Equal(10, view.SpatialResolutionInMeters);
@@ -700,7 +700,7 @@ namespace WebApi.Test
             Assert.NotNull(view.ContactPoint);
             Assert.Equal("nameEn", view.ContactPoint.Name);
             Assert.Equal("test@example.com", view.ContactPoint.Email);
-            Assert.Equal(new Uri("http://example.com/documentation"), view.Documentation);
+            Assert.Equal(new Uri("http://example.com/documentation"), view.LandingPage);
             Assert.Equal(new Uri("http://example.com/specification"), view.Specification);
             Assert.Equal(new[] { new Uri("http://eurovoc.europa.eu/6409"), new Uri("http://eurovoc.europa.eu/6410") }, view.EuroVocThemes);
             Assert.Equal(10, view.SpatialResolutionInMeters);
@@ -794,7 +794,7 @@ namespace WebApi.Test
             dataset.AccrualPeriodicity = new Uri("http://publications.europa.eu/resource/dataset/frequency/1");
             dataset.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") };
             dataset.SetTemporal(new DateOnly(2023, 8, 16), new DateOnly(2023, 9, 10));
-            dataset.Documentation = new Uri("http://example.com/documentation");
+            dataset.LandingPage = new Uri("http://example.com/documentation");
             dataset.Specification = new Uri("http://example.com/specification");
             dataset.SpatialResolutionInMeters = 10;
             dataset.TemporalResolution = "P2D";
@@ -854,7 +854,7 @@ namespace WebApi.Test
             Assert.NotNull(view.ContactPoint);
             Assert.Equal("ContactSk", view.ContactPoint.Name);
             Assert.Equal("test@test.sk", view.ContactPoint.Email);
-            Assert.Equal(new Uri("http://example.com/documentation"), view.Documentation);
+            Assert.Equal(new Uri("http://example.com/documentation"), view.LandingPage);
             Assert.Equal(new Uri("http://example.com/specification"), view.Specification);
             Assert.Equal(new[] { new Uri("http://eurovoc.europa.eu/6409"), new Uri("http://eurovoc.europa.eu/6410") }, view.EuroVocThemes);
             Assert.Equal(10, view.SpatialResolutionInMeters);

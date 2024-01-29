@@ -74,6 +74,8 @@
     "documentation": "Dokumentácia",
     "updateFrequency": "Periodicita aktualizácie",
     "otherDatasetsFromList": "Dalšie datasety z tejto série",
+    "datasetsFromList": "Datasety z tejto série",
+    "datasetSerie": "Dátová séria",
     "timeValidity": "Časová platnosť",
     "spatialValidity": "Územná platnosť",
     "contactPoint": "Kontaktný bod",
@@ -211,5 +213,7 @@
     "technicalSupport": "Technická podpora",
     "legalForm": "Právna forma",
     "newPublisher": "Nový poskytovateľ dát",
-    "editPublisher": "Upraviť poskytovateľa dát"
+    "editPublisher": "Upraviť poskytovateľa dát",
+    "promptForDataPublishing": "Podnety na zverejnenie údajov",
+    "landingPage": "Domovská webová stránka"
 }

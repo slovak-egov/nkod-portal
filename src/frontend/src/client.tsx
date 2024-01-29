@@ -154,7 +154,7 @@ export type DatasetInput = {
     endDate: string | null;
     contactName: LanguageDependentTexts;
     contactEmail: string | null;
-    documentation: string | null;
+    landingPage: string | null;
     specification: string | null;
     euroVocThemes: string[];
     spatialResolutionInMeters: string | null;
@@ -209,12 +209,12 @@ export type Dataset = {
     keywords: string[];
     keywordsAll: LanguageDependentTextsMulti | null;
     type: string[];
-    typeValues: CodelistValue | null;
+    typeValues: CodelistValue[];
     spatial: string[];
     spatialValues: CodelistValue[];
     temporal: Temporal | null;
     contactPoint: CardView | null;
-    documentation: string | null;
+    landingPage: string | null;
     specification: string | null;
     euroVocThemes: string[];
     euroVocThemeValues: string[];
@@ -811,7 +811,7 @@ export function extractLanguageErrors(errors: { [id: string]: string }, key: str
     return filtered;
 }
 
-export async function removeEntity(prompt: string, url: string, id: string, headers: RawAxiosRequestHeaders) {
+export async function removeEntity(prompt: string, url: string, id: string, headers: RawAxiosRequestHeaders): Promise<boolean | string> {
     if (window.confirm(prompt)) {
         try {
             await axios.delete(baseUrl + url, {
@@ -822,10 +822,12 @@ export async function removeEntity(prompt: string, url: string, id: string, head
             });
             return true;
         } catch (err) {
-            alert(err);
-            return false;
+            if (err instanceof AxiosError) {
+                return err.response?.data ?? err.message ?? 'Error';
+            }
         }
     }
+    return false;
 }
 
 type FileUploadResult = {

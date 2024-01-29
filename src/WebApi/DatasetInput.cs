@@ -31,7 +31,7 @@ namespace WebApi
 
         public string? ContactEmail { get; set; }
 
-        public string? Documentation { get; set; }
+        public string? LandingPage { get; set; }
 
         public string? Specification { get; set; }
 
@@ -68,7 +68,7 @@ namespace WebApi
             results.ValidateDate(nameof(EndDate), EndDate);
             results.ValidateLanguageTexts(nameof(ContactName), ContactName, languages, false);
             results.ValidateEmail(nameof(ContactEmail), ContactEmail, false);
-            results.ValidateUrl(nameof(Documentation), Documentation, false);
+            results.ValidateUrl(nameof(LandingPage), LandingPage, false);
             results.ValidateUrl(nameof(Specification), Specification, false);
             
             loadedEuroVocLabels ??= new Dictionary<string, List<string>>();
@@ -99,7 +99,7 @@ namespace WebApi
             dataset.SetContactPoint(
                 ContactName is not null ? new LanguageDependedTexts(ContactName) : null,
                 ContactEmail);
-            dataset.Documentation = Documentation.AsUri();
+            dataset.LandingPage = LandingPage.AsUri();
             dataset.Specification = Specification.AsUri();
             dataset.SpatialResolutionInMeters = SpatialResolutionInMeters is not null ? decimal.Parse(SpatialResolutionInMeters, System.Globalization.CultureInfo.CurrentCulture) : null;
             dataset.TemporalResolution = TemporalResolution;

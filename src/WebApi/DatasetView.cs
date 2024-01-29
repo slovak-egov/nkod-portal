@@ -47,8 +47,8 @@ namespace WebApi
         public TemporalView? Temporal { get; set; }
 
         public CardView? ContactPoint { get; set; }
-
-        public Uri? Documentation { get; set; }
+                
+        public Uri? LandingPage { get; set; }
 
         public Uri? Specification { get; set; }
 
@@ -87,7 +87,7 @@ namespace WebApi
                 Spatial = datasetRdf.Spatial.ToArray(),
                 Temporal = temporal is not null ? new TemporalView { StartDate = temporal.StartDate?.ToString(CultureInfo.CurrentCulture), EndDate = temporal.EndDate?.ToString(CultureInfo.CurrentCulture) } : null,
                 ContactPoint = contactPoint is not null ? CardView.MapFromRdf(contactPoint, language, fetchAllLanguages) : null,
-                Documentation = datasetRdf.Documentation,
+                LandingPage = datasetRdf.LandingPage,
                 Specification = datasetRdf.Specification,
                 EuroVocThemes = datasetRdf.EuroVocThemes.ToArray(),
                 SpatialResolutionInMeters = datasetRdf.SpatialResolutionInMeters,

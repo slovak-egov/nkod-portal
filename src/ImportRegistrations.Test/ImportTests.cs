@@ -38,7 +38,7 @@ namespace ImportRegistrations.Test
             dataset.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") };
             dataset.SetTemporal(new DateOnly(2023, 8, 16), new DateOnly(2023, 9, 10));
             dataset.SetContactPoint(new LanguageDependedTexts { { "sk", "nameSk" }, { "en", "nameEn" } }, "test@example.com");
-            dataset.Documentation = new Uri("http://example.com/documentation");
+            dataset.LandingPage = new Uri("http://example.com/documentation");
             dataset.Specification = new Uri("http://example.com/specification");
             dataset.SpatialResolutionInMeters = 10;
             dataset.TemporalResolution = "P2D";

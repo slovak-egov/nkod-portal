@@ -171,6 +171,17 @@ namespace Frontend.Test
             return null;
         }
 
+        public static async Task<IReadOnlyList<string>> GetAlerts(this IPage test)
+        {
+            IReadOnlyList<IElementHandle> alerts = await test.QuerySelectorAllAsync(".custom-alert");
+            List<string> texts = new List<string>();
+            foreach (IElementHandle alert in alerts)
+            {
+                texts.Add(await alert.TextContentAsync() ?? string.Empty);
+            }
+            return texts;
+        }
+
         public static async Task<string?> GetMultiRadioSelectedLabel(this IPage test, string legendText)
         {
             IElementHandle? fieldset = await test.GetByFieldsetLegend(legendText);
@@ -411,7 +422,7 @@ namespace Frontend.Test
             await test.AssertLangaugeValuesInput("Kontaktný bod, meno", rdf.ContactPoint?.Name ?? new Dictionary<string, string>());
             Assert.AreEqual(rdf.ContactPoint?.Email ?? string.Empty, await (await test.GetInputInFormElementGroup("Kontaktný bod, e-mailová adresa")).GetAttributeAsync("value"));
 
-            Assert.AreEqual(rdf.Documentation?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Odkaz na dokumentáciu")).GetAttributeAsync("value"));
+            Assert.AreEqual(rdf.LandingPage?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Domovská webová stránka")).GetAttributeAsync("value"));
             Assert.AreEqual(rdf.Specification?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Odkaz na špecifikáciu")).GetAttributeAsync("value"));
 
             CollectionAssert.AreEqual(rdf.EuroVocThemes.Select(e => e.ToString()).ToList(), await test.GetMultiSelectItems("Klasifikácia podľa EuroVoc"));
@@ -532,7 +543,7 @@ namespace Frontend.Test
             await test.FillLangaugeValuesInput("Kontaktný bod, meno", rdf.ContactPoint?.Name ?? new Dictionary<string, string>());
             await (await test.GetInputInFormElementGroup("Kontaktný bod, e-mailová adresa")).FillAsync(rdf.ContactPoint?.Email ?? string.Empty);
 
-            await (await test.GetInputInFormElementGroup("Odkaz na dokumentáciu")).FillAsync(rdf.Documentation?.ToString() ?? string.Empty);
+            await (await test.GetInputInFormElementGroup("Domovská webová stránka")).FillAsync(rdf.LandingPage?.ToString() ?? string.Empty);
             await (await test.GetInputInFormElementGroup("Odkaz na špecifikáciu")).FillAsync(rdf.Specification?.ToString() ?? string.Empty);
 
             await FillMultiInput((await test.GetFormElementGroup("Klasifikácia podľa EuroVoc"))!, rdf.EuroVocThemes.Select(t => t.ToString()));
@@ -724,7 +735,7 @@ namespace Frontend.Test
             Assert.AreEqual(expected.Temporal?.EndDate, actual.Temporal?.EndDate);
             AssertAreEqualLanguage(expected.ContactPoint?.Name, actual.ContactPoint?.Name);
             Assert.AreEqual(expected.ContactPoint?.Email, actual.ContactPoint?.Email);
-            Assert.AreEqual(expected.Documentation, actual.Documentation);
+            Assert.AreEqual(expected.LandingPage, actual.LandingPage);
             Assert.AreEqual(expected.Specification, actual.Specification);
 
             Assert.AreEqual(expected.SpatialResolutionInMeters, actual.SpatialResolutionInMeters);

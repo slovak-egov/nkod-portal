@@ -1,8 +1,7 @@
-import { useTranslation } from "react-i18next";
+import { useTranslation } from 'react-i18next';
 
-export function Footer()
-{
-    const {t} = useTranslation();
+export function Footer() {
+    const { t } = useTranslation();
 
     return (
         <div data-module="idsk-footer-extended">
@@ -28,6 +27,14 @@ export function Footer()
                                             href="https://wiki.vicepremier.gov.sk/display/opendata/Podpora+pre+data.slovensko.sk"
                                         >
                                             {t('technicalSupport')}
+                                        </a>
+
+                                        <a
+                                            className="govuk-link"
+                                            title={t('promptForDataPublishing')}
+                                            href="https://wiki.vicepremier.gov.sk/pages/viewpage.action?pageId=146573741"
+                                        >
+                                            {t('promptForDataPublishing')}
                                         </a>
                                     </p>
                                 </div>

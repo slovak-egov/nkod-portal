@@ -37,6 +37,26 @@ namespace WebApi
         {
             ValidationResults results = new ValidationResults();
 
+            DcatDataset? dataset = null;
+
+            if (Guid.TryParse(DatasetId, out Guid datasetId))
+            {
+                FileState? datasetFileState = await documentStorage.GetFileState(datasetId);
+                if (datasetFileState?.Content is not null)
+                {
+                    dataset = DcatDataset.Parse(datasetFileState.Content);
+                }
+            }
+
+            if (dataset is null)
+            {
+                results["dataset"] = "Dataset nebol nájdený";
+            } 
+            else if (dataset.IsSerie)
+            {
+                results["dataset"] = "Dátová séria nemôže mať distribúcie";
+            }
+
             await results.ValidateRequiredCodelistValue(nameof(AuthorsWorkType), AuthorsWorkType, DcatDistribution.AuthorsWorkTypeCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(OriginalDatabaseType), OriginalDatabaseType, DcatDistribution.OriginalDatabaseTypeCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(DatabaseProtectedBySpecialRightsType), DatabaseProtectedBySpecialRightsType, DcatDistribution.DatabaseProtectedBySpecialRightsTypeCodelist, codelistProvider);

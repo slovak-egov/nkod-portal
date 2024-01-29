@@ -30,16 +30,20 @@ namespace Frontend.Test
             dataset.SetTitle(new Dictionary<string, string> { { "sk", name } });
             dataset.SetDescription(new Dictionary<string, string> { { "sk", "Test Description" } });
             dataset.SetKeywords(new Dictionary<string, List<string>> { { "sk", new List<string> { "Test1", "Test2" } } });
+            dataset.Type = new[] { new Uri("https://data.gov.sk/set/codelist/dataset-type/1") };
             dataset.Themes = new[] { 
                 new Uri("http://publications.europa.eu/resource/dataset/data-theme/1"), 
                 new Uri("http://publications.europa.eu/resource/dataset/data-theme/2"), 
                 new Uri(DcatDataset.EuroVocPrefix + "6409"), 
                 new Uri(DcatDataset.EuroVocPrefix + "6410") };
-            dataset.Documentation = new Uri("http://example.com/documentation");
+            dataset.LandingPage = new Uri("http://example.com/documentation");
+            dataset.Specification = new Uri("http://example.com/specification");
             dataset.AccrualPeriodicity = new Uri("http://publications.europa.eu/resource/dataset/frequency/1");
             dataset.SetContactPoint(new LanguageDependedTexts { { "sk", "Test Contact Point" } }, "test@example.com");
             dataset.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") };
             dataset.SetTemporal(new DateOnly(2023, 8, 17), new DateOnly(2023, 9, 12));
+            dataset.TemporalResolution = "1D";
+            dataset.SpatialResolutionInMeters = 100;
             dataset.Publisher = new Uri(publisher);
             dataset.ShouldBePublic = isPublic;
             dataset.SetEuroVocLabelThemes(new Dictionary<string, List<string>> { { "sk", new List<string> { "nepovolená likvidácia odpadu", "chemický odpad" } } });
@@ -317,6 +321,7 @@ namespace Frontend.Test
 
             await Page.CheckTestContent("publisher-name", "Test Publisher");
             await Page.CheckTestContent("description", "Test Description");
+            await Page.CheckTestContent("types", "type1sk");
 
             IElementHandle? keywords = await Page.GetTestElement("keywords");
             Assert.IsNotNull(keywords);
@@ -332,12 +337,19 @@ namespace Frontend.Test
             }
             CollectionAssert.AreEquivalent(new[] { "theme1sk", "theme2sk", "nepovolená likvidácia odpadu", "chemický odpad" }, themeValues);
 
-            IElementHandle? documentationParent = await Page.GetTestElement("documentation");
+            IElementHandle? documentationParent = await Page.GetTestElement("landing-page");
             Assert.IsNotNull(documentationParent);
             IElementHandle? documentationLink = await documentationParent.QuerySelectorAsync("a");
             Assert.IsNotNull(documentationLink);
             Assert.AreEqual("http://example.com/documentation", await documentationLink.GetAttributeAsync("href"));
             Assert.AreEqual("Zobraziť", await documentationLink.TextContentAsync());
+
+            IElementHandle? specificationParent = await Page.GetTestElement("specification");
+            Assert.IsNotNull(specificationParent);
+            IElementHandle? specificationLink = await specificationParent.QuerySelectorAsync("a");
+            Assert.IsNotNull(specificationLink);
+            Assert.AreEqual("http://example.com/specification", await specificationLink.GetAttributeAsync("href"));
+            Assert.AreEqual("Zobraziť", await specificationLink.TextContentAsync());
 
             await Page.CheckTestContent("update-frequency", "frequency1sk");
             await Page.CheckTestContent("contact-name", "Test Contact Point");
@@ -352,8 +364,11 @@ namespace Frontend.Test
             }
             CollectionAssert.AreEquivalent(new[] { "country1sk", "country2sk" }, spatialValues);
 
+            await Page.CheckTestContent("spatial-resolution", "100");
+
             await Page.CheckTestContent("temporal-start", "17. 8. 2023");
             await Page.CheckTestContent("temporal-end", "12. 9. 2023");
+            await Page.CheckTestContent("temporal-resolution", "1D");
 
             await Page.CheckTestContent("distributions-count", "1 distribúcia");
 
@@ -389,6 +404,28 @@ namespace Frontend.Test
             await Page.OpenDatasetDetail(id);
 
             Assert.IsNull(await Page.GetTestElement("description"));
+        }
+
+        [TestMethod]
+        public async Task TypesAreNotVisibleIfEmpty()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            fixture.CreatePublisher(PublisherId, true);
+            Guid id = CreateDatasetAndDistribution(fixture, "Test dataset", true);
+
+            using Storage storage = new Storage(path);
+
+            UpdateDataset(id, storage, d => d.Type = Array.Empty<Uri>());
+
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            f.CreateDefaultClient();
+
+            await Page.OpenDatasetDetail(id);
+
+            Assert.IsNull(await Page.GetTestElement("types"));
         }
 
         [TestMethod]
@@ -451,14 +488,36 @@ namespace Frontend.Test
 
             using Storage storage = new Storage(path);
 
-            UpdateDataset(id, storage, d => d.Documentation = null);
+            UpdateDataset(id, storage, d => d.LandingPage = null);
 
             using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
             f.CreateDefaultClient();
 
             await Page.OpenDatasetDetail(id);
 
-            Assert.IsNull(await Page.GetTestElement("documentation"));
+            Assert.IsNull(await Page.GetTestElement("landing-page"));
+        }
+
+        [TestMethod]
+        public async Task SpecificationIsNotVisibleIfEmpty()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            fixture.CreatePublisher(PublisherId, true);
+            Guid id = CreateDatasetAndDistribution(fixture, "Test dataset", true);
+
+            using Storage storage = new Storage(path);
+
+            UpdateDataset(id, storage, d => d.Specification = null);
+
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            f.CreateDefaultClient();
+
+            await Page.OpenDatasetDetail(id);
+
+            Assert.IsNull(await Page.GetTestElement("specification"));
         }
 
         [TestMethod]
@@ -569,6 +628,50 @@ namespace Frontend.Test
             await Page.OpenDatasetDetail(id);
 
             Assert.IsNull(await Page.GetTestElement("temporal-end"));
+        }
+
+        [TestMethod]
+        public async Task TemporalResolutionIsNotVisibleIfEmpty()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            fixture.CreatePublisher(PublisherId, true);
+            Guid id = CreateDatasetAndDistribution(fixture, "Test dataset", true);
+
+            using Storage storage = new Storage(path);
+
+            UpdateDataset(id, storage, d => d.TemporalResolution = null);
+
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            f.CreateDefaultClient();
+
+            await Page.OpenDatasetDetail(id);
+
+            Assert.IsNull(await Page.GetTestElement("temporal-resolution"));
+        }
+
+        [TestMethod]
+        public async Task SpatialResolutionIsNotVisibleIfEmpty()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            fixture.CreatePublisher(PublisherId, true);
+            Guid id = CreateDatasetAndDistribution(fixture, "Test dataset", true);
+
+            using Storage storage = new Storage(path);
+
+            UpdateDataset(id, storage, d => d.SpatialResolutionInMeters = null);
+
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            f.CreateDefaultClient();
+
+            await Page.OpenDatasetDetail(id);
+
+            Assert.IsNull(await Page.GetTestElement("spatial-resolution"));
         }
 
         [TestMethod]
@@ -700,6 +803,10 @@ namespace Frontend.Test
             await Page.OpenDatasetDetail(parentId);
 
             await AssertRelatedDatasets(storage, c1, c2);
+
+            IElementHandle? related = await Page.GetTestElement("related");
+            Assert.IsNotNull(related);
+            Assert.AreEqual("Datasety z tejto série", await (await related.QuerySelectorAsync("h4"))!.TextContentAsync());
         }
 
         [TestMethod]
@@ -728,6 +835,17 @@ namespace Frontend.Test
             await Page.OpenDatasetDetail(c1);
 
             await AssertRelatedDatasets(storage, c2);
+
+            IElementHandle? related = await Page.GetTestElement("related");
+            Assert.IsNotNull(related);
+            Assert.AreEqual("Dalšie datasety z tejto série", await (await related.QuerySelectorAsync("h4"))!.TextContentAsync());
+
+            IElementHandle? dataSerie = await Page.GetTestElement("data-serie");
+            Assert.IsNotNull(dataSerie);
+            IElementHandle? parentLink = await dataSerie.QuerySelectorAsync("a");
+            Assert.IsNotNull(parentLink);
+            Assert.AreEqual($"/datasety/{parentId}", await parentLink.GetAttributeAsync("href"));
+            Assert.AreEqual("Zobraziť", await parentLink.TextContentAsync());
         }
 
         [TestMethod]

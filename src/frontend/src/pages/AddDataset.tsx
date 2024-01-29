@@ -24,7 +24,7 @@ export default function AddDataset() {
         endDate: null,
         contactName: {},
         contactEmail: null,
-        documentation: null,
+        landingPage: null,
         specification: null,
         euroVocThemes: [],
         spatialResolutionInMeters: null,
@@ -77,17 +77,19 @@ export default function AddDataset() {
                         {t('saveDataset')}
                     </Button>
 
-                    <Button
-                        disabled={saving}
-                        onClick={async () => {
-                            const result = await save();
-                            if (result?.success) {
-                                navigate('/sprava/distribucie/' + result?.id + '/pridat');
-                            }
-                        }}
-                    >
-                        {t('saveAndAddDistribution')}
-                    </Button>
+                    {!dataset.isSerie ? (
+                        <Button
+                            disabled={saving}
+                            onClick={async () => {
+                                const result = await save();
+                                if (result?.success) {
+                                    navigate('/sprava/distribucie/' + result?.id + '/pridat');
+                                }
+                            }}
+                        >
+                            {t('saveAndAddDistribution')}
+                        </Button>
+                    ) : null}
                 </div>
             </MainContent>
         </>

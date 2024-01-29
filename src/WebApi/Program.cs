@@ -815,6 +815,7 @@ app.MapPut("/datasets", [Authorize] async ([FromBody] DatasetInput? dataset, [Fr
                                     parentDataset = parentDatasetId;
                                 }
 
+                                datasetRdf.Modified = DateTimeOffset.UtcNow;
                                 dataset.MapToRdf(publisher, datasetRdf);
                                 FileMetadata metadata = datasetRdf.UpdateMetadata(hasDistributions || dataset.IsSerie, state.Metadata);
                                 metadata = await datasetRdf.UpdateReferenceToParent(parentDataset, metadata, client);
@@ -891,8 +892,22 @@ app.MapDelete("/datasets", [Authorize] async ([FromQuery] string? id, [FromServi
     {
         if (Guid.TryParse(id, out Guid key))
         {
-            await client.DeleteFile(key).ConfigureAwait(false);
-            return Results.Ok();
+            FileStorageResponse response = await client.GetFileStates(new FileStorageQuery
+            {
+                ParentFile = key,
+                OnlyTypes = new List<FileType> { FileType.DatasetRegistration },
+                MaxResults = 0
+            }).ConfigureAwait(false);
+
+            if (response.TotalCount == 0)
+            {
+                await client.DeleteFile(key).ConfigureAwait(false);
+                return Results.Ok();
+            }
+            else
+            {
+                return Results.BadRequest("Dátovú sériu nie je možné zmazať, najskôr prosím zmažte všetky datasety z tejto série.");
+            }            
         }
         else
         {

@@ -100,7 +100,7 @@ namespace WebApi.Test
             Extensions.AssertDateEqual(input.EndDate, dataset.Temporal?.EndDate);
             Extensions.AssertTextsEqual(input.ContactName, dataset.ContactPoint?.Name);
             Assert.Equal(input.ContactEmail, dataset.ContactPoint?.Email);
-            Assert.Equal(input.Documentation, dataset.Documentation?.ToString());
+            Assert.Equal(input.LandingPage, dataset.LandingPage?.ToString());
             Assert.Equal(input.Specification, dataset.Specification?.ToString());
             Assert.Equal(input.SpatialResolutionInMeters is not null ? decimal.Parse(input.SpatialResolutionInMeters, System.Globalization.CultureInfo.CurrentCulture) : null, dataset.SpatialResolutionInMeters);
             Assert.Equal(input.TemporalResolution, dataset.TemporalResolution);
@@ -548,7 +548,7 @@ namespace WebApi.Test
             FileState state = storage.GetFileState(datasetId, accessPolicy)!;
             DcatDataset dataset = DcatDataset.Parse(state.Content!)!;
             dataset.IsSerie = true;
-            storage.InsertFile(dataset.ToString(), state.Metadata, true, accessPolicy);
+            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, state.Metadata), true, accessPolicy);
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -575,13 +575,13 @@ namespace WebApi.Test
             FileState parentState = storage.GetFileState(parentId, accessPolicy)!;
             DcatDataset parentDataset = DcatDataset.Parse(parentState.Content!)!;
             parentDataset.IsSerie = true;
-            storage.InsertFile(parentDataset.ToString(), parentState.Metadata, true, accessPolicy);
+            storage.InsertFile(parentDataset.ToString(), parentDataset.UpdateMetadata(true, parentState.Metadata), true, accessPolicy);
 
             FileState partState = storage.GetFileState(childId, accessPolicy)!;
             DcatDataset partDataset = DcatDataset.Parse(partState.Content!)!;
             partDataset.IsPartOf = parentDataset.Uri;
             partDataset.IsPartOfInternalId = parentState.Metadata.Id.ToString();
-            storage.InsertFile(partDataset.ToString(), partState.Metadata, true, accessPolicy);
+            storage.InsertFile(partDataset.ToString(), partDataset.UpdateMetadata(true, partState.Metadata), true, accessPolicy);
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -609,13 +609,13 @@ namespace WebApi.Test
             FileState parentState = storage.GetFileState(parentId, accessPolicy)!;
             DcatDataset parentDataset = DcatDataset.Parse(parentState.Content!)!;
             parentDataset.IsSerie = true;
-            storage.InsertFile(parentDataset.ToString(), parentState.Metadata, true, accessPolicy);
+            storage.InsertFile(parentDataset.ToString(), parentDataset.UpdateMetadata(true, parentState.Metadata), true, accessPolicy);
 
             FileState partState = storage.GetFileState(childId, accessPolicy)!;
             DcatDataset partDataset = DcatDataset.Parse(partState.Content!)!;
             partDataset.IsPartOf = parentDataset.Uri;
             partDataset.IsPartOfInternalId = parentState.Metadata.Id.ToString();
-            storage.InsertFile(partDataset.ToString(), partState.Metadata, true, accessPolicy);
+            storage.InsertFile(partDataset.ToString(), partDataset.UpdateMetadata(true, partState.Metadata), true, accessPolicy);
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();

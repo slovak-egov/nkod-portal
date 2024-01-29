@@ -151,10 +151,10 @@ namespace NkodSk.Abstractions
             }
         }
 
-        public Uri? Documentation
+        public Uri? LandingPage
         {
-            get => GetUriFromUriNode("foaf:page");
-            set => SetUriNode("foaf:page", value);
+            get => GetUriFromUriNode("dcat:landingPage");
+            set => SetUriNode("dcat:landingPage", value);
         }
 
         public Uri? Specification
@@ -227,6 +227,8 @@ namespace NkodSk.Abstractions
             graph.Assert(subject, rdfTypeNode, targetTypeNode);
             DcatDataset dataset = new DcatDataset(graph, subject);
             dataset.createdId = id;
+            dataset.Issued = DateTimeOffset.UtcNow;
+            dataset.Modified = DateTimeOffset.UtcNow;
             return dataset;
         }
 
@@ -319,7 +321,7 @@ namespace NkodSk.Abstractions
                 !Equals(Temporal?.EndDate, dataset.Temporal?.EndDate) ||
                 !AreLaguagesEqual(ContactPoint?.Name, dataset.ContactPoint?.Name) ||
                 !Equals(ContactPoint?.Email, dataset.ContactPoint?.Email) ||
-                !Equals(Documentation, dataset.Documentation) ||
+                !Equals(LandingPage, dataset.LandingPage) ||
                 !Equals(Specification, dataset.Specification) ||
                 !Equals(SpatialResolutionInMeters, dataset.SpatialResolutionInMeters) ||
                 !Equals(TemporalResolution, dataset.TemporalResolution) ||

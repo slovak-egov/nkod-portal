@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using TestBase;
 using Microsoft.Playwright;
 using System.Data;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Frontend.Test
 {
@@ -102,7 +103,7 @@ namespace Frontend.Test
             input.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1") };
             input.SetTemporal(new DateOnly(2023, 8, 20), new DateOnly(2023, 9, 12));
             input.SetContactPoint(new LanguageDependedTexts(new Dictionary<string, string> { { "sk", "ContactSk" } }), "test@example.com");
-            input.Documentation = new Uri("http://example.com/documentation");
+            input.LandingPage = new Uri("http://example.com/documentation");
             input.Specification = new Uri("http://example.com/specification");
             input.Themes = new[] { new Uri("http://publications.europa.eu/resource/dataset/data-theme/1"), new Uri(DcatDataset.EuroVocPrefix + "6409"), new Uri(DcatDataset.EuroVocPrefix + "6410") };
             input.SetEuroVocLabelThemes(new Dictionary<string, List<string>> { 
@@ -436,7 +437,7 @@ namespace Frontend.Test
             input.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/2") };
             input.SetTemporal(new DateOnly(2023, 8, 10), new DateOnly(2023, 9, 17));
             input.SetContactPoint(new LanguageDependedTexts(new Dictionary<string, string> { { "sk", "ContactSk2" } }), "test2@example.com");
-            input.Documentation = new Uri("http://example.com/documentation2");
+            input.LandingPage = new Uri("http://example.com/documentation2");
             input.Specification = new Uri("http://example.com/specification2");
             input.Themes = new[] { new Uri("http://publications.europa.eu/resource/dataset/data-theme/2"), new Uri(DcatDataset.EuroVocPrefix + "6411") };
             input.SetEuroVocLabelThemes(new Dictionary<string, List<string>> { 
@@ -798,7 +799,7 @@ namespace Frontend.Test
             input.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/2") };
             input.SetTemporal(new DateOnly(2023, 8, 10), new DateOnly(2023, 9, 17));
             input.SetContactPoint(new LanguageDependedTexts(new Dictionary<string, string> { { "sk", "ContactSk2" }, { "en", "ContactEn2" }, { "de", "ContactDe2" } }), "test2@example.com");
-            input.Documentation = new Uri("http://example.com/documentation2");
+            input.LandingPage = new Uri("http://example.com/documentation2");
             input.Specification = new Uri("http://example.com/specification2");
             input.Themes = new[] { new Uri("http://publications.europa.eu/resource/dataset/data-theme/2"), new Uri(DcatDataset.EuroVocPrefix + "6411") };
             input.SetEuroVocLabelThemes(new Dictionary<string, List<string>> {
@@ -820,6 +821,113 @@ namespace Frontend.Test
 
             Assert.AreEqual(1, storage.GetFileStates(new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.DatasetRegistration } }, accessPolicy).TotalCount);
             Extensions.AssertAreEqual(input, false, storage.GetFileState(id, accessPolicy)!);
+        }
+
+        [TestMethod]
+        public async Task TestRemoveRecordAsSerie()
+        {
+            string path = fixture.GetStoragePath();
+
+            Guid parentId = fixture.CreateDataset("Test 1", PublisherId);
+            Guid childId = fixture.CreateDataset("Test 2", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            FileState parentState = storage.GetFileState(parentId, accessPolicy)!;
+            DcatDataset parentDataset = DcatDataset.Parse(parentState.Content!)!;
+            parentDataset.IsSerie = true;
+            storage.InsertFile(parentDataset.ToString(), parentDataset.UpdateMetadata(true, parentState.Metadata), true, accessPolicy);
+
+            FileState partState = storage.GetFileState(childId, accessPolicy)!;
+            DcatDataset partDataset = DcatDataset.Parse(partState.Content!)!;
+            partDataset.IsPartOf = parentDataset.Uri;
+            partDataset.IsPartOfInternalId = parentState.Metadata.Id.ToString();
+            storage.InsertFile(partDataset.ToString(), partDataset.UpdateMetadata(true, partState.Metadata), true, accessPolicy);
+
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            await Page.Login(f, PublisherId, "Publisher");
+
+            await Page.OpenDatasetsAdmin();
+
+            Page.Dialog += (_, dialog) => dialog.AcceptAsync();
+            await Page.RunAndWaitForRequests(async () =>
+            {
+                await Page.ClickOnTableButton(0, "Odstrániť");
+            }, new List<string> { "datasets" });
+
+            await Page.AssertTableRowsCount(2);
+
+            CollectionAssert.AreEquivalent(new[] { "Dátovú sériu nie je možné zmazať, najskôr prosím zmažte všetky datasety z tejto série." }, (await Page.GetAlerts()).ToArray());
+        }
+
+        [TestMethod]
+        public async Task TestDistributionsShouldBeVisible()
+        {
+            string path = fixture.GetStoragePath();
+
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            await Page.Login(f, PublisherId, "Publisher");
+
+            await Page.OpenDatasetsAdmin();
+
+            await Page.AssertTableRowsCount(1);
+
+            Assert.AreEqual(1, await Page.GetByText("Zmeniť distribúcie").CountAsync());
+        }
+
+        [TestMethod]
+        public async Task TestDistributionsShouldNotBeVisibleWithSerie()
+        {
+            string path = fixture.GetStoragePath();
+
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            FileState state = storage.GetFileState(datasetId, accessPolicy)!;
+            DcatDataset dataset = DcatDataset.Parse(state.Content!)!;
+            dataset.IsSerie = true;
+            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, state.Metadata), true, accessPolicy);
+
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            await Page.Login(f, PublisherId, "Publisher");
+
+            await Page.OpenDatasetsAdmin();
+
+            await Page.AssertTableRowsCount(1);
+
+            Assert.AreEqual(0, await Page.GetByText("Zmeniť distribúcie").CountAsync());
+        }
+
+        [TestMethod]
+        public async Task TestSaveAndAddDitributionsShouldBeNotVisibleOnSerie()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            await Page.Login(f, PublisherId, "Publisher");
+
+            await Page.OpenDatasetsAdmin();
+            await Page.RunAndWaitForDatasetCreate(async () =>
+            {
+                await Page.GetByText("Nový dataset").ClickAsync();
+            });
+
+            Assert.AreEqual(1, await Page.GetByText("Uložiť dataset a pridať distribúciu").CountAsync());
+
+            await Page.CheckDatasetSerieRadio("Dataset je séria");
+
+            Assert.AreEqual(0, await Page.GetByText("Uložiť dataset a pridať distribúciu").CountAsync());
+
+            await Page.CheckDatasetSerieRadio("Samostatný dataset");
+
+            Assert.AreEqual(1, await Page.GetByText("Uložiť dataset a pridať distribúciu").CountAsync());
         }
     }
 }
