@@ -23,6 +23,8 @@ using System.Security.Policy;
 using static Lucene.Net.Queries.Function.ValueSources.MultiFunction;
 using System.Data;
 using Lucene.Net.Analysis.Cz;
+using static System.Net.Mime.MediaTypeNames;
+using System.Globalization;
 
 namespace NkodSk.RdfFulltextIndex
 {
@@ -201,11 +203,27 @@ namespace NkodSk.RdfFulltextIndex
 
             booleanClauses.Add(new TermQuery(new Term("lang", externalQuery.Language)), Occur.MUST);
 
-            if (!string.IsNullOrWhiteSpace(externalQuery.QueryText))
+            string query = externalQuery.QueryText?.Trim() ?? string.Empty;
+
+            StringBuilder sb = new StringBuilder();
+            string normalizedString = query.Normalize(NormalizationForm.FormD);
+            for (int i = 0; i < normalizedString.Length; i++)
+            {
+                char c = normalizedString[i];
+                var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c);
+                if (unicodeCategory != UnicodeCategory.NonSpacingMark)
+                {
+                    sb.Append(c);
+                }
+            }
+
+            query = sb.ToString().Normalize(NormalizationForm.FormC);
+
+            if (!string.IsNullOrWhiteSpace(query))
             {
                 BooleanQuery textQueries = new BooleanQuery();
 
-                string escapedQuery = QueryParserBase.Escape(externalQuery.QueryText.Trim()) + "*";
+                string escapedQuery = QueryParserBase.Escape(query) + "*";
 
                 QueryParser queryParserTitle = new QueryParser(Version, "title", analyzer);
                 textQueries.Add(queryParserTitle.Parse(escapedQuery), Occur.SHOULD);
