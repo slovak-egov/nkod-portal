@@ -7,6 +7,7 @@ using NkodSk.Abstractions;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection.Metadata;
 using System.Runtime;
@@ -44,6 +45,8 @@ namespace NkodSk.RdfFileStorage
 
         private readonly ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();
 
+        private readonly ReadOnlyDictionary<FileType, string> fileTypeFolders;
+
         private int disposed;
 
         private int defaultCapacity;
@@ -63,6 +66,19 @@ namespace NkodSk.RdfFileStorage
                 Directory.CreateDirectory(publicTurtlePath);
             }
 
+            FileType[] fileTypes = Enum.GetValues<FileType>();
+            Dictionary<FileType, string> fileTypeFolders = new Dictionary<FileType, string>(fileTypes.Length);
+            foreach (FileType fileType in Enum.GetValues<FileType>())
+            {
+                string folderPath = Path.Combine(publicTurtlePath, GetFileTypeSubfolderName(fileType));
+                if (!Directory.Exists(folderPath))
+                {
+                    Directory.CreateDirectory(folderPath);
+                }
+                fileTypeFolders[fileType] = folderPath;
+            }
+            this.fileTypeFolders = new ReadOnlyDictionary<FileType, string>(fileTypeFolders);
+
             protectedPath = Path.Combine(path, protectedFolderName);
             if (!Directory.Exists(protectedPath))
             {
@@ -76,7 +92,7 @@ namespace NkodSk.RdfFileStorage
             entryProperties = new Dictionary<Guid, Entry>(defaultCapacity);
             dependentEntries = new Dictionary<Guid, HashSet<Guid>>(defaultCapacity);
             entriesByPublisher = new Dictionary<string, HashSet<Guid>>(defaultCapacity);
-            entriesByType = new Dictionary<FileType, HashSet<Guid>>(Enum.GetValues<FileType>().Length);
+            entriesByType = new Dictionary<FileType, HashSet<Guid>>(fileTypes.Length);
             entriesByLanguage = new Dictionary<string, HashSet<Guid>>();
             additionalFilters = new Dictionary<string, Dictionary<string, HashSet<Guid>>>();
 
@@ -135,7 +151,7 @@ namespace NkodSk.RdfFileStorage
                             fs.Write(Encoding.UTF8.GetBytes(testFileName));
                             fs.Close();
                         }                            
-                        File.Delete(testFileName);
+                        File.Delete(path);
                     }
 
                     TestFolder(publicTurtlePath);
@@ -336,11 +352,37 @@ namespace NkodSk.RdfFileStorage
 
         public static bool ShouldBePublic(FileMetadata metadata) => metadata.IsPublic && IsTurtleFile(metadata) && !metadata.IsHarvested;
 
+        private static string GetFileTypeSubfolderName(FileType fileType)
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (char c in Enum.GetName(fileType) ?? fileType.ToString())
+            {
+                if (sb.Length > 0 && char.IsUpper(c))
+                {
+                    sb.Append('_');
+                }
+                sb.Append(char.ToLowerInvariant(c));
+            }
+            return sb.ToString();
+        }
+
+        public static string GetDefaultSubfolderName(FileMetadata metadata)
+        {
+            if (ShouldBePublic(metadata))
+            {
+                return Path.Combine("public", GetFileTypeSubfolderName(metadata.Type));
+            }
+            else
+            {
+                return "protected";
+            }
+        }
+
         private string GetFilePath(FileMetadata metadata)
         {
             if (ShouldBePublic(metadata))
             {
-                return Path.Combine(publicTurtlePath, metadata.Id.ToString("N") + ".ttl");
+                return Path.Combine(fileTypeFolders[metadata.Type], metadata.Id.ToString("N") + ".ttl");
             }
             else
             {

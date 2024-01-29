@@ -129,6 +129,32 @@ namespace WebApi.Test
         }
 
         [Fact]
+        public async Task TestCreateMinimalInSerie()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+
+            fixture.CreatePublisher("Test", PublisherId);
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            FileState parentState = storage.GetFileState(datasetId, accessPolicy)!;
+            DcatDataset parentDataset = DcatDataset.Parse(parentState.Content!)!;
+            parentDataset.IsSerie = true;
+            storage.InsertFile(parentDataset.ToString(), parentState.Metadata, true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
         public async Task TestCreateExtended()
         {
             string path = fixture.GetStoragePath();

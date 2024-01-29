@@ -205,9 +205,27 @@ namespace NkodSk.Abstractions
             return null;
         }
 
+        public DateTimeOffset? GetDateTimeFromUriNode(string name)
+        {
+            string? dateText = GetTextFromUriNode(name);
+            if (dateText is not null)
+            {
+                if (DateTimeOffset.TryParse(dateText, out DateTimeOffset date))
+                {
+                    return date;
+                }
+            }
+            return null;
+        }
+
         public void SetDateToUriNode(string name, DateOnly? value)
         {
             SetTextToUriNode(name, value?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        public void SetDateTimeToUriNode(string name, DateTimeOffset? value)
+        {
+            SetTextToUriNode(name, value?.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ssZ", System.Globalization.CultureInfo.InvariantCulture));
         }
 
         public void SetBooleanToUriNode(string name, bool? value)

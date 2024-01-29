@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using NkodSk.Abstractions;
 using TestBase;
 using System.Web;
+using System.Data;
 
 namespace WebApi.Test
 {
@@ -70,7 +71,7 @@ namespace WebApi.Test
             return input;
         }
 
-        private void ValidateValues(Storage storage, string? id, DatasetInput input, string publisher, bool shouldBePublic)
+        private void ValidateValues(Storage storage, string? id, DatasetInput input, string publisher, bool shouldBePublic, DateTimeOffset? issued)
         {
             Assert.NotNull(id);
             FileState? state = storage.GetFileState(Guid.Parse(id), accessPolicy);
@@ -104,6 +105,18 @@ namespace WebApi.Test
             Assert.Equal(input.SpatialResolutionInMeters is not null ? decimal.Parse(input.SpatialResolutionInMeters, System.Globalization.CultureInfo.CurrentCulture) : null, dataset.SpatialResolutionInMeters);
             Assert.Equal(input.TemporalResolution, dataset.TemporalResolution);
             Assert.Equal(input.IsPartOf, dataset.IsPartOf?.ToString());
+
+            Assert.NotNull(dataset.Issued);
+            Assert.NotNull(dataset.Modified);
+            if (issued.HasValue)
+            {
+                Assert.Equal(issued.Value, dataset.Issued);
+            }
+            else
+            {
+                Assert.True((dataset.Issued!.Value - DateTimeOffset.Now).Duration().TotalMinutes < 1);
+            }
+            Assert.True((dataset.Modified!.Value - DateTimeOffset.Now).Duration().TotalMinutes < 1);
         }
 
         [Fact]
@@ -140,7 +153,7 @@ namespace WebApi.Test
             Assert.False(string.IsNullOrEmpty(result.Id));
             Assert.True(result.Success);
             Assert.True(result.Errors is null || result.Errors.Count == 0);
-            ValidateValues(storage, result.Id, input, PublisherId, false);
+            ValidateValues(storage, result.Id, input, PublisherId, false, null);
         }
 
         [Fact]
@@ -164,7 +177,7 @@ namespace WebApi.Test
             Assert.False(string.IsNullOrEmpty(result.Id));
             Assert.True(result.Success);
             Assert.True(result.Errors is null || result.Errors.Count == 0);
-            ValidateValues(storage, result.Id, input, PublisherId, false);
+            ValidateValues(storage, result.Id, input, PublisherId, false, null);
         }
 
         [Fact]
@@ -187,7 +200,7 @@ namespace WebApi.Test
             Assert.False(string.IsNullOrEmpty(result.Id));
             Assert.True(result.Success);
             Assert.True(result.Errors is null || result.Errors.Count == 0);
-            ValidateValues(storage, result.Id, input, PublisherId, false);
+            ValidateValues(storage, result.Id, input, PublisherId, false, null);
         }
 
         [Fact]
@@ -218,6 +231,8 @@ namespace WebApi.Test
                 storage.DeleteFile(distributionId, accessPolicy);
             }
 
+            DcatDataset dataset = DcatDataset.Parse(storage.GetFileState(datasetId, accessPolicy)!.Content!)!;
+
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
@@ -232,7 +247,7 @@ namespace WebApi.Test
             Assert.False(string.IsNullOrEmpty(result.Id));
             Assert.True(result.Success);
             Assert.True(result.Errors is null || result.Errors.Count == 0);
-            ValidateValues(storage, result.Id, input, PublisherId, false);
+            ValidateValues(storage, result.Id, input, PublisherId, false, dataset.Issued!.Value);
         }
 
         [Fact]
@@ -246,6 +261,8 @@ namespace WebApi.Test
             {
                 storage.DeleteFile(distributionId, accessPolicy);
             }
+
+            DcatDataset dataset = DcatDataset.Parse(storage.GetFileState(datasetId, accessPolicy)!.Content!)!;
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -262,7 +279,7 @@ namespace WebApi.Test
             Assert.False(string.IsNullOrEmpty(result.Id));
             Assert.True(result.Success);
             Assert.True(result.Errors is null || result.Errors.Count == 0);
-            ValidateValues(storage, result.Id, input, PublisherId, false);
+            ValidateValues(storage, result.Id, input, PublisherId, false, dataset.Issued!.Value);
         }
 
         [Fact]
@@ -515,6 +532,99 @@ namespace WebApi.Test
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PostAsync("/datasets", requestContent);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task DeleteDatasetAsSerieEmpty()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDatasetCodelists();
+            fixture.CreatePublisher("Test", PublisherId);
+
+            Guid datasetId = fixture.CreateDataset("Test 1", PublisherId);
+
+            using Storage storage = new Storage(path);
+            FileState state = storage.GetFileState(datasetId, accessPolicy)!;
+            DcatDataset dataset = DcatDataset.Parse(state.Content!)!;
+            dataset.IsSerie = true;
+            storage.InsertFile(dataset.ToString(), state.Metadata, true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            using HttpResponseMessage response = await client.DeleteAsync($"/datasets?id={HttpUtility.UrlEncode(datasetId.ToString())}");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            Assert.Null(storage.GetFileMetadata(datasetId, accessPolicy));
+        }
+
+        [Fact]
+        public async Task DeleteDatasetAsSerieWithChildren()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDatasetCodelists();
+            fixture.CreatePublisher("Test", PublisherId);
+
+            Guid parentId = fixture.CreateDataset("Test 1", PublisherId);
+            Guid childId = fixture.CreateDataset("Test 2", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            FileState parentState = storage.GetFileState(parentId, accessPolicy)!;
+            DcatDataset parentDataset = DcatDataset.Parse(parentState.Content!)!;
+            parentDataset.IsSerie = true;
+            storage.InsertFile(parentDataset.ToString(), parentState.Metadata, true, accessPolicy);
+
+            FileState partState = storage.GetFileState(childId, accessPolicy)!;
+            DcatDataset partDataset = DcatDataset.Parse(partState.Content!)!;
+            partDataset.IsPartOf = parentDataset.Uri;
+            partDataset.IsPartOfInternalId = parentState.Metadata.Id.ToString();
+            storage.InsertFile(partDataset.ToString(), partState.Metadata, true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            using HttpResponseMessage response = await client.DeleteAsync($"/datasets?id={HttpUtility.UrlEncode(parentId.ToString())}");
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+            Assert.NotNull(storage.GetFileMetadata(parentId, accessPolicy));
+            Assert.NotNull(storage.GetFileMetadata(childId, accessPolicy));
+        }
+
+        [Fact]
+        public async Task DeleteDatasetAsPartSerie()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDatasetCodelists();
+            fixture.CreatePublisher("Test", PublisherId);
+
+            Guid parentId = fixture.CreateDataset("Test 1", PublisherId);
+            Guid childId = fixture.CreateDataset("Test 2", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            FileState parentState = storage.GetFileState(parentId, accessPolicy)!;
+            DcatDataset parentDataset = DcatDataset.Parse(parentState.Content!)!;
+            parentDataset.IsSerie = true;
+            storage.InsertFile(parentDataset.ToString(), parentState.Metadata, true, accessPolicy);
+
+            FileState partState = storage.GetFileState(childId, accessPolicy)!;
+            DcatDataset partDataset = DcatDataset.Parse(partState.Content!)!;
+            partDataset.IsPartOf = parentDataset.Uri;
+            partDataset.IsPartOfInternalId = parentState.Metadata.Id.ToString();
+            storage.InsertFile(partDataset.ToString(), partState.Metadata, true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            using HttpResponseMessage response = await client.DeleteAsync($"/datasets?id={HttpUtility.UrlEncode(childId.ToString())}");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            Assert.NotNull(storage.GetFileMetadata(parentId, accessPolicy));
+            Assert.Null(storage.GetFileMetadata(childId, accessPolicy));
         }
     }
 }

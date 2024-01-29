@@ -25,7 +25,12 @@ namespace DocumentStorageApi.Test
         private void CreateFile(FileState state)
         {
             bool isPublic = Storage.ShouldBePublic(state.Metadata);
-            string filePath = Path.Combine(path, isPublic ? "public" : "protected", state.Metadata.Id.ToString("N") + (isPublic ? ".ttl" : string.Empty));
+            string folder = Path.Combine(path, Storage.GetDefaultSubfolderName(state.Metadata));
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+            string filePath = Path.Combine(folder, state.Metadata.Id.ToString("N") + (isPublic ? ".ttl" : string.Empty));
             string metadataPath = Path.Combine(path, "protected", state.Metadata.Id.ToString("N") + ".metadata");
             File.WriteAllText(filePath, state.Content);
             state.Metadata.SaveTo(metadataPath);

@@ -200,6 +200,18 @@ namespace NkodSk.Abstractions
             set => SetBooleanToUriNode("custom:isSerie", value);
         }
 
+        public DateTimeOffset? Issued 
+        {
+            get => GetDateTimeFromUriNode("dct:issued");
+            set => SetDateTimeToUriNode("dct:issued", value);
+        }
+
+        public DateTimeOffset? Modified
+        {
+            get => GetDateTimeFromUriNode("dct:modified");
+            set => SetDateTimeToUriNode("dct:modified", value);
+        }
+
         public IEnumerable<Uri> Distributions => GetUrisFromUriNode("dcat:distribution");
 
         public static DcatDataset Create()
