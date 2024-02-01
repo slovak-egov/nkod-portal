@@ -14,6 +14,7 @@ using System.Runtime;
 using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
+using VDS.RDF.Query.Expressions.Functions.Sparql.String;
 using static Lucene.Net.Queries.Function.ValueSources.MultiFunction;
 using static Lucene.Net.Search.FieldValueHitQueue;
 

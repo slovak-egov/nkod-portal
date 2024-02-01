@@ -211,8 +211,8 @@ namespace Frontend.Test
                 IReadOnlyList<IElementHandle> results = await Page.QuerySelectorAllAsync("[data-testid='sr-result']");
                 Assert.AreEqual(2, results.Count);
 
-                await AssertResult(results[0], d1, "Test 1", "Test Publisher 1");
-                await AssertResult(results[1], d2, "Test 2", "Test Publisher 2");                
+                await AssertResult(results[1], d1, "Test 1", "Test Publisher 1");
+                await AssertResult(results[0], d2, "Test 2", "Test Publisher 2");                
             }
 
             async Task CheckFilters(bool checkPublisher1, bool checkPublisher2)

@@ -1,5 +1,7 @@
 ﻿using Abstractions;
+using AngleSharp.Dom;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using NkodSk.Abstractions;
 using NkodSk.RdfFileStorage;
@@ -13,6 +15,8 @@ using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using TestBase;
+using VDS.RDF;
+using VDS.RDF.Parsing;
 using VDS.RDF.Query.Algebra;
 using static Lucene.Net.Documents.Field;
 
@@ -336,6 +340,22 @@ namespace WebApi.Test
             Assert.Equal(2, result.TotalCount);
             Assert.Equal(2, result.Items.Count);
             Assert.Equal(new[] { id3, id2 }, result.Items.Select(i => i.Id));
+        }
+
+        [Fact]
+        public async Task FilterByNonExistingIdTest()
+        {
+            string path = fixture.GetStoragePath();
+
+            Guid id = fixture.CreateDataset("Cestovné poriadky", PublisherId);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView> result = await client.SearchDatasets(JsonContent.Create(new { Filters = new Dictionary<string, string[]> { { "id", new[] { "test" } } } }));
+            Assert.Equal(0, result.TotalCount);
+            Assert.Empty(result.Items);
         }
 
         [Fact]
@@ -920,6 +940,90 @@ namespace WebApi.Test
             Assert.Equal(new CodelistItemView("http://www.iana.org/assignments/media-types/text/csv", "CSV"), distribution.MediaTypeValue);
             Assert.Equal(new CodelistItemView("http://www.iana.org/assignments/media-types/application/zip", "ZIP"), distribution.CompressFormatValue);
             Assert.Equal(new CodelistItemView("http://www.iana.org/assignments/media-types/application/zip", "ZIP"), distribution.PackageFormatValue);
+        }
+
+        [Fact]
+        public async Task DereferenceByDatasetUriShouldBeRedirected()
+        {
+            string path = fixture.GetStoragePath();
+
+            Uri uri = new Uri($"https://data.gov.sk/set/{Guid.NewGuid()}");
+
+            IGraph graph = new VDS.RDF.Graph();
+            RdfDocument.AddDefaultNamespaces(graph);
+            IUriNode subject = graph.CreateUriNode(uri);
+            IUriNode rdfTypeNode = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode targetTypeNode = graph.CreateUriNode("dcat:Dataset");
+            graph.Assert(subject, rdfTypeNode, targetTypeNode);
+            DcatDataset dataset = new DcatDataset(graph, subject);
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = dataset.UpdateMetadata(true);
+            storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            using HttpResponseMessage response = await client.GetAsync(uri.PathAndQuery);
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.NotNull(response.Headers.Location);
+            Assert.Equal("/datasety/" + metadata.Id.ToString(), response.Headers.Location.OriginalString);
+        }
+
+        [Fact]
+        public async Task DereferenceByDistributionUriShouldBeRedirected()
+        {
+            string path = fixture.GetStoragePath();
+
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            Uri uri = new Uri($"https://data.gov.sk/set/{Guid.NewGuid()}/{Guid.NewGuid()}");
+
+            IGraph graph = new VDS.RDF.Graph();
+            RdfDocument.AddDefaultNamespaces(graph);
+            IUriNode subject = graph.CreateUriNode(uri);
+            IUriNode rdfTypeNode = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode targetTypeNode = graph.CreateUriNode("dcat:Distribution");
+            graph.Assert(subject, rdfTypeNode, targetTypeNode);
+            DcatDistribution distribution = new DcatDistribution(graph, subject);
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = distribution.UpdateMetadata(datasetId, PublisherId);
+            storage.InsertFile(distribution.ToString(), metadata, false, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            using HttpResponseMessage response = await client.GetAsync(uri.PathAndQuery);
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.NotNull(response.Headers.Location);
+            Assert.Equal("/datasety/" + datasetId.ToString(), response.Headers.Location.OriginalString);
+        }
+
+        [Fact]
+        public async Task DereferenceByLandingPageShouldBeRedirected()
+        {
+            string path = fixture.GetStoragePath();
+
+            Uri uri = new Uri($"https://data.gov.sk/dataset/{Guid.NewGuid()}");
+
+            DcatDataset dataset = DcatDataset.Create();
+            dataset.LandingPage = uri;
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = dataset.UpdateMetadata(true);
+            storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            using HttpResponseMessage response = await client.GetAsync(uri.PathAndQuery);
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.NotNull(response.Headers.Location);
+            Assert.Equal("/datasety/" + metadata.Id.ToString(), response.Headers.Location.OriginalString);
         }
     }
 }

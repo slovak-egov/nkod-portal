@@ -27,8 +27,7 @@ export function Footer() {
                                             href="https://wiki.vicepremier.gov.sk/display/opendata/Podpora+pre+data.slovensko.sk"
                                         >
                                             {t('technicalSupport')}
-                                        </a>
-
+                                        </a>{' '}
                                         <a
                                             className="govuk-link"
                                             title={t('promptForDataPublishing')}

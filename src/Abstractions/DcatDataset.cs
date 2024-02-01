@@ -26,6 +26,10 @@ namespace NkodSk.Abstractions
 
         private Guid? createdId;
 
+        private DateTimeOffset? issued;
+
+        private DateTimeOffset? modified;
+
         public DcatDataset(IGraph graph, IUriNode node) : base(graph, node)
         {
         }
@@ -200,16 +204,24 @@ namespace NkodSk.Abstractions
             set => SetBooleanToUriNode("custom:isSerie", value);
         }
 
-        public DateTimeOffset? Issued 
+        public DateTimeOffset? Issued
         {
-            get => GetDateTimeFromUriNode("dct:issued");
-            set => SetDateTimeToUriNode("dct:issued", value);
+            get => issued ?? GetDateTimeFromUriNode("dct:issued");
+            set
+            {
+                issued = value;
+                SetDateTimeToUriNode("dct:issued", value);
+            }
         }
 
         public DateTimeOffset? Modified
         {
-            get => GetDateTimeFromUriNode("dct:modified");
-            set => SetDateTimeToUriNode("dct:modified", value);
+            get => modified ?? GetDateTimeFromUriNode("dct:modified");
+            set
+            {
+                modified = value;
+                SetDateTimeToUriNode("dct:modified", value);
+            }
         }
 
         public IEnumerable<Uri> Distributions => GetUrisFromUriNode("dcat:distribution");
@@ -227,8 +239,9 @@ namespace NkodSk.Abstractions
             graph.Assert(subject, rdfTypeNode, targetTypeNode);
             DcatDataset dataset = new DcatDataset(graph, subject);
             dataset.createdId = id;
-            dataset.Issued = DateTimeOffset.UtcNow;
-            dataset.Modified = DateTimeOffset.UtcNow;
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            dataset.Issued = now;
+            dataset.Modified = now;
             return dataset;
         }
 
@@ -255,6 +268,11 @@ namespace NkodSk.Abstractions
             values[AccrualPeriodicityCodelist] = AccrualPeriodicity is not null ? new[] { AccrualPeriodicity.ToString() } : Array.Empty<string>();
             values["serie"] = new string[] { IsSerie ? "1" : "0" };
             values["key"] = new string[] { Uri.ToString() };
+            
+            if (LandingPage is not null)
+            {
+                values["landingPage"] = new string[] { LandingPage.ToString() };
+            }
 
             if (IsHarvested)
             {
@@ -275,11 +293,11 @@ namespace NkodSk.Abstractions
             LanguageDependedTexts names = GetLiteralNodesFromUriNode("dct:title").ToArray();
             if (metadata is null)
             {
-                metadata = new FileMetadata(id, names, FileType.DatasetRegistration, parentId, Publisher?.ToString(), isPublic, null, now, now, values);
+                metadata = new FileMetadata(id, names, FileType.DatasetRegistration, parentId, Publisher?.ToString(), isPublic, null, Issued ?? now, Modified ?? now, values);
             }
             else
             {
-                metadata = metadata with { Name = names, ParentFile = parentId, Publisher = Publisher?.ToString(), IsPublic = isPublic, AdditionalValues = values, LastModified = now };
+                metadata = metadata with { Name = names, ParentFile = parentId, Publisher = Publisher?.ToString(), IsPublic = isPublic, AdditionalValues = values, LastModified = modified ?? now };
             }
             return metadata;
         }

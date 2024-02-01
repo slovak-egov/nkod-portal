@@ -217,12 +217,12 @@ FileStorageQuery MapQuery(AbstractQuery query, string language, bool allowAll = 
         pageSize = null;
     }
 
-    FileStorageOrderProperty? orderProperty = query.OrderBy?.ToLowerInvariant() switch
+    FileStorageOrderDefinition? orderDefinition = query.OrderBy?.ToLowerInvariant() switch
     {
-        "name" => FileStorageOrderProperty.Name,
-        "relevance" => FileStorageOrderProperty.Revelance,
-        "created" => FileStorageOrderProperty.Created,
-        "modified" => FileStorageOrderProperty.LastModified,
+        "name" => new FileStorageOrderDefinition(FileStorageOrderProperty.Name, false),
+        "relevance" => new FileStorageOrderDefinition(FileStorageOrderProperty.Revelance, false),
+        "created" => new FileStorageOrderDefinition(FileStorageOrderProperty.Created, true),
+        "modified" => new FileStorageOrderDefinition(FileStorageOrderProperty.LastModified, true),
         _ => null
     };
 
@@ -232,7 +232,7 @@ FileStorageQuery MapQuery(AbstractQuery query, string language, bool allowAll = 
         IncludeDependentFiles = true,
         SkipResults = pageSize.HasValue ? (page - 1) * pageSize.Value : 0,
         MaxResults = pageSize,
-        OrderDefinitions = orderProperty.HasValue ? new List<FileStorageOrderDefinition> { new FileStorageOrderDefinition(orderProperty.Value, false) } : null,
+        OrderDefinitions = orderDefinition.HasValue ? new List<FileStorageOrderDefinition> { orderDefinition.Value } : null,
         RequiredFacets = query.RequiredFacets,
         Language = language
     };
@@ -419,12 +419,23 @@ app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServi
         bool isAuthenticated = user?.Identity?.IsAuthenticated ?? false;
 
         string language = query.Language ?? "sk";
-        FileStorageResponse storageResponse = await GetStorageResponse(query, language, q =>
+
+        FileStorageResponse storageResponse;
+
+        try
         {
-            q.OnlyTypes = new List<FileType> { FileType.DatasetRegistration };
-            q.IncludeDependentFiles = true;
-            return q;
-        }, client, isAuthenticated).ConfigureAwait(false);
+            storageResponse = await GetStorageResponse(query, language, q =>
+            {
+                q.OnlyTypes = new List<FileType> { FileType.DatasetRegistration };
+                q.IncludeDependentFiles = true;
+                return q;
+            }, client, isAuthenticated).ConfigureAwait(false);
+        } 
+        catch (BadHttpRequestException e)
+        {
+            storageResponse = new FileStorageResponse(new List<FileState>(), 0, new List<Facet>());
+        }
+
         AbstractResponse<DatasetView> response = new AbstractResponse<DatasetView>
         {
             TotalCount = storageResponse.TotalCount,
@@ -2216,6 +2227,59 @@ app.Use(async (context, next) =>
         return;
     }
     context.Response.Redirect(context.Request.GetUri().ToString());
+    return;
+});
+
+app.Use(async (context, next) =>
+{
+    if (context.GetEndpoint() is null)
+    {
+        string path = context.Request.Path.Value ?? string.Empty;
+        if (path.StartsWith("/set/") || path.StartsWith("/dataset/"))
+        {
+            IDocumentStorageClient client = context.RequestServices.GetRequiredService<IDocumentStorageClient>();
+
+            UriBuilder uriBuilder = new UriBuilder();
+            uriBuilder.Scheme = "https";
+            uriBuilder.Host = "data.gov.sk";
+            uriBuilder.Path = path;
+            Uri uri = uriBuilder.Uri;
+
+            FileStorageQuery query = new FileStorageQuery
+            {
+                MaxResults = 1,
+                OnlyTypes = new List<FileType> { FileType.DatasetRegistration, FileType.DistributionRegistration },
+                AdditionalFilters = new Dictionary<string, string[]>(),
+            };
+
+            if (path.StartsWith("/set/"))
+            {
+                query.AdditionalFilters["key"] = new[] { uri.ToString() };
+            }
+            else if (path.StartsWith("/dataset"))
+            {
+                query.AdditionalFilters["landingPage"] = new[] { uri.ToString() };
+            }
+
+            FileStorageResponse response = await client.GetFileStates(query);
+            if (response.Files.Count >= 1)
+            {
+                FileState state = response.Files[0];
+                if (state.Metadata.Type == FileType.DatasetRegistration)
+                {
+                    context.Response.Redirect($"/datasety/{state.Metadata.Id}");
+                    return;
+                } 
+                else if (state.Metadata.Type == FileType.DistributionRegistration && state.Metadata.ParentFile.HasValue)
+                {
+                    context.Response.Redirect($"/datasety/{state.Metadata.ParentFile.Value}");
+                    return;
+                }
+            }
+        }
+    }
+
+    await next(context);
     return;
 });
 

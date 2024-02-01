@@ -201,7 +201,7 @@ export default function SearchResults(props: Props) {
                         <SearchBar
                             value={props.query.queryText}
                             data-testid="sr-query"
-                            onChange={(e) => props.setQueryParameters({ queryText: e.target.value })}
+                            onChange={(e) => props.setQueryParameters({ queryText: e.target.value, page: 1 })}
                         />
                     </div>
 

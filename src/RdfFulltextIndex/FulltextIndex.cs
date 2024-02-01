@@ -111,7 +111,7 @@ namespace NkodSk.RdfFulltextIndex
                                 }
                                 description += string.Join(" ", dataset.GetKeywords(lang));
 
-                                doc.AddTextField("title", title, Lucene.Net.Documents.Field.Store.NO);
+                                doc.AddTextField("title", title, Lucene.Net.Documents.Field.Store.NO).Boost = 2;
                                 doc.AddTextField("description", description, Lucene.Net.Documents.Field.Store.NO);
 
                                 doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
@@ -134,7 +134,7 @@ namespace NkodSk.RdfFulltextIndex
                                 string title = catalog.GetTitle(lang) ?? string.Empty;
                                 string description = catalog.GetDescription(lang) ?? string.Empty;
 
-                                doc.AddTextField("title", title, Lucene.Net.Documents.Field.Store.NO);
+                                doc.AddTextField("title", title, Lucene.Net.Documents.Field.Store.NO).Boost = 2;
                                 doc.AddTextField("description", description, Lucene.Net.Documents.Field.Store.NO);
                                 doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
 
@@ -155,7 +155,7 @@ namespace NkodSk.RdfFulltextIndex
 
                                 string title = agent.GetName(lang) ?? string.Empty;
 
-                                doc.AddTextField("title", title, Lucene.Net.Documents.Field.Store.NO);
+                                doc.AddTextField("title", title, Lucene.Net.Documents.Field.Store.NO).Boost = 2;
                                 doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
 
                                 indexWriter.AddDocument(facetsConfig.Build(taxonomyWriter, doc));
@@ -234,32 +234,6 @@ namespace NkodSk.RdfFulltextIndex
                 booleanClauses.Add(textQueries, Occur.MUST);
             }
 
-            if (externalQuery.OnlyTypes is not null && externalQuery.OnlyTypes.Count > 0)
-            {
-                //BooleanQuery valueQuery = new BooleanQuery();
-                //foreach (FileType fileType in externalQuery.OnlyTypes)
-                //{
-                //    valueQuery.Add(new TermQuery(new Term("type", Enum.GetName(fileType))), Occur.SHOULD);
-                //}
-                //booleanClauses.Add(valueQuery, Occur.MUST);
-            }
-
-            if (externalQuery.AdditionalFilters is not null)
-            {
-                //foreach ((string key, string[] values) in externalQuery.AdditionalFilters)
-                //{
-                //    if (values.Length > 0)
-                //    {
-                //        BooleanQuery valueQuery = new BooleanQuery();
-                //        foreach (string value in values)
-                //        {
-                //            valueQuery.Add(new TermQuery(new Term(key, value)), Occur.SHOULD);
-                //        }
-                //        booleanClauses.Add(valueQuery, Occur.MUST);
-                //    }
-                //}
-            }
-
             if (externalQuery.DateTo.HasValue)
             {
                 booleanClauses.Add(TermRangeQuery.NewStringRange("startDate", null, externalQuery.DateTo.Value.ToString("yyyyMMdd"), true, true), Occur.MUST);
@@ -271,15 +245,14 @@ namespace NkodSk.RdfFulltextIndex
             }
 
             FacetsCollector facetsCollector = new FacetsCollector();
-            int maxResults = externalQuery.MaxResults.GetValueOrDefault(int.MaxValue);
-            TopDocs topDocs = FacetsCollector.Search(indexSearcher, booleanClauses, externalQuery.SkipResults + maxResults, facetsCollector);
+            TopDocs topDocs = FacetsCollector.Search(indexSearcher, booleanClauses, 50000, facetsCollector);
 
             FulltextResponse response = new FulltextResponse
             {
                 TotalCount = topDocs.TotalHits
             };
 
-            for (int i = 0; i < maxResults; i++)
+            for (int i = 0;; i++)
             {
                 int index = externalQuery.SkipResults + i;
                 if (index < topDocs.ScoreDocs.Length)

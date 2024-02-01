@@ -1545,44 +1545,6 @@ namespace RdfFileStorage.Test
         }
 
         [Fact]
-        public void FilesShouldBeOrderedByLastModifiedAsc()
-        {
-            Storage storage = new Storage(fixture.GetStoragePath());
-
-            FileStorageQuery query = new FileStorageQuery
-            {
-                OrderDefinitions = new List<FileStorageOrderDefinition> { new FileStorageOrderDefinition(FileStorageOrderProperty.LastModified, false) }
-            };
-            FileStorageResponse response = storage.GetFileStates(query, StaticAccessPolicy.Allow);
-
-            List<FileState> expectedFiles = fixture.ExistingStates
-                .OrderBy(f => f.Metadata.LastModified)
-                .ToList();
-
-            Assert.Equal(expectedFiles.Count, response.TotalCount);
-            Assert.Equal(expectedFiles, response.Files);
-        }
-
-        [Fact]
-        public void FilesShouldBeOrderedByLastModifiedDesc()
-        {
-            Storage storage = new Storage(fixture.GetStoragePath());
-
-            FileStorageQuery query = new FileStorageQuery
-            {
-                OrderDefinitions = new List<FileStorageOrderDefinition> { new FileStorageOrderDefinition(FileStorageOrderProperty.LastModified, true) }
-            };
-            FileStorageResponse response = storage.GetFileStates(query, StaticAccessPolicy.Allow);
-
-            List<FileState> expectedFiles = fixture.ExistingStates
-                .OrderByDescending(f => f.Metadata.LastModified)
-                .ToList();
-
-            Assert.Equal(expectedFiles.Count, response.TotalCount);
-            Assert.Equal(expectedFiles, response.Files);
-        }
-
-        [Fact]
         public void FilesShouldBeOrderedByNameAsc()
         {
             Storage storage = new Storage(fixture.GetStoragePath());
@@ -1854,6 +1816,36 @@ namespace RdfFileStorage.Test
 
             Assert.Equal(1, response.TotalCount);
             Assert.Equal(new[] { new FileState(metadata2, content) }, response.Files);
+        }
+
+        [Fact]
+        public void TestSortByLastModified()
+        {
+            Storage storage = new Storage(fixture.GetStoragePath(insertContent: false));
+
+            DateTimeOffset created = DateTimeOffset.UtcNow;
+
+            FileMetadata m1 = new FileMetadata(Guid.NewGuid(), new LanguageDependedTexts { { "sk", "Test" } }, FileType.DatasetRegistration, null, null, true, null, created, created.AddMinutes(-5));
+
+            FileMetadata m3 = new FileMetadata(Guid.NewGuid(), new LanguageDependedTexts { { "sk", "Test" } }, FileType.DatasetRegistration, null, null, true, null, created, created.AddMinutes(-10));
+
+            FileMetadata m4 = new FileMetadata(Guid.NewGuid(), new LanguageDependedTexts { { "sk", "Test" } }, FileType.DatasetRegistration, null, null, true, null, created, created.AddMinutes(-3));
+
+            storage.InsertFile("test", m1, false, StaticAccessPolicy.Allow);
+            storage.InsertFile("test", m3, false, StaticAccessPolicy.Allow);
+            storage.InsertFile("test", m4, false, StaticAccessPolicy.Allow);
+
+            FileStorageQuery query = new FileStorageQuery { OrderDefinitions = new List<FileStorageOrderDefinition> { new FileStorageOrderDefinition { Property = FileStorageOrderProperty.LastModified, ReverseOrder = true } } };
+            FileStorageResponse response = storage.GetFileStates(query, StaticAccessPolicy.Allow);
+
+            Assert.Equal(3, response.TotalCount);
+            Assert.Equal(new[] { m4.Id, m1.Id, m3.Id }, response.Files.Select(f => f.Metadata.Id).ToArray());
+
+            query.OrderDefinitions = new List<FileStorageOrderDefinition> { new FileStorageOrderDefinition { Property = FileStorageOrderProperty.LastModified } };
+            response = storage.GetFileStates(query, StaticAccessPolicy.Allow);
+
+            Assert.Equal(3, response.TotalCount);
+            Assert.Equal(new[] { m3.Id, m1.Id, m4.Id }, response.Files.Select(f => f.Metadata.Id).ToArray());
         }
     }
 }

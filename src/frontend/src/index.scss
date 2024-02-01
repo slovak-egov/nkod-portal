@@ -1,8 +1,8 @@
-$idsk-assets-path: "~/idsk-assets/";
-$govuk-assets-path: "~/idsk-assets/";
-$govuk-link-visited-colour: #0065B3;
+$idsk-assets-path: '~/idsk-assets/';
+$govuk-assets-path: '~/idsk-assets/';
+$govuk-link-visited-colour: #0065b3;
 
-@import  '@id-sk/frontend/idsk/all';  
+@import '@id-sk/frontend/idsk/all';
 
 body {
     margin: 0;
@@ -29,7 +29,7 @@ body {
 
         .nkod-entity-detail-tag {
             margin-right: 10px;
-            background: #DEE0E2;
+            background: #dee0e2;
             float: left;
             padding: 10px;
             border-bottom: 2px solid black;
@@ -43,11 +43,11 @@ body {
     margin-bottom: 50px;
 
     .nkod-detail-attribute-name {
-        font-weight: bold;    
-        color: #2B8CC4;
+        font-weight: bold;
+        color: #2b8cc4;
         margin: 0 0 10px 0;
     }
-    
+
     .nkod-detail-attribute-value {
         margin: 0;
     }
@@ -70,7 +70,7 @@ body {
             vertical-align: middle;
         }
     }
-    
+
     .nkod-detail-distribution-url {
         margin: 0;
     }
@@ -89,4 +89,42 @@ body {
 .nkod-current-page {
     background-color: #1d70b8;
     color: white;
+}
+
+.govuk-accordion__icon {
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    width: 16px;
+    height: 16px;
+    margin-top: -8px;
+}
+
+.govuk-accordion__icon:after,
+.govuk-accordion__icon:before {
+    content: '';
+    box-sizing: border-box;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 25%;
+    height: 25%;
+    margin: auto;
+    border: 2px solid transparent;
+    background-color: govuk-colour('black');
+}
+
+.govuk-accordion__icon:before {
+    width: 100%;
+}
+
+.govuk-accordion__icon:after {
+    height: 100%;
+}
+
+.expanded .govuk-accordion__icon:after {
+    content: ' ';
+    display: none;
 }

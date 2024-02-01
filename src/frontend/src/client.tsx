@@ -230,6 +230,10 @@ type TermsOfUse = {
     originalDatabaseType: string | null;
     databaseProtectedBySpecialRightsType: string | null;
     personalDataContainmentType: string | null;
+    authorsWorkTypeValue: CodelistValue | null;
+    originalDatabaseTypeValue: CodelistValue | null;
+    databaseProtectedBySpecialRightsTypeValue: CodelistValue | null;
+    personalDataContainmentTypeValue: CodelistValue | null;
 };
 
 export type Distribution = {
@@ -241,9 +245,12 @@ export type Distribution = {
     format: string | null;
     formatValue: CodelistValue | null;
     mediaType: string | null;
+    mediaTypeValue: CodelistValue | null;
     conformsTo: string | null;
     compressFormat: string | null;
+    compressFormatValue: CodelistValue | null;
     packageFormat: string | null;
+    packageFormatValue: CodelistValue | null;
     title: string | null;
     titleAll: LanguageDependentTexts | null;
 };
@@ -482,7 +489,7 @@ export function useDatasets(initialQuery?: Partial<RequestQuery>) {
         };
     }
 
-    return useEntities<Dataset>('datasets/search', { orderBy: 'created', ...defaultParams });
+    return useEntities<Dataset>('datasets/search', { orderBy: 'modified', ...defaultParams });
 }
 
 export function useLocalCatalogs(initialQuery?: Partial<RequestQuery>) {

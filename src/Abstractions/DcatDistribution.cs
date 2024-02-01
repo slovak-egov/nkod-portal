@@ -147,6 +147,8 @@ namespace NkodSk.Abstractions
             DateTimeOffset now = DateTimeOffset.UtcNow;
             Dictionary<string, string[]> values = new Dictionary<string, string[]>();
 
+            values["key"] = new string[] { Uri.ToString() };
+
             if (IsHarvested)
             {
                 values["Harvested"] = new string[] { "true" };

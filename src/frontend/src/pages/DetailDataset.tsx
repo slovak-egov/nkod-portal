@@ -12,12 +12,14 @@ import { useDataset, useDatasets, useDocumentTitle } from '../client';
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useEffect } from 'react';
+import DistributionRow from '../components/DistributionRow';
+import IdSkModule from '../components/IdSkModule';
 
 export default function DetailDataset() {
     const [dataset, loading, error] = useDataset();
     const { id } = useParams();
-    const [datasetsAsSibling, datasetsAsSiblingQuery, setDatasetsAsSiblingQuery] = useDatasets({ page: 0 });
-    const [datasetsAsParent, datasetsAsParentQuery, setDatasetsAsParentQuery] = useDatasets({ page: 0 });
+    const [datasetsAsSibling, datasetsAsSiblingQuery, setDatasetsAsSiblingQuery] = useDatasets({ page: 0, orderBy: 'name' });
+    const [datasetsAsParent, datasetsAsParentQuery, setDatasetsAsParentQuery] = useDatasets({ page: 0, orderBy: 'name' });
     const { t } = useTranslation();
     useDocumentTitle(dataset?.name ?? '');
 
@@ -138,7 +140,7 @@ export default function DetailDataset() {
                                 {dataset.specification ? (
                                     <GridColumn widthUnits={1} totalUnits={4}>
                                         <div className="nkod-detail-attribute">
-                                            <div className="govuk-body nkod-detail-attribute-name">{t('specification')}</div>
+                                            <div className="govuk-body nkod-detail-attribute-name">{t('specificationLink')}</div>
                                             <div
                                                 className="govuk-body nkod-detail-attribute-value"
                                                 data-testid="specification"
@@ -147,16 +149,6 @@ export default function DetailDataset() {
                                                 <a href={dataset.specification} className="govuk-link">
                                                     {t('show')}
                                                 </a>
-                                            </div>
-                                        </div>
-                                    </GridColumn>
-                                ) : null}
-                                {dataset.accrualPeriodicityValue ? (
-                                    <GridColumn widthUnits={1} totalUnits={4}>
-                                        <div className="nkod-detail-attribute">
-                                            <div className="govuk-body nkod-detail-attribute-name">{t('updateFrequency')}</div>
-                                            <div className="govuk-body nkod-detail-attribute-value" data-testid="update-frequency">
-                                                {dataset.accrualPeriodicityValue.label}
                                             </div>
                                         </div>
                                     </GridColumn>
@@ -183,6 +175,14 @@ export default function DetailDataset() {
                             </GridRow>
                             <GridRow>
                                 <GridColumn widthUnits={1} totalUnits={4}>
+                                    {dataset.accrualPeriodicityValue ? (
+                                        <div className="nkod-detail-attribute">
+                                            <div className="govuk-body nkod-detail-attribute-name">{t('updateFrequency')}</div>
+                                            <div className="govuk-body nkod-detail-attribute-value" data-testid="update-frequency">
+                                                {dataset.accrualPeriodicityValue.label}
+                                            </div>
+                                        </div>
+                                    ) : null}
                                     {dataset.spatialValues.length > 0 ? (
                                         <div className="nkod-detail-attribute">
                                             <div className="govuk-body nkod-detail-attribute-name">{t('spatialValidity')}</div>
@@ -237,24 +237,9 @@ export default function DetailDataset() {
                                                 ? t('distribution2-4')
                                                 : t('distribution5')}
                                         </div>
-                                        <hr className="idsk-crossroad-line" aria-hidden="true" />
-                                        {dataset.distributions.map((distrubution) => (
-                                            <div key={distrubution.id} className="govuk-body nkod-detail-distribution-row" data-testid="distribution">
-                                                <div style={{ display: 'flex' }}>
-                                                    <FileIcon format={distrubution.formatValue?.label ?? ''} />
-                                                    <span
-                                                        className="govuk-body nkod-detail-distribution-url"
-                                                        style={{ lineHeight: '20px', paddingTop: '20px' }}
-                                                    >
-                                                        {distrubution.downloadUrl ? (
-                                                            <a href={distrubution.downloadUrl} className="govuk-link">
-                                                                {distrubution.title && distrubution.title.trim().length > 0 ? distrubution.title : dataset.name}
-                                                            </a>
-                                                        ) : null}
-                                                    </span>
-                                                </div>
-                                                <hr className="idsk-crossroad-line" aria-hidden="true" />
-                                            </div>
+                                        <hr className="govuk-line" aria-hidden="true" />
+                                        {dataset.distributions.map((distribution) => (
+                                            <DistributionRow key={distribution.id} distribution={distribution} dataset={dataset} />
                                         ))}
                                     </GridColumn>
                                 ) : null}

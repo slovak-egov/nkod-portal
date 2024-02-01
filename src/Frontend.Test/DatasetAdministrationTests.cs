@@ -537,7 +537,7 @@ namespace Frontend.Test
             await Page.OpenDatasetsAdmin();
             await Page.RunAndWaitForDatasetEdit(id, async () =>
             {
-                await Page.ClickOnTableButton(1, "Upraviť");
+                await Page.ClickOnTableButton(0, "Upraviť");
             });
 
             await Page.RunAndWaitForDatasetList(async () =>
@@ -608,7 +608,7 @@ namespace Frontend.Test
             await Page.OpenDatasetsAdmin();
             await Page.RunAndWaitForDatasetEdit(id, async () =>
             {
-                await Page.ClickOnTableButton(1, "Upraviť");
+                await Page.ClickOnTableButton(0, "Upraviť");
             });
 
             dataset.IsPartOf = null;
@@ -680,7 +680,7 @@ namespace Frontend.Test
             await Page.OpenDatasetsAdmin();
             await Page.RunAndWaitForDatasetEdit(id, async () =>
             {
-                await Page.ClickOnTableButton(1, "Upraviť");
+                await Page.ClickOnTableButton(0, "Upraviť");
             });
 
             dataset.IsPartOf = new Uri($"https://data.gov.sk/set/{serieId}");
@@ -852,7 +852,7 @@ namespace Frontend.Test
             Page.Dialog += (_, dialog) => dialog.AcceptAsync();
             await Page.RunAndWaitForRequests(async () =>
             {
-                await Page.ClickOnTableButton(0, "Odstrániť");
+                await Page.ClickOnTableButton(1, "Odstrániť");
             }, new List<string> { "datasets" });
 
             await Page.AssertTableRowsCount(2);

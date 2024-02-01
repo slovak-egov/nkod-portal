@@ -215,5 +215,9 @@
     "newPublisher": "Nový poskytovateľ dát",
     "editPublisher": "Upraviť poskytovateľa dát",
     "promptForDataPublishing": "Podnety na zverejnenie údajov",
-    "landingPage": "Domovská webová stránka"
+    "landingPage": "Domovská webová stránka",
+    "dataSerie": "Dátová séria",
+    "openAll": "otvoriť všetky",
+    "closeAll": "zatvoriť všetky",
+    "byDateModified": "Dátumu aktualizácie"
 }

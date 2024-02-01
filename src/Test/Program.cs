@@ -193,6 +193,11 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Agent"
     string content = File.ReadAllText(path);
     FoafAgent catalog = FoafAgent.Parse(content)!;
 
+    if (catalog.LegalForm is null)
+    {
+        catalog.LegalForm = new Uri("https://data.gov.sk/def/legal-form-type/995");
+    }
+
     Guid id = Guid.NewGuid();
 
     publishers.Add(catalog.Uri.ToString());
@@ -384,6 +389,18 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Datase
 
     FileMetadata metadata = catalog.UpdateMetadata(catalog.Distributions.Any());
 
+    metadata = metadata with { Created = catalog.Issued ?? new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero), LastModified = catalog.Modified ?? new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero) };
+
+    if (catalog.Issued.HasValue)
+    {
+        metadata = metadata with { Created = catalog.Issued.Value };
+    }
+
+    if (catalog.Modified.HasValue)
+    {
+        metadata = metadata with { LastModified = catalog.Modified.Value };
+    }
+
     Match m = Regex.Match(catalog.Uri.ToString(), "^https://data.gov.sk/set/(.+)$");
     if (m.Success && m.Groups.Count >= 2 && Guid.TryParse(m.Groups[1].Value, out Guid id))
     {
@@ -411,9 +428,22 @@ foreach ((Guid childId, Uri parentUri) in datasetPartOf)
 {
     if (datasetMetadataByUri.TryGetValue(parentUri, out FileMetadata? parentMetadata) && datasetMetadatas.TryGetValue(childId, out FileMetadata? childMetadata))
     {
-        childMetadata = childMetadata with { ParentFile = parentMetadata.Id };
-        storage.UpdateMetadata(childMetadata, accessPolicy);
+        FileState state = storage.GetFileState(childMetadata.Id, accessPolicy)!;
+        DcatDataset child = DcatDataset.Parse(state.Content!)!;
+        child.IsPartOfInternalId = parentMetadata.Id.ToString();
+        childMetadata = child.UpdateMetadata(true, state.Metadata);
+        storage.InsertFile(child.ToString(), childMetadata, true, accessPolicy);
         datasetMetadatas[childId] = childMetadata;
+
+        FileState parentState = storage.GetFileState(parentMetadata.Id, accessPolicy)!;
+        DcatDataset parent = DcatDataset.Parse(parentState.Content!)!;
+        if (!parent.IsSerie)
+        {
+            parent.IsSerie = true;
+            parentMetadata = parent.UpdateMetadata(true, parentState.Metadata);
+            storage.InsertFile(parent.ToString(), parentMetadata, true, accessPolicy);
+            datasetMetadatas[parentMetadata.Id] = parentMetadata;
+        }
     }
     else
     {

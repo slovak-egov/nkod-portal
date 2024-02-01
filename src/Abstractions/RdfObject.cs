@@ -98,7 +98,12 @@ namespace NkodSk.Abstractions
             Dictionary<string, string> values = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
             foreach (ILiteralNode node in GetLiteralNodesFromUriNode(name))
             {
-                values[node.Language] = node.Value;
+                string lang = node.Language;
+                if (string.IsNullOrEmpty(lang))
+                {
+                    lang = "sk";
+                }
+                values[lang] = node.Value;
             }
             return values;
         }
@@ -108,10 +113,15 @@ namespace NkodSk.Abstractions
             Dictionary<string, List<string>> values = new Dictionary<string, List<string>>(StringComparer.CurrentCultureIgnoreCase);
             foreach (ILiteralNode node in GetLiteralNodesFromUriNode(name))
             {
-                if (!values.TryGetValue(node.Language, out List<string>? list))
+                string lang = node.Language;
+                if (string.IsNullOrEmpty(lang))
+                {
+                    lang = "sk";
+                }
+                if (!values.TryGetValue(lang, out List<string>? list))
                 {
                     list = new List<string>();
-                    values[node.Language] = list;
+                    values[lang] = list;
                 }
                 list.Add(node.Value);
             }
@@ -122,7 +132,7 @@ namespace NkodSk.Abstractions
         {
             IEnumerable<string> GetTexts(string language)
             {
-                return GetLiteralNodesFromUriNode(name).Where(n => n.Language == language).Select(n => n.Value);
+                return GetLiteralNodesFromUriNode(name).Where(n => n.Language == language || (language == "sk" && string.IsNullOrEmpty(n.Language))).Select(n => n.Value);
             }
 
             IEnumerable<string> texts = GetTexts(language);
