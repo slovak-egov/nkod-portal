@@ -260,7 +260,7 @@ namespace NkodSk.Abstractions
         {
             Guid id = metadata?.Id ?? createdId ?? Guid.NewGuid();
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            Dictionary<string, string[]> values = new Dictionary<string, string[]>();
+            Dictionary<string, string[]> values = metadata?.AdditionalValues ?? new Dictionary<string, string[]>();
             isPublic = isPublic && ShouldBePublic;
 
             values[TypeCodelist] = Type.Select(v => v.ToString()).ToArray();
@@ -273,10 +273,18 @@ namespace NkodSk.Abstractions
             {
                 values["landingPage"] = new string[] { LandingPage.ToString() };
             }
+            else
+            {
+                values.Remove("landingPage");
+            }
 
             if (IsHarvested)
             {
                 values["Harvested"] = new string[] { "true" };
+            }
+            else
+            {
+                values.Remove("Harvested");
             }
 
             foreach ((string language, List<string> texts) in Keywords)

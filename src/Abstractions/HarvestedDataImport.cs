@@ -174,7 +174,17 @@ namespace NkodSk.Abstractions
                         catalog is null,
                         DcatDataset.Parse,
                         () => catalog?.Uri is not null ? sparqlClient.GetDatasets(catalog.Uri) : Task.FromResult(new List<DcatDataset>()),
-                        (d, m) => d.UpdateMetadata(true, m),
+                        (d, m) =>
+                        {
+                            m = d.UpdateMetadata(true, m);
+                            Dictionary<string, string[]> additionalValues = m.AdditionalValues ?? new Dictionary<string, string[]>();
+                            if (catalog is not null)
+                            {
+                                additionalValues["localCatalog"] = new[] { state.Metadata.Id.ToString() };
+                            }
+                            m = m with { AdditionalValues = additionalValues };
+                            return m;
+                        },
                         () => Task.CompletedTask,
                         async (datasetMetadata, dataset) =>
                         {
