@@ -174,7 +174,7 @@ function App(props: Props) {
             >
                 <BrowserRouter>
                     <Alert type="warning" style={{ margin: 0 }}>
-                        Registrácia datasetov začína až 5.2.2024! Dovtedy použite <a href="https://data.gov.sk">data.gov.sk</a>.
+                        Registrácia datasetov začína až 12.2.2024! Dovtedy použite <a href="https://data.gov.sk">data.gov.sk</a>.
                     </Alert>
                     <Header />
                     <AppNavigator {...props} />
