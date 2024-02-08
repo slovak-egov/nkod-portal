@@ -51,9 +51,9 @@ export default function DistributionRow(props: Props) {
                 ) : null}
 
                 {distribution.termsOfUse?.personalDataContainmentTypeValue ? (
-                    <div>
+                    <p className="govuk-body">
                         {t('personalDataType')}: {distribution.termsOfUse.personalDataContainmentTypeValue.label}
-                    </div>
+                    </p>
                 ) : null}
 
                 {distribution.formatValue ? (

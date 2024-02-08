@@ -267,16 +267,10 @@ namespace WebApi.Test
 
         public void CreateDistributionCodelists()
         {
-            CreateCodelistFile(DcatDistribution.AuthorsWorkTypeCodelist, new Dictionary<string, LanguageDependedTexts>
+            CreateCodelistFile(DcatDistribution.LicenseCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "https://data.gov.sk/def/ontology/law/authorsWorkType/1", new LanguageDependedTexts{ { "sk", "work1sk" }, { "en", "work1en" } } },
-            });
-            CreateCodelistFile(DcatDistribution.OriginalDatabaseTypeCodelist, new Dictionary<string, LanguageDependedTexts>
-            {
-                { "https://data.gov.sk/def/ontology/law/originalDatabaseType/1", new LanguageDependedTexts{ { "sk", "type1sk" }, { "en", "type1en" } } }
-            });
-            CreateCodelistFile(DcatDistribution.DatabaseProtectedBySpecialRightsTypeCodelist, new Dictionary<string, LanguageDependedTexts>
-            {
+                { "https://data.gov.sk/def/ontology/law/originalDatabaseType/1", new LanguageDependedTexts{ { "sk", "type1sk" }, { "en", "type1en" } } },
                 { "https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1", new LanguageDependedTexts{ { "sk", "rights1sk" }, { "en", "rights1en" } } }
             });
             CreateCodelistFile(DcatDistribution.PersonalDataContainmentTypeCodelist, new Dictionary<string, LanguageDependedTexts>

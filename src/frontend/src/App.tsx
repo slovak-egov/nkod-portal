@@ -36,6 +36,7 @@ import Invitation from './pages/Invitation';
 import LoginInProgress from './pages/LoginInProgress';
 import EditPublisher from './pages/EditPublisher';
 import PublisherRegistration from './pages/PublisherRegistration';
+import ChangeLicenses from './pages/ChangeLicenses';
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -219,6 +220,8 @@ function App(props: Props) {
                                             <Route path="/sprava/lokalne-katalogy" Component={CatalogList} />
                                             <Route path="/sprava/lokalne-katalogy/pridat" Component={AddCatalog} />
                                             <Route path="/sprava/lokalne-katalogy/upravit/:id" Component={EditCatalog} />
+
+                                            <Route path="/sprava/zmena-licencii" Component={ChangeLicenses} />
                                         </>
                                     ) : null}
 

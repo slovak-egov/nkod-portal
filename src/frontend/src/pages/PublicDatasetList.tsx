@@ -4,7 +4,7 @@ import MainContent from '../components/MainContent';
 import GridRow from '../components/GridRow';
 import GridColumn from '../components/GridColumn';
 import { Link } from 'react-router-dom';
-import { useDatasets, useDocumentTitle } from '../client';
+import { knownCodelists, useDatasets, useDocumentTitle } from '../client';
 import SearchResults from '../components/SearchResults';
 import { useTranslation } from 'react-i18next';
 import multiIcon from '../icons/multi.png';
@@ -20,7 +20,9 @@ const codelistsKeys = [
     'http://publications.europa.eu/resource/authority/data-theme',
     'http://publications.europa.eu/resource/authority/file-type',
     'http://publications.europa.eu/resource/authority/frequency',
-    'keywords'
+    'keywords',
+    knownCodelists.distribution.license,
+    knownCodelists.distribution.personalDataContainmentType
 ];
 
 export default function PublicDatasetList() {

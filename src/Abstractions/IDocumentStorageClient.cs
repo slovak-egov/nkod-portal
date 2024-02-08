@@ -45,6 +45,7 @@ namespace NkodSk.Abstractions
                     FileStorageResponse response = await GetFileStates(query).ConfigureAwait(false);
 
                     datasetMetadata = dataset.UpdateMetadata(response.Files.Count > 0, datasetMetadata);
+                    datasetMetadata = DcatDistribution.ClearDatasetMetadata(datasetMetadata);
 
                     foreach (FileState state in response.Files)
                     {

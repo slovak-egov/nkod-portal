@@ -42,8 +42,6 @@ namespace ImportRegistrations.Test
             dataset.Specification = new Uri("http://example.com/specification");
             dataset.SpatialResolutionInMeters = 10;
             dataset.TemporalResolution = "P2D";
-            dataset.IsPartOf = new Uri("http://example.com/test-dataset");
-            dataset.IsPartOfInternalId = "XXX";
             dataset.SetEuroVocLabelThemes(new Dictionary<string, List<string>> {
                 { "sk", new List<string> { "nepovolená likvidácia odpadu", "chemický odpad" } },
                 { "en", new List<string> { "unauthorised dumping", "chemical waste" } }
@@ -68,34 +66,69 @@ namespace ImportRegistrations.Test
             return (dataset, distribution);
         }
 
-        private void AssertExpectedState(Storage storage, string publisherId, Guid catalogId, DcatDataset dataset, DcatDistribution distribution)
+        private void AssertExpectedState(Storage storage, string publisherId, Guid catalogId, DcatDataset dataset, DcatDistribution? distribution)
         {
-            FileStorageResponse importedDatasets = storage.GetFileStates(new FileStorageQuery { ParentFile = catalogId, OnlyTypes = new List<FileType> { FileType.DatasetRegistration } }, new AllAccessFilePolicy());
+            FileStorageResponse importedDatasets = storage.GetFileStates(new FileStorageQuery
+            {
+                AdditionalFilters = new Dictionary<string, string[]>
+                {
+                    { "localCatalog", new[]{ catalogId.ToString() } },
+                    { "key", new[]{ dataset.Uri.ToString() } }
+                },
+                OnlyTypes = new List<FileType> { FileType.DatasetRegistration }
+            }, new AllAccessFilePolicy());
+
             Assert.Single(importedDatasets.Files);
             Assert.Equal(1, importedDatasets.TotalCount);
             FileState datasetState = importedDatasets.Files[0];
 
             FileMetadata datasetMetadata = datasetState.Metadata;
+            if (dataset.IsPartOfInternalId is not null)
+            {
+                Assert.Equal(Guid.Parse(dataset.IsPartOfInternalId), datasetMetadata.ParentFile);
+            }
+            else
+            {
+                Assert.Null(datasetMetadata.ParentFile);
+            }
             Assert.Equal(new[] { "true" }, datasetMetadata.AdditionalValues?["Harvested"]);
             Assert.Equal(publisherId, datasetMetadata.Publisher);
             Assert.True(datasetMetadata.IsPublic);
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, datasetMetadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist));
             Assert.NotNull(datasetState.Content);
             DcatDataset importedDataset = DcatDataset.Parse(datasetState.Content)!;
             Assert.True(dataset.IsEqualTo(importedDataset));
+            Assert.False(Storage.ShouldBePublic(datasetMetadata));
+
+            if (distribution is not null)
+            {
+                Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, datasetMetadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist));
+            }
+            else
+            {
+                Assert.Null(datasetMetadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist));
+            }
 
             FileStorageResponse importedDistributions = storage.GetFileStates(new FileStorageQuery { ParentFile = datasetMetadata.Id, OnlyTypes = new List<FileType> { FileType.DistributionRegistration } }, new AllAccessFilePolicy());
-            Assert.Single(importedDistributions.Files);
-            Assert.Equal(1, importedDistributions.TotalCount);
-            FileState distributionState = importedDistributions.Files[0];
+            if (distribution is not null)
+            {
+                Assert.Single(importedDistributions.Files);
+                Assert.Equal(1, importedDistributions.TotalCount);
+                FileState distributionState = importedDistributions.Files[0];
 
-            FileMetadata distributionMetadata = distributionState.Metadata;
-            Assert.Equal(new[] { "true" }, distributionMetadata.AdditionalValues?["Harvested"]);
-            Assert.Equal(publisherId, distributionMetadata.Publisher);
-            Assert.True(distributionMetadata.IsPublic);
-            Assert.NotNull(distributionState.Content);
-            DcatDistribution importedDistribution = DcatDistribution.Parse(distributionState.Content)!;
-            Assert.True(distribution.IsEqualTo(importedDistribution));
+                FileMetadata distributionMetadata = distributionState.Metadata;
+                Assert.Equal(new[] { "true" }, distributionMetadata.AdditionalValues?["Harvested"]);
+                Assert.Equal(publisherId, distributionMetadata.Publisher);
+                Assert.True(distributionMetadata.IsPublic);
+                Assert.NotNull(distributionState.Content);
+                DcatDistribution importedDistribution = DcatDistribution.Parse(distributionState.Content)!;
+                Assert.True(distribution.IsEqualTo(importedDistribution));
+                Assert.False(Storage.ShouldBePublic(distributionMetadata));
+            }
+            else 
+            {
+                Assert.Empty(importedDistributions.Files);
+                Assert.Equal(0, importedDistributions.TotalCount);
+            }
         }
 
         [Fact]
@@ -232,6 +265,59 @@ namespace ImportRegistrations.Test
             FileStorageResponse importedDatasets = storage.GetFileStates(new FileStorageQuery { ParentFile = catalogId, OnlyTypes = new List<FileType> { FileType.DatasetRegistration } }, new AllAccessFilePolicy());
             Assert.Empty(importedDatasets.Files);
             Assert.Equal(0, importedDatasets.TotalCount);
+        }
+
+        [Fact]
+        public async Task TestImportSerieDataset()
+        {
+            string path = fixture.GetStoragePath();
+
+            string publisherId = "http://data.gob.sk/test";
+            (Uri catalogUri, Guid catalogId) = fixture.CreateLocalCatalog("Test", publisherId);
+            using Storage storage = new Storage(path);
+            TestSparqlClient sparqlClient = new TestSparqlClient();
+
+            (DcatDataset datasetSerie, _) = CreateDatasetAndDistribution(publisherId);
+
+            sparqlClient.Add(catalogUri, datasetSerie);
+
+            (DcatDataset datasetPart, DcatDistribution distribution) = CreateDatasetAndDistribution(publisherId);
+
+            datasetPart.IsPartOf = datasetSerie.Uri;
+
+            sparqlClient.Add(catalogUri, datasetPart);
+            sparqlClient.Add(datasetPart.Uri, distribution);
+
+            HttpContextValueAccessor httpContextValueAccessor = new HttpContextValueAccessor();
+
+            HarvestedDataImport import = new HarvestedDataImport(
+                sparqlClient,
+                new TestDocumentStorageClient(storage, new DefaultFileAccessPolicy(httpContextValueAccessor)),
+                p =>
+                {
+                    httpContextValueAccessor.Publisher = p;
+                    return Task.CompletedTask;
+                },
+                s => { });
+
+            await import.Import();
+
+            datasetSerie.IsSerie = true;
+
+            FileStorageResponse importedDatasets = storage.GetFileStates(new FileStorageQuery
+            {
+                AdditionalFilters = new Dictionary<string, string[]>
+                {
+                    { "localCatalog", new[]{ catalogId.ToString() } },
+                    { "key", new[]{ datasetSerie.Uri.ToString() } }
+                },
+                OnlyTypes = new List<FileType> { FileType.DatasetRegistration }
+            }, new AllAccessFilePolicy());
+
+            datasetPart.IsPartOfInternalId = importedDatasets.Files[0].Metadata.Id.ToString();
+
+            AssertExpectedState(storage, publisherId, catalogId, datasetSerie, null);
+            AssertExpectedState(storage, publisherId, catalogId, datasetPart, distribution);
         }
 
         private class HttpContextValueAccessor : IHttpContextValueAccessor

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -34,12 +35,16 @@ namespace NkodSk.Abstractions
                 FileStorageQuery query = new FileStorageQuery()
                 {
                     OnlyTypes = new List<FileType>() { type },
-                    ParentFile = parentMetadata.Id,
                     AdditionalFilters = new Dictionary<string, string[]>()
                     {
                         { "Harvested", new[]{ "true" } },
                     },
                 };
+
+                if (type == FileType.DatasetRegistration)
+                {
+                    query.AdditionalFilters["localCatalog"] = new[] { parentMetadata.Id.ToString() };
+                }
 
                 FileStorageResponse response = await documentStorageClient.GetFileStates(query);
 
@@ -70,6 +75,8 @@ namespace NkodSk.Abstractions
                         List<T> rdfObjects = await fetcher();
 
                         logger($"Total children fetched: {rdfObjects.Count}");
+
+                        Dictionary<Guid, Uri> serieParts = new Dictionary<Guid, Uri>();
 
                         foreach (T rdfObject in rdfObjects)
                         {
@@ -104,7 +111,10 @@ namespace NkodSk.Abstractions
 
                             if (newMetadata is not null)
                             {                                
-                                newMetadata = newMetadata with { ParentFile = parentMetadata.Id };
+                                if (rdfObject is not DcatDataset)
+                                {
+                                    newMetadata = newMetadata with { ParentFile = parentMetadata.Id };
+                                }
 
                                 logger("Saving child");
                                 logger("Metadata:");
@@ -116,6 +126,11 @@ namespace NkodSk.Abstractions
                                 await savedCallback();
 
                                 logger("Child saved");
+
+                                if (rdfObject is DcatDataset dataset && dataset.IsPartOf is not null)
+                                {
+                                    serieParts[newMetadata.Id] = dataset.IsPartOf;
+                                }
                             }
 
                             logger("Updating inner children");
@@ -123,6 +138,45 @@ namespace NkodSk.Abstractions
                             await innerUpdate(newMetadata ?? existing.State.Metadata, rdfObject);
 
                             logger("Inner children updated");
+                        }
+
+                        foreach ((Guid childId, Uri parentUri) in serieParts)
+                        {
+                            FileStorageQuery parentQuery = new FileStorageQuery
+                            {
+                                OnlyTypes = new List<FileType> { FileType.DatasetRegistration },
+                                AdditionalFilters = new Dictionary<string, string[]>
+                                {
+                                    { "key", new[] { parentUri.ToString() } },
+                                },
+                            };
+                            
+                            FileStorageResponse parentResponse = await documentStorageClient.GetFileStates(parentQuery);
+                            if (parentResponse.Files.Count >= 1)
+                            {
+                                FileState parentState = parentResponse.Files[0];
+                                DcatDataset? parentDataset = parentState.Content is not null ? DcatDataset.Parse(parentState.Content) : null;
+                                if (parentDataset is not null)
+                                {
+                                    if (!parentDataset.IsSerie)
+                                    {
+                                        parentDataset.IsSerie = true;
+                                        await documentStorageClient.InsertFile(parentDataset.ToString(), true, parentDataset.UpdateMetadata(true, parentState.Metadata));
+                                    }
+                                }
+
+                                FileState? childState = await documentStorageClient.GetFileState(childId);
+                                if (childState?.Content is not null)
+                                {
+                                    DcatDataset? childDataset = DcatDataset.Parse(childState.Content);
+                                    if (childDataset is not null)
+                                    {
+                                        childDataset.IsPartOf = parentUri;
+                                        childDataset.IsPartOfInternalId = parentState.Metadata.Id.ToString();
+                                        await documentStorageClient.InsertFile(childDataset.ToString(), true, childDataset.UpdateMetadata(true, childState.Metadata));
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -174,7 +228,17 @@ namespace NkodSk.Abstractions
                         catalog is null,
                         DcatDataset.Parse,
                         () => catalog?.Uri is not null ? sparqlClient.GetDatasets(catalog.Uri) : Task.FromResult(new List<DcatDataset>()),
-                        (d, m) => d.UpdateMetadata(true, m),
+                        (d, m) =>
+                        {
+                            m = d.UpdateMetadata(true, m);
+                            Dictionary<string, string[]> additionalValues = m.AdditionalValues ?? new Dictionary<string, string[]>();
+                            if (catalog is not null)
+                            {
+                                additionalValues["localCatalog"] = new[] { state.Metadata.Id.ToString() };
+                            }
+                            m = m with { AdditionalValues = additionalValues };
+                            return m;
+                        },
                         () => Task.CompletedTask,
                         async (datasetMetadata, dataset) =>
                         {

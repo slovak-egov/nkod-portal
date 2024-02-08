@@ -10,7 +10,7 @@ import { useNavigate, useParams } from "react-router";
 import { DistributionForm } from "../components/DistributionForm";
 import { useTranslation } from "react-i18next";
 
-const transformEntityForEdit = (entity: Distribution): DistributionInput => {
+export const transformEntityForEdit = (entity: Distribution): DistributionInput => {
     return {
         id: entity.id,
         datasetId: entity.datasetId,
