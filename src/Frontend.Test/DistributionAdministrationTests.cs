@@ -13,6 +13,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using TestBase;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Frontend.Test
 {
@@ -87,6 +88,65 @@ namespace Frontend.Test
             distribution.SetTitle(new Dictionary<string, string> { { "sk", string.Empty } });
 
             await Page.AssertDistributionForm(distribution);
+        }
+
+        [TestMethod]
+        public async Task TestNavigateToNewRecordWithExistingDistribution()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDistributionCodelists();
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            DcatDistribution otherDistribution = DcatDistribution.Create(datasetId);
+            otherDistribution.SetTermsOfUse(
+                new Uri("https://data.gov.sk/def/authors-work-type/1"),
+                new Uri("https://data.gov.sk/def/original-database-type/1"),
+                new Uri("https://data.gov.sk/def/codelist/database-creator-special-rights-type/2"),
+                new Uri("https://data.gov.sk/def/personal-data-occurence-type/1"));
+            otherDistribution.DownloadUrl = new Uri("http://example.com/download");
+            otherDistribution.AccessUrl = otherDistribution.DownloadUrl;
+            otherDistribution.Format = new Uri("http://publications.europa.eu/resource/dataset/file-type/1");
+            otherDistribution.MediaType = new Uri("http://www.iana.org/assignments/media-types/text/csv");
+            otherDistribution.CompressFormat = new Uri("http://www.iana.org/assignments/media-types/application/zip");
+            otherDistribution.PackageFormat = otherDistribution.CompressFormat;
+
+            fixture.CreateDistribution(datasetId, PublisherId, otherDistribution);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            await Page.Login(f, PublisherId, "Publisher");
+
+            await Page.OpenDistributionsAdmin(0);
+            await Page.RunAndWaitForDistributionCreate(datasetId, async () =>
+            {
+                await Page.GetByText("Nová distribúcia").ClickAsync();
+            });
+
+            DcatDistribution distribution = DcatDistribution.Create(datasetId);
+            distribution.SetTermsOfUse(
+                new Uri("https://data.gov.sk/def/authors-work-type/1"),
+                new Uri("https://data.gov.sk/def/original-database-type/1"),
+                new Uri("https://data.gov.sk/def/codelist/database-creator-special-rights-type/2"),
+                new Uri("https://data.gov.sk/def/personal-data-occurence-type/1"));
+            otherDistribution.DownloadUrl = new Uri("http://example.com/download");
+            distribution.Format = new Uri("http://publications.europa.eu/resource/authority/file-type/CSV");
+            distribution.MediaType = new Uri("http://www.iana.org/assignments/media-types/text/csv");
+            distribution.SetTitle(new Dictionary<string, string> { { "sk", string.Empty } });
+
+            await Page.AssertDistributionForm(distribution);
+
+            DcatDistribution input = CreateMinimalDistribution();
+            await Page.FillDistributionFields(input);
+
+            await Page.RunAndWaitForDistributionList(datasetId, async () =>
+            {
+                await Page.GetByText("Uložiť", new PageGetByTextOptions { Exact = true }).ClickAsync();
+            });
+
+            await Page.AssertTableRowsCount(2);
+
+            Extensions.AssertAreEqual(input, Extensions.GetLastEntity(storage, FileType.DistributionRegistration)!);
         }
 
         private DcatDistribution CreateMinimalDistribution(int? index = null)
@@ -506,6 +566,50 @@ namespace Frontend.Test
 
             Assert.AreEqual(1, storage.GetFileStates(new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.DistributionRegistration } }, accessPolicy).TotalCount);
             Extensions.AssertAreEqual(input, storage.GetFileState(id, accessPolicy)!);
+        }
+
+        [TestMethod]
+        public async Task ChangeLicencesForOneDistribution()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDistributionCodelists();
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            DcatDistribution distribution = CreateMaximalDistribution();
+            Guid id = fixture.CreateDistribution(datasetId, PublisherId, distribution);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            await Page.Login(f, PublisherId, "Publisher");
+
+            await Page.OpenDatasetsAdmin();
+
+            await Page.TakeScreenshot();
+
+            await Page.RunAndWaitForChangeLicenses(async () =>
+            {
+                await Page.GetByText("Hromadne upraviť licencie všetkých distribúcií", new PageGetByTextOptions { Exact = true }).ClickAsync();
+            });
+
+            distribution.SetTermsOfUse(
+                new Uri("https://data.gov.sk/def/authors-work-type/1"),
+                new Uri("https://data.gov.sk/def/original-database-type/1"),
+                new Uri("https://data.gov.sk/def/codelist/database-creator-special-rights-type/2"),
+                new Uri("https://data.gov.sk/def/personal-data-occurence-type/1"));
+
+            await (await Page.GetSelectInFormElementGroup("Typ autorského diela"))!.SelectOptionAsync(distribution.TermsOfUse?.AuthorsWorkType?.ToString() ?? string.Empty);
+            await (await Page.GetSelectInFormElementGroup("Typ originálnej databázy"))!.SelectOptionAsync(distribution.TermsOfUse?.OriginalDatabaseType?.ToString() ?? string.Empty);
+            await (await Page.GetSelectInFormElementGroup("Typ špeciálnej právnej ochrany databázy"))!.SelectOptionAsync(distribution.TermsOfUse?.DatabaseProtectedBySpecialRightsType?.ToString() ?? string.Empty);
+            await (await Page.GetSelectInFormElementGroup("Typ výskytu osobných údajov"))!.SelectOptionAsync(distribution.TermsOfUse?.PersonalDataContainmentType?.ToString() ?? string.Empty);
+
+            await Page.RunAndWaitForDatasetList(async () =>
+            {
+                await Page.GetByText("Uložiť", new PageGetByTextOptions { Exact = true }).ClickAsync();
+            });
+
+            Assert.AreEqual(1, storage.GetFileStates(new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.DistributionRegistration } }, accessPolicy).TotalCount);
+            Extensions.AssertAreEqual(distribution, storage.GetFileState(id, accessPolicy)!);
         }
     }
 }

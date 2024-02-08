@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Schema;
 using VDS.RDF;
 using VDS.RDF.Parsing;
 
@@ -11,13 +12,15 @@ namespace NkodSk.Abstractions
 {
     public class DcatDistribution : RdfObject
     {
-        public const string AuthorsWorkTypeCodelist = "https://data.gov.sk/set/codelist/authors-work-type";
+        //public const string AuthorsWorkTypeCodelist = "https://data.gov.sk/set/codelist/authors-work-type";
 
-        public const string OriginalDatabaseTypeCodelist = "https://data.gov.sk/set/codelist/original-database-type";
+        //public const string OriginalDatabaseTypeCodelist = "https://data.gov.sk/set/codelist/original-database-type";
 
-        public const string DatabaseProtectedBySpecialRightsTypeCodelist = "https://data.gov.sk/set/codelist/database-creator-special-rights-type";
+        //public const string DatabaseProtectedBySpecialRightsTypeCodelist = "https://data.gov.sk/set/codelist/database-creator-special-rights-type";
 
         public const string PersonalDataContainmentTypeCodelist = "https://data.gov.sk/set/codelist/personal-data-occurence-type";
+
+        public const string LicenseCodelist = "http://publications.europa.eu/resource/authority/licence";
 
         public const string FormatCodelist = "http://publications.europa.eu/resource/authority/file-type";
 
@@ -170,6 +173,17 @@ namespace NkodSk.Abstractions
             return UpdateMetadata(datasetMetadata.Id, datasetMetadata.Publisher, metadata);
         }
 
+        public static FileMetadata ClearDatasetMetadata(FileMetadata metadata)
+        {
+            if (metadata.AdditionalValues is not null)
+            {
+                metadata.AdditionalValues.Remove(FormatCodelist);
+                metadata.AdditionalValues.Remove(LicenseCodelist);
+                metadata.AdditionalValues.Remove(PersonalDataContainmentTypeCodelist);
+            }
+            return metadata;
+        }
+
         public FileMetadata UpdateDatasetMetadata(FileMetadata metadata)
         {
             Dictionary<string, string[]> values = metadata.AdditionalValues ?? new Dictionary<string, string[]>();
@@ -182,6 +196,32 @@ namespace NkodSk.Abstractions
             string[] formatsAsArray = formats.ToArray();
             Array.Sort(formatsAsArray);
             values[FormatCodelist] = formatsAsArray;
+
+            HashSet<string> licences = values.ContainsKey(LicenseCodelist) ? new HashSet<string>(values[LicenseCodelist]) : new HashSet<string>();
+            if (TermsOfUse?.AuthorsWorkType is not null)
+            {
+                licences.Add(TermsOfUse.AuthorsWorkType.ToString());
+            }
+            if (TermsOfUse?.OriginalDatabaseType is not null)
+            {
+                licences.Add(TermsOfUse.OriginalDatabaseType.ToString());
+            }
+            if (TermsOfUse?.DatabaseProtectedBySpecialRightsType is not null)
+            {
+                licences.Add(TermsOfUse.DatabaseProtectedBySpecialRightsType.ToString());
+            }
+            string[] licencesAsArray = licences.ToArray();
+            Array.Sort(licencesAsArray);
+            values[LicenseCodelist] = licencesAsArray;
+
+            HashSet<string> personalDatas = values.ContainsKey(PersonalDataContainmentTypeCodelist) ? new HashSet<string>(values[PersonalDataContainmentTypeCodelist]) : new HashSet<string>();
+            if (TermsOfUse?.PersonalDataContainmentType is not null)
+            {
+                personalDatas.Add(TermsOfUse.PersonalDataContainmentType.ToString());
+            }
+            string[] personalDatasAsArray = personalDatas.ToArray();
+            Array.Sort(personalDatasAsArray);
+            values[PersonalDataContainmentTypeCodelist] = personalDatasAsArray;
 
             return metadata with { AdditionalValues = values };
         }

@@ -39,10 +39,8 @@ export const knownCodelists = {
         euroVoc: 'http://eurovoc.europa.eu/100141'
     },
     distribution: {
-        authorsWorkType: 'https://data.gov.sk/set/codelist/authors-work-type',
-        originalDatabaseType: 'https://data.gov.sk/set/codelist/original-database-type',
-        databaseProtectedBySpecialRightsType: 'https://data.gov.sk/set/codelist/database-creator-special-rights-type',
         personalDataContainmentType: 'https://data.gov.sk/set/codelist/personal-data-occurence-type',
+        license: 'http://publications.europa.eu/resource/authority/licence',
         format: 'http://publications.europa.eu/resource/authority/file-type',
         mediaType: 'http://www.iana.org/assignments/media-types'
     },
@@ -281,7 +279,7 @@ export type Facet = {
     values: { [id: string]: number };
 };
 
-type Response<T> = {
+export type Response<T> = {
     items: T[];
     totalCount: number;
     facets: Facet[];

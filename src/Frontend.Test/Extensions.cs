@@ -884,9 +884,12 @@ namespace Frontend.Test
         {
             await page.RunAndWaitForRequests(action, new List<string>
             {
-                "codelists"
-            });
+                "codelists",
+                "distributions/search",
+            });            
             await page.WaitForURLAsync($"http://localhost:6001/sprava/distribucie/{datasetId}/pridat");
+            await page.WaitForLoadingDone();
+            await page.WaitForLoadingDone();
         }
 
         public static async Task RunAndWaitForDistributionEdit(this IPage page, Guid id, Guid datasetId, Func<Task> action)
@@ -1315,5 +1318,14 @@ namespace Frontend.Test
             await page.WaitForURLAsync($"http://localhost:6001/sprava/poskytovatelia/upravit/{id}");
         }
 
+        public static async Task RunAndWaitForChangeLicenses(this IPage page, Func<Task> action)
+        {
+            await page.RunAndWaitForRequests(action, new List<string>
+            {
+                "codelists",
+            });
+            await page.WaitForURLAsync($"http://localhost:6001/sprava/zmena-licencii");
+            await page.WaitForLoadingDone();
+        }
     }
 }

@@ -149,18 +149,11 @@ namespace Frontend.Test
 
         public void CreateDistributionCodelists()
         {
-            CreateCodelistFile(DcatDistribution.AuthorsWorkTypeCodelist, new Dictionary<string, LanguageDependedTexts>
+            CreateCodelistFile(DcatDistribution.LicenseCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "https://data.gov.sk/def/authors-work-type/1", new LanguageDependedTexts{ { "sk", "work1sk" }, { "en", "work1en" } } },
                 { "https://creativecommons.org/licenses/by/4.0/", new LanguageDependedTexts{ { "sk", "CC sk" }, { "en", "CC en" } } },
-            });
-            CreateCodelistFile(DcatDistribution.OriginalDatabaseTypeCodelist, new Dictionary<string, LanguageDependedTexts>
-            {
                 { "https://data.gov.sk/def/original-database-type/1", new LanguageDependedTexts{ { "sk", "type1sk" }, { "en", "type1en" } } },
-                { "https://creativecommons.org/licenses/by/4.0/", new LanguageDependedTexts{ { "sk", "CC sk" }, { "en", "CC en" } } }
-            });
-            CreateCodelistFile(DcatDistribution.DatabaseProtectedBySpecialRightsTypeCodelist, new Dictionary<string, LanguageDependedTexts>
-            {
                 { "https://data.gov.sk/def/codelist/database-creator-special-rights-type/2", new LanguageDependedTexts{ { "sk", "rights1sk" }, { "en", "rights1en" } } },
                 { "https://creativecommons.org/publicdomain/zero/1.0/", new LanguageDependedTexts{ { "sk", "CC sk" }, { "en", "CC en" } } }
             });

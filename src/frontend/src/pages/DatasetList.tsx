@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AlertPublisher from '../components/AlertPublisher';
 import Alert from '../components/Alert';
+import { Link } from 'react-router-dom';
 
 export default function DatasetList() {
     const [datasets, query, setQueryParameters, loading, error, refresh] = useDatasets({ pageSize: 20, page: 0 });
@@ -56,6 +57,9 @@ export default function DatasetList() {
 
                 <p>
                     <Button onClick={() => navigate('/sprava/datasety/pridat')}>{t('newDataset')}</Button>
+                    <Button style={{ marginLeft: '10px' }} onClick={() => navigate('/sprava/zmena-licencii')}>
+                        {t('changeLicensesBulk')}
+                    </Button>
                 </p>
 
                 {loading ? <Loading /> : null}

@@ -219,5 +219,8 @@
     "dataSerie": "Dátová séria",
     "openAll": "otvoriť všetky",
     "closeAll": "zatvoriť všetky",
-    "byDateModified": "Dátumu aktualizácie"
+    "byDateModified": "Dátumu aktualizácie",
+    "changeLicenses": "Zmena licencií",
+    "leaveAsIs": "Ponechať bez zmeny",
+    "changeLicensesBulk": "Hromadne upraviť licencie všetkých distribúcií"
 }

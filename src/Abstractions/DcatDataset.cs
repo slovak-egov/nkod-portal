@@ -226,6 +226,8 @@ namespace NkodSk.Abstractions
 
         public IEnumerable<Uri> Distributions => GetUrisFromUriNode("dcat:distribution");
 
+        public bool UpdateModifiedDate { get; set; }
+
         public static DcatDataset Create()
         {
             Guid id = Guid.NewGuid();
@@ -305,7 +307,7 @@ namespace NkodSk.Abstractions
             }
             else
             {
-                metadata = metadata with { Name = names, ParentFile = parentId, Publisher = Publisher?.ToString(), IsPublic = isPublic, AdditionalValues = values, LastModified = modified ?? now };
+                metadata = metadata with { Name = names, ParentFile = parentId, Publisher = Publisher?.ToString(), IsPublic = isPublic, AdditionalValues = values, LastModified = UpdateModifiedDate ? now : (Modified ?? now) };
             }
             return metadata;
         }

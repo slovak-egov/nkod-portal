@@ -42,8 +42,6 @@ namespace ImportRegistrations.Test
             dataset.Specification = new Uri("http://example.com/specification");
             dataset.SpatialResolutionInMeters = 10;
             dataset.TemporalResolution = "P2D";
-            dataset.IsPartOf = new Uri("http://example.com/test-dataset");
-            dataset.IsPartOfInternalId = "XXX";
             dataset.SetEuroVocLabelThemes(new Dictionary<string, List<string>> {
                 { "sk", new List<string> { "nepovolená likvidácia odpadu", "chemický odpad" } },
                 { "en", new List<string> { "unauthorised dumping", "chemical waste" } }
@@ -96,10 +94,19 @@ namespace ImportRegistrations.Test
             Assert.Equal(new[] { "true" }, datasetMetadata.AdditionalValues?["Harvested"]);
             Assert.Equal(publisherId, datasetMetadata.Publisher);
             Assert.True(datasetMetadata.IsPublic);
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, datasetMetadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist));
             Assert.NotNull(datasetState.Content);
             DcatDataset importedDataset = DcatDataset.Parse(datasetState.Content)!;
             Assert.True(dataset.IsEqualTo(importedDataset));
+            Assert.False(Storage.ShouldBePublic(datasetMetadata));
+
+            if (distribution is not null)
+            {
+                Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, datasetMetadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist));
+            }
+            else
+            {
+                Assert.Null(datasetMetadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist));
+            }
 
             FileStorageResponse importedDistributions = storage.GetFileStates(new FileStorageQuery { ParentFile = datasetMetadata.Id, OnlyTypes = new List<FileType> { FileType.DistributionRegistration } }, new AllAccessFilePolicy());
             if (distribution is not null)
@@ -115,6 +122,7 @@ namespace ImportRegistrations.Test
                 Assert.NotNull(distributionState.Content);
                 DcatDistribution importedDistribution = DcatDistribution.Parse(distributionState.Content)!;
                 Assert.True(distribution.IsEqualTo(importedDistribution));
+                Assert.False(Storage.ShouldBePublic(distributionMetadata));
             }
             else 
             {
@@ -278,7 +286,7 @@ namespace ImportRegistrations.Test
             datasetPart.IsPartOf = datasetSerie.Uri;
 
             sparqlClient.Add(catalogUri, datasetPart);
-            sparqlClient.Add(catalogUri, distribution);
+            sparqlClient.Add(datasetPart.Uri, distribution);
 
             HttpContextValueAccessor httpContextValueAccessor = new HttpContextValueAccessor();
 
