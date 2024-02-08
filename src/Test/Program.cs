@@ -13,6 +13,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 using System;
 using VDS.RDF.Query.Expressions.Functions.Sparql.Boolean;
+using System.Data;
 
 string sourceDir = args[0];
 string targetDir = args[1];
@@ -676,8 +677,13 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Catalo
     {
         if (datasetMetadataByUri.TryGetValue(uri, out FileMetadata? datasetMetadata))
         {
-            datasetMetadata = datasetMetadata with { ParentFile = metadata.Id };
+            Dictionary<string, string[]> additionalValues = datasetMetadata.AdditionalValues ?? new Dictionary<string, string[]>();
+            additionalValues["localCatalog"] = new string[] { catalog.Uri.ToString() };
+            additionalValues["Harvested"] = new string[] { "true" };
+            datasetMetadata = datasetMetadata with { AdditionalValues = additionalValues };
+
             storage.UpdateMetadata(datasetMetadata, accessPolicy);
+            datasetMetadatas[datasetMetadata.Id] = datasetMetadata;
         }
     }
 }

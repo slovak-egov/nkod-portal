@@ -21,7 +21,6 @@ namespace WebApi
 
             results.ValidateUrl(nameof(Website), Website, true);
             results.ValidateEmail(nameof(Email), Email, true);
-            results.ValidateRequiredText(nameof(Phone), Phone);
             await results.ValidateRequiredCodelistValue(nameof(LegalForm), LegalForm, FoafAgent.LegalFormCodelist, codelistProvider);
 
             return results;
