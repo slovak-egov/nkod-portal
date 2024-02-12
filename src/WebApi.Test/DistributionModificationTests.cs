@@ -87,6 +87,21 @@ namespace WebApi.Test
             Assert.Equal(input.CompressFormat, distribution.CompressFormat?.ToString());
             Assert.Equal(input.PackageFormat, distribution.PackageFormat?.ToString());
             Extensions.AssertTextsEqual(input.Title, distribution.Title);
+
+            ValidateDatasetModifyChange(storage, datasetId);
+        }
+
+        private void ValidateDatasetModifyChange(Storage storage, Guid datasetId)
+        {
+            FileState? datasetState = storage.GetFileState(datasetId, accessPolicy);
+            Assert.NotNull(datasetState);
+            Assert.NotNull(datasetState.Content);
+            Assert.True((DateTimeOffset.Now - datasetState.Metadata.LastModified).Duration().TotalMinutes < 1);
+
+            DcatDataset? dataset = DcatDataset.Parse(datasetState.Content);
+            Assert.NotNull(dataset);
+
+            Assert.True((dataset.Modified!.Value - DateTimeOffset.Now).Duration().TotalMinutes < 1);
         }
 
         [Fact]
@@ -266,6 +281,7 @@ namespace WebApi.Test
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             Assert.Null(storage.GetFileMetadata(distributions[0], accessPolicy));
+            ValidateDatasetModifyChange(storage, datasetId);
         }
 
         [Fact]

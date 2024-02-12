@@ -232,17 +232,6 @@ async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord? us
 
     claims.Add(new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()));
 
-    if (customClaims is not null)
-    {
-        foreach (Claim claim in customClaims)
-        {
-            if (!claims.Any(c => c.Type == claim.Type))
-            {
-                claims.Add(claim);
-            }
-        }
-    }
-    
     if (user?.Email is not null)
     {
         claims.Add(new Claim(ClaimTypes.Email, user.Email));
@@ -270,6 +259,17 @@ async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord? us
     if (companyName is not null)
     {
         claims.Add(new Claim("CompanyName", companyName));
+    }
+
+    if (customClaims is not null)
+    {
+        foreach (Claim claim in customClaims)
+        {
+            if (!claims.Any(c => c.Type == claim.Type))
+            {
+                claims.Add(claim);
+            }
+        }
     }
 
     DateTimeOffset expires = DateTimeOffset.Now.AddMinutes(accessTokenValidInMinutes);
@@ -601,7 +601,14 @@ app.MapPost("/refresh", async ([FromServices] ApplicationDbContext context, [Fro
 
                         if (areEqual && request.RefreshToken.Length == refreshTokenLen)
                         {
-                            return Results.Ok(await CreateToken(context, record, configuration, signingCredentials, hasExplicitDelegation, principal.Claims));
+                            string? publisher = null;
+
+                            if (principal.IsInRole("Superadmin"))
+                            {
+                                publisher = principal.FindFirst("Publisher")?.Value;
+                            }
+
+                            return Results.Ok(await CreateToken(context, record, configuration, signingCredentials, hasExplicitDelegation, principal.Claims, publisher: publisher));
                         }
                     }
                 }

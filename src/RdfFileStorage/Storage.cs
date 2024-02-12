@@ -2,12 +2,14 @@
 using Lucene.Net.QueryParsers.Classic;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Similarities;
+using Lucene.Net.Util;
 using Newtonsoft.Json;
 using NkodSk.Abstractions;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Metadata;
 using System.Runtime;
@@ -129,7 +131,7 @@ namespace NkodSk.RdfFileStorage
                 CheckDispose();
 
                 ClearEntries();
-                
+
                 foreach (FileType fileType in Enum.GetValues<FileType>())
                 {
                     if (!entriesByType.ContainsKey(fileType))
@@ -151,7 +153,7 @@ namespace NkodSk.RdfFileStorage
                         {
                             fs.Write(Encoding.UTF8.GetBytes(testFileName));
                             fs.Close();
-                        }                            
+                        }
                         File.Delete(path);
                     }
 
@@ -162,6 +164,30 @@ namespace NkodSk.RdfFileStorage
                 {
                     exceptions.Add(e);
                 }
+
+                int total = files.Length;
+                int count = 0;
+                int reportedProgress = 0;
+                object? reportLock = new object();
+
+                void IncreaseProgress()
+                {
+                    int newCount = Interlocked.Increment(ref count);
+                    int newRatio = total > 0 ? (int)Math.Floor((double)newCount * 100 / total) : 0;
+                    if (newRatio >= reportedProgress + 10)
+                    {
+                        lock (reportLock)
+                        {
+                            if (newRatio >= reportedProgress + 10)
+                            {
+                                Trace.TraceInformation($"Load progress: {newCount} / {total} ({newRatio}%)");
+                                reportedProgress = newRatio;
+                            }
+                        }
+                    }
+                }
+
+                Trace.TraceInformation($"Total entries to load: {total}");
 
                 Parallel.ForEach(files, metadataPath =>
                 {
@@ -174,15 +200,15 @@ namespace NkodSk.RdfFileStorage
                                 throw new Exception($"Unable to find target file {path}");
                             }
 
-                            using FileStream fs = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
-                            if (!fs.CanRead)
-                            {
-                                throw new Exception($"File {path} is not readable");
-                            }
-                            if (!fs.CanWrite)
-                            {
-                                throw new Exception($"File {path} is not writable");
-                            }
+                            //using FileStream fs = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+                            //if (!fs.CanRead)
+                            //{
+                            //    throw new Exception($"File {path} is not readable");
+                            //}
+                            //if (!fs.CanWrite)
+                            //{
+                            //    throw new Exception($"File {path} is not writable");
+                            //}
                         }
 
                         CheckFile(metadataPath);
@@ -196,6 +222,7 @@ namespace NkodSk.RdfFileStorage
                         {
                             InsertFileEntry(metadata, filePath);
                         }
+                        IncreaseProgress();
                     }
                     catch (Exception e)
                     {
@@ -205,6 +232,8 @@ namespace NkodSk.RdfFileStorage
                         }
                     }
                 });
+
+                Trace.TraceInformation($"Loading entries completed ({total})");
 
                 if (exceptions.Count > 0)
                 {
@@ -544,7 +573,7 @@ namespace NkodSk.RdfFileStorage
                 List<FileStorageOrderDefinition> orderDefinitions = query.OrderDefinitions?.ToList() ?? new List<FileStorageOrderDefinition>(1);
                 if (orderDefinitions.Count == 0)
                 {
-                      orderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.LastModified, true));
+                    orderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.LastModified, true));
                 }
 
                 int CompareEntries(Entry a, Entry b)
@@ -586,7 +615,7 @@ namespace NkodSk.RdfFileStorage
                     if (query.RequiredFacets.Contains("publishers") && query.OnlyPublishers is not null && query.OnlyPublishers.Count > 0)
                     {
                         HashSet<string> publisherKeys = new HashSet<string>(query.OnlyPublishers);
-                        
+
                         HashSet<Entry> filteredEntries = new HashSet<Entry>(results);
                         filteredEntries.RemoveWhere(e => e.Metadata.Publisher == null || !publisherKeys.Contains(e.Metadata.Publisher));
 
@@ -606,7 +635,7 @@ namespace NkodSk.RdfFileStorage
                                 filteredEntries.RemoveWhere(e => e.Metadata.AdditionalValues == null || !e.Metadata.AdditionalValues.TryGetValue(filterId, out string[]? entryValues) || !keys.Overlaps(entryValues));
 
                                 resultsWithFacet[facetId] = filteredEntries;
-                            }                                
+                            }
                         }
                     }
 
@@ -726,7 +755,7 @@ namespace NkodSk.RdfFileStorage
                             dependentStates = new List<FileState>();
                         }
                     }
-                    
+
                     FileState fileState = new FileState(entry.Metadata, fileContent, dependentStates);
 
                     pageResults.Add(fileState);
@@ -841,7 +870,7 @@ namespace NkodSk.RdfFileStorage
                     countByPublisher.TryGetValue(publisher, out int count);
                     themesByPublisher.TryGetValue(publisher, out Dictionary<string, int>? themes);
                     groups.Add(new FileStorageGroup(publisher, publisherState, count, themes));
-                }                
+                }
             }
 
             List<FileStorageOrderDefinition> orderDefinitions = query.OrderDefinitions?.ToList() ?? new List<FileStorageOrderDefinition>(2);
@@ -1175,10 +1204,10 @@ namespace NkodSk.RdfFileStorage
                         streamLocks = new StreamLocks(newPath);
                     }
 
-                    metadata.SaveTo(GetMetadataPath(metadata.Id));                    
+                    metadata.SaveTo(GetMetadataPath(metadata.Id));
                     RemoveFileEntry(metadata.Id);
 
-                    Entry newEntry = existingEntry with { Metadata = metadata, Path = newPath, StreamLocks = streamLocks };                    
+                    Entry newEntry = existingEntry with { Metadata = metadata, Path = newPath, StreamLocks = streamLocks };
                     InsertFileEntry(newEntry);
                 }
             }

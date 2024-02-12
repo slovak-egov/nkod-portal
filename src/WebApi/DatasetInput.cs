@@ -94,8 +94,8 @@ namespace WebApi
             dataset.Type = (Type ?? new List<string>()).Select(s => new Uri(s, UriKind.Absolute));
             dataset.Spatial = (Spatial ?? new List<string>()).Select(s => new Uri(s, UriKind.Absolute));
             dataset.SetTemporal(
-                StartDate is not null ? DateOnly.Parse(StartDate, System.Globalization.CultureInfo.CurrentCulture) : null,
-                EndDate is not null ? DateOnly.Parse(EndDate, System.Globalization.CultureInfo.CurrentCulture) : null);
+                !string.IsNullOrEmpty(StartDate) ? DateOnly.Parse(StartDate, System.Globalization.CultureInfo.CurrentCulture) : null,
+                !string.IsNullOrEmpty(EndDate) ? DateOnly.Parse(EndDate, System.Globalization.CultureInfo.CurrentCulture) : null);
             dataset.SetContactPoint(
                 ContactName is not null ? new LanguageDependedTexts(ContactName) : null,
                 ContactEmail);

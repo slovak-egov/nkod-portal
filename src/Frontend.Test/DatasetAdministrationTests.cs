@@ -836,12 +836,14 @@ namespace Frontend.Test
             FileState parentState = storage.GetFileState(parentId, accessPolicy)!;
             DcatDataset parentDataset = DcatDataset.Parse(parentState.Content!)!;
             parentDataset.IsSerie = true;
+            parentDataset.Modified = new DateTimeOffset(2023, 8, 10, 0, 0, 0, TimeSpan.Zero);
             storage.InsertFile(parentDataset.ToString(), parentDataset.UpdateMetadata(true, parentState.Metadata), true, accessPolicy);
 
             FileState partState = storage.GetFileState(childId, accessPolicy)!;
             DcatDataset partDataset = DcatDataset.Parse(partState.Content!)!;
             partDataset.IsPartOf = parentDataset.Uri;
             partDataset.IsPartOfInternalId = parentState.Metadata.Id.ToString();
+            partDataset.Modified = new DateTimeOffset(2023, 8, 11, 0, 0, 0, TimeSpan.Zero);
             storage.InsertFile(partDataset.ToString(), partDataset.UpdateMetadata(true, partState.Metadata), true, accessPolicy);
 
             using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
@@ -854,6 +856,7 @@ namespace Frontend.Test
             {
                 await Page.ClickOnTableButton(1, "Odstrániť");
             }, new List<string> { "datasets" });
+
 
             await Page.AssertTableRowsCount(2);
 

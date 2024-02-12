@@ -1,5 +1,6 @@
 ﻿using IAMClient;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using NkodSk.Abstractions;
@@ -8,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
@@ -83,6 +85,58 @@ namespace WebApi.Test
             Assert.NotNull(result);
             Assert.NotNull(result.Token);
             Assert.NotNull(result.RefreshToken);
+        }
+
+        [Fact]
+        public async Task PublisherShouldBeImpersonatedAgainForSuperadmin()
+        {
+            string path = fixture.GetStoragePath();
+
+            Guid id1 = fixture.CreatePublisher("Test", PublisherId, isPublic: true);
+            Guid id2 = fixture.CreatePublisher("Test2", PublisherId + "!", isPublic: true);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            TestIdentityAccessManagementClient identityClient = applicationFactory.Services.GetRequiredService<TestIdentityAccessManagementClient>();
+            UserSaveResult userSaveResult = identityClient.CreateUser(new NewUserInput
+            {
+                FirstName = "Meno",
+                LastName = "Priezvisko",
+                Email = "test@example.com",
+                Role = "Superadmin",
+            }, null);
+
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("Superadmin", userId: userSaveResult.Id));
+
+            async Task DoImpersonation(Guid id, string uri)
+            {
+                using (JsonContent requestContent = JsonContent.Create(new { }))
+                {
+                    using HttpResponseMessage response = await client.PostAsync($"/publishers/impersonate?id={HttpUtility.UrlEncode(id.ToString())}", requestContent);
+                    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+                    string content = await response.Content.ReadAsStringAsync();
+                    TokenResult? result = JsonConvert.DeserializeObject<TokenResult>(content);
+                    Assert.NotNull(result);
+                    Assert.NotNull(result.Token);
+                    Assert.NotNull(result.RefreshToken);
+
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, result.Token);
+                }
+
+                using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/user-info"))
+                {
+                    using HttpResponseMessage response = await client.SendAsync(request);
+                    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                    UserInfo userInfo = JsonConvert.DeserializeObject<UserInfo>(await response.Content.ReadAsStringAsync())!;
+                    Assert.Equal(uri, userInfo.Publisher);
+                }                
+            }
+
+            await DoImpersonation(id1, PublisherId);
+            await DoImpersonation(id2, PublisherId + "!");
         }
 
         private AdminPublisherInput CreateInput()

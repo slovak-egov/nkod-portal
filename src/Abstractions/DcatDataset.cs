@@ -176,7 +176,7 @@ namespace NkodSk.Abstractions
         public string? TemporalResolution
         {
             get => GetTextFromUriNode("dct:temporalResolution");
-            set => SetTextToUriNode("dct:temporalResolution", value);
+            set => SetTextToUriNode("dct:temporalResolution", value, new Uri(RdfDocument.XsdPrefix + "duration"));
         }
 
 

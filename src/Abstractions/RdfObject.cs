@@ -161,13 +161,14 @@ namespace NkodSk.Abstractions
             return null;
         }
 
-        public void SetTextToUriNode(string name, string? text)
+        public void SetTextToUriNode(string name, string? text, Uri? dataType = null)
         {
             RemoveUriNodes(name);
             if (text is not null)
             {
                 IUriNode? typeNode = GetOrCreateUriNode(name);
-                Graph.Assert(Node, typeNode, Graph.CreateLiteralNode(text));
+                ILiteralNode node = dataType is null ? Graph.CreateLiteralNode(text) : Graph.CreateLiteralNode(text, dataType);
+                Graph.Assert(Node, typeNode, node);
             }
         }
 
@@ -230,12 +231,12 @@ namespace NkodSk.Abstractions
 
         public void SetDateToUriNode(string name, DateOnly? value)
         {
-            SetTextToUriNode(name, value?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+            SetTextToUriNode(name, value?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), new Uri(RdfDocument.XsdPrefix + "date"));
         }
 
         public void SetDateTimeToUriNode(string name, DateTimeOffset? value)
         {
-            SetTextToUriNode(name, value?.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ssZ", System.Globalization.CultureInfo.InvariantCulture));
+            SetTextToUriNode(name, value?.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ssZ", System.Globalization.CultureInfo.InvariantCulture), new Uri(RdfDocument.XsdPrefix + "dateTime"));
         }
 
         public void SetBooleanToUriNode(string name, bool? value)

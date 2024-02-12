@@ -679,7 +679,7 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Catalo
         {
             Dictionary<string, string[]> additionalValues = datasetMetadata.AdditionalValues ?? new Dictionary<string, string[]>();
             additionalValues["localCatalog"] = new string[] { catalog.Uri.ToString() };
-            additionalValues["Harvested"] = new string[] { "true" };
+            //additionalValues["Harvested"] = new string[] { "true" };
             datasetMetadata = datasetMetadata with { AdditionalValues = additionalValues };
 
             storage.UpdateMetadata(datasetMetadata, accessPolicy);

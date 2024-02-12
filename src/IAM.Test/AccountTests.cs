@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
@@ -240,6 +241,64 @@ namespace IAM.Test
         }
 
         [Fact]
+        public async Task DelegationTokenShouldBeReissuedToSuperadmin()
+        {
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
+
+            UserRecord record;
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                record = await CreateDefaultUser(context);
+                record.Publisher = null;
+                record.Role = "Superadmin";
+                await context.SaveChangesAsync();
+            }
+
+            using HttpClient client = applicationFactory.CreateClient();
+            string accessToken = applicationFactory.CreateToken("Superadmin", id: record.Id);
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, accessToken);
+
+            async Task TestDelegation(string publisher)
+            {
+                using JsonContent requestContent = JsonContent.Create(new { });
+                using HttpResponseMessage response = await client.PostAsync($"/delegate-publisher?publisher={HttpUtility.UrlEncode(publisher)}", requestContent);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+                TokenResult? result = await response.Content.ReadFromJsonAsync<TokenResult>();
+                Assert.NotNull(result);
+                Assert.NotEqual(accessToken, result.Token);
+                Assert.False(string.IsNullOrEmpty(result.RefreshToken));
+
+                ClaimsPrincipal claims = applicationFactory.ValidateToken(result.Token);
+                Assert.Equal(record.Id, claims.FindFirstValue(ClaimTypes.NameIdentifier));
+                Assert.Equal(record.Email, claims.FindFirstValue(ClaimTypes.Email));
+                Assert.Equal(record.FirstName, claims.FindFirstValue(ClaimTypes.GivenName));
+                Assert.Equal(record.LastName, claims.FindFirstValue(ClaimTypes.Surname));
+                Assert.Equal(record.Role, claims.FindFirstValue(ClaimTypes.Role));
+                Assert.Equal(publisher, claims.FindFirstValue("Publisher"));
+
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, result.Token);
+
+                using (IServiceScope scope = applicationFactory.Services.CreateScope())
+                {
+                    ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    {
+                        UserRecord? changedRecord = await context.Users.FindAsync(record.Id);
+                        Assert.NotNull(changedRecord);
+                        Assert.Equal(result.RefreshToken, changedRecord.RefreshToken);
+                        Assert.NotNull(changedRecord.RefreshTokenExpiryTime);
+                        Assert.True(changedRecord.RefreshTokenExpiryTime.Value > DateTimeOffset.UtcNow);
+                    }
+                }
+            }
+
+            await TestDelegation(PublisherId);
+
+            await TestDelegation(PublisherId + "!");
+        }
+
+        [Fact]
         public async Task DelegationTokenShouldNotBeIssuedToPublisher()
         {
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
@@ -258,6 +317,98 @@ namespace IAM.Test
             using JsonContent requestContent = JsonContent.Create(new { });
             using HttpResponseMessage response = await client.PostAsync($"/delegate-publisher?publisher={HttpUtility.UrlEncode(PublisherId)}", requestContent);
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+
+
+        [Fact]
+        public async Task TokenShouldBeRefreshedIfDelegated()
+        {
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
+
+            UserRecord record;
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                record = await CreateDefaultUser(context);
+                record.Publisher = null;
+                record.Role = "Superadmin";
+                record.RefreshToken = "1234";
+                record.RefreshTokenExpiryTime = DateTimeOffset.UtcNow.AddDays(1);
+                await context.SaveChangesAsync();
+            }
+
+            using HttpClient client = applicationFactory.CreateClient();
+            string accessToken = applicationFactory.CreateToken("Superadmin", null, id: record.Id);
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, accessToken);
+
+            using (JsonContent requestContent = JsonContent.Create(new { }))
+            {
+                using HttpResponseMessage response = await client.PostAsync($"/delegate-publisher?publisher={HttpUtility.UrlEncode(PublisherId)}", requestContent);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+                TokenResult? result = await response.Content.ReadFromJsonAsync<TokenResult>();
+                Assert.NotNull(result);
+                Assert.NotEqual(accessToken, result.Token);
+                Assert.False(string.IsNullOrEmpty(result.RefreshToken));
+
+                ClaimsPrincipal claims = applicationFactory.ValidateToken(result.Token);
+                Assert.Equal(record.Id, claims.FindFirstValue(ClaimTypes.NameIdentifier));
+                Assert.Equal(record.Email, claims.FindFirstValue(ClaimTypes.Email));
+                Assert.Equal(record.FirstName, claims.FindFirstValue(ClaimTypes.GivenName));
+                Assert.Equal(record.LastName, claims.FindFirstValue(ClaimTypes.Surname));
+                Assert.Equal(record.Role, claims.FindFirstValue(ClaimTypes.Role));
+                Assert.Equal(PublisherId, claims.FindFirstValue("Publisher"));
+
+                accessToken = result.Token;
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, result.Token);
+
+                using (IServiceScope scope = applicationFactory.Services.CreateScope())
+                {
+                    ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    {
+                        UserRecord? changedRecord = await context.Users.FindAsync(record.Id);
+                        Assert.NotNull(changedRecord);
+                        Assert.Equal(result.RefreshToken, changedRecord.RefreshToken);
+                        Assert.NotNull(changedRecord.RefreshTokenExpiryTime);
+                        Assert.True(changedRecord.RefreshTokenExpiryTime.Value > DateTimeOffset.UtcNow);
+                    }
+                }
+            }   
+
+            RefreshTokenRequest request = new RefreshTokenRequest
+            {
+                AccessToken = accessToken,
+                RefreshToken = record.RefreshToken
+            };
+            using (JsonContent requestContent = JsonContent.Create(request))
+            {
+                using HttpResponseMessage response = await client.PostAsync("/refresh", requestContent);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+                TokenResult? result = await response.Content.ReadFromJsonAsync<TokenResult>();
+                Assert.NotNull(result);
+                Assert.Equal(record.RefreshToken, result.RefreshToken);
+                Assert.NotEqual(accessToken, result.Token);
+
+                ClaimsPrincipal claims = applicationFactory.ValidateToken(result.Token);
+                Assert.Equal(record.Id, claims.FindFirstValue(ClaimTypes.NameIdentifier));
+                Assert.Equal(record.Email, claims.FindFirstValue(ClaimTypes.Email));
+                Assert.Equal(record.FirstName, claims.FindFirstValue(ClaimTypes.GivenName));
+                Assert.Equal(record.LastName, claims.FindFirstValue(ClaimTypes.Surname));
+                Assert.Equal(record.Role, claims.FindFirstValue(ClaimTypes.Role));
+                Assert.Equal(PublisherId, claims.FindFirstValue("Publisher"));
+
+                using (IServiceScope scope = applicationFactory.Services.CreateScope())
+                {
+                    ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    {
+                        UserRecord? changedRecord = await context.Users.FindAsync(record.Id);
+                        Assert.NotNull(changedRecord);
+                        Assert.Equal(record.RefreshToken, changedRecord.RefreshToken);
+                        Assert.Equal(record.RefreshTokenExpiryTime, changedRecord.RefreshTokenExpiryTime);
+                    }
+                }
+            }  
         }
     }
 }

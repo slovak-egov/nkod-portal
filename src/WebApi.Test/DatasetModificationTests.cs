@@ -82,7 +82,14 @@ namespace WebApi.Test
             Assert.Equal(FileType.DatasetRegistration, state.Metadata.Type);
             Assert.Null(state.Metadata.ParentFile);
             Assert.Equal("TestName", state.Metadata.Name["sk"]);
-            Assert.True((DateTimeOffset.Now - state.Metadata.Created).Duration().TotalMinutes < 1);
+            if (issued.HasValue)
+            {
+                Assert.Equal(issued, state.Metadata.Created);
+            }
+            else
+            {
+                Assert.True((DateTimeOffset.Now - state.Metadata.Created).Duration().TotalMinutes < 1);
+            }            
             Assert.True((DateTimeOffset.Now - state.Metadata.LastModified).Duration().TotalMinutes < 1);
 
             DcatDataset? dataset = DcatDataset.Parse(state.Content);
@@ -105,6 +112,15 @@ namespace WebApi.Test
             Assert.Equal(input.SpatialResolutionInMeters is not null ? decimal.Parse(input.SpatialResolutionInMeters, System.Globalization.CultureInfo.CurrentCulture) : null, dataset.SpatialResolutionInMeters);
             Assert.Equal(input.TemporalResolution, dataset.TemporalResolution);
             Assert.Equal(input.IsPartOf, dataset.IsPartOf?.ToString());
+
+            if (input.TemporalResolution is not null)
+            {
+                Assert.Equal("http://www.w3.org/2001/XMLSchema#duration", dataset.GetLiteralNodesFromUriNode("dct:temporalResolution").First().DataType.ToString());
+            }
+
+            string dateType = "http://www.w3.org/2001/XMLSchema#dateTime";
+            Assert.Equal(dateType.ToString(), dataset.GetLiteralNodesFromUriNode("dct:issued").First().DataType.ToString());
+            Assert.Equal(dateType.ToString(), dataset.GetLiteralNodesFromUriNode("dct:modified").First().DataType.ToString());
 
             Assert.NotNull(dataset.Issued);
             Assert.NotNull(dataset.Modified);

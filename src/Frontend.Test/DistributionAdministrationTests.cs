@@ -569,6 +569,39 @@ namespace Frontend.Test
         }
 
         [TestMethod]
+        public async Task ChangeLicencesForOneDistributionWithotChange()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDistributionCodelists();
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            DcatDistribution distribution = CreateMaximalDistribution();
+            Guid id = fixture.CreateDistribution(datasetId, PublisherId, distribution);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            await Page.Login(f, PublisherId, "Publisher");
+
+            await Page.OpenDatasetsAdmin();
+
+            await Page.TakeScreenshot();
+
+            await Page.RunAndWaitForChangeLicenses(async () =>
+            {
+                await Page.GetByText("Hromadne upraviť licencie všetkých distribúcií", new PageGetByTextOptions { Exact = true }).ClickAsync();
+            });
+
+            await Page.RunAndWaitForDatasetList(async () =>
+            {
+                await Page.GetByText("Uložiť", new PageGetByTextOptions { Exact = true }).ClickAsync();
+            });
+
+            Assert.AreEqual(1, storage.GetFileStates(new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.DistributionRegistration } }, accessPolicy).TotalCount);
+            Extensions.AssertAreEqual(distribution, storage.GetFileState(id, accessPolicy)!);
+        }
+
+        [TestMethod]
         public async Task ChangeLicencesForOneDistribution()
         {
             string path = fixture.GetStoragePath();

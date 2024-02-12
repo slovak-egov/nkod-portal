@@ -193,12 +193,12 @@ namespace TestBase
 
         public Task<TokenResult> DelegatePublisher(string publisherId)
         {
-            return tokenService?.DelegateToken(httpContextValueAccessor, publisherId) ?? throw new Exception("No token service registered");
+            return tokenService?.DelegateToken(httpContextValueAccessor, publisherId, httpContextValueAccessor.UserId!) ?? throw new Exception("No token service registered");
         }
 
         public Task<UserInfo> GetUserInfo()
         {
-            string publisherId = httpContextValueAccessor.Publisher ?? string.Empty;
+            string publisherId = (httpContextValueAccessor.HasRole("Superadmin") ? null : httpContextValueAccessor.Publisher) ?? string.Empty;
 
             if (users.TryGetValue(publisherId, out List<Entry>? list))
             {

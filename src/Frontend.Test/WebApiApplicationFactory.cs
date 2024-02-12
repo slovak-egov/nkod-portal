@@ -172,7 +172,7 @@ namespace Frontend.Test
             });
         }
 
-        public Task<TokenResult> DelegateToken(IHttpContextValueAccessor httpContextValueAccessor, string publisherId)
+        public Task<TokenResult> DelegateToken(IHttpContextValueAccessor httpContextValueAccessor, string publisherId, string userId)
         {
             if (httpContextValueAccessor.HasRole("Superadmin"))
             {

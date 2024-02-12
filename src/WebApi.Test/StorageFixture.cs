@@ -183,6 +183,8 @@ namespace WebApi.Test
                 { "sk", new List<string> { "nepovolená likvidácia odpadu", "chemický odpad" } },
                 { "en", new List<string> { "unauthorised dumping", "chemical waste" } }
             });
+            dataset.Issued = new DateTimeOffset(2023, 8, 16, 0, 0, 0, TimeSpan.Zero);
+            dataset.Modified = new DateTimeOffset(2023, 8, 16, 0, 0, 0, TimeSpan.Zero);
 
             FileMetadata metadata = dataset.UpdateMetadata(true);
             CreateFile(new FileState(metadata, dataset.ToString()));

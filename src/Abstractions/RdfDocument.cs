@@ -159,7 +159,7 @@ namespace NkodSk.Abstractions
 
         private static Uri SkosPrefix { get; } = new Uri(@"http://www.w3.org/2004/02/skos/core#");
 
-        private static Uri XsdPrefix { get; } = new Uri(@"http://www.w3.org/2001/XMLSchema#");
+        public static Uri XsdPrefix { get; } = new Uri(@"http://www.w3.org/2001/XMLSchema#");
 
         private static Uri VcardPrefix { get; } = new Uri(@"http://www.w3.org/2006/vcard/ns#");
 

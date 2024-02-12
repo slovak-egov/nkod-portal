@@ -35,6 +35,7 @@ namespace NkodSk.Abstractions
 
                 if (dataset is not null)
                 {
+                    dataset.Modified = DateTime.UtcNow;
                     FileMetadata datasetMetadata = datasetState.Metadata;
 
                     FileStorageQuery query = new FileStorageQuery
@@ -59,7 +60,7 @@ namespace NkodSk.Abstractions
                         }
                     }
 
-                    await UpdateMetadata(datasetMetadata).ConfigureAwait(false);
+                    await InsertFile(dataset.ToString(), true, datasetMetadata).ConfigureAwait(false);
                 }
             }
         }
