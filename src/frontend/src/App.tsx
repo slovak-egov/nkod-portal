@@ -1,6 +1,6 @@
 import Header from './components/Header';
-import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom';
-import { Footer } from './components/Footer';
+import {BrowserRouter, Route, Routes, useNavigate} from 'react-router-dom';
+import {Footer} from './components/Footer';
 import AddDataset from './pages/AddDataset';
 import DatasetList from './pages/DatasetList';
 import HomePage from './pages/HomePage';
@@ -20,8 +20,18 @@ import EditDistribution from './pages/EditDistribution';
 import Sparql from './pages/Sparql';
 import Quality from './pages/Quality';
 import Profile from './pages/Profile';
-import { Language, LanguageOptionsContext, TokenContext, TokenResult, UserInfo, sendPost, supportedLanguages, useUserInfo } from './client';
-import React, { useEffect, useState, useContext } from 'react';
+import {
+    Language,
+    LanguageOptionsContext,
+    sendPost,
+    supportedLanguages,
+    TokenContext,
+    TokenResult,
+    UserInfo,
+    useUserInfo
+} from './client';
+import {CmsUser, CmsUserContext, getCmsUser} from "./cms";
+import React, {useContext, useEffect, useState} from 'react';
 import PublisherList from './pages/PublisherList';
 import UserList from './pages/UserList';
 import EditUser from './pages/EditUser';
@@ -30,8 +40,12 @@ import Codelists from './pages/Codelists';
 import AddPublisher from './pages/AddPublisher';
 import InfoPageInvalidDelegation from './pages/InfoPageInvalidDelegation';
 import InfoPageWaitingForApprove from './pages/InfoPageWaitingForApprove';
-import { AxiosResponse, RawAxiosRequestHeaders } from 'axios';
+import {AxiosResponse, RawAxiosRequestHeaders} from 'axios';
 import NotFound from './pages/NotFound';
+import ODCommunityStartPage from "./pages/cms/ODCommunityStartPage";
+import UserPage from "./pages/cms/UserPage";
+import RegisterUser from "./pages/cms/RegisterUser";
+import Login from "./pages/cms/Login";
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -75,6 +89,7 @@ const defaultHeaders: RawAxiosRequestHeaders = {};
 function App(props: Props) {
     const [token, setToken] = useState(props.extenalToken);
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+    const [cmsUser, setCmsUser] = useState<CmsUser | null>(null);
     const [headers, setHeaders] = useState<RawAxiosRequestHeaders>(defaultHeaders);
     const [userInfoIsLoading, setUserInfoIsLoading] = useState<boolean>(true);
     const [language, setLanguage] = useState<Language>(supportedLanguages[0]);
@@ -131,16 +146,61 @@ function App(props: Props) {
 
     useEffect(() => {
         async function load() {
-            if (!headers['Authorization']) {
-                setUserInfo(null);
-                setUserInfoIsLoading(false);
-                return;
-            }
-
-            setUserInfoIsLoading(true);
             try {
-                const response: AxiosResponse<UserInfo> = await sendPost('user-info', {}, headers);
-                setUserInfo(response.data);
+                if (process.env.REACT_APP_NO_AUTH) {
+                    setCmsUser({
+                            id: 'id',
+                            userName: 'ODKomunity tester',
+                            normalizedUserName: undefined,
+                            email: undefined,
+                            normalizedEmail: undefined,
+                            emailConfirmed: false,
+                            passwordHash: undefined,
+                            securityStamp: undefined,
+                            phoneNumber: undefined,
+                            phoneNumberConfirmed: false,
+                            twoFactorEnabled: false,
+                            lockoutEnd: undefined,
+                            lockoutEnabled: false,
+                            accessFailedCount: 0,
+                            concurrencyStamp: undefined
+                        });
+                    
+                    setUserInfo({
+                        publisher: 'test',
+                        publisherEmail: 'test@test.tst',
+                        publisherHomePage: '',
+                        publisherView: {
+                            id: '',
+                            key: '',
+                            isPublic: true,
+                            name: 'test',
+                            datasetCount: 0,
+                            themes: null
+                        },
+                        publisherActive: true,
+                        publisherPhone: '',
+                        id: '',
+                        firstName: 'test',
+                        lastName: 'test',
+                        email: 'test@test.tst',
+                        role: 'Superadmin',
+                        companyName: 'test'
+                    });
+                } else {
+                    setCmsUser(await getCmsUser());
+                    
+                    if (!headers['Authorization']) {
+                        setUserInfo(null);
+                        setUserInfoIsLoading(false);
+                        return;
+                    }
+
+                    setUserInfoIsLoading(true);
+
+                    setUserInfo((await sendPost('user-info', {}, headers)).data);
+                }
+                
             } catch (err) {
                 setUserInfo(null);
             } finally {
@@ -161,83 +221,94 @@ function App(props: Props) {
                 userInfoLoading: userInfoIsLoading
             }}
         >
-            <LanguageOptionsContext.Provider
+            <CmsUserContext.Provider
                 value={{
-                    language: language,
-                    setLanguage: setLanguage
-                }}
-            >
-                <BrowserRouter>
-                    <Alert type="warning" style={{ margin: 0 }}>
-                        Registrácia datasetov začína až 15.1.2024! Dovtedy použite <a href="https://data.gov.sk">data.gov.sk</a>.
-                    </Alert>
-                    <Header />
-                    <AppNavigator {...props} />
-                    <div className="govuk-width-container">
-                        <div className="govuk-grid-row">
-                            <div className="govuk-grid-column-full">
-                                <Routes>
-                                    <Route path="/" Component={HomePage} />
-
-                                    <Route path="/datasety/:id" element={<DetailDataset />} />
-                                    <Route path="/datasety" element={<PublicDatasetList />} />
-                                    <Route path="/poskytovatelia" element={<PublicPublisherList />} />
-                                    <Route path="/lokalne-katalogy/:id" element={<DetailLocalCatalog />} />
-                                    <Route path="/lokalne-katalogy" element={<PublicLocalCatalogList />} />
-                                    <Route path="/sparql" Component={Sparql} />
-                                    <Route path="/kvalita-metadat" Component={Quality} />
-
-                                    {userInfo ? (
-                                        <>
-                                            <Route path="/sprava/neplatne-zastupenie" Component={InfoPageInvalidDelegation} />
-                                            <Route path="/sprava/caka-na-schvalenie" Component={InfoPageWaitingForApprove} />
-                                        </>
-                                    ) : null}
-
-                                    {userInfo?.publisher && userInfo.publisherView == null ? <Route path="/registracia" Component={AddPublisher} /> : null}
-
-                                    {userInfo?.publisher && userInfo.publisherActive && userInfo.role ? (
-                                        <>
-                                            <Route path="/sprava/datasety" Component={DatasetList} />
-                                            <Route path="/sprava/datasety/pridat" Component={AddDataset} />
-                                            <Route path="/sprava/datasety/upravit/:id" Component={EditDataset} />
-
-                                            <Route path="/sprava/distribucie/:datasetId" Component={DistributionList} />
-                                            <Route path="/sprava/distribucie/:datasetId/pridat" Component={AddDistribution} />
-                                            <Route path="/sprava/distribucie/:datasetId/upravit/:id" Component={EditDistribution} />
-
-                                            <Route path="/sprava/lokalne-katalogy" Component={CatalogList} />
-                                            <Route path="/sprava/lokalne-katalogy/pridat" Component={AddCatalog} />
-                                            <Route path="/sprava/lokalne-katalogy/upravit/:id" Component={EditCatalog} />
-                                        </>
-                                    ) : null}
-
-                                    {userInfo?.publisher &&
-                                    userInfo.publisherActive &&
-                                    (userInfo.role === 'PublisherAdmin' || userInfo.role === 'Superadmin') ? (
-                                        <>
-                                            <Route path="/sprava/pouzivatelia" Component={UserList} />
-                                            <Route path="/sprava/pouzivatelia/pridat" Component={AddUser} />
-                                            <Route path="/sprava/pouzivatelia/upravit/:id" Component={EditUser} />
-                                            <Route path="/sprava/profil" Component={Profile} />
-                                        </>
-                                    ) : null}
-
-                                    {userInfo?.role === 'Superadmin' ? (
-                                        <>
-                                            <Route path="/sprava/poskytovatelia" Component={PublisherList} />
-                                            <Route path="/sprava/ciselniky" Component={Codelists} />
-                                        </>
-                                    ) : null}
-
-                                    <Route path="*" Component={NotFound} />
-                                </Routes>
+                    cmsUser: cmsUser,
+                    setCmsUser: setCmsUser
+                }}>
+                <LanguageOptionsContext.Provider
+                    value={{
+                        language: language,
+                        setLanguage: setLanguage
+                    }}
+                >
+                    <BrowserRouter>
+                        <Alert type="warning" style={{ margin: 0 }}>
+                            Registrácia datasetov začína až 15.1.2024! Dovtedy použite <a href="https://data.gov.sk">data.gov.sk</a>.
+                        </Alert>
+                        <Header />
+                        <AppNavigator {...props} />
+                        <div className="govuk-width-container">
+                            <div className="govuk-grid-row">
+                                <div className="govuk-grid-column-full">
+                                    <Routes>
+                                        <Route path="/" Component={HomePage} />
+    
+                                        <Route path="/datasety/:id" element={<DetailDataset />} />
+                                        <Route path="/datasety" element={<PublicDatasetList />} />
+                                        <Route path="/poskytovatelia" element={<PublicPublisherList />} />
+                                        <Route path="/lokalne-katalogy/:id" element={<DetailLocalCatalog />} />
+                                        <Route path="/lokalne-katalogy" element={<PublicLocalCatalogList />} />
+                                        <Route path="/sparql" Component={Sparql} />
+                                        <Route path="/kvalita-metadat" Component={Quality} />
+    
+                                        {userInfo ? (
+                                            <>
+                                                <Route path="/sprava/neplatne-zastupenie" Component={InfoPageInvalidDelegation} />
+                                                <Route path="/sprava/caka-na-schvalenie" Component={InfoPageWaitingForApprove} />
+                                            </>
+                                        ) : null}
+    
+                                        {userInfo?.publisher && userInfo.publisherView == null ? <Route path="/registracia" Component={AddPublisher} /> : null}
+    
+                                        {userInfo?.publisher && userInfo.publisherActive && userInfo.role ? (
+                                            <>
+                                                <Route path="/sprava/datasety" Component={DatasetList} />
+                                                <Route path="/sprava/datasety/pridat" Component={AddDataset} />
+                                                <Route path="/sprava/datasety/upravit/:id" Component={EditDataset} />
+    
+                                                <Route path="/sprava/distribucie/:datasetId" Component={DistributionList} />
+                                                <Route path="/sprava/distribucie/:datasetId/pridat" Component={AddDistribution} />
+                                                <Route path="/sprava/distribucie/:datasetId/upravit/:id" Component={EditDistribution} />
+    
+                                                <Route path="/sprava/lokalne-katalogy" Component={CatalogList} />
+                                                <Route path="/sprava/lokalne-katalogy/pridat" Component={AddCatalog} />
+                                                <Route path="/sprava/lokalne-katalogy/upravit/:id" Component={EditCatalog} />
+                                            </>
+                                        ) : null}
+    
+                                        {userInfo?.publisher &&
+                                        userInfo.publisherActive &&
+                                        (userInfo.role === 'PublisherAdmin' || userInfo.role === 'Superadmin') ? (
+                                            <>
+                                                <Route path="/sprava/pouzivatelia" Component={UserList} />
+                                                <Route path="/sprava/pouzivatelia/pridat" Component={AddUser} />
+                                                <Route path="/sprava/pouzivatelia/upravit/:id" Component={EditUser} />
+                                                <Route path="/sprava/profil" Component={Profile} />
+                                            </>
+                                        ) : null}
+    
+                                        {userInfo?.role === 'Superadmin' ? (
+                                            <>
+                                                <Route path="/sprava/poskytovatelia" Component={PublisherList} />
+                                                <Route path="/sprava/ciselniky" Component={Codelists} />
+                                            </>
+                                        ) : null}
+                                        
+                                        <Route path="/odkomunita" Component={ODCommunityStartPage} />
+                                        <Route path="/odkomunita/register-user" Component={RegisterUser} />
+                                        <Route path="/odkomunita/user-page" Component={UserPage} />
+                                        <Route path="/odkomunita/login" Component={Login} />
+    
+                                        <Route path="*" Component={NotFound} />
+                                    </Routes>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <Footer />
-                </BrowserRouter>
-            </LanguageOptionsContext.Provider>
+                        <Footer />
+                    </BrowserRouter>
+                </LanguageOptionsContext.Provider>
+            </CmsUserContext.Provider>
         </TokenContext.Provider>
     );
 }

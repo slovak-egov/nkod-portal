@@ -4,11 +4,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { useDocumentTitle, usePublishers } from "../client";
 import HomePagePublisher from "./HomePagePublisher";
 import { useTranslation } from "react-i18next";
+import {useCmsUser} from "../cms";
 
 export default function HomePage()
 {
     const [query, setQuery] = useState('');
     const navigate = useNavigate();
+    const cmsUser = useCmsUser();
+
     useDocumentTitle('');
 
     const [publishers] = usePublishers({
@@ -111,6 +114,12 @@ export default function HomePage()
                     </li>
                     <li className="idsk-intro-block__side-menu__li">
                         <Link className="govuk-link idsk-intro-block__side-menu__a" to="/kvalita-metadat" title={t('homePage.qualityStatistics')}>{t('homePage.qualityStatistics')}</Link>
+                    </li>
+                    <li className="idsk-intro-block__side-menu__li">
+                        {cmsUser ?
+                            <Link className="govuk-link idsk-intro-block__side-menu__a" to="/odkomunita/user-page" title={t('odCommunity')}>{t('odCommunity')}</Link> :
+                            <Link className="govuk-link idsk-intro-block__side-menu__a" to="/odkomunita" title={t('odCommunity')}>{t('odCommunity')}</Link>
+                        }
                     </li>
                 </ul>
             </div>

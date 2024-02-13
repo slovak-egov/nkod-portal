@@ -18,16 +18,15 @@ spec:
       containers:
         - name: iam
           image: $REPOSITORY/iam:$TAG
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: jwt-config
           env:
-            - name: Jwt__Issuer
-              value: ""
-            - name: Jwt__Audience
-              value: ""
             - name: AccessTokenValidInMinutes
-              value: ""
+              value: "20"
             - name: RefreshTokenValidInMinutes
-              value: ""
+              value: "20"
             - name: AccessTokenKeyPassword
               valueFrom:
                 secretKeyRef:
@@ -41,9 +40,9 @@ spec:
             - name: Saml2__EntityId
               value: ""
             - name: Saml2__IdPMetadata
-              value: ""
+              value: "http://iam/metadata"
             - name: Saml2__SignatureAlgorithm
-              value: ""
+              value: "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
             - name: Saml2__SigningCertificateFile
               valueFrom:
                 secretKeyRef:
@@ -65,11 +64,11 @@ spec:
                   name: nkod-secrets
                   key: DecryptionCertificatePassword
             - name: Saml2__CertificateValidationMode
-              value: ""
+              value: "None"
             - name: Saml2__RevocationMode
-              value: ""
+              value: "NoCheck"
             - name: Saml2__ReturnUrl
-              value: ""
+              value: "http://demo.nkod/saml/consume"
             - name: ConnectionStrings__DefaultConnection
               valueFrom:
                 secretKeyRef:
