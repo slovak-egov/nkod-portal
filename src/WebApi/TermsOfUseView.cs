@@ -20,6 +20,10 @@ namespace WebApi
 
         public CodelistItemView? PersonalDataContainmentTypeValue { get; set; }
 
+        public string? AuthorName { get; set; }
+
+        public string? OriginalDatabaseAuthorName { get; set; }
+
         public static async Task<TermsOfUseView> MapFromRdf(LegTermsOfUse rdf, ICodelistProviderClient codelistProviderClient, string language)
         {
             TermsOfUseView view = new TermsOfUseView
@@ -27,7 +31,9 @@ namespace WebApi
                 AuthorsWorkType = rdf.AuthorsWorkType,
                 OriginalDatabaseType = rdf.OriginalDatabaseType,
                 DatabaseProtectedBySpecialRightsType = rdf.DatabaseProtectedBySpecialRightsType,
-                PersonalDataContainmentType = rdf.PersonalDataContainmentType
+                PersonalDataContainmentType = rdf.PersonalDataContainmentType,
+                AuthorName = rdf.AuthorName,
+                OriginalDatabaseAuthorName = rdf.OriginalDatabaseAuthorName,
             };
 
             view.AuthorsWorkTypeValue = await codelistProviderClient.MapCodelistValue(DcatDistribution.LicenseCodelist, view.AuthorsWorkType?.ToString(), language);

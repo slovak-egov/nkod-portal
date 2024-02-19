@@ -39,6 +39,8 @@ namespace WebApi.Test
                 OriginalDatabaseType = "https://data.gov.sk/def/ontology/law/originalDatabaseType/1",
                 DatabaseProtectedBySpecialRightsType = "https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1",
                 PersonalDataContainmentType = "https://data.gov.sk/def/ontology/law/personalDataContainmentType/1",
+                AuthorName = "AuthorName",
+                OriginalDatabaseAuthorName = "OriginalDatabaseAuthorName",
                 DownloadUrl = "http://data.gov.sk/download",
                 Format = "http://publications.europa.eu/resource/dataset/file-type/1",
                 MediaType = "http://www.iana.org/assignments/media-types/text/csv",
@@ -80,6 +82,8 @@ namespace WebApi.Test
             Assert.Equal(input.OriginalDatabaseType, distribution.TermsOfUse?.OriginalDatabaseType?.ToString());
             Assert.Equal(input.DatabaseProtectedBySpecialRightsType, distribution.TermsOfUse?.DatabaseProtectedBySpecialRightsType?.ToString());
             Assert.Equal(input.PersonalDataContainmentType, distribution.TermsOfUse?.PersonalDataContainmentType?.ToString());
+            Assert.Equal(input.AuthorName, distribution.TermsOfUse?.AuthorName);
+            Assert.Equal(input.OriginalDatabaseAuthorName, distribution.TermsOfUse?.OriginalDatabaseAuthorName);
             Assert.Equal(input.DownloadUrl, distribution.DownloadUrl?.ToString());
             Assert.Equal(input.Format, distribution.Format?.ToString());
             Assert.Equal(input.MediaType, distribution.MediaType?.ToString());

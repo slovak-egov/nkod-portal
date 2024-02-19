@@ -79,7 +79,6 @@ const defaultHeaders: RawAxiosRequestHeaders = {};
 
 function App(props: Props) {
     const [token, setToken] = useState(props.extenalToken);
-    const [tokenRefreshPlanned, setTokenRefreshPlanned] = useState<boolean>(false);
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
     const [headers, setHeaders] = useState<RawAxiosRequestHeaders>(defaultHeaders);
     const [userInfoIsLoading, setUserInfoIsLoading] = useState<boolean>(true);
@@ -120,20 +119,23 @@ function App(props: Props) {
     );
 
     useEffect(() => {
-        if (token?.refreshTokenAfter && !tokenRefreshPlanned) {
-            setTokenRefreshPlanned(true);
+        if (token?.refreshTokenAfter) {
             const refreshTokenAfter = new Date(token.refreshTokenAfter);
             const now = new Date();
             const diff = refreshTokenAfter.getTime() - now.getTime();
             if (diff > 0) {
-                setTimeout(() => {
+                const timeout = setTimeout(() => {
                     refreshToken();
                 }, diff);
+
+                return () => {
+                    clearTimeout(timeout);
+                };
             } else {
                 refreshToken();
             }
         }
-    }, [token, tokenRefreshPlanned, refreshToken]);
+    }, [token, refreshToken]);
 
     useEffect(() => {
         async function load() {

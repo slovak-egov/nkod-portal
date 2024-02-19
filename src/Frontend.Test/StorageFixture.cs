@@ -62,7 +62,9 @@ namespace Frontend.Test
                 new Uri("https://creativecommons.org/licenses/by/4.0/"),
                 new Uri("https://creativecommons.org/licenses/by/4.0/"),
                 new Uri("https://creativecommons.org/publicdomain/zero/1.0/"),
-                new Uri("https://data.gov.sk/def/personal-data-occurence-type/2"));
+                new Uri("https://data.gov.sk/def/personal-data-occurence-type/2"),
+                string.Empty,
+                string.Empty);
             distribution.DownloadUrl = new Uri("http://example.com/download");
             distribution.AccessUrl = distribution.DownloadUrl;
             distribution.Format = new Uri("http://publications.europa.eu/resource/dataset/file-type/1");

@@ -12,6 +12,7 @@ import MultiCheckbox from "./MultiCheckbox"
 import ErrorAlert from "./ErrorAlert"
 import Loading from "./Loading"
 import { useTranslation } from "react-i18next"
+import DateInput from "./DateInput"
 
 type Props = {
     dataset: DatasetInput;
@@ -262,15 +263,13 @@ export function DatasetForm(props: Props)
                 label={t('timeValidityDateFrom')}
                 errorMessage={errors['startdate']}
                 element={(id) => (
-                    <BaseInput id={id} disabled={saving} value={dataset.startDate ?? ''} onChange={(e) => setDataset({ startDate: e.target.value })} />
+                    <DateInput id={id} disabled={saving} value={dataset.startDate ?? ''} onDateChange={(e) => setDataset({ startDate: e })} />
                 )}
             />
             <FormElementGroup
                 label={t('timeValidityDateTo')}
                 errorMessage={errors['enddate']}
-                element={(id) => (
-                    <BaseInput id={id} disabled={saving} value={dataset.endDate ?? ''} onChange={(e) => setDataset({ endDate: e.target.value })} />
-                )}
+                element={(id) => <DateInput id={id} disabled={saving} value={dataset.endDate ?? ''} onDateChange={(e) => setDataset({ endDate: e })} />}
             />
 
             <MultiLanguageFormGroup<string>

@@ -56,6 +56,18 @@ export default function DistributionRow(props: Props) {
                     </p>
                 ) : null}
 
+                {distribution.termsOfUse?.authorName ? (
+                    <p className="govuk-body">
+                        {t('authorName')}: {distribution.termsOfUse.authorName}
+                    </p>
+                ) : null}
+
+                {distribution.termsOfUse?.originalDatabaseAuthorName ? (
+                    <p className="govuk-body">
+                        {t('originalDatabaseAuthorName')}: {distribution.termsOfUse.originalDatabaseAuthorName}
+                    </p>
+                ) : null}
+
                 {distribution.formatValue ? (
                     <p className="govuk-body">
                         {t('downloadFormat')}: {distribution.formatValue.label}

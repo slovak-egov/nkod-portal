@@ -937,6 +937,9 @@ namespace Frontend.Test
             Assert.AreEqual(rdf.TermsOfUse?.DatabaseProtectedBySpecialRightsType?.ToString(), await test.GetSelectItemFormElementGroup("Typ špeciálnej právnej ochrany databázy"));
             Assert.AreEqual(rdf.TermsOfUse?.PersonalDataContainmentType?.ToString(), await test.GetSelectItemFormElementGroup("Typ výskytu osobných údajov"));
 
+            Assert.AreEqual(rdf.TermsOfUse?.AuthorName?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Meno autora diela")).GetAttributeAsync("value"));
+            Assert.AreEqual(rdf.TermsOfUse?.OriginalDatabaseAuthorName?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Meno autora originálnej databázy")).GetAttributeAsync("value"));
+
             Assert.AreEqual(rdf.DownloadUrl?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("URL súboru na stiahnutie")).GetAttributeAsync("value"));
             Assert.AreEqual(rdf.Format?.ToString(), await test.GetSelectItemFormElementGroup("Formát súboru na stiahnutie"));
             Assert.AreEqual(rdf.MediaType?.ToString(), await test.GetSelectItemFormElementGroup("Typ média súboru na stiahnutie"));
@@ -952,6 +955,9 @@ namespace Frontend.Test
             await (await test.GetSelectInFormElementGroup("Typ originálnej databázy"))!.SelectOptionAsync(rdf.TermsOfUse?.OriginalDatabaseType?.ToString() ?? string.Empty);
             await (await test.GetSelectInFormElementGroup("Typ špeciálnej právnej ochrany databázy"))!.SelectOptionAsync(rdf.TermsOfUse?.DatabaseProtectedBySpecialRightsType?.ToString() ?? string.Empty);
             await (await test.GetSelectInFormElementGroup("Typ výskytu osobných údajov"))!.SelectOptionAsync(rdf.TermsOfUse?.PersonalDataContainmentType?.ToString() ?? string.Empty);
+
+            await (await test.GetInputInFormElementGroup("Meno autora diela"))!.FillAsync(rdf.TermsOfUse?.AuthorName?.ToString() ?? string.Empty);
+            await (await test.GetInputInFormElementGroup("Meno autora originálnej databázy"))!.FillAsync(rdf.TermsOfUse?.OriginalDatabaseAuthorName?.ToString() ?? string.Empty);
 
             await (await test.GetInputInFormElementGroup("URL súboru na stiahnutie"))!.FillAsync(rdf.DownloadUrl?.ToString() ?? string.Empty);
             await (await test.GetSelectInFormElementGroup("Formát súboru na stiahnutie"))!.SelectOptionAsync(rdf.Format?.ToString() ?? string.Empty);

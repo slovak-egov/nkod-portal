@@ -198,6 +198,7 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddApplicationInsightsTelemetry(options =>
 {
     options.ConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+    options.EnableAdaptiveSampling = false;
 });
 builder.Services.AddSingleton<ITelemetryInitializer, RequestTelementryInitializer>();
 

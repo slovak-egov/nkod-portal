@@ -165,8 +165,6 @@ namespace Frontend.Test
             await Page.RunAndWaitForPublisherList(async () =>
             {
                 await Page.GetByText("Uložiť", new PageGetByTextOptions { Exact = true }).ClickAsync();
-
-                await Page.TakeScreenshot();
             });
 
             await Page.AssertTableRowsCount(1);

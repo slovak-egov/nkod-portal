@@ -52,7 +52,9 @@ namespace ImportRegistrations.Test
             distribution.SetTermsOfUse(new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
-                new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"));
+                new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"),
+                string.Empty,
+                string.Empty);
             distribution.DownloadUrl = new Uri("http://data.gov.sk/download");
             distribution.AccessUrl = new Uri("http://data.gov.sk/download");
             distribution.Format = new Uri("http://publications.europa.eu/resource/dataset/file-type/1");

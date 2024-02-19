@@ -157,8 +157,6 @@ namespace Frontend.Test
 
             await (await Page.GetSelectInFormElementGroup("Právna forma"))!.SelectOptionAsync("https://data.gov.sk/def/legal-form-type/331");
 
-            await Page.TakeScreenshot();
-
             await Page.RunAndWaitForRequests(async () =>
             {
                 await Page.GetByText("Registrovať").ClickAsync();

@@ -35,6 +35,7 @@ using System;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -131,7 +132,7 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
-{x
+{
     options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Frontend API",
@@ -164,9 +165,17 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddApplicationInsightsTelemetry(options =>
 {
     options.ConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
-    
+    options.EnableAdaptiveSampling = false;    
 }).AddApplicationInsightsTelemetryProcessor<ExceptionFilter>();
 builder.Services.AddSingleton<ITelemetryInitializer, RequestTelementryInitializer>();
+
+const int maxFileSize = 30 * 1024 * 1024;
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.ValueLengthLimit = maxFileSize;
+    options.MultipartBodyLengthLimit = maxFileSize + 200;
+});
 
 var app = builder.Build();
 
@@ -1150,6 +1159,96 @@ app.MapPut("/distributions", [Authorize] async ([FromBody] DistributionInput dis
     return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
 });
 
+app.MapPut("/distributions/licences", [Authorize] async ([FromBody] DistributionLicenceInput distribution, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
+    if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
+    {
+        return Results.Forbid();
+    }
+
+    FileState? publisherState = await client.GetPublisherFileState(publisherId).ConfigureAwait(false);
+    if (publisherState is null || !publisherState.Metadata.IsPublic)
+    {
+        return Results.Forbid();
+    }
+
+    SaveResult result = new SaveResult();
+    try
+    {
+        if (distribution is not null)
+        {
+            if (Guid.TryParse(distribution.Id, out Guid id))
+            {
+                FileState? state = await client.GetFileState(id);
+                if (state?.Content is not null && state.Metadata.Type == FileType.DistributionRegistration && state.Metadata.Publisher == publisher.ToString() && state.Metadata.ParentFile.HasValue)
+                {
+                    Guid datasetId = state.Metadata.ParentFile.Value;
+
+                    DcatDistribution? distributionRdf = DcatDistribution.Parse(state.Content);
+                    if (distributionRdf is not null)
+                    {
+                        FileState? datasetState = await client.GetFileState(datasetId).ConfigureAwait(false);
+                        if (datasetState?.Content is not null && datasetState.Metadata.Publisher == publisher.ToString())
+                        {
+                            DcatDataset? dataset = DcatDataset.Parse(datasetState.Content);
+                            if (dataset is not null)
+                            {
+                                FileMetadata? distributionFileMetadata = null;
+
+                                distribution.MapToRdf(distributionRdf);
+                                FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata, state.Metadata);
+                                await client.InsertFile(distributionRdf.ToString(), true, metadata).ConfigureAwait(false);
+                                await client.UpdateDatasetMetadata(datasetId).ConfigureAwait(false);
+
+                                if (distributionFileMetadata is not null)
+                                {
+                                    await client.UpdateMetadata(distributionFileMetadata with { ParentFile = metadata.Id }).ConfigureAwait(false);
+                                }
+
+                                result.Id = metadata.Id.ToString();
+                                result.Success = true;
+                            }
+                            else
+                            {
+                                return Results.Problem("Source rdf entity is not valid state");
+                            }
+                        }
+                        else
+                        {
+                            return Results.Forbid();
+                        }
+                    }
+                    else
+                    {
+                        return Results.Problem("Source rdf entity is not valid state");
+                    }
+                }
+                else
+                {
+                    return Results.Forbid();
+                }
+            }
+            else
+            {
+                return Results.Forbid();
+            }
+        }
+        else
+        {
+            result.Errors ??= new Dictionary<string, string>();
+            result.Errors["generic"] = "Bad request";
+        }
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        result.Errors ??= new Dictionary<string, string>();
+        result.Errors["generic"] = "Generic error";
+    }
+    return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
+});
+
 app.MapDelete("/distributions", [Authorize] async ([FromQuery] string? id, [FromServices] IDocumentStorageClient client, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
 {
     string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
@@ -1603,7 +1702,7 @@ app.MapPost("user-info", [Authorize] async ([FromServices] IDocumentStorageClien
     }
 });
 
-app.MapPost("publishers/impersonate", [Authorize] async ([FromQuery] string? id, [FromServices] IIdentityAccessManagementClient client, [FromServices] IDocumentStorageClient documentStorageClient, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("publishers/impersonate", [Authorize] async ([FromQuery] string? id, [FromServices] IIdentityAccessManagementClient client, [FromServices] IDocumentStorageClient documentStorageClient, ClaimsPrincipal user, HttpResponse response, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
     {
@@ -1614,7 +1713,10 @@ app.MapPost("publishers/impersonate", [Authorize] async ([FromQuery] string? id,
                 FileState? state = await documentStorageClient.GetFileState(fileId).ConfigureAwait(false);
                 if (state?.Metadata.Publisher is not null)
                 {
-                    return Results.Ok(await client.DelegatePublisher(state.Metadata.Publisher).ConfigureAwait(false));
+                    TokenResult token = await client.DelegatePublisher(state.Metadata.Publisher).ConfigureAwait(false);
+                    string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+                    response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+                    return Results.Ok(token);
                 }
                 else
                 {
@@ -1936,7 +2038,7 @@ app.MapPut("/profile", [Authorize] async ([FromServices] IDocumentStorageClient 
     return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapPost("/upload", [Authorize] async ([FromServices] IDocumentStorageClient client, ClaimsPrincipal identity, HttpRequest request, IFormFile file, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/upload", [RequestSizeLimit(100)] [RequestFormLimits(MultipartBodyLengthLimit = 200, ValueLengthLimit = 200)] [Authorize] async ([FromServices] IDocumentStorageClient client, ClaimsPrincipal identity, HttpRequest request, IFormFile file, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
     {
@@ -1945,6 +2047,11 @@ app.MapPost("/upload", [Authorize] async ([FromServices] IDocumentStorageClient 
             string? publisher = identity.FindFirstValue("Publisher");
             if (!string.IsNullOrEmpty(publisher))
             {
+                if (file.Length > maxFileSize)
+                {
+                    return Results.BadRequest("File is too large");
+                }
+
                 DateTimeOffset now = DateTimeOffset.UtcNow;
                 FileMetadata metadata = new FileMetadata(Guid.NewGuid(), file.FileName, FileType.DistributionFile, null, publisher, true, file.FileName, now, now);
                 using Stream stream = file.OpenReadStream();
@@ -2235,14 +2342,23 @@ app.Use(async (context, next) =>
     if (context.GetEndpoint() is null)
     {
         string path = context.Request.Path.Value ?? string.Empty;
-        if (path.StartsWith("/set/") || path.StartsWith("/dataset/"))
+        if (path.StartsWith("/set/") || path.StartsWith("/dataset/") || path.StartsWith("/datasety/"))
         {
             IDocumentStorageClient client = context.RequestServices.GetRequiredService<IDocumentStorageClient>();
 
             UriBuilder uriBuilder = new UriBuilder();
             uriBuilder.Scheme = "https";
             uriBuilder.Host = "data.gov.sk";
-            uriBuilder.Path = path;
+            
+            if (path.StartsWith("/datasety/"))
+            {
+                uriBuilder.Path = "/dataset/" + path.Substring(10);
+            }
+            else
+            {
+                uriBuilder.Path = path;
+            }
+
             Uri uri = uriBuilder.Uri;
 
             FileStorageQuery query = new FileStorageQuery
@@ -2256,10 +2372,10 @@ app.Use(async (context, next) =>
             {
                 query.AdditionalFilters["key"] = new[] { uri.ToString() };
             }
-            else if (path.StartsWith("/dataset"))
+            else 
             {
                 query.AdditionalFilters["landingPage"] = new[] { uri.ToString() };
-            }
+            } 
 
             FileStorageResponse response = await client.GetFileStates(query);
             if (response.Files.Count >= 1)

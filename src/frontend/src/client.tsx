@@ -168,6 +168,8 @@ export type DistributionInput = {
     originalDatabaseType: string | null;
     databaseProtectedBySpecialRightsType: string | null;
     personalDataContainmentType: string | null;
+    authorName: string | null;
+    originalDatabaseAuthorName: string | null;
     downloadUrl: string | null;
     format: string | null;
     mediaType: string | null;
@@ -232,6 +234,8 @@ type TermsOfUse = {
     originalDatabaseTypeValue: CodelistValue | null;
     databaseProtectedBySpecialRightsTypeValue: CodelistValue | null;
     personalDataContainmentTypeValue: CodelistValue | null;
+    authorName: string | null;
+    originalDatabaseAuthorName: string | null;
 };
 
 export type Distribution = {
@@ -858,26 +862,41 @@ export function removeUser(prompt: string, id: string, headers: RawAxiosRequestH
 
 export function useSingleFileUpload(url: string) {
     const [uploading, setUploading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
     const headers = useDefaultHeaders();
+    const { t } = useTranslation();
 
     const upload = useCallback(
         async (file: File) => {
             const formData = new FormData();
             formData.append('file', file, file.name);
-            setUploading(true);
-            try {
-                const response: AxiosResponse<FileUploadResult> = await axios.post(baseUrl + url, formData, {
-                    headers: headers
-                });
-                return response.data;
-            } finally {
-                setUploading(false);
+
+            if (file.size <= 31457280) {
+                setUploading(true);
+                setError(null);
+                try {
+                    const response: AxiosResponse<FileUploadResult> = await axios.post(baseUrl + url, formData, {
+                        headers: headers
+                    });
+                    return response.data;
+                } catch (err) {
+                    if (axios.isCancel(err)) {
+                        return;
+                    }
+                    if (err instanceof Error) {
+                        setError(err);
+                    }
+                } finally {
+                    setUploading(false);
+                }
+            } else {
+                setError(new Error(t('fileSizeExceedLimit')));
             }
         },
-        [url, headers]
+        [url, headers, t]
     );
 
-    return [uploading, upload] as const;
+    return [uploading, upload, error] as const;
 }
 
 export function useDistributionFileUpload() {

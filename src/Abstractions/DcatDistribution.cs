@@ -49,7 +49,7 @@ namespace NkodSk.Abstractions
             }
         }
 
-        public void SetTermsOfUse(Uri? authorsWorkType, Uri? originalDatabaseType, Uri? databaseProtectedBySpecialRightsType, Uri? personalDataContainmentType)
+        public void SetTermsOfUse(Uri? authorsWorkType, Uri? originalDatabaseType, Uri? databaseProtectedBySpecialRightsType, Uri? personalDataContainmentType, string? authorName, string? originalDatabaseAuthorName)
         {
             RemoveUriNodes("leg:termsOfUse");
             LegTermsOfUse termsOfUse = new LegTermsOfUse(Graph, CreateSubject("leg:termsOfUse", "leg:TermsOfUse", "terms"));
@@ -57,6 +57,8 @@ namespace NkodSk.Abstractions
             termsOfUse.OriginalDatabaseType = originalDatabaseType;
             termsOfUse.DatabaseProtectedBySpecialRightsType = databaseProtectedBySpecialRightsType;
             termsOfUse.PersonalDataContainmentType = personalDataContainmentType;
+            termsOfUse.OriginalDatabaseAuthorName = originalDatabaseAuthorName;
+            termsOfUse.AuthorName = authorName;
         }
 
 
@@ -232,6 +234,8 @@ namespace NkodSk.Abstractions
                 !Equals(TermsOfUse?.OriginalDatabaseType, distribution.TermsOfUse?.OriginalDatabaseType) ||
                 !Equals(TermsOfUse?.DatabaseProtectedBySpecialRightsType, distribution.TermsOfUse?.DatabaseProtectedBySpecialRightsType) ||
                 !Equals(TermsOfUse?.PersonalDataContainmentType, distribution.TermsOfUse?.PersonalDataContainmentType) ||
+                !Equals(TermsOfUse?.AuthorName, distribution.TermsOfUse?.AuthorName) ||
+                !Equals(TermsOfUse?.OriginalDatabaseAuthorName, distribution.TermsOfUse?.OriginalDatabaseAuthorName) ||
                 !Equals(DownloadUrl, distribution.DownloadUrl) ||
                 !Equals(AccessUrl, distribution.AccessUrl) ||
                 !Equals(Format, distribution.Format) ||

@@ -122,7 +122,7 @@ namespace WebApi.Test
         {
             DcatDistribution distribution = DcatDistribution.Create(datasetMetadata.Id);
 
-            distribution.SetTermsOfUse(authorsWorkType, originalDatabaseType, databaseProtectedBySpecialRightsType, personalDataContainmentType);
+            distribution.SetTermsOfUse(authorsWorkType, originalDatabaseType, databaseProtectedBySpecialRightsType, personalDataContainmentType, string.Empty, string.Empty);
             distribution.DownloadUrl = downloadUri;
             distribution.AccessUrl = accessUri;
             distribution.Format = format;

@@ -104,14 +104,10 @@ namespace WebApi.Test
         {
             string path = fixture.GetStoragePath();
 
-            StringBuilder contentBuilder = new StringBuilder();
-            for (int i = 0; i < 1_000_000; i++)
-            {
-                contentBuilder.AppendLine("content");
-            }
-            string content = contentBuilder.ToString();
+            byte[] bytes = new byte[1024 * 1024  * 30];
+            const byte fillByte = (byte)'a';
+            Array.Fill(bytes, fillByte);
 
-            byte[] bytes = Encoding.UTF8.GetBytes(content);
             string name = "test.txt";
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
@@ -127,7 +123,8 @@ namespace WebApi.Test
             Assert.NotEmpty(result.Id);
             Assert.NotEmpty(result.Url);
 
-            FileState? state = storage.GetFileState(Guid.Parse(result.Id), AnonymousAccessPolicy.Default);
+            Guid id = Guid.Parse(result.Id);
+            FileState? state = storage.GetFileState(id, AnonymousAccessPolicy.Default);
             Assert.NotNull(state);
             Assert.Equal(name, state.Metadata.Name);
             Assert.Equal(name, state.Metadata.OriginalFileName);
@@ -137,7 +134,43 @@ namespace WebApi.Test
             Assert.Null(state.Metadata.AdditionalValues);
             Assert.True(state.Metadata.IsPublic);
 
-            Assert.Equal(content, state.Content);
+            using Stream? stream = storage.OpenReadStream(id, AnonymousAccessPolicy.Default);
+            Assert.NotNull(stream);
+            byte[] buffer = new byte[4096];
+            long totalRead = 0;
+            while (true)
+            {
+                int read = stream.Read(buffer, 0, buffer.Length);
+                if (read == 0) break;
+                for (int i = 0; i < read; i++)
+                {
+                    if (buffer[i] != fillByte)
+                    {
+                        Assert.Fail("Invalid byte at position " + (totalRead + i));
+                    }
+                }
+                totalRead += read;
+            }
+            Assert.Equal(bytes.Length, totalRead);
+        }
+
+        [Fact]
+        public async Task LargeFileOverLimitShouldNotBeUploaded()
+        {
+            string path = fixture.GetStoragePath();
+
+            byte[] bytes = new byte[1024 * 1024 * 300 + 1];
+            Array.Fill(bytes, (byte)'a');
+
+            string name = "test.txt";
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            using MultipartFormDataContent requestContent = new MultipartFormDataContent();
+            requestContent.Add(new ByteArrayContent(bytes, 0, bytes.Length), "file", name);
+            using HttpResponseMessage response = await client.PostAsync("/upload", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
     }
 }

@@ -82,7 +82,9 @@ namespace Frontend.Test
                 new Uri("https://creativecommons.org/licenses/by/4.0/"),
                 new Uri("https://creativecommons.org/licenses/by/4.0/"),
                 new Uri("https://creativecommons.org/publicdomain/zero/1.0/"),
-                new Uri("https://data.gov.sk/def/personal-data-occurence-type/2"));
+                new Uri("https://data.gov.sk/def/personal-data-occurence-type/2"),
+                string.Empty,
+                string.Empty);
             distribution.Format = new Uri("http://publications.europa.eu/resource/authority/file-type/CSV");
             distribution.MediaType = new Uri("http://www.iana.org/assignments/media-types/text/csv");
             distribution.SetTitle(new Dictionary<string, string> { { "sk", string.Empty } });
@@ -103,7 +105,9 @@ namespace Frontend.Test
                 new Uri("https://data.gov.sk/def/authors-work-type/1"),
                 new Uri("https://data.gov.sk/def/original-database-type/1"),
                 new Uri("https://data.gov.sk/def/codelist/database-creator-special-rights-type/2"),
-                new Uri("https://data.gov.sk/def/personal-data-occurence-type/1"));
+                new Uri("https://data.gov.sk/def/personal-data-occurence-type/1"),
+                "Abc",
+                "Xyz");
             otherDistribution.DownloadUrl = new Uri("http://example.com/download");
             otherDistribution.AccessUrl = otherDistribution.DownloadUrl;
             otherDistribution.Format = new Uri("http://publications.europa.eu/resource/dataset/file-type/1");
@@ -128,7 +132,9 @@ namespace Frontend.Test
                 new Uri("https://data.gov.sk/def/authors-work-type/1"),
                 new Uri("https://data.gov.sk/def/original-database-type/1"),
                 new Uri("https://data.gov.sk/def/codelist/database-creator-special-rights-type/2"),
-                new Uri("https://data.gov.sk/def/personal-data-occurence-type/1"));
+                new Uri("https://data.gov.sk/def/personal-data-occurence-type/1"),
+                "Abc",
+                "Xyz");
             otherDistribution.DownloadUrl = new Uri("http://example.com/download");
             distribution.Format = new Uri("http://publications.europa.eu/resource/authority/file-type/CSV");
             distribution.MediaType = new Uri("http://www.iana.org/assignments/media-types/text/csv");
@@ -156,7 +162,9 @@ namespace Frontend.Test
                 new Uri("https://creativecommons.org/licenses/by/4.0/"),
                 new Uri("https://creativecommons.org/licenses/by/4.0/"),
                 new Uri("https://creativecommons.org/publicdomain/zero/1.0/"),
-                new Uri("https://data.gov.sk/def/personal-data-occurence-type/2"));
+                new Uri("https://data.gov.sk/def/personal-data-occurence-type/2"),
+                string.Empty,
+                string.Empty);
             input.DownloadUrl = new Uri("http://example.com/download");
             input.AccessUrl = input.DownloadUrl;
             input.Format = new Uri("http://publications.europa.eu/resource/dataset/file-type/1");
@@ -386,7 +394,9 @@ namespace Frontend.Test
                 new Uri("https://data.gov.sk/def/authors-work-type/1"),
                 new Uri("https://data.gov.sk/def/original-database-type/1"),
                 new Uri("https://data.gov.sk/def/codelist/database-creator-special-rights-type/2"),
-                new Uri("https://data.gov.sk/def/personal-data-occurence-type/1")
+                new Uri("https://data.gov.sk/def/personal-data-occurence-type/1"),
+                string.Empty,
+                string.Empty
             );
             input.DownloadUrl = new Uri("http://example.com/download/other");
             input.AccessUrl = input.DownloadUrl;
@@ -437,7 +447,9 @@ namespace Frontend.Test
                 new Uri("https://data.gov.sk/def/authors-work-type/1"),
                 new Uri("https://data.gov.sk/def/original-database-type/1"),
                 new Uri("https://data.gov.sk/def/codelist/database-creator-special-rights-type/2"),
-                new Uri("https://data.gov.sk/def/personal-data-occurence-type/1")
+                new Uri("https://data.gov.sk/def/personal-data-occurence-type/1"),
+                "Abc",
+                "Xyz"
             );
             input.DownloadUrl = new Uri("http://example.com/download/other");
             input.AccessUrl = input.DownloadUrl;
@@ -544,7 +556,9 @@ namespace Frontend.Test
                 new Uri("https://data.gov.sk/def/authors-work-type/1"),
                 new Uri("https://data.gov.sk/def/original-database-type/1"),
                 new Uri("https://data.gov.sk/def/codelist/database-creator-special-rights-type/2"),
-                new Uri("https://data.gov.sk/def/personal-data-occurence-type/1")
+                new Uri("https://data.gov.sk/def/personal-data-occurence-type/1"),
+                "Abc",
+                "Xyz"
             );
             input.DownloadUrl = new Uri("http://example.com/download/other");
             input.AccessUrl = input.DownloadUrl;
@@ -585,8 +599,6 @@ namespace Frontend.Test
 
             await Page.OpenDatasetsAdmin();
 
-            await Page.TakeScreenshot();
-
             await Page.RunAndWaitForChangeLicenses(async () =>
             {
                 await Page.GetByText("Hromadne upraviť licencie všetkých distribúcií", new PageGetByTextOptions { Exact = true }).ClickAsync();
@@ -612,13 +624,17 @@ namespace Frontend.Test
             DcatDistribution distribution = CreateMaximalDistribution();
             Guid id = fixture.CreateDistribution(datasetId, PublisherId, distribution);
 
+            string otherPublisherId = PublisherId + "1";
+
+            Guid otherDatasetId = fixture.CreateDataset("Test2", otherPublisherId);
+            DcatDistribution otherDistribution = CreateMaximalDistribution();
+            Guid otherDistributionId = fixture.CreateDistribution(otherDatasetId, otherPublisherId, otherDistribution);
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
             await Page.Login(f, PublisherId, "Publisher");
 
             await Page.OpenDatasetsAdmin();
-
-            await Page.TakeScreenshot();
 
             await Page.RunAndWaitForChangeLicenses(async () =>
             {
@@ -629,7 +645,9 @@ namespace Frontend.Test
                 new Uri("https://data.gov.sk/def/authors-work-type/1"),
                 new Uri("https://data.gov.sk/def/original-database-type/1"),
                 new Uri("https://data.gov.sk/def/codelist/database-creator-special-rights-type/2"),
-                new Uri("https://data.gov.sk/def/personal-data-occurence-type/1"));
+                new Uri("https://data.gov.sk/def/personal-data-occurence-type/1"),
+                string.Empty,
+                string.Empty);
 
             await (await Page.GetSelectInFormElementGroup("Typ autorského diela"))!.SelectOptionAsync(distribution.TermsOfUse?.AuthorsWorkType?.ToString() ?? string.Empty);
             await (await Page.GetSelectInFormElementGroup("Typ originálnej databázy"))!.SelectOptionAsync(distribution.TermsOfUse?.OriginalDatabaseType?.ToString() ?? string.Empty);
@@ -641,8 +659,11 @@ namespace Frontend.Test
                 await Page.GetByText("Uložiť", new PageGetByTextOptions { Exact = true }).ClickAsync();
             });
 
-            Assert.AreEqual(1, storage.GetFileStates(new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.DistributionRegistration } }, accessPolicy).TotalCount);
+            Assert.AreEqual(1, storage.GetFileStates(new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.DistributionRegistration }, OnlyPublishers = new List<string> { PublisherId } }, accessPolicy).TotalCount);
             Extensions.AssertAreEqual(distribution, storage.GetFileState(id, accessPolicy)!);
+
+            FileStorageResponse otherPublisherStates = storage.GetFileStates(new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.DistributionRegistration }, OnlyPublishers = new List<string> { otherPublisherId } }, accessPolicy);
+            Extensions.AssertAreEqual(otherDistribution, storage.GetFileState(otherDistributionId, accessPolicy)!);
         }
     }
 }

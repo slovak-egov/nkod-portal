@@ -24,7 +24,6 @@ import SelectElementItems from '../components/SelectElementItems';
 import { useState } from 'react';
 import Button from '../components/Button';
 import { AxiosResponse } from 'axios';
-import { transformEntityForEdit } from './EditDistribution';
 import { useNavigate } from 'react-router';
 
 const requiredCodelists = [knownCodelists.distribution.license, knownCodelists.distribution.personalDataContainmentType];
@@ -44,6 +43,8 @@ export default function ChangeLicenses() {
         personalDataContainmentType: ''
     });
     const [saving, setSaving] = useState(false);
+    const [changed, setChanged] = useState(0);
+    const [total, setTotal] = useState(0);
 
     const [codelists, loadingCodelists, errorCodelists] = useCodelists(requiredCodelists);
 
@@ -152,43 +153,62 @@ export default function ChangeLicenses() {
                     />
                 ) : null}
 
+                {total > 0 ? (
+                    <p className="govuk-body">
+                        Prebieha zmena licencií, dokončených {changed} z {total}.
+                    </p>
+                ) : null}
+
                 <Button
                     style={{ marginRight: '20px' }}
                     onClick={async () => {
                         setSaving(true);
-                        try {
-                            const response: AxiosResponse<Response<Distribution>> = await sendPost<RequestQuery>(
-                                'distributions/search',
-                                {
-                                    pageSize: -1,
-                                    page: 1,
-                                    language: 'sk',
-                                    requiredFacets: []
-                                },
-                                headers
-                            );
-                            for (const distribution of response.data.items) {
-                                const input = transformEntityForEdit(distribution);
-                                if (licenses.authorsWorkType) {
-                                    input.authorsWorkType = licenses.authorsWorkType;
-                                }
-                                if (licenses.originalDatabaseType) {
-                                    input.originalDatabaseType = licenses.originalDatabaseType;
-                                }
-                                if (licenses.databaseProtectedBySpecialRightsType) {
-                                    input.databaseProtectedBySpecialRightsType = licenses.databaseProtectedBySpecialRightsType;
-                                }
-                                if (licenses.personalDataContainmentType) {
-                                    input.personalDataContainmentType = licenses.personalDataContainmentType;
+                        const publisher = userInfo?.publisher;
+                        if (publisher) {
+                            try {
+                                setChanged(0);
+                                setTotal(0);
+
+                                const response: AxiosResponse<Response<Distribution>> = await sendPost<RequestQuery>(
+                                    'distributions/search',
+                                    {
+                                        pageSize: -1,
+                                        page: 1,
+                                        language: 'sk',
+                                        filters: {
+                                            publishers: [publisher]
+                                        },
+                                        requiredFacets: []
+                                    },
+                                    headers
+                                );
+
+                                setTotal(response.data.totalCount);
+
+                                for (const distribution of response.data.items) {
+                                    const input: Partial<DistributionInput> = { id: distribution.id };
+                                    if (licenses.authorsWorkType) {
+                                        input.authorsWorkType = licenses.authorsWorkType;
+                                    }
+                                    if (licenses.originalDatabaseType) {
+                                        input.originalDatabaseType = licenses.originalDatabaseType;
+                                    }
+                                    if (licenses.databaseProtectedBySpecialRightsType) {
+                                        input.databaseProtectedBySpecialRightsType = licenses.databaseProtectedBySpecialRightsType;
+                                    }
+                                    if (licenses.personalDataContainmentType) {
+                                        input.personalDataContainmentType = licenses.personalDataContainmentType;
+                                    }
+
+                                    await sendPut<Partial<DistributionInput>>('distributions/licences', input, headers);
+                                    setChanged((c) => c + 1);
                                 }
 
-                                await sendPut<DistributionInput>('distributions', input, headers);
+                                navigate('/sprava/datasety');
+                            } catch {
+                            } finally {
+                                setSaving(false);
                             }
-
-                            navigate('/sprava/datasety');
-                        } catch {
-                        } finally {
-                            setSaving(false);
                         }
                     }}
                     disabled={saving}

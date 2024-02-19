@@ -51,7 +51,7 @@ export function DistributionForm(props: Props) {
 
     const [codelists, loadingCodelists, errorCodelists] = useCodelists(requiredCodelists);
     const [uploadSetting, setUploadSetting] = useState<UploadSetting>(uploadSettings[0]);
-    const [uploading, upload] = useDistributionFileUpload();
+    const [uploading, upload, uploadError] = useDistributionFileUpload();
 
     const { distribution, setDistribution, errors } = props;
 
@@ -159,6 +159,32 @@ export function DistributionForm(props: Props) {
                 />
             ) : null}
 
+            <FormElementGroup
+                label={t('authorName')}
+                errorMessage={errors['authorname']}
+                element={(id) => (
+                    <BaseInput
+                        id={id}
+                        disabled={saving}
+                        value={distribution.authorName ?? ''}
+                        onChange={(e) => setDistribution({ authorName: e.target.value })}
+                    />
+                )}
+            />
+
+            <FormElementGroup
+                label={t('originalDatabaseAuthorName')}
+                errorMessage={errors['originaldatabaseauthorname']}
+                element={(id) => (
+                    <BaseInput
+                        id={id}
+                        disabled={saving}
+                        value={distribution.originalDatabaseAuthorName ?? ''}
+                        onChange={(e) => setDistribution({ originalDatabaseAuthorName: e.target.value })}
+                    />
+                )}
+            />
+
             <MultiRadio<UploadSetting>
                 label={t('distributionFile')}
                 options={uploadSettings}
@@ -195,18 +221,22 @@ export function DistributionForm(props: Props) {
                                 const files = e.target.files ?? [];
                                 if (files.length > 0) {
                                     const file = await upload(files[0]);
-                                    setDistribution({
-                                        downloadUrl: file.url,
-                                        fileId: file.id
-                                    });
+                                    if (file) {
+                                        setDistribution({
+                                            downloadUrl: file.url,
+                                            fileId: file.id
+                                        });
+                                    }
                                 }
                             }}
                         />
                     )}
                 />
             ) : null}
+            <p className="govuk-hint">{t('maximumFileUploadSize')}: 30 MB</p>
 
             {uploading ? <Alert type="info">{t('fileUploadProgress')}</Alert> : null}
+            {uploadError ? <ErrorAlert error={uploadError} /> : null}
 
             {formatCodelist ? (
                 <FormElementGroup

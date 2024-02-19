@@ -17,6 +17,10 @@ namespace WebApi
 
         public string? PersonalDataContainmentType { get; set; }
 
+        public string? AuthorName { get; set; }
+        
+        public string? OriginalDatabaseAuthorName { get; set; }
+
         public string? DownloadUrl { get; set; }
 
         public string? Format { get; set; }
@@ -74,7 +78,10 @@ namespace WebApi
 
         public void MapToRdf(DcatDistribution distribution)
         {
-            distribution.SetTermsOfUse(AuthorsWorkType.AsUri(), OriginalDatabaseType.AsUri(), DatabaseProtectedBySpecialRightsType.AsUri(), PersonalDataContainmentType.AsUri());
+            string? authorName = !string.IsNullOrWhiteSpace(AuthorName) ? AuthorName : null;
+            string? originalDatabaseAuthorName = !string.IsNullOrWhiteSpace(OriginalDatabaseAuthorName) ? OriginalDatabaseAuthorName : null;
+
+            distribution.SetTermsOfUse(AuthorsWorkType.AsUri(), OriginalDatabaseType.AsUri(), DatabaseProtectedBySpecialRightsType.AsUri(), PersonalDataContainmentType.AsUri(), authorName, originalDatabaseAuthorName);
             distribution.DownloadUrl = DownloadUrl.AsUri();
             distribution.AccessUrl = DownloadUrl.AsUri();
             distribution.Format = Format.AsUri();

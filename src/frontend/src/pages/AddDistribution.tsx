@@ -21,6 +21,8 @@ export default function AddDistribution() {
         originalDatabaseType: 'https://creativecommons.org/licenses/by/4.0/',
         databaseProtectedBySpecialRightsType: 'https://creativecommons.org/publicdomain/zero/1.0/',
         personalDataContainmentType: 'https://data.gov.sk/def/personal-data-occurence-type/2',
+        authorName: null,
+        originalDatabaseAuthorName: null,
         downloadUrl: null,
         format: 'http://publications.europa.eu/resource/authority/file-type/CSV',
         mediaType: 'http://www.iana.org/assignments/media-types/text/csv',
@@ -44,7 +46,9 @@ export default function AddDistribution() {
                 authorsWorkType: previous.termsOfUse?.authorsWorkType ?? null,
                 originalDatabaseType: previous.termsOfUse?.originalDatabaseType ?? null,
                 databaseProtectedBySpecialRightsType: previous.termsOfUse?.databaseProtectedBySpecialRightsType ?? null,
-                personalDataContainmentType: previous.termsOfUse?.personalDataContainmentType ?? null
+                personalDataContainmentType: previous.termsOfUse?.personalDataContainmentType ?? null,
+                authorName: previous.termsOfUse?.authorName ?? null,
+                originalDatabaseAuthorName: previous.termsOfUse?.originalDatabaseAuthorName ?? null
             });
         }
     }, [distributions, setDistribution, licensesApplied]);
