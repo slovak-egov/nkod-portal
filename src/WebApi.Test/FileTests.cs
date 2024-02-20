@@ -30,7 +30,9 @@ namespace WebApi.Test
         public async Task PublicDownloadFileTest()
         {
             string path = fixture.GetStoragePath();
-            Guid id = fixture.CreateDistributionFile("test.txt", "content");
+
+            (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            Guid id = fixture.CreateDistributionFile("test.txt", "content", true, distributions[0]);
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();

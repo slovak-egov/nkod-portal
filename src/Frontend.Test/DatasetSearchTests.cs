@@ -52,9 +52,9 @@ namespace Frontend.Test
 
             DcatDistribution distribution = DcatDistribution.Create(datasetId);
             distribution.SetTermsOfUse(
-                new Uri("https://creativecommons.org/licenses/by/4.0/"),
-                new Uri("https://creativecommons.org/licenses/by/4.0/"),
-                new Uri("https://creativecommons.org/publicdomain/zero/1.0/"),
+                new Uri("http://publications.europa.eu/resource/authority/licence/CC_BY_4_0"),
+                new Uri("http://publications.europa.eu/resource/authority/licence/CC_BY_4_0"),
+                new Uri("http://publications.europa.eu/resource/authority/licence/CC_BY_4_0"),
                 new Uri("https://data.gov.sk/def/personal-data-occurence-type/2"),
                 string.Empty,
                 string.Empty);

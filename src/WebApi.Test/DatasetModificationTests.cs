@@ -13,6 +13,7 @@ using NkodSk.Abstractions;
 using TestBase;
 using System.Web;
 using System.Data;
+using AngleSharp.Io;
 
 namespace WebApi.Test
 {
@@ -474,7 +475,7 @@ namespace WebApi.Test
             input.Id = datasetId.ToString();
             input.Name!["sk"] = string.Empty;
             using JsonContent requestContent = JsonContent.Create(input);
-            using HttpResponseMessage response = await client.PostAsync("/datasets", requestContent);
+            using HttpResponseMessage response = await client.PutAsync("/datasets", requestContent);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
@@ -492,7 +493,7 @@ namespace WebApi.Test
             input.Id = datasetId.ToString();
             input.Description!["sk"] = string.Empty;
             using JsonContent requestContent = JsonContent.Create(input);
-            using HttpResponseMessage response = await client.PostAsync("/datasets", requestContent);
+            using HttpResponseMessage response = await client.PutAsync("/datasets", requestContent);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
@@ -510,7 +511,7 @@ namespace WebApi.Test
             input.Id = datasetId.ToString();
             input.Themes!.Clear();
             using JsonContent requestContent = JsonContent.Create(input);
-            using HttpResponseMessage response = await client.PostAsync("/datasets", requestContent);
+            using HttpResponseMessage response = await client.PutAsync("/datasets", requestContent);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
@@ -528,7 +529,7 @@ namespace WebApi.Test
             input.Id = datasetId.ToString();
             input.AccrualPeriodicity = string.Empty;
             using JsonContent requestContent = JsonContent.Create(input);
-            using HttpResponseMessage response = await client.PostAsync("/datasets", requestContent);
+            using HttpResponseMessage response = await client.PutAsync("/datasets", requestContent);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
@@ -546,7 +547,7 @@ namespace WebApi.Test
             input.Id = datasetId.ToString();
             input.Keywords!["sk"] = new List<string> { "" };
             using JsonContent requestContent = JsonContent.Create(input);
-            using HttpResponseMessage response = await client.PostAsync("/datasets", requestContent);
+            using HttpResponseMessage response = await client.PutAsync("/datasets", requestContent);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
@@ -641,6 +642,92 @@ namespace WebApi.Test
 
             Assert.NotNull(storage.GetFileMetadata(parentId, accessPolicy));
             Assert.Null(storage.GetFileMetadata(childId, accessPolicy));
+        }
+
+        [Fact]
+        public async Task DistributionFileIsDownloadableByDefault()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            fixture.CreatePublisher("Test", PublisherId);
+
+            (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            Guid fileId = fixture.CreateDistributionFile("test.txt", "content", true, distributions[0]);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            using (HttpResponseMessage response = await client.GetAsync($"/download?id={HttpUtility.UrlEncode(fileId.ToString())}"))
+            {
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal("test.txt", response.Content.Headers.ContentDisposition?.FileName);
+                string content = await response.Content.ReadAsStringAsync();
+                Assert.Equal("content", content);
+            }                
+        }
+
+        [Fact]
+        public async Task DistributionFileIsDownloadableByDatasetStatus()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            fixture.CreatePublisher("Test", PublisherId);
+
+            (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            Guid fileId = fixture.CreateDistributionFile("test.txt", "content", true, distributions[0]);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            System.Net.Http.Headers.AuthenticationHeaderValue authenticationHeaderValue = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+
+            async Task TestDownload(bool expected, bool useAuthorization)
+            {
+                using HttpRequestMessage request = new HttpRequestMessage(System.Net.Http.HttpMethod.Get, $"/download?id={HttpUtility.UrlEncode(fileId.ToString())}");
+
+                if (useAuthorization)
+                {
+                    request.Headers.Authorization = authenticationHeaderValue;
+                }
+
+                using HttpResponseMessage response = await client.SendAsync(request);
+                if (expected)
+                {
+                    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                    Assert.Equal("test.txt", response.Content.Headers.ContentDisposition?.FileName);
+                    string content = await response.Content.ReadAsStringAsync();
+                    Assert.Equal("content", content);
+                }
+                else
+                {
+                    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+                }
+            }
+
+            async Task ChangePublicStatus(bool isPublic)
+            {
+                DatasetInput input = CreateInput(false);
+                input.Id = datasetId.ToString();
+                input.IsPublic = isPublic;
+                using JsonContent requestContent = JsonContent.Create(input);
+                using HttpRequestMessage request = new HttpRequestMessage(System.Net.Http.HttpMethod.Put, "/datasets");
+                request.Content = requestContent;
+                request.Headers.Authorization = authenticationHeaderValue;
+                using HttpResponseMessage response = await client.SendAsync(request);
+                response.EnsureSuccessStatusCode();
+            }
+
+            await TestDownload(true, false);
+            await ChangePublicStatus(false);
+            await TestDownload(false, false);
+            await TestDownload(true, true);
+            await ChangePublicStatus(true);
+            await TestDownload(true, false);
         }
     }
 }

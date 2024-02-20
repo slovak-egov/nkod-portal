@@ -216,7 +216,7 @@ FileStorageQuery MapQuery(AbstractQuery query, string language, bool allowAll = 
             throw new BadHttpRequestException("PageSize must be greater than 0");
         }
 
-        if (pageSize > 100)
+        if (pageSize > 10000)
         {
             throw new BadHttpRequestException("PageSize must be less than or equal to 100");
         }
@@ -238,7 +238,6 @@ FileStorageQuery MapQuery(AbstractQuery query, string language, bool allowAll = 
     FileStorageQuery storageQuery = new FileStorageQuery
     {
         QueryText = query.QueryText,
-        IncludeDependentFiles = true,
         SkipResults = pageSize.HasValue ? (page - 1) * pageSize.Value : 0,
         MaxResults = pageSize,
         OrderDefinitions = orderDefinition.HasValue ? new List<FileStorageOrderDefinition> { orderDefinition.Value } : null,
@@ -1194,20 +1193,28 @@ app.MapPut("/distributions/licences", [Authorize] async ([FromBody] Distribution
                             DcatDataset? dataset = DcatDataset.Parse(datasetState.Content);
                             if (dataset is not null)
                             {
-                                FileMetadata? distributionFileMetadata = null;
-
-                                distribution.MapToRdf(distributionRdf);
-                                FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata, state.Metadata);
-                                await client.InsertFile(distributionRdf.ToString(), true, metadata).ConfigureAwait(false);
-                                await client.UpdateDatasetMetadata(datasetId).ConfigureAwait(false);
-
-                                if (distributionFileMetadata is not null)
+                                ValidationResults validationResults = await distribution.Validate(publisherId, client, codelistProviderClient);
+                                if (validationResults.IsValid)
                                 {
-                                    await client.UpdateMetadata(distributionFileMetadata with { ParentFile = metadata.Id }).ConfigureAwait(false);
-                                }
+                                    FileMetadata? distributionFileMetadata = null;
 
-                                result.Id = metadata.Id.ToString();
-                                result.Success = true;
+                                    distribution.MapToRdf(distributionRdf);
+                                    FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata, state.Metadata);
+                                    await client.InsertFile(distributionRdf.ToString(), true, metadata).ConfigureAwait(false);
+                                    await client.UpdateDatasetMetadata(datasetId).ConfigureAwait(false);
+
+                                    if (distributionFileMetadata is not null)
+                                    {
+                                        await client.UpdateMetadata(distributionFileMetadata with { ParentFile = metadata.Id }).ConfigureAwait(false);
+                                    }
+
+                                    result.Id = metadata.Id.ToString();
+                                    result.Success = true;
+                                }
+                                else
+                                {
+                                    result.Errors = validationResults;
+                                }                                    
                             }
                             else
                             {
@@ -2099,14 +2106,22 @@ app.MapGet("/download", async ([FromServices] IDocumentStorageClient client, [Fr
             FileMetadata? metadata = await client.GetFileMetadata(key).ConfigureAwait(false);
             if (metadata is not null)
             {
-                if (metadata.Type == FileType.DistributionFile)
+                if (metadata.Type == FileType.DistributionFile && metadata.ParentFile.HasValue)
                 {
-                    Stream? stream = await client.DownloadStream(key).ConfigureAwait(false);
-                    if (stream is not null)
+                    FileMetadata? distributionMetadata = await client.GetFileMetadata(metadata.ParentFile.Value).ConfigureAwait(false);
+                    if (distributionMetadata is not null && distributionMetadata.Type == FileType.DistributionRegistration && distributionMetadata.ParentFile.HasValue)
                     {
-                        FileStreamHttpResult r = (FileStreamHttpResult)Results.File(stream, fileDownloadName: metadata.OriginalFileName ?? metadata.Name.GetText(language) ?? metadata.Id.ToString());
+                        FileMetadata? datasetMetadata = await client.GetFileMetadata(distributionMetadata.ParentFile.Value).ConfigureAwait(false);
+                        if (datasetMetadata is not null && datasetMetadata.Type == FileType.DatasetRegistration)
+                        {
+                            Stream? stream = await client.DownloadStream(key).ConfigureAwait(false);
+                            if (stream is not null)
+                            {
+                                FileStreamHttpResult r = (FileStreamHttpResult)Results.File(stream, fileDownloadName: metadata.OriginalFileName ?? metadata.Name.GetText(language) ?? metadata.Id.ToString());
 
-                        return r;
+                                return r;
+                            }
+                        }
                     }
                 }
             }
@@ -2137,8 +2152,11 @@ app.MapPost("/refresh", async ([FromServices] IIdentityAccessManagementClient cl
         if (!string.IsNullOrEmpty(request?.AccessToken) && !string.IsNullOrEmpty(request?.RefreshToken))
         {
             TokenResult token = await client.RefreshToken(request.AccessToken, request.RefreshToken);
-            string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
-            response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+            if (!string.IsNullOrEmpty(token.Token))
+            {
+                string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+                response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+            }
 
             return Results.Ok(token);
         }

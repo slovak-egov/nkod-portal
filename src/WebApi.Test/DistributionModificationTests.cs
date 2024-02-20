@@ -148,6 +148,31 @@ namespace WebApi.Test
         }
 
         [Fact]
+        public async Task TestCreateMinimalWithWrongPersonalData()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, Guid publisherId, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            input.PersonalDataContainmentType = "https://data.gov.sk/def/ontology/law/personalDataContainmentType/3";
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            string content = await response.Content.ReadAsStringAsync();
+            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
+            Assert.NotNull(result);
+            Assert.True(string.IsNullOrEmpty(result.Id));
+            Assert.False(result.Success);
+            Assert.NotNull(result.Errors);
+            Assert.NotEmpty(result.Errors["personaldatacontainmenttype"]);
+        }
+
+        [Fact]
         public async Task TestCreateMinimalInSerie()
         {
             string path = fixture.GetStoragePath();
@@ -238,6 +263,33 @@ namespace WebApi.Test
             Assert.True(result.Success);
             Assert.True(result.Errors is null || result.Errors.Count == 0);
             ValidateValues(storage, result.Id, input, datasetId, PublisherId);
+        }
+
+        [Fact]
+        public async Task TestModifyWithWrongPersonalData()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, Guid publisherId, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            using Storage storage = new Storage(path);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            input.Id = distributions[0].ToString();
+            input.PersonalDataContainmentType = "https://data.gov.sk/def/ontology/law/personalDataContainmentType/3";
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            string content = await response.Content.ReadAsStringAsync();
+            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
+            Assert.NotNull(result);
+            Assert.True(string.IsNullOrEmpty(result.Id));
+            Assert.False(result.Success);
+            Assert.NotNull(result.Errors);
+            Assert.NotEmpty(result.Errors["personaldatacontainmenttype"]);
         }
 
         [Fact]

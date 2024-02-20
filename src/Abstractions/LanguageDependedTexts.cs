@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AngleSharp.Css;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http.Headers;
@@ -37,7 +38,11 @@ namespace NkodSk.Abstractions
             {
                 return text;
             }
-            if (!string.Equals(language, "sk", StringComparison.OrdinalIgnoreCase) && TryGetValue("sk", out text))
+            if (TryGetValue("sk", out text))
+            {
+                return text;
+            }
+            if (TryGetValue(string.Empty, out text))
             {
                 return text;
             }

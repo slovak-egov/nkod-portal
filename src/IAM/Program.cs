@@ -621,7 +621,7 @@ app.MapPost("/refresh", async ([FromServices] ApplicationDbContext context, [Fro
         }
     }
 
-    return Results.Forbid();
+    return Results.Ok(new TokenResult());
 });
 
 app.MapGet("/logout", [Authorize] async ([FromServices] ApplicationDbContext context, HttpRequest request, ClaimsPrincipal user, [FromServices] Saml2Configuration saml2Configuration, [FromServices] IConfiguration configuration, [FromServices] ILogger<Program> logger) =>

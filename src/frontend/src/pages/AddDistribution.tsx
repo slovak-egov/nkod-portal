@@ -17,9 +17,9 @@ export default function AddDistribution() {
 
     const [distribution, setDistribution, errors, saving, save] = useDistributionAdd({
         datasetId: datasetId ?? '',
-        authorsWorkType: 'https://creativecommons.org/licenses/by/4.0/',
-        originalDatabaseType: 'https://creativecommons.org/licenses/by/4.0/',
-        databaseProtectedBySpecialRightsType: 'https://creativecommons.org/publicdomain/zero/1.0/',
+        authorsWorkType: 'http://publications.europa.eu/resource/authority/licence/CC_BY_4_0',
+        originalDatabaseType: 'http://publications.europa.eu/resource/authority/licence/CC_BY_4_0',
+        databaseProtectedBySpecialRightsType: 'http://publications.europa.eu/resource/authority/licence/CC_BY_4_0',
         personalDataContainmentType: 'https://data.gov.sk/def/personal-data-occurence-type/2',
         authorName: null,
         originalDatabaseAuthorName: null,

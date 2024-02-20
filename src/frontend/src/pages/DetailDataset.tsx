@@ -14,22 +14,23 @@ import { useTranslation } from 'react-i18next';
 import { useEffect } from 'react';
 import DistributionRow from '../components/DistributionRow';
 import IdSkModule from '../components/IdSkModule';
+import NotFound from './NotFound';
 
 export default function DetailDataset() {
     const [dataset, loading, error] = useDataset();
     const { id } = useParams();
-    const [datasetsAsSibling, datasetsAsSiblingQuery, setDatasetsAsSiblingQuery] = useDatasets({ page: 0, orderBy: 'name' });
-    const [datasetsAsParent, datasetsAsParentQuery, setDatasetsAsParentQuery] = useDatasets({ page: 0, orderBy: 'name' });
+    const [datasetsAsSibling, datasetsAsSiblingQuery, setDatasetsAsSiblingQuery] = useDatasets({ page: 0, pageSize: 10000, orderBy: 'modified' });
+    const [datasetsAsParent, datasetsAsParentQuery, setDatasetsAsParentQuery] = useDatasets({ page: 0, pageSize: 10000, orderBy: 'modified' });
     const { t } = useTranslation();
     useDocumentTitle(dataset?.name ?? '');
 
     useEffect(() => {
         if (id) {
             if (!datasetsAsSiblingQuery.filters || Object.keys(datasetsAsSiblingQuery.filters).length === 0) {
-                setDatasetsAsSiblingQuery({ filters: { sibling: [id] }, page: 1, pageSize: 100 });
+                setDatasetsAsSiblingQuery({ filters: { sibling: [id] }, page: 1 });
             }
             if (!datasetsAsParentQuery.filters || Object.keys(datasetsAsParentQuery.filters).length === 0) {
-                setDatasetsAsParentQuery({ filters: { parent: [id] }, page: 1, pageSize: 100 });
+                setDatasetsAsParentQuery({ filters: { parent: [id] }, page: 1 });
             }
         }
     }, [id, datasetsAsSiblingQuery, setDatasetsAsSiblingQuery, datasetsAsParentQuery, setDatasetsAsParentQuery]);
@@ -260,7 +261,9 @@ export default function DetailDataset() {
                         </div>
                     </MainContent>
                 </>
-            ) : null}
+            ) : (
+                <NotFound />
+            )}
         </>
     );
 }

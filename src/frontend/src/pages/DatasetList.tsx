@@ -18,6 +18,8 @@ import { useTranslation } from 'react-i18next';
 import AlertPublisher from '../components/AlertPublisher';
 import Alert from '../components/Alert';
 import { Link } from 'react-router-dom';
+import FormElementGroup from '../components/FormElementGroup';
+import BaseInput from '../components/BaseInput';
 
 export default function DatasetList() {
     const [datasets, query, setQueryParameters, loading, error, refresh] = useDatasets({ pageSize: 20, page: 0 });
@@ -61,6 +63,11 @@ export default function DatasetList() {
                         {t('changeLicensesBulk')}
                     </Button>
                 </p>
+
+                <FormElementGroup
+                    label={t('search')}
+                    element={(id) => <BaseInput id={id} value={query.queryText ?? ''} onChange={(e) => setQueryParameters({ queryText: e.target.value })} />}
+                />
 
                 {loading ? <Loading /> : null}
                 {error ? <ErrorAlert error={error} /> : null}

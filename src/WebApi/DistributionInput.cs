@@ -73,6 +73,11 @@ namespace WebApi
             await results.ValidateCodelistValue(nameof(PackageFormat), PackageFormat, DcatDistribution.MediaTypeCodelist, codelistProvider);
             results.ValidateLanguageTexts(nameof(Title), Title, null, false);
 
+            if (PersonalDataContainmentType == "https://data.gov.sk/def/personal-data-occurence-type/3")
+            {
+                results.Add("personaldatacontainmenttype", "Typ výskytu osobných údajov nemôže ostať nešpecifikovaný");
+            }
+
             return results;
         }
 

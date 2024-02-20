@@ -677,13 +677,27 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Catalo
     {
         if (datasetMetadataByUri.TryGetValue(uri, out FileMetadata? datasetMetadata))
         {
-            Dictionary<string, string[]> additionalValues = datasetMetadata.AdditionalValues ?? new Dictionary<string, string[]>();
-            additionalValues["localCatalog"] = new string[] { catalog.Uri.ToString() };
-            //additionalValues["Harvested"] = new string[] { "true" };
-            datasetMetadata = datasetMetadata with { AdditionalValues = additionalValues };
+            FileMetadata MarkAsHarvested(FileMetadata metadata)
+            {
+                FileState state = storage.GetFileState(metadata.Id, accessPolicy)!;
+                metadata = state.Metadata;
+                Dictionary<string, string[]> additionalValues = metadata.AdditionalValues ?? new Dictionary<string, string[]>();
+                additionalValues["localCatalog"] = new string[] { catalog.Uri.ToString() };
+                additionalValues["Harvested"] = new string[] { "true" };
+                metadata = metadata with { AdditionalValues = additionalValues };
 
-            storage.UpdateMetadata(datasetMetadata, accessPolicy);
-            datasetMetadatas[datasetMetadata.Id] = datasetMetadata;
+                storage.DeleteFile(metadata.Id, accessPolicy);
+                storage.InsertFile(state.Content!, metadata, true, accessPolicy);
+                return metadata;
+            }
+                       
+            datasetMetadatas[datasetMetadata.Id] = MarkAsHarvested(datasetMetadata);
+
+            FileStorageResponse response = storage.GetFileStates(new FileStorageQuery { ParentFile = datasetMetadata.Id, OnlyTypes = new List<FileType> { FileType.DistributionRegistration } }, accessPolicy);
+            foreach (FileState state in response.Files)
+            {
+                MarkAsHarvested(state.Metadata);
+            }
         }
     }
 }

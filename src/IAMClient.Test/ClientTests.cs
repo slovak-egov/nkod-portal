@@ -10,6 +10,7 @@ using System.Web;
 using TestBase;
 using MySqlX.XDevAPI;
 using System.Security.Claims;
+using AngleSharp.Io;
 
 namespace IAMClient.Test
 {
@@ -787,8 +788,10 @@ namespace IAMClient.Test
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, contextValueAccessor.Token);
             IdentityAccessManagementClient iamClient = new IdentityAccessManagementClient(new DefaultHttpClientFactory(client), contextValueAccessor);
 
-            HttpRequestException e = await Assert.ThrowsAsync<HttpRequestException>(async () => await iamClient.RefreshToken(contextValueAccessor.Token!, "1235"));
-            Assert.Equal(HttpStatusCode.Forbidden, e.StatusCode);
+            TokenResult? result = await iamClient.RefreshToken(contextValueAccessor.Token!, "1235");
+            Assert.NotNull(result);
+            Assert.Null(result.RefreshToken);
+            Assert.Equal(string.Empty, result.Token);
         }
 
         [Fact]
@@ -811,8 +814,10 @@ namespace IAMClient.Test
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, contextValueAccessor.Token);
             IdentityAccessManagementClient iamClient = new IdentityAccessManagementClient(new DefaultHttpClientFactory(client), contextValueAccessor);
 
-            HttpRequestException e = await Assert.ThrowsAsync<HttpRequestException>(async () => await iamClient.RefreshToken(contextValueAccessor.Token!, record.RefreshToken));
-            Assert.Equal(HttpStatusCode.Forbidden, e.StatusCode);
+            TokenResult? result = await iamClient.RefreshToken(contextValueAccessor.Token!, record.RefreshToken);
+            Assert.NotNull(result);
+            Assert.Null(result.RefreshToken);
+            Assert.Equal(string.Empty, result.Token);
         }
 
         [Fact]

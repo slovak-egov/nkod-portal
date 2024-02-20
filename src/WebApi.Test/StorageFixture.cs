@@ -309,10 +309,10 @@ namespace WebApi.Test
             });
         }
 
-        public Guid CreateDistributionFile(string name, string content, bool isPublic = true)
+        public Guid CreateDistributionFile(string name, string content, bool isPublic = true, Guid? parentId = null)
         {
             Guid id = Guid.NewGuid();
-            FileMetadata metadata = new FileMetadata(id, id.ToString(), FileType.DistributionFile, null, null, isPublic, name, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+            FileMetadata metadata = new FileMetadata(id, id.ToString(), FileType.DistributionFile, parentId, null, isPublic, name, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
             CreateFile(new FileState(metadata, content));
             return id;
         }

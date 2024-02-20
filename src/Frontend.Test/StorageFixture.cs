@@ -59,9 +59,9 @@ namespace Frontend.Test
         {
             DcatDistribution distribution = DcatDistribution.Create(datasetId);
             distribution.SetTermsOfUse(
-                new Uri("https://creativecommons.org/licenses/by/4.0/"),
-                new Uri("https://creativecommons.org/licenses/by/4.0/"),
-                new Uri("https://creativecommons.org/publicdomain/zero/1.0/"),
+                new Uri("http://publications.europa.eu/resource/authority/licence/CC_BY_4_0"),
+                new Uri("http://publications.europa.eu/resource/authority/licence/CC_BY_4_0"),
+                new Uri("http://publications.europa.eu/resource/authority/licence/CC_BY_4_0"),
                 new Uri("https://data.gov.sk/def/personal-data-occurence-type/2"),
                 string.Empty,
                 string.Empty);
@@ -154,10 +154,10 @@ namespace Frontend.Test
             CreateCodelistFile(DcatDistribution.LicenseCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "https://data.gov.sk/def/authors-work-type/1", new LanguageDependedTexts{ { "sk", "work1sk" }, { "en", "work1en" } } },
-                { "https://creativecommons.org/licenses/by/4.0/", new LanguageDependedTexts{ { "sk", "CC sk" }, { "en", "CC en" } } },
                 { "https://data.gov.sk/def/original-database-type/1", new LanguageDependedTexts{ { "sk", "type1sk" }, { "en", "type1en" } } },
                 { "https://data.gov.sk/def/codelist/database-creator-special-rights-type/2", new LanguageDependedTexts{ { "sk", "rights1sk" }, { "en", "rights1en" } } },
-                { "https://creativecommons.org/publicdomain/zero/1.0/", new LanguageDependedTexts{ { "sk", "CC sk" }, { "en", "CC en" } } }
+                { "https://creativecommons.org/publicdomain/zero/1.0/", new LanguageDependedTexts{ { "sk", "CC sk" }, { "en", "CC en" } } },
+                { "http://publications.europa.eu/resource/authority/licence/CC_BY_4_0", new LanguageDependedTexts{ { "sk", "CC sk" }, { "en", "CC en" } } }
             });
             CreateCodelistFile(DcatDistribution.PersonalDataContainmentTypeCodelist, new Dictionary<string, LanguageDependedTexts>
             {

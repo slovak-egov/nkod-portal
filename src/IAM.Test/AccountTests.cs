@@ -159,7 +159,12 @@ namespace IAM.Test
             };
             using JsonContent requestContent = JsonContent.Create(request);
             using HttpResponseMessage response = await client.PostAsync("/refresh", requestContent);
-            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            TokenResult? result = await response.Content.ReadFromJsonAsync<TokenResult>();
+            Assert.NotNull(result);
+            Assert.Null(result.RefreshToken);
+            Assert.Equal(string.Empty, result.Token);
         }
 
         [Fact]
@@ -188,7 +193,12 @@ namespace IAM.Test
             };
             using JsonContent requestContent = JsonContent.Create(request);
             using HttpResponseMessage response = await client.PostAsync("/refresh", requestContent);
-            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            TokenResult? result = await response.Content.ReadFromJsonAsync<TokenResult>();
+            Assert.NotNull(result);
+            Assert.Null(result.RefreshToken);
+            Assert.Equal(string.Empty, result.Token);
         }
 
         [Fact]
