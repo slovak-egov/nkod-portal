@@ -439,7 +439,7 @@ app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServi
                 return q;
             }, client, isAuthenticated).ConfigureAwait(false);
         } 
-        catch (BadHttpRequestException e)
+        catch (BadHttpRequestException)
         {
             storageResponse = new FileStorageResponse(new List<FileState>(), 0, new List<Facet>());
         }
@@ -2241,17 +2241,6 @@ app.MapGet("/saml/logout", async ([FromServices] IIdentityAccessManagementClient
         return Results.Redirect("/");
     }
 });
-
-IResult ReturnSpaPage(IWebHostEnvironment environment)
-{
-    string mainPage = Path.Combine(environment.WebRootPath, "index.html");
-    string content = string.Empty;
-    if (File.Exists(mainPage))
-    {
-        content = File.ReadAllText(mainPage);
-    }
-    return Results.Content(content, new Microsoft.Net.Http.Headers.MediaTypeHeaderValue("text/html"));
-}
 
 app.MapPost("/saml/consume", async ([FromServices] IIdentityAccessManagementClient client, HttpRequest request, HttpResponse response, IWebHostEnvironment environment, [FromServices] TelemetryClient? telemetryClient) =>
 {

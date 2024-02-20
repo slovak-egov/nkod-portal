@@ -796,7 +796,11 @@ namespace Frontend.Test
             using Storage storage = new Storage(path);
 
             UpdateDataset(parentId, storage, d => d.IsSerie = true);
-            UpdateDataset(c1, storage, d => d.IsPartOfInternalId = parentId.ToString());
+            UpdateDataset(c1, storage, d =>
+            {
+                d.IsPartOfInternalId = parentId.ToString();
+                d.Modified = new DateTimeOffset(2023, 8, 17, 0, 0, 0, TimeSpan.Zero);
+            });
             UpdateDataset(c2, storage, d => d.IsPartOfInternalId = parentId.ToString());
 
             using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
@@ -804,7 +808,7 @@ namespace Frontend.Test
 
             await Page.OpenDatasetDetail(parentId);
 
-            await AssertRelatedDatasets(storage, c1, c2);
+            await AssertRelatedDatasets(storage, c2, c1);
 
             IElementHandle? related = await Page.GetTestElement("related");
             Assert.IsNotNull(related);
