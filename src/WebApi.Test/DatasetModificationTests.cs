@@ -729,5 +729,54 @@ namespace WebApi.Test
             await ChangePublicStatus(true);
             await TestDownload(true, false);
         }
+
+        [Fact]
+        public async Task HarvestedDatasetShouldNotBeEdited()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            (Guid datasetId, Guid publisherId, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            using Storage storage = new Storage(path);
+            foreach (Guid distributionId in distributions)
+            {
+                storage.DeleteFile(distributionId, accessPolicy);
+            }
+
+            DcatDataset dataset = DcatDataset.Parse(storage.GetFileState(datasetId, accessPolicy)!.Content!)!;
+            dataset.IsHarvested = true;
+            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, storage.GetFileState(datasetId, accessPolicy)!.Metadata), true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DatasetInput input = CreateInput(true);
+            input.Id = datasetId.ToString();
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/datasets", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task HarvestedDatasetShouldNotBeDeleted()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            (Guid datasetId, Guid publisherId, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            using Storage storage = new Storage(path);
+            foreach (Guid distributionId in distributions)
+            {
+                storage.DeleteFile(distributionId, accessPolicy);
+            }
+
+            DcatDataset dataset = DcatDataset.Parse(storage.GetFileState(datasetId, accessPolicy)!.Content!)!;
+            dataset.IsHarvested = true;
+            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, storage.GetFileState(datasetId, accessPolicy)!.Metadata), true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            using HttpResponseMessage response = await client.DeleteAsync($"/datasets?id={HttpUtility.UrlEncode(datasetId.ToString())}");
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
     }
 }

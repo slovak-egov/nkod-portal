@@ -193,6 +193,7 @@ namespace Frontend.Test
             Guid d2 = CreateDatasetAndDistribution(fixture, "Test 2", true, publisher: publisher2);
 
             using Storage storage = new Storage(path);
+
             using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
             f.CreateDefaultClient();
 

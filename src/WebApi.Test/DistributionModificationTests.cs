@@ -655,5 +655,70 @@ namespace WebApi.Test
             metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
             Assert.Equal(Array.Empty<string>(), metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
         }
+
+        [Fact]
+        public async Task DistributionShouldNotBeAddedToHarvestedDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, Guid publisherId, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            using Storage storage = new Storage(path);
+
+            DcatDataset dataset = DcatDataset.Parse(storage.GetFileState(datasetId, accessPolicy)!.Content!)!;
+            dataset.IsHarvested = true;
+            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, storage.GetFileState(datasetId, accessPolicy)!.Metadata), true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task HarvestedDistributionShouldNotBeEdited()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, Guid publisherId, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            using Storage storage = new Storage(path);
+
+            DcatDistribution distribution = DcatDistribution.Parse(storage.GetFileState(distributions[0], accessPolicy)!.Content!)!;
+            distribution.IsHarvested = true;
+            storage.InsertFile(distribution.ToString(), distribution.UpdateMetadata(datasetId, PublisherId, storage.GetFileState(distributions[0], accessPolicy)!.Metadata), true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            input.Id = distributions[0].ToString();
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task HarvestedDistributionShouldNotBeDeleted()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, Guid publisherId, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            using Storage storage = new Storage(path);
+
+            DcatDistribution distribution = DcatDistribution.Parse(storage.GetFileState(distributions[0], accessPolicy)!.Content!)!;
+            distribution.IsHarvested = true;
+            storage.InsertFile(distribution.ToString(), distribution.UpdateMetadata(datasetId, PublisherId, storage.GetFileState(distributions[0], accessPolicy)!.Metadata), true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            using HttpResponseMessage response = await client.DeleteAsync($"/distributions?id={HttpUtility.UrlEncode(distributions[0].ToString())}");
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
     }
 }

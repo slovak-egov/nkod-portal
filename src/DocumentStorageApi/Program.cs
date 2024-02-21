@@ -17,6 +17,7 @@ using System.IO.Compression;
 using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks.Dataflow;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -267,15 +268,19 @@ app.MapPost("/files/by-publisher", [AllowAnonymous] (IFileStorage storage, IFile
         });
         if (fulltextResponse.Documents.Count > 0)
         {
-            HashSet<Guid> keys = new HashSet<Guid>(fulltextResponse.Documents.Count);
-            foreach (FulltextResponseDocument document in fulltextResponse.Documents)
-            {
-                keys.Add(document.Id);
-            }
-            List<FileStorageGroup> groups = new List<FileStorageGroup>(response.Groups.Count);
+            Dictionary<Guid, FileStorageGroup> groupsById = new Dictionary<Guid, FileStorageGroup>(response.Groups.Count);
             foreach (FileStorageGroup group in response.Groups)
             {
-                if (group.PublisherFileState?.Metadata is not null && keys.Contains(group.PublisherFileState.Metadata.Id))
+                if (group.PublisherFileState?.Metadata is not null)
+                {
+                    groupsById[group.PublisherFileState.Metadata.Id] = group;
+                }
+            }
+
+            List<FileStorageGroup> groups = new List<FileStorageGroup>(response.Groups.Count);
+            foreach (Guid id in fulltextResponse.Documents.Select(d => d.Id))
+            {
+                if (groupsById.TryGetValue(id, out FileStorageGroup? group))
                 {
                     groups.Add(group);
                 }

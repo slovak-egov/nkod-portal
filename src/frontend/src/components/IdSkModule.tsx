@@ -19,11 +19,14 @@ type Props = {
 export default function IdSkModule(props: Props) {
     const [node, setNode] = useState<HTMLDivElement | null>(null);
 
-    const initialize = useCallback((node: HTMLDivElement) => {
-        setNode(node);
-    }, []);
-
     const { moduleType, userInfo, ...divProperties } = props;
+
+    const initialize = useCallback(
+        (node: HTMLDivElement) => {
+            setNode(node);
+        },
+        [moduleType]
+    );
 
     useEffect(() => {
         if (node != null) {

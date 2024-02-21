@@ -38,6 +38,8 @@ namespace WebApi
 
         public Uri? AccessService { get; set; }
 
+        public bool IsHarvested { get; set; }
+
         public static async Task<DistributionView> MapFromRdf(Guid id, Guid? datasetId, DcatDistribution distributionRdf, ICodelistProviderClient codelistProviderClient, string language, bool fetchAllLanguages)
         {
             LegTermsOfUse? legTermsOfUse = distributionRdf.TermsOfUse;
@@ -56,6 +58,7 @@ namespace WebApi
                 PackageFormat = distributionRdf.PackageFormat,
                 Title = distributionRdf.GetTitle(language),
                 AccessService = distributionRdf.AccessService,
+                IsHarvested = distributionRdf.IsHarvested
             };
 
             if (fetchAllLanguages)

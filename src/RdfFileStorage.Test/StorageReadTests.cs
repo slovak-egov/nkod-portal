@@ -1767,14 +1767,14 @@ namespace RdfFileStorage.Test
             AssertGroups();
 
             query.OrderDefinitions.Clear();
-            query.OrderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.Revelance, false));
+            query.OrderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.Relevance, false));
             response = storage.GetFileStatesByPublisher(query, StaticAccessPolicy.Allow);
             Assert.Equal(expectedGroups.Count, response.TotalCount);
             AssertGroups();
 
             expectedGroups.Sort((a, b) => a.Count.CompareTo(b.Count));
             query.OrderDefinitions.Clear();
-            query.OrderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.Revelance, true));
+            query.OrderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.Relevance, true));
             response = storage.GetFileStatesByPublisher(query, StaticAccessPolicy.Allow);
             Assert.Equal(expectedGroups.Count, response.TotalCount);
             AssertGroups();

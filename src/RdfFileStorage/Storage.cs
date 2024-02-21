@@ -589,8 +589,10 @@ namespace NkodSk.RdfFileStorage
                                 compare = a.Metadata.Created.CompareTo(b.Metadata.Created) * reverseCoefficient;
                                 break;
                             case FileStorageOrderProperty.LastModified:
-                            case FileStorageOrderProperty.Revelance:
                                 compare = a.Metadata.LastModified.CompareTo(b.Metadata.LastModified) * reverseCoefficient;
+                                break;
+                            case FileStorageOrderProperty.Relevance:
+                                compare = a.Metadata.LastModified.CompareTo(b.Metadata.LastModified) * -reverseCoefficient;
                                 break;
                             case FileStorageOrderProperty.Name:
                                 compare = StringComparer.CurrentCultureIgnoreCase.Compare(a.Metadata.Name.GetText(query.Language), b.Metadata.Name.GetText(query.Language)) * reverseCoefficient;
@@ -700,9 +702,9 @@ namespace NkodSk.RdfFileStorage
                     }
                 }
 
-                if (orderDefinitions.Count >= 1 && orderDefinitions[0].Property == FileStorageOrderProperty.Revelance && !orderDefinitions[0].ReverseOrder && query.OnlyIds is not null && query.OnlyIds.Count > 0)
+                if (orderDefinitions.Count >= 1 && orderDefinitions[0].Property == FileStorageOrderProperty.Relevance && !orderDefinitions[0].ReverseOrder && query.OnlyIds is not null && query.OnlyIds.Count > 0)
                 {
-                    orderDefinitions.RemoveAt(0);
+                    orderDefinitions.Clear();
                     Dictionary<Guid, Entry> indexedEntries = new Dictionary<Guid, Entry>(results.Count);
                     foreach (Entry entry in results)
                     {
@@ -876,7 +878,7 @@ namespace NkodSk.RdfFileStorage
             List<FileStorageOrderDefinition> orderDefinitions = query.OrderDefinitions?.ToList() ?? new List<FileStorageOrderDefinition>(2);
             if (orderDefinitions.Count == 0)
             {
-                orderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.Revelance, true));
+                orderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.Relevance, true));
                 orderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.Name, false));
             }
 
@@ -888,7 +890,7 @@ namespace NkodSk.RdfFileStorage
                     int reverseCoefficient = orderDefinition.ReverseOrder ? -1 : 1;
                     switch (orderDefinition.Property)
                     {
-                        case FileStorageOrderProperty.Revelance:
+                        case FileStorageOrderProperty.Relevance:
                             return a.Count.CompareTo(b.Count) * -reverseCoefficient;
                         case FileStorageOrderProperty.Name:
                             string na = a.PublisherFileState?.Metadata.Name.GetText(query.Language) ?? string.Empty;
@@ -899,7 +901,10 @@ namespace NkodSk.RdfFileStorage
                 return 0;
             }
 
-            groups.Sort(CompareEntries);
+            if (orderDefinitions.Count > 0)
+            {
+                groups.Sort(CompareEntries);
+            }
 
             List<FileStorageGroup> pageResults;
 

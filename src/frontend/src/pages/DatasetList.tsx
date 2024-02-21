@@ -126,28 +126,32 @@ export default function DatasetList() {
                                                     ) : null}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Button
-                                                        className="idsk-button idsk-button--secondary"
-                                                        style={{ marginRight: '10px', marginTop: '10px', marginBottom: '10px' }}
-                                                        onClick={() => navigate('/sprava/datasety/upravit/' + d.id)}
-                                                    >
-                                                        {t('edit')}
-                                                    </Button>
-                                                    <Button
-                                                        className="idsk-button idsk-button--secondary"
-                                                        style={{ marginTop: '10px', marginBottom: '10px' }}
-                                                        onClick={async () => {
-                                                            setAlert(null);
-                                                            const r = await removeDataset(t('removePrompt'), d.id, headers);
-                                                            if (r === true) {
-                                                                refresh();
-                                                            } else if (typeof r === 'string') {
-                                                                setAlert(r);
-                                                            }
-                                                        }}
-                                                    >
-                                                        {t('remove')}
-                                                    </Button>
+                                                    {!d.isHarvested ? (
+                                                        <>
+                                                            <Button
+                                                                className="idsk-button idsk-button--secondary"
+                                                                style={{ marginRight: '10px', marginTop: '10px', marginBottom: '10px' }}
+                                                                onClick={() => navigate('/sprava/datasety/upravit/' + d.id)}
+                                                            >
+                                                                {t('edit')}
+                                                            </Button>
+                                                            <Button
+                                                                className="idsk-button idsk-button--secondary"
+                                                                style={{ marginTop: '10px', marginBottom: '10px' }}
+                                                                onClick={async () => {
+                                                                    setAlert(null);
+                                                                    const r = await removeDataset(t('removePrompt'), d.id, headers);
+                                                                    if (r === true) {
+                                                                        refresh();
+                                                                    } else if (typeof r === 'string') {
+                                                                        setAlert(r);
+                                                                    }
+                                                                }}
+                                                            >
+                                                                {t('remove')}
+                                                            </Button>
+                                                        </>
+                                                    ) : null}
                                                 </TableCell>
                                             </TableRow>
                                         ))}

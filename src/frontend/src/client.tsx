@@ -223,6 +223,7 @@ export type Dataset = {
     isPartOf: string | null;
     isSerie: boolean;
     distributions: Distribution[];
+    isHarvested: boolean;
 };
 
 type TermsOfUse = {
@@ -255,6 +256,7 @@ export type Distribution = {
     packageFormatValue: CodelistValue | null;
     title: string | null;
     titleAll: LanguageDependentTexts | null;
+    isHarvested: boolean;
 };
 
 export type LocalCatalog = {

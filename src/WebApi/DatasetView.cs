@@ -66,6 +66,10 @@ namespace WebApi
 
         public List<DistributionView> Distributions { get; } = new List<DistributionView>();
 
+        public bool IsHarvested { get; set; }
+
+        public DateTimeOffset? LastUpdated { get; set; }
+
         public static async Task<DatasetView> MapFromRdf(FileMetadata metadata, DcatDataset datasetRdf, ICodelistProviderClient codelistProviderClient, string language, bool fetchAllLanguages)
         {
             VcardKind? contactPoint = datasetRdf.ContactPoint;
@@ -93,7 +97,9 @@ namespace WebApi
                 SpatialResolutionInMeters = datasetRdf.SpatialResolutionInMeters,
                 TemporalResolution = datasetRdf.TemporalResolution,
                 IsPartOf = datasetRdf.IsPartOfInternalId,
-                IsSerie = datasetRdf.IsSerie
+                IsSerie = datasetRdf.IsSerie,
+                IsHarvested = datasetRdf.IsHarvested,
+                LastUpdated = datasetRdf.Modified,
             };
 
             if (fetchAllLanguages)

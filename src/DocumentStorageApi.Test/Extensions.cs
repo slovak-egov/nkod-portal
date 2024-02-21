@@ -75,7 +75,7 @@ namespace DocumentStorageApi.Test
                         case FileStorageOrderProperty.Created:
                             result = a.Metadata.Created.CompareTo(b.Metadata.Created);
                             break;
-                        case FileStorageOrderProperty.Revelance:
+                        case FileStorageOrderProperty.Relevance:
                         case FileStorageOrderProperty.LastModified:
                             result = a.Metadata.LastModified.CompareTo(b.Metadata.LastModified);
                             break;

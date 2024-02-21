@@ -19,7 +19,8 @@ namespace WebApi
             {
                 if (exceptionTelemetry.Exception is BadHttpRequestException)
                 {
-                    switch (exceptionTelemetry.Exception.Message?.Trim())
+                    string message = exceptionTelemetry.Exception.Message?.Trim() ?? string.Empty;
+                    switch (message)
                     {
                         case "Reading the request body timed out due to data arriving too slowly. See MinRequestBodyDataRate.":
                         case "Unexpected end of request content.":

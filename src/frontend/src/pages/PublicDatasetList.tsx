@@ -27,12 +27,14 @@ const codelistsKeys = [
 
 export default function PublicDatasetList() {
     const [datasets, query, setQueryParameters, loading, error] = useDatasets({
-        requiredFacets: codelistsKeys
+        requiredFacets: codelistsKeys,
+        orderBy: 'relevance'
     });
     const { t } = useTranslation();
     useDocumentTitle(t('search'));
 
     const orderByOptions: OrderOption[] = [
+        { name: t('byRelevance'), value: 'relevance' },
         { name: t('byDateModified'), value: 'modified' },
         { name: t('byDateCreated'), value: 'created' },
         { name: t('byName'), value: 'name' }

@@ -4,8 +4,6 @@ import MainContent from '../components/MainContent';
 import GridRow from '../components/GridRow';
 import GridColumn from '../components/GridColumn';
 import RelatedContent from '../components/RelatedContent';
-import FileIcon from '../components/FileIcon';
-
 import Loading from '../components/Loading';
 import ErrorAlert from '../components/ErrorAlert';
 import { useDataset, useDatasets, useDocumentTitle } from '../client';
@@ -13,14 +11,22 @@ import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useEffect } from 'react';
 import DistributionRow from '../components/DistributionRow';
-import IdSkModule from '../components/IdSkModule';
 import NotFound from './NotFound';
+import Pagination from '../components/Pagination';
 
 export default function DetailDataset() {
     const [dataset, loading, error] = useDataset();
     const { id } = useParams();
-    const [datasetsAsSibling, datasetsAsSiblingQuery, setDatasetsAsSiblingQuery] = useDatasets({ page: 0, pageSize: 10000, orderBy: 'modified' });
-    const [datasetsAsParent, datasetsAsParentQuery, setDatasetsAsParentQuery] = useDatasets({ page: 0, pageSize: 10000, orderBy: 'modified' });
+    const [datasetsAsSibling, datasetsAsSiblingQuery, setDatasetsAsSiblingQuery, loadingDatasetsAsSibling] = useDatasets({
+        page: 0,
+        pageSize: 25,
+        orderBy: 'modified'
+    });
+    const [datasetsAsParent, datasetsAsParentQuery, setDatasetsAsParentQuery, loadingDatasetsAsParent] = useDatasets({
+        page: 0,
+        pageSize: 25,
+        orderBy: 'modified'
+    });
     const { t } = useTranslation();
     useDocumentTitle(dataset?.name ?? '');
 
@@ -42,6 +48,8 @@ export default function DetailDataset() {
     if (datasetsAsParent) {
         datasets.push(...datasetsAsParent.items);
     }
+    const total = (datasetsAsSibling?.totalCount ?? 0) + (datasetsAsParent?.totalCount ?? 0);
+    const loadingDatasets = loadingDatasetsAsParent || loadingDatasetsAsSibling;
 
     const path = [
         { title: t('nkod'), link: '/' },
@@ -254,6 +262,16 @@ export default function DetailDataset() {
                                                 title: d.name ?? t('noName'),
                                                 url: '/datasety/' + d.id
                                             }))}
+                                        />
+                                        {loadingDatasets ? <Loading /> : null}
+                                        <Pagination
+                                            currentPage={datasetsAsParentQuery.page}
+                                            totalItems={total}
+                                            pageSize={25}
+                                            onPageChange={(p) => {
+                                                setDatasetsAsParentQuery({ page: p });
+                                                setDatasetsAsSiblingQuery({ page: p });
+                                            }}
                                         />
                                     </GridColumn>
                                 </GridRow>

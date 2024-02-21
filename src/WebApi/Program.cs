@@ -229,7 +229,7 @@ FileStorageQuery MapQuery(AbstractQuery query, string language, bool allowAll = 
     FileStorageOrderDefinition? orderDefinition = query.OrderBy?.ToLowerInvariant() switch
     {
         "name" => new FileStorageOrderDefinition(FileStorageOrderProperty.Name, false),
-        "relevance" => new FileStorageOrderDefinition(FileStorageOrderProperty.Revelance, false),
+        "relevance" => new FileStorageOrderDefinition(FileStorageOrderProperty.Relevance, false),
         "created" => new FileStorageOrderDefinition(FileStorageOrderProperty.Created, true),
         "modified" => new FileStorageOrderDefinition(FileStorageOrderProperty.LastModified, true),
         _ => null
@@ -814,6 +814,11 @@ app.MapPut("/datasets", [Authorize] async ([FromBody] DatasetInput? dataset, [Fr
                     FileState? state = await client.GetFileState(id);
                     if (state?.Content is not null && state.Metadata.Publisher == publisher.ToString())
                     {
+                        if (state.Metadata.IsHarvested)
+                        {
+                            return Results.BadRequest();
+                        }
+
                         FileStorageResponse response = await client.GetFileStates(new FileStorageQuery
                         {
                             ParentFile = id,
@@ -911,27 +916,34 @@ app.MapDelete("/datasets", [Authorize] async ([FromQuery] string? id, [FromServi
     {
         if (Guid.TryParse(id, out Guid key))
         {
-            FileStorageResponse response = await client.GetFileStates(new FileStorageQuery
+            FileMetadata? metadata = await client.GetFileMetadata(key);
+            if (metadata is not null && metadata.Type == FileType.DatasetRegistration && metadata.Publisher == publisher.ToString())
             {
-                ParentFile = key,
-                OnlyTypes = new List<FileType> { FileType.DatasetRegistration },
-                MaxResults = 0
-            }).ConfigureAwait(false);
+                if (metadata.IsHarvested)
+                {
+                    return Results.BadRequest();
+                }
 
-            if (response.TotalCount == 0)
-            {
-                await client.DeleteFile(key).ConfigureAwait(false);
-                return Results.Ok();
+                FileStorageResponse response = await client.GetFileStates(new FileStorageQuery
+                {
+                    ParentFile = key,
+                    OnlyTypes = new List<FileType> { FileType.DatasetRegistration },
+                    MaxResults = 0
+                }).ConfigureAwait(false);
+
+                if (response.TotalCount == 0)
+                {
+                    await client.DeleteFile(key).ConfigureAwait(false);
+                    return Results.Ok();
+                }
+                else
+                {
+                    return Results.BadRequest("Dátovú sériu nie je možné zmazať, najskôr prosím zmažte všetky datasety z tejto série.");
+                }
             }
-            else
-            {
-                return Results.BadRequest("Dátovú sériu nie je možné zmazať, najskôr prosím zmažte všetky datasety z tejto série.");
-            }            
         }
-        else
-        {
-            return Results.Forbid();
-        }
+
+        return Results.Forbid();
     }
     catch (HttpRequestException e)
     {
@@ -974,6 +986,11 @@ app.MapPost("/distributions", [Authorize] async ([FromBody] DistributionInput? d
                 FileState? datasetState = await client.GetFileState(datasetId).ConfigureAwait(false);
                 if (datasetState?.Content is not null && datasetState.Metadata.Publisher == publisher.ToString())
                 {
+                    if (datasetState.Metadata.IsHarvested)
+                    {
+                        return Results.BadRequest();
+                    }
+
                     DcatDataset? dataset = DcatDataset.Parse(datasetState.Content);
                     if (dataset is not null)
                     {
@@ -1069,6 +1086,11 @@ app.MapPut("/distributions", [Authorize] async ([FromBody] DistributionInput dis
                 FileState? state = await client.GetFileState(id);
                 if (state?.Content is not null && state.Metadata.Type == FileType.DistributionRegistration && state.Metadata.Publisher == publisher.ToString() && state.Metadata.ParentFile.HasValue)
                 {
+                    if (state.Metadata.IsHarvested)
+                    {
+                        return Results.BadRequest();
+                    }
+
                     Guid datasetId = state.Metadata.ParentFile.Value;
 
                     DcatDistribution? distributionRdf = DcatDistribution.Parse(state.Content);
@@ -1182,6 +1204,11 @@ app.MapPut("/distributions/licences", [Authorize] async ([FromBody] Distribution
                 FileState? state = await client.GetFileState(id);
                 if (state?.Content is not null && state.Metadata.Type == FileType.DistributionRegistration && state.Metadata.Publisher == publisher.ToString() && state.Metadata.ParentFile.HasValue)
                 {
+                    if (state.Metadata.IsHarvested)
+                    {
+                        return Results.BadRequest();
+                    }
+
                     Guid datasetId = state.Metadata.ParentFile.Value;
 
                     DcatDistribution? distributionRdf = DcatDistribution.Parse(state.Content);
@@ -1277,6 +1304,11 @@ app.MapDelete("/distributions", [Authorize] async ([FromQuery] string? id, [From
             FileMetadata? metadata = await client.GetFileMetadata(key);
             if (metadata is not null && metadata.Type == FileType.DistributionRegistration && metadata.Publisher == publisher.ToString() && metadata.ParentFile.HasValue)
             {
+                if (metadata.IsHarvested)
+                {
+                    return Results.BadRequest();
+                }
+
                 Guid datasetId = metadata.ParentFile.Value;
                 await client.DeleteFile(key).ConfigureAwait(false);
                 await client.UpdateDatasetMetadata(datasetId).ConfigureAwait(false); 

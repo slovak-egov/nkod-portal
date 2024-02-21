@@ -141,7 +141,12 @@ export default function ChangeLicenses() {
                             <SelectElementItems<CodelistValue>
                                 id={id}
                                 disabled={saving}
-                                options={[{ id: '', label: t('leaveAsIs') }, ...personalDataContainmentTypeCodelist.values]}
+                                options={[
+                                    { id: '', label: t('leaveAsIs') },
+                                    ...personalDataContainmentTypeCodelist.values.filter(
+                                        (v) => v.id !== 'https://data.gov.sk/def/personal-data-occurence-type/3'
+                                    )
+                                ]}
                                 selectedValue={licenses.personalDataContainmentType ?? ''}
                                 renderOption={(v) => v.label}
                                 getValue={(v) => v.id}
