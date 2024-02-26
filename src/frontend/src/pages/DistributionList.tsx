@@ -34,7 +34,6 @@ export default function DistributionList() {
                 items={[{ title: t('nkod'), link: '/' }, { title: t('distributionList'), link: '/sprava/datasety' }, { title: t('distributionList') }]}
             />
             <MainContent>
-                <AlertPublisher />
                 <PageHeader>{t('distributionList')}</PageHeader>
                 {userInfo?.publisherView ? (
                     <p className="govuk-body nkod-publisher-name">

@@ -316,10 +316,39 @@ namespace NkodSk.Abstractions
 
         public virtual IEnumerable<RdfObject> RootObjects => new[] { this };
 
+        public void RemoveTriples(Uri subject)
+        {
+            IUriNode? uriNode = Graph.GetUriNode(subject);
+            if (uriNode is not null)
+            {
+                RemoveTriples(Graph, uriNode, new HashSet<INode>());
+            }
+        }
+
+        public void RemoveTriples(IUriNode node)
+        {
+            RemoveTriples(Graph, node, new HashSet<INode>());
+        }
+
+        private static void RemoveTriples(IGraph graph, IUriNode node, ISet<INode> visited)
+        {
+            foreach (Triple t in graph.GetTriplesWithSubject(node).ToList())
+            {
+                graph.Retract(t);
+                if (t.Object is IUriNode uriNode)
+                {
+                    if (visited.Add(uriNode))
+                    {
+                        RemoveTriples(graph, uriNode, visited);
+                    }
+                }
+            }
+        }
+
         public override string ToString()
         {
             Graph newGraph = new Graph();
-            Graph.NamespaceMap.Import(Graph.NamespaceMap);
+            newGraph.NamespaceMap.Import(Graph.NamespaceMap);
             foreach (RdfObject obj in RootObjects)
             {
                 foreach (Triple t in obj.Triples)

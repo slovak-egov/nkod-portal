@@ -14,6 +14,7 @@ using System.Text.RegularExpressions;
 using System;
 using VDS.RDF.Query.Expressions.Functions.Sparql.Boolean;
 using System.Data;
+using J2N.Text;
 
 string sourceDir = args[0];
 string targetDir = args[1];
@@ -251,6 +252,15 @@ async Task<bool> CheckCodelistValue(string codelistId, Uri? uri, bool required)
     return !required;
 }
 
+Uri hasQualityMeasurmentUri = new Uri("http://www.w3.org/ns/dqv#hasQualityMeasurement");
+void RemoveQualityMeasurment(IGraph g)
+{
+    foreach (Triple t in g.GetTriplesWithPredicate(hasQualityMeasurmentUri).ToList())
+    {
+        g.Retract(t);
+    }
+}
+
 
 Dictionary<Uri, Guid> distributionUriToDataset = new Dictionary<Uri, Guid>();
 Dictionary<Guid, FileMetadata> datasetMetadatas = new Dictionary<Guid, FileMetadata>();
@@ -261,7 +271,7 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Datase
 {
     string content = File.ReadAllText(path);
     DcatDataset catalog = DcatDataset.Parse(content)!;
-
+     
     RemoveEmptyTexts(catalog.Title, catalog.SetTitle);
     RemoveEmptyTexts(catalog.Description, catalog.SetDescription);
     RemoveEmptyTextsCollection(catalog.Keywords, catalog.SetKeywords);
@@ -393,11 +403,11 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Datase
         continue;
     }
 
+    RemoveQualityMeasurment(catalog.Graph);
+
     content = catalog.ToString();
 
-    FileMetadata metadata = catalog.UpdateMetadata(catalog.Distributions.Any());
-
-    metadata = metadata with { Created = catalog.Issued ?? new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero), LastModified = catalog.Modified ?? new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero) };
+    FileMetadata metadata = catalog.UpdateMetadata(catalog.Distributions.Any(), null, new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero));
 
     if (catalog.Issued.HasValue)
     {
@@ -439,7 +449,7 @@ foreach ((Guid childId, Uri parentUri) in datasetPartOf)
         FileState state = storage.GetFileState(childMetadata.Id, accessPolicy)!;
         DcatDataset child = DcatDataset.Parse(state.Content!)!;
         child.IsPartOfInternalId = parentMetadata.Id.ToString();
-        childMetadata = child.UpdateMetadata(true, state.Metadata);
+        childMetadata = child.UpdateMetadata(true, state.Metadata, new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero));
         storage.InsertFile(child.ToString(), childMetadata, true, accessPolicy);
         datasetMetadatas[childId] = childMetadata;
 
@@ -448,7 +458,7 @@ foreach ((Guid childId, Uri parentUri) in datasetPartOf)
         if (!parent.IsSerie)
         {
             parent.IsSerie = true;
-            parentMetadata = parent.UpdateMetadata(true, parentState.Metadata);
+            parentMetadata = parent.UpdateMetadata(true, parentState.Metadata, new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero));
             storage.InsertFile(parent.ToString(), parentMetadata, true, accessPolicy);
             datasetMetadatas[parentMetadata.Id] = parentMetadata;
         }
@@ -460,6 +470,7 @@ foreach ((Guid childId, Uri parentUri) in datasetPartOf)
 }
 
 string filesDir = @"F:\Backup\DataGov2\files";
+StringBuffer notFoundBuilder = new StringBuffer();
 
 foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Distribution")))
 {
@@ -560,10 +571,13 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Distri
             continue;
         }
 
+        RemoveQualityMeasurment(catalog.Graph);
+
+        content = catalog.ToString();
+
         FileMetadata datasetMetadata = datasetMetadatas[datasetId];
 
         FileMetadata metadata = catalog.UpdateMetadata(datasetMetadata);
-        datasetMetadata = catalog.UpdateDatasetMetadata(datasetMetadata);
 
         storage.InsertFile(
             content, metadata, true, accessPolicy
@@ -572,31 +586,79 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Distri
 
         if (catalog.DownloadUrl is not null && catalog.DownloadUrl.Host == "data.gov.sk")
         {
-            int index = catalog.DownloadUrl.LocalPath.LastIndexOf("/");
-            string fileName = index >= 0 ? catalog.DownloadUrl.LocalPath.Substring(index + 1) : catalog.DownloadUrl.LocalPath;
-            string downloadPath = Path.Combine(filesDir, Path.GetFileName(path));
-            if (File.Exists(downloadPath))
+            string? fileName = null;
+            string? resource = null;
+            Match m = Regex.Match(catalog.DownloadUrl.LocalPath, "/resource/([^/]+)/.*/([^/]+)$");
+            if (m.Success)
             {
-                FileMetadata downloadMetadata = new FileMetadata(Guid.NewGuid(), fileName, FileType.DistributionFile, metadata.Id, metadata.Publisher, true, fileName, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
-                storage.InsertFile("", downloadMetadata, false, accessPolicy);
-                string targetPath = Path.Combine(targetDir, "protected", downloadMetadata.Id.ToString("N"));
-                File.Copy(downloadPath, targetPath, true);
-
-                catalog.DownloadUrl = new Uri("https://data.slovensko.sk/download?id=" + downloadMetadata.Id);
-
-                content = catalog.ToString();
-                storage.InsertFile(content, metadata, true, accessPolicy);
+                resource = m.Groups[1].Value;
+                fileName = m.Groups[2].Value;
             }
-        }
+            else
+            {
+                m = Regex.Match(catalog.DownloadUrl.LocalPath, "/dump/([^/]+)$");
+                if (m.Success)
+                {
+                    resource = m.Groups[1].Value;
+                    fileName = m.Groups[1].Value;
+                }
+            }
 
-        storage.UpdateMetadata(datasetMetadata, accessPolicy);
-        datasetMetadatas[datasetId] = datasetMetadata;
+            if (fileName is not null && resource is not null)
+            {
+                const string dir = @"E:\ckan";
+                string downloadPath = Path.Combine(dir, resource[0..3], resource[3..6], resource[6..]);
+                if (File.Exists(downloadPath))
+                {
+                    FileMetadata downloadMetadata = new FileMetadata(Guid.NewGuid(), fileName, FileType.DistributionFile, metadata.Id, metadata.Publisher, true, fileName, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+                    storage.InsertFile("", downloadMetadata, false, accessPolicy);
+                    string targetPath = Path.Combine(targetDir, "protected", downloadMetadata.Id.ToString("N"));
+                    File.Copy(downloadPath, targetPath, true);
+
+                    Uri downloadUrl = new Uri("https://data.slovensko.sk/download?id=" + downloadMetadata.Id);
+
+                    catalog.DownloadUrl = downloadUrl;
+                    catalog.AccessUrl = downloadUrl;
+
+                    content = catalog.ToString();
+                    storage.InsertFile(content, metadata, true, accessPolicy);
+                }
+                else
+                {
+                    Console.WriteLine("File not found: " + downloadPath);
+                    notFoundBuilder.AppendLine(catalog.DownloadUrl.OriginalString);
+                }
+            }
+            else
+            {
+                Console.WriteLine("File not found: " + catalog.DownloadUrl);
+                notFoundBuilder.AppendLine(catalog.DownloadUrl.OriginalString);
+            }
+
+            //int index = catalog.DownloadUrl.LocalPath.LastIndexOf("/");
+            //string fileName = index >= 0 ? catalog.DownloadUrl.LocalPath.Substring(index + 1) : catalog.DownloadUrl.LocalPath;
+            //string downloadPath = Path.Combine(filesDir, Path.GetFileName(path));
+            
+        }
     }
     else
     {
         Console.WriteLine("Dataset not found: " + catalog.Uri);
     }
 }
+
+foreach (FileMetadata datasetMetadata in datasetMetadatas.Values)
+{
+    await ((IDocumentStorageClient)documentStorageClient).UpdateDatasetMetadata(datasetMetadata.Id, false);
+}
+
+Console.WriteLine();
+Console.WriteLine();
+Console.WriteLine();
+Console.WriteLine(notFoundBuilder.ToString());
+Console.WriteLine();
+Console.WriteLine();
+Console.WriteLine();
 
 foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Catalog")))
 {
@@ -666,6 +728,10 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Catalo
         continue;
     }
 
+    RemoveQualityMeasurment(catalog.Graph);
+
+    content = catalog.ToString();
+
 
     FileMetadata metadata = catalog.UpdateMetadata();
 
@@ -677,23 +743,27 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Catalo
     {
         if (datasetMetadataByUri.TryGetValue(uri, out FileMetadata? datasetMetadata))
         {
-            FileMetadata MarkAsHarvested(FileMetadata metadata)
+            FileMetadata MarkAsHarvested(FileMetadata metadata, bool? isPublic = null)
             {
                 FileState state = storage.GetFileState(metadata.Id, accessPolicy)!;
                 metadata = state.Metadata;
+
                 Dictionary<string, string[]> additionalValues = metadata.AdditionalValues ?? new Dictionary<string, string[]>();
                 additionalValues["localCatalog"] = new string[] { catalog.Uri.ToString() };
                 additionalValues["Harvested"] = new string[] { "true" };
                 metadata = metadata with { AdditionalValues = additionalValues };
-
-                storage.DeleteFile(metadata.Id, accessPolicy);
+                if (isPublic.HasValue)
+                {
+                    metadata = metadata with { IsPublic = isPublic.Value };
+                }
                 storage.InsertFile(state.Content!, metadata, true, accessPolicy);
                 return metadata;
             }
-                       
-            datasetMetadatas[datasetMetadata.Id] = MarkAsHarvested(datasetMetadata);
 
             FileStorageResponse response = storage.GetFileStates(new FileStorageQuery { ParentFile = datasetMetadata.Id, OnlyTypes = new List<FileType> { FileType.DistributionRegistration } }, accessPolicy);
+
+            datasetMetadatas[datasetMetadata.Id] = MarkAsHarvested(datasetMetadata, response.TotalCount > 0);
+
             foreach (FileState state in response.Files)
             {
                 MarkAsHarvested(state.Metadata);

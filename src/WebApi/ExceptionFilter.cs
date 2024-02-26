@@ -24,6 +24,9 @@ namespace WebApi
                     {
                         case "Reading the request body timed out due to data arriving too slowly. See MinRequestBodyDataRate.":
                         case "Unexpected end of request content.":
+                            TraceTelemetry traceTelemetry  = new TraceTelemetry("BadHttpRequestException", SeverityLevel.Information);
+                            traceTelemetry.Properties["Message"] = message;
+                            Next.Process(traceTelemetry);
                             return;
                     }
                 }

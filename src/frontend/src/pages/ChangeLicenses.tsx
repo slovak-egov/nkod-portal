@@ -64,7 +64,6 @@ export default function ChangeLicenses() {
         <>
             <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title: t('changeLicenses') }]} />
             <MainContent>
-                <AlertPublisher />
                 <PageHeader>{t('changeLicenses')}</PageHeader>
                 {userInfo?.publisherView ? (
                     <p className="govuk-body nkod-publisher-name">

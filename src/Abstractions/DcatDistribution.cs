@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Lucene.Net.Search.Similarities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Policy;
@@ -226,6 +227,15 @@ namespace NkodSk.Abstractions
             values[PersonalDataContainmentTypeCodelist] = personalDatasAsArray;
 
             return metadata with { AdditionalValues = values };
+        }
+
+        public void IncludeInDataset(DcatDataset dataset)
+        {
+            dataset.Graph.Assert(dataset.Node, dataset.Graph.CreateUriNode("dcat:distribution"), Node);
+            foreach (Triple t in Triples)
+            {
+                dataset.Graph.Assert(t);
+            }
         }
 
         public bool IsEqualTo(DcatDistribution distribution)

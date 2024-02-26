@@ -117,10 +117,10 @@ namespace WebApi.Test
             return metadata.Id;
         }
 
-        public Guid CreateDistrbution(FileMetadata datasetMetadata, Uri? authorsWorkType, Uri? originalDatabaseType, Uri? databaseProtectedBySpecialRightsType, Uri? personalDataContainmentType,
+        public Guid CreateDistrbution(FileState datasetState, Uri? authorsWorkType, Uri? originalDatabaseType, Uri? databaseProtectedBySpecialRightsType, Uri? personalDataContainmentType,
             Uri? downloadUri, Uri? accessUri, Uri? format, Uri? mediaType, Uri? conformsTo = null, Uri? compressFormat = null, Uri? packageFormat = null, string? title = null, string? titleEn = null, Uri? accessService = null)
         {
-            DcatDistribution distribution = DcatDistribution.Create(datasetMetadata.Id);
+            DcatDistribution distribution = DcatDistribution.Create(datasetState.Metadata.Id);
 
             distribution.SetTermsOfUse(authorsWorkType, originalDatabaseType, databaseProtectedBySpecialRightsType, personalDataContainmentType, string.Empty, string.Empty);
             distribution.DownloadUrl = downloadUri;
@@ -143,8 +143,10 @@ namespace WebApi.Test
             }
             distribution.SetTitle(titles);
 
-            datasetMetadata = distribution.UpdateDatasetMetadata(datasetMetadata);
-            UpdateMetadata(datasetMetadata);
+            FileMetadata datasetMetadata = distribution.UpdateDatasetMetadata(datasetState.Metadata);
+            DcatDataset dataset = DcatDataset.Parse(datasetState.Content!)!;
+            distribution.IncludeInDataset(dataset);
+            CreateFile(new FileState(datasetMetadata, dataset.ToString()));
 
             FileMetadata metadata = distribution.UpdateMetadata(datasetMetadata);
             CreateFile(new FileState(metadata, distribution.ToString()));
@@ -187,9 +189,10 @@ namespace WebApi.Test
             dataset.Modified = new DateTimeOffset(2023, 8, 16, 0, 0, 0, TimeSpan.Zero);
 
             FileMetadata metadata = dataset.UpdateMetadata(true);
-            CreateFile(new FileState(metadata, dataset.ToString()));
+            FileState datasetState = new FileState(metadata, dataset.ToString());
+            CreateFile(datasetState);
 
-            Guid distributionId = CreateDistrbution(metadata, 
+            Guid distributionId = CreateDistrbution(datasetState, 
                 new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),

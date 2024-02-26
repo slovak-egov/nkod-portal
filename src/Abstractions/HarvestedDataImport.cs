@@ -249,7 +249,7 @@ namespace NkodSk.Abstractions
                                 DcatDistribution.Parse,
                                 () => sparqlClient.GetDistributions(dataset.Uri),
                                 (d, m) => d.UpdateMetadata(datasetMetadata, m),
-                                () => documentStorageClient.UpdateDatasetMetadata(datasetMetadata.Id),
+                                () => documentStorageClient.UpdateDatasetMetadata(datasetMetadata.Id, false),
                                 (_, _) => Task.CompletedTask
                             );
                         }

@@ -944,6 +944,24 @@ namespace NkodSk.RdfFileStorage
             }
         }
 
+        public long? GetSize(Guid id, IFileStorageAccessPolicy accessPolicy)
+        {
+            rwLock.EnterReadLock();
+            try
+            {
+                if (entryProperties.TryGetValue(id, out Entry? entry) && entry.CanBeReadWithPolicy(accessPolicy))
+                {
+                    FileInfo fileInfo = new FileInfo(entry.Path);
+                    return fileInfo.Exists ? fileInfo.Length : null;
+                }
+                return null;
+            }
+            finally
+            {
+                rwLock.ExitReadLock();
+            }
+        }
+
         public FileState? GetFileState(Guid id, IFileStorageAccessPolicy accessPolicy)
         {
             rwLock.EnterReadLock();

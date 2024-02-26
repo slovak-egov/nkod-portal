@@ -791,13 +791,6 @@ export const supportedLanguages: Language[] = [
         nameInPrimaryLanguage: 'anglicky',
         isPrimary: false,
         isRequired: false
-    },
-    {
-        id: 'de',
-        name: 'deutsch',
-        nameInPrimaryLanguage: 'nemecky',
-        isPrimary: false,
-        isRequired: false
     }
 ];
 

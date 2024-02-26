@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using VDS.RDF;
 
 namespace NkodSk.Abstractions
 {
@@ -26,7 +27,9 @@ namespace NkodSk.Abstractions
 
         Task DeleteFile(Guid id);
 
-        async Task UpdateDatasetMetadata(Guid datasetId)
+        Task<long?> GetSize(Guid id);
+
+        async Task UpdateDatasetMetadata(Guid datasetId, bool updateDatasetModifiedDate)
         {
             FileState? datasetState = await GetFileState(datasetId).ConfigureAwait(false);
             if (datasetState?.Content is not null)
@@ -35,7 +38,10 @@ namespace NkodSk.Abstractions
 
                 if (dataset is not null)
                 {
-                    dataset.Modified = DateTime.UtcNow;
+                    if (updateDatasetModifiedDate)
+                    {
+                        dataset.Modified = DateTime.UtcNow;
+                    }
                     FileMetadata datasetMetadata = datasetState.Metadata;
 
                     FileStorageQuery query = new FileStorageQuery
@@ -48,6 +54,8 @@ namespace NkodSk.Abstractions
                     datasetMetadata = dataset.UpdateMetadata(response.Files.Count > 0, datasetMetadata);
                     datasetMetadata = DcatDistribution.ClearDatasetMetadata(datasetMetadata);
 
+                    dataset.RemoveAllDistributions();
+
                     foreach (FileState state in response.Files)
                     {
                         if (state.Content is not null)
@@ -56,6 +64,7 @@ namespace NkodSk.Abstractions
                             if (distribution is not null)
                             {
                                 datasetMetadata = distribution.UpdateDatasetMetadata(datasetMetadata);
+                                distribution.IncludeInDataset(dataset);
                             }
                         }
                     }

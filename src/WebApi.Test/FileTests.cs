@@ -39,8 +39,26 @@ namespace WebApi.Test
             using HttpResponseMessage response = await client.GetAsync($"/download?id={HttpUtility.UrlEncode(id.ToString())}");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal("test.txt", response.Content.Headers.ContentDisposition?.FileName);
+            Assert.Equal(Encoding.UTF8.GetByteCount("content"), response.Content.Headers.ContentLength);
             string content = await response.Content.ReadAsStringAsync();
             Assert.Equal("content", content);
+        }
+
+        [Fact]
+        public async Task PublicHeadFileTest()
+        {
+            string path = fixture.GetStoragePath();
+
+            (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            Guid id = fixture.CreateDistributionFile("test.txt", "content", true, distributions[0]);
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Head, $"/download?id={HttpUtility.UrlEncode(id.ToString())}");
+            using HttpResponseMessage response = await client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("test.txt", response.Content.Headers.ContentDisposition?.FileName);
+            Assert.Equal(Encoding.UTF8.GetByteCount("content"), response.Content.Headers.ContentLength);
         }
 
         [Fact]

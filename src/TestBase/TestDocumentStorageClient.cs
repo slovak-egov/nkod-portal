@@ -41,6 +41,11 @@ namespace TestBase
             return Task.FromResult(fileStorage.GetFileMetadata(id, accessPolicy));
         }
 
+        public Task<long?> GetSize(Guid id)
+        {
+            return Task.FromResult(fileStorage.GetSize(id, accessPolicy));
+        }
+
         public Task<FileState?> GetFileState(Guid id)
         {
             return Task.FromResult(fileStorage.GetFileState(id, accessPolicy));

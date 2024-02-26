@@ -186,7 +186,6 @@ namespace Frontend.Test
             {
                 Dictionary<string, string> values = input.Title;
                 values["en"] = "NameEn";
-                values["de"] = "NameDe";
                 input.SetTitle(values);
             }
 
@@ -567,7 +566,7 @@ namespace Frontend.Test
             input.CompressFormat = new Uri("http://www.iana.org/assignments/media-types/application/rar");
             input.PackageFormat = input.CompressFormat;
             input.ConformsTo = new Uri("http://example.com/conforms/other");
-            input.SetTitle(new Dictionary<string, string> { { "sk", "TestSkOther" }, { "en", "TestEnOther" }, { "de", "TestDeOther" } });
+            input.SetTitle(new Dictionary<string, string> { { "sk", "TestSkOther" }, { "en", "TestEnOther" } });
 
             await Page.FillDistributionFields(input);
 

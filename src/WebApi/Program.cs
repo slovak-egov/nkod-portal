@@ -36,6 +36,7 @@ using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Http.Features;
+using System.Net.Mime;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -1018,7 +1019,7 @@ app.MapPost("/distributions", [Authorize] async ([FromBody] DistributionInput? d
                             distribution.MapToRdf(distributionRdf);
                             FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata);
                             await client.InsertFile(distributionRdf.ToString(), false, metadata).ConfigureAwait(false);
-                            await client.UpdateDatasetMetadata(datasetId).ConfigureAwait(false);  
+                            await client.UpdateDatasetMetadata(datasetId, true).ConfigureAwait(false);  
                             if (distributionFileMetadata is not null)
                             {
                                 await client.UpdateMetadata(distributionFileMetadata with { ParentFile = metadata.Id }).ConfigureAwait(false);
@@ -1125,7 +1126,7 @@ app.MapPut("/distributions", [Authorize] async ([FromBody] DistributionInput dis
                                     distribution.MapToRdf(distributionRdf);
                                     FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata, state.Metadata);
                                     await client.InsertFile(distributionRdf.ToString(), true, metadata).ConfigureAwait(false);
-                                    await client.UpdateDatasetMetadata(datasetId).ConfigureAwait(false);
+                                    await client.UpdateDatasetMetadata(datasetId, true).ConfigureAwait(false);
 
                                     if (distributionFileMetadata is not null)
                                     {
@@ -1228,7 +1229,7 @@ app.MapPut("/distributions/licences", [Authorize] async ([FromBody] Distribution
                                     distribution.MapToRdf(distributionRdf);
                                     FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata, state.Metadata);
                                     await client.InsertFile(distributionRdf.ToString(), true, metadata).ConfigureAwait(false);
-                                    await client.UpdateDatasetMetadata(datasetId).ConfigureAwait(false);
+                                    await client.UpdateDatasetMetadata(datasetId, false).ConfigureAwait(false);
 
                                     if (distributionFileMetadata is not null)
                                     {
@@ -1311,7 +1312,7 @@ app.MapDelete("/distributions", [Authorize] async ([FromQuery] string? id, [From
 
                 Guid datasetId = metadata.ParentFile.Value;
                 await client.DeleteFile(key).ConfigureAwait(false);
-                await client.UpdateDatasetMetadata(datasetId).ConfigureAwait(false); 
+                await client.UpdateDatasetMetadata(datasetId, true).ConfigureAwait(false); 
             }
 
             return Results.Ok();
@@ -2128,6 +2129,69 @@ app.MapPost("/upload", [RequestSizeLimit(100)] [RequestFormLimits(MultipartBodyL
     }
 }).Produces<FileUploadResult>();
 
+async Task<FileMetadata?> FindAndValidateDownload(IDocumentStorageClient client, Guid id)
+{
+    FileMetadata? metadata = await client.GetFileMetadata(id).ConfigureAwait(false);
+    if (metadata is not null)
+    {
+        if (metadata.Type == FileType.DistributionFile && metadata.ParentFile.HasValue)
+        {
+            FileMetadata? distributionMetadata = await client.GetFileMetadata(metadata.ParentFile.Value).ConfigureAwait(false);
+            if (distributionMetadata is not null && distributionMetadata.Type == FileType.DistributionRegistration && distributionMetadata.ParentFile.HasValue)
+            {
+                FileMetadata? datasetMetadata = await client.GetFileMetadata(distributionMetadata.ParentFile.Value).ConfigureAwait(false);
+                if (datasetMetadata is not null && datasetMetadata.Type == FileType.DatasetRegistration)
+                {
+                    return metadata;
+                }
+            }
+        }
+    }
+    return null;
+}
+
+app.MapMethods("/download", new[] { "HEAD" }, async ([FromServices] IDocumentStorageClient client, [FromQuery] string? id, HttpResponse response, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        if (Guid.TryParse(id, out Guid key))
+        {
+            FileMetadata? metadata = await FindAndValidateDownload(client, key).ConfigureAwait(false);
+            if (metadata is not null)
+            {
+                ContentDisposition contentDisposition = new ContentDisposition
+                {
+                    DispositionType = "attachment",
+                    FileName = metadata.OriginalFileName
+                };
+                response.Headers.ContentDisposition = contentDisposition.ToString();
+                long? size = await client.GetSize(key).ConfigureAwait(false);
+                if (size.HasValue)
+                {
+                    response.ContentLength = size;
+                }
+                return Results.Ok();
+            }
+        }
+        return Results.NotFound();
+    }
+    catch (HttpRequestException e)
+    {
+        telemetryClient?.TrackException(e);
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+});
+
 app.MapGet("/download", async ([FromServices] IDocumentStorageClient client, [FromQuery] string? id, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
@@ -2135,26 +2199,14 @@ app.MapGet("/download", async ([FromServices] IDocumentStorageClient client, [Fr
         string language = "sk";
         if (Guid.TryParse(id, out Guid key))
         {
-            FileMetadata? metadata = await client.GetFileMetadata(key).ConfigureAwait(false);
+            FileMetadata? metadata = await FindAndValidateDownload(client, key).ConfigureAwait(false);
             if (metadata is not null)
             {
-                if (metadata.Type == FileType.DistributionFile && metadata.ParentFile.HasValue)
+                Stream? stream = await client.DownloadStream(key).ConfigureAwait(false);
+                if (stream is not null)
                 {
-                    FileMetadata? distributionMetadata = await client.GetFileMetadata(metadata.ParentFile.Value).ConfigureAwait(false);
-                    if (distributionMetadata is not null && distributionMetadata.Type == FileType.DistributionRegistration && distributionMetadata.ParentFile.HasValue)
-                    {
-                        FileMetadata? datasetMetadata = await client.GetFileMetadata(distributionMetadata.ParentFile.Value).ConfigureAwait(false);
-                        if (datasetMetadata is not null && datasetMetadata.Type == FileType.DatasetRegistration)
-                        {
-                            Stream? stream = await client.DownloadStream(key).ConfigureAwait(false);
-                            if (stream is not null)
-                            {
-                                FileStreamHttpResult r = (FileStreamHttpResult)Results.File(stream, fileDownloadName: metadata.OriginalFileName ?? metadata.Name.GetText(language) ?? metadata.Id.ToString());
-
-                                return r;
-                            }
-                        }
-                    }
+                    FileStreamHttpResult r = TypedResults.File(stream, fileDownloadName: metadata.OriginalFileName ?? metadata.Name.GetText(language) ?? metadata.Id.ToString());
+                    return r;
                 }
             }
         }
@@ -2347,7 +2399,7 @@ app.Use(async (context, next) =>
         if (!string.IsNullOrEmpty(logPath) && Directory.Exists(logPath))
         {
             context.Request.EnableBuffering();
-            string logName = $"{DateTimeOffset.UtcNow:yyyyMMddHHiiss.fffff}_{Guid.NewGuid():N}";
+            string logName = $"{DateTimeOffset.UtcNow:yyyyMMddHHmmss.fffff}_{Guid.NewGuid():N}";
             string path = Path.Combine(logPath, logName);
             using (FileStream fs = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {

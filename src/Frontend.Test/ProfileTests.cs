@@ -159,7 +159,7 @@ namespace Frontend.Test
 
             await Page.RunAndWaitForRequests(async () =>
             {
-                await Page.GetByText("Registrovať").ClickAsync();
+                await Page.GetByText("Registrovať", new Microsoft.Playwright.PageGetByTextOptions { Exact = true }).ClickAsync();
             }, new List<string> { "registration" });
 
             FileState? state = ((IFileStorage)storage).GetPublisherState(PublisherId, accessPolicy);

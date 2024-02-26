@@ -58,7 +58,9 @@ namespace DocumentStorageApi.Test
             using HttpClient client = applicationFactory.CreateClient();
             using HttpResponseMessage response = await client.GetAsync($"/files/{expected.Metadata.Id}/content");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Equal(expected.Content, await response.Content.ReadAsStringAsync());
+            string content = await response.Content.ReadAsStringAsync();
+            Assert.Equal(Encoding.UTF8.GetByteCount(content), response.Content.Headers.ContentLength);
+            Assert.Equal(expected.Content, content);
         }
 
         [Fact]

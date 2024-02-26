@@ -40,7 +40,6 @@ export default function CatalogList() {
         <>
             <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title: t('localCatalogList') }]} />
             <MainContent>
-                <AlertPublisher />
                 <PageHeader>{t('localCatalogList')}</PageHeader>
                 {userInfo?.publisherView ? (
                     <p className="govuk-body nkod-publisher-name">

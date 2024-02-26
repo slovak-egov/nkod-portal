@@ -483,9 +483,9 @@ namespace Frontend.Test
                     IElementHandle? addLanguage = await group.QuerySelectorAsync(".add-language");
                     Assert.IsNotNull(addLanguage);
 
-                    IElementHandle? select = await addLanguage.QuerySelectorAsync("select");
-                    Assert.IsNotNull(select);
-                    await select.SelectOptionAsync(lang);
+                    //IElementHandle? select = await addLanguage.QuerySelectorAsync("select");
+                    //Assert.IsNotNull(select);
+                    //await select.SelectOptionAsync(lang);
 
                     IElementHandle? button = await addLanguage.QuerySelectorAsync("button");
                     Assert.IsNotNull(button);
@@ -839,6 +839,7 @@ namespace Frontend.Test
             });
 
             await page.WaitForURLAsync($"http://localhost:6001/sprava/datasety");
+            await page.WaitForLoadingDone();
         }
 
         public static async Task RunAndWaitForLocalCatalogCreate(this IPage page, Func<Task> action)

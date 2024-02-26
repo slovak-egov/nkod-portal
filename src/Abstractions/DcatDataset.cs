@@ -258,10 +258,10 @@ namespace NkodSk.Abstractions
             return null;
         }
 
-        public FileMetadata UpdateMetadata(bool isPublic, FileMetadata? metadata = null)
+        public FileMetadata UpdateMetadata(bool isPublic, FileMetadata? metadata = null, DateTimeOffset? effectiveDate = null)
         {
             Guid id = metadata?.Id ?? createdId ?? Guid.NewGuid();
-            DateTimeOffset now = DateTimeOffset.UtcNow;
+            DateTimeOffset now = effectiveDate ?? DateTimeOffset.UtcNow;
             Dictionary<string, string[]> values = metadata?.AdditionalValues ?? new Dictionary<string, string[]>();
             isPublic = isPublic && ShouldBePublic;
 
@@ -335,6 +335,18 @@ namespace NkodSk.Abstractions
             }
 
             return metadata with { ParentFile = parentId };
+        }
+
+        public void RemoveAllDistributions()
+        {
+            foreach (Triple t in Graph.GetTriplesWithSubjectPredicate(Node, Graph.CreateUriNode("dcat:distribution")).ToList())
+            {
+                Graph.Retract(t);
+                if (t.Object is IUriNode node)
+                {
+                    RemoveTriples(node);
+                }
+            }
         }
 
         public bool IsEqualTo(DcatDataset dataset)

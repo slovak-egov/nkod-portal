@@ -470,7 +470,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
 
             IFileStorageAccessPolicy accessPolicy = new AllAccessFilePolicy();
-            fixture.CreateDistrbution(storage.GetFileMetadata(id1, accessPolicy)!,
+            fixture.CreateDistrbution(storage.GetFileState(id1, accessPolicy)!,
                 new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
@@ -480,7 +480,7 @@ namespace WebApi.Test
                 new Uri("http://publications.europa.eu/resource/dataset/file-type/1"),
                 new Uri("http://www.iana.org/assignments/media-types/text/csv"));
 
-            fixture.CreateDistrbution(storage.GetFileMetadata(id1, accessPolicy)!,
+            fixture.CreateDistrbution(storage.GetFileState(id1, accessPolicy)!,
                 new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
@@ -490,7 +490,7 @@ namespace WebApi.Test
                 new Uri("http://publications.europa.eu/resource/dataset/file-type/2"),
                 new Uri("http://www.iana.org/assignments/media-types/text/xml"));
 
-            fixture.CreateDistrbution(storage.GetFileMetadata(id2, accessPolicy)!,
+            fixture.CreateDistrbution(storage.GetFileState(id2, accessPolicy)!,
                 new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
@@ -500,7 +500,7 @@ namespace WebApi.Test
                 new Uri("http://publications.europa.eu/resource/dataset/file-type/2"),
                 new Uri("http://www.iana.org/assignments/media-types/text/xml"));
 
-            fixture.CreateDistrbution(storage.GetFileMetadata(id2, accessPolicy)!,
+            fixture.CreateDistrbution(storage.GetFileState(id2, accessPolicy)!,
                 new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
@@ -827,10 +827,11 @@ namespace WebApi.Test
 
 
             FileMetadata metadata = dataset.UpdateMetadata(true);
-            fixture.CreateFile(new FileState(metadata, dataset.ToString()));
+            FileState state = new FileState(metadata, dataset.ToString());
+            fixture.CreateFile(state);
             Guid id = metadata.Id;
 
-            Guid[] distributions = new[] { fixture.CreateDistrbution(metadata,
+            Guid[] distributions = new[] { fixture.CreateDistrbution(state,
                 new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
@@ -948,6 +949,35 @@ namespace WebApi.Test
             string path = fixture.GetStoragePath();
 
             Uri uri = new Uri($"https://data.gov.sk/set/{Guid.NewGuid()}");
+
+            IGraph graph = new VDS.RDF.Graph();
+            RdfDocument.AddDefaultNamespaces(graph);
+            IUriNode subject = graph.CreateUriNode(uri);
+            IUriNode rdfTypeNode = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode targetTypeNode = graph.CreateUriNode("dcat:Dataset");
+            graph.Assert(subject, rdfTypeNode, targetTypeNode);
+            DcatDataset dataset = new DcatDataset(graph, subject);
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = dataset.UpdateMetadata(true);
+            storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            using HttpResponseMessage response = await client.GetAsync(uri.PathAndQuery);
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.NotNull(response.Headers.Location);
+            Assert.Equal("/datasety/" + metadata.Id.ToString(), response.Headers.Location.OriginalString);
+        }
+
+        [Fact]
+        public async Task DereferenceByDatasetUriShouldBeRedirected2()
+        {
+            string path = fixture.GetStoragePath();
+
+            Uri uri = new Uri($"https://data.gov.sk/set/{Guid.NewGuid()}/test");
 
             IGraph graph = new VDS.RDF.Graph();
             RdfDocument.AddDefaultNamespaces(graph);

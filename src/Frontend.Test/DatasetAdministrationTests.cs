@@ -118,22 +118,18 @@ namespace Frontend.Test
             {
                 Dictionary<string, string> values = input.Title;
                 values["en"] = "NameEn";
-                values["de"] = "NameDe";
                 input.SetTitle(values);
 
                 values = input.Description;
                 values["en"] = "DescriptionEn";
-                values["de"] = "DescriptionDe";
                 input.SetDescription(values);
 
                 values = input.ContactPoint!.Name;
                 values["en"] = "ContactEn";
-                values["de"] = "ContactDe";
                 input.ContactPoint!.SetNames(values);
 
                 Dictionary<string, List<string>> keywords = input.Keywords;
                 keywords["en"] = new List<string> { "keyword3", "keyword4" };
-                keywords["de"] = new List<string> { "keyword5", "keyword6" };
                 input.SetKeywords(keywords);
             }
 
@@ -791,14 +787,14 @@ namespace Frontend.Test
 
             DcatDataset input = DcatDataset.Create();
             input.Publisher = new Uri(PublisherId);
-            input.SetTitle(new Dictionary<string, string> { { "sk", "NameSk2" }, { "en", "NameEn2" }, { "de", "NameDe2" } });
-            input.SetDescription(new Dictionary<string, string> { { "sk", "DescriptionSk2" }, { "en", "DescriptionEn2" }, { "de", "DescriptionDe2" } });
+            input.SetTitle(new Dictionary<string, string> { { "sk", "NameSk2" }, { "en", "NameEn2" } });
+            input.SetDescription(new Dictionary<string, string> { { "sk", "DescriptionSk2" }, { "en", "DescriptionEn2" } });
             input.AccrualPeriodicity = new Uri("http://publications.europa.eu/resource/dataset/frequency/2");
             input.ShouldBePublic = false;
 
             input.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/2") };
             input.SetTemporal(new DateOnly(2023, 8, 10), new DateOnly(2023, 9, 17));
-            input.SetContactPoint(new LanguageDependedTexts(new Dictionary<string, string> { { "sk", "ContactSk2" }, { "en", "ContactEn2" }, { "de", "ContactDe2" } }), "test2@example.com");
+            input.SetContactPoint(new LanguageDependedTexts(new Dictionary<string, string> { { "sk", "ContactSk2" }, { "en", "ContactEn2" } }), "test2@example.com");
             input.LandingPage = new Uri("http://example.com/documentation2");
             input.Specification = new Uri("http://example.com/specification2");
             input.Themes = new[] { new Uri("http://publications.europa.eu/resource/dataset/data-theme/2"), new Uri(DcatDataset.EuroVocPrefix + "6411") };
@@ -806,7 +802,7 @@ namespace Frontend.Test
                 { "sk", new List<string> { "elektronický odpad" } },
                 { "en", new List<string> { "electronic waste" } },
             });
-            input.SetKeywords(new Dictionary<string, List<string>> { { "sk", new List<string> { "keywordnew1", "keywordnew2" } }, { "en", new List<string> { "keywordnew3", "keywordnew4" } }, { "de", new List<string> { "keywordnew5", "keywordnew6" } } });
+            input.SetKeywords(new Dictionary<string, List<string>> { { "sk", new List<string> { "keywordnew1", "keywordnew2" } }, { "en", new List<string> { "keywordnew3", "keywordnew4" } } });
             input.SpatialResolutionInMeters = 20;
             input.TemporalResolution = "2d";
 

@@ -14,10 +14,12 @@ using NkodSk.RdfFileStorage;
 using NkodSk.RdfFulltextIndex;
 using System.IO;
 using System.IO.Compression;
+using System.Net.Mime;
 using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks.Dataflow;
+using static Lucene.Net.QueryParsers.Flexible.Core.Nodes.PathQueryNode;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -196,6 +198,30 @@ app.MapGet("/files/{id}", [AllowAnonymous] (IFileStorage storage, IFileStorageAc
     return fileState is not null ? Results.Ok(fileState) : Results.NotFound();
 });
 
+app.MapMethods("/files/{id}/content", new[] { "HEAD" }, [AllowAnonymous] (IFileStorage storage, HttpResponse response, IFileStorageAccessPolicy accessPolicy, Guid id) =>
+{
+    FileMetadata? metadata = storage.GetFileMetadata(id, accessPolicy);
+    if (metadata is not null)
+    {
+        long? size = storage.GetSize(id, accessPolicy);
+        if (size.HasValue)
+        {
+            ContentDisposition contentDisposition = new ContentDisposition
+            {
+                DispositionType = "attachment",
+                FileName = metadata.OriginalFileName
+            };
+            response.Headers.ContentDisposition = contentDisposition.ToString();
+            response.ContentLength = size;
+        }
+        return Results.Ok();
+    }
+    else
+    {
+        return Results.NotFound();
+    }
+});
+
 app.MapGet("/files/{id}/content", [AllowAnonymous] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, Guid id) =>
 {
     Stream? stream = storage.OpenReadStream(id, accessPolicy);
@@ -216,7 +242,11 @@ app.MapPost("/files/query", [AllowAnonymous] ([FromServices] IFileStorage storag
     FileStorageResponse response;
     if (!string.IsNullOrEmpty(query.QueryText))
     {
-        FulltextResponse fulltextResponse = fulltextStorage.Search(query);
+        FileStorageQuery fulltextQuery = new FileStorageQuery
+        {
+            QueryText = query.QueryText
+        };
+        FulltextResponse fulltextResponse = fulltextStorage.Search(fulltextQuery);
         if (fulltextResponse.Documents.Count > 0)
         {
             FileStorageQuery internalQuery = new FileStorageQuery

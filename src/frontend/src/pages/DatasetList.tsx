@@ -46,7 +46,6 @@ export default function DatasetList() {
             <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title: t('datasetList') }]} />
 
             <MainContent>
-                <AlertPublisher />
                 <PageHeader>{t('datasetList')}</PageHeader>
 
                 {userInfo?.publisherView ? (

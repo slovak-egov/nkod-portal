@@ -43,7 +43,6 @@ export default function AddDataset() {
             <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title: t('datasetList'), link: '/sprava/datasety' }, { title: 'Nový dataset' }]} />
             <MainContent>
                 <div className="nkod-form-page">
-                    <AlertPublisher2 />
                     <PageHeader>{t('newDataset')}</PageHeader>
                     {userInfo?.publisherView ? (
                         <p className="govuk-body nkod-publisher-name">

@@ -14,6 +14,7 @@ using TestBase;
 using System.Data;
 using static Lucene.Net.Documents.Field;
 using System.Security.Policy;
+using VDS.RDF;
 
 namespace WebApi.Test
 {
@@ -654,6 +655,120 @@ namespace WebApi.Test
 
             metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
             Assert.Equal(Array.Empty<string>(), metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
+        }
+
+        [Fact]
+        public async Task TestCreateShouldAddDistrubutionToDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+
+            (Guid datasetId, _, _) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            string content = await response.Content.ReadAsStringAsync();
+            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrEmpty(result.Id));
+            FileState? distributionState = storage.GetFileState(Guid.Parse(result.Id), accessPolicy);
+            FileState? datasetState = storage.GetFileState(datasetId, accessPolicy);
+
+            Assert.NotNull(distributionState);
+            Assert.NotNull(datasetState);
+
+            DcatDataset dataset = DcatDataset.Parse(datasetState.Content!)!;
+            DcatDistribution distribution = DcatDistribution.Parse(distributionState.Content!)!;
+
+            HashSet<Triple> datasetTriples = new HashSet<Triple>(dataset.Graph.Triples);
+            HashSet<Triple> distributionTriples = new HashSet<Triple>(distribution.Graph.Triples);
+            Assert.Contains(new Triple(dataset.Node, dataset.Graph.CreateUriNode("dcat:distribution"), distribution.Node), datasetTriples);
+            List<Triple> notFound = distributionTriples.Where(t => !datasetTriples.Contains(t)).ToList();
+            Assert.Empty(notFound);
+        }
+
+        [Fact]
+        public async Task TestModifyShouldModifyDistrubutionToDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+
+            (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            FileState distributionStateBefore = storage.GetFileState(distributions[0], accessPolicy)!;
+            DcatDistribution distributionBefore = DcatDistribution.Parse(distributionStateBefore.Content!)!;
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            input.Id = distributions[0].ToString();
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            string content = await response.Content.ReadAsStringAsync();
+            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrEmpty(result.Id));
+            FileState? distributionState = storage.GetFileState(Guid.Parse(result.Id), accessPolicy);
+            FileState? datasetState = storage.GetFileState(datasetId, accessPolicy);
+
+            Assert.NotNull(distributionState);
+            Assert.NotNull(datasetState);
+
+            DcatDataset dataset = DcatDataset.Parse(datasetState.Content!)!;
+            DcatDistribution distribution = DcatDistribution.Parse(distributionState.Content!)!;
+
+            HashSet<Triple> datasetTriples = new HashSet<Triple>(dataset.Graph.Triples);
+            HashSet<Triple> distributionTriples = new HashSet<Triple>(distribution.Graph.Triples);
+            Assert.Contains(new Triple(dataset.Node, dataset.Graph.CreateUriNode("dcat:distribution"), distribution.Node), datasetTriples);
+            List<Triple> notFound = distributionTriples.Where(t => !datasetTriples.Contains(t)).ToList();
+            Assert.Empty(notFound);
+
+            HashSet<Triple> distributionBeforeTriples = new HashSet<Triple>(distributionBefore.Graph.Triples);
+            distributionBeforeTriples.ExceptWith(distribution.Graph.Triples);
+            Assert.True(distributionBeforeTriples.All(t => !datasetTriples.Contains(t)));
+        }
+
+        [Fact]
+        public async Task TestDeleteShouldRemoveDistributionFromDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            FileState distributionState = storage.GetFileState(distributions[0], accessPolicy)!;
+            DcatDistribution distribution = DcatDistribution.Parse(distributionState.Content!)!;
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            using HttpResponseMessage response = await client.DeleteAsync($"/distributions?id={HttpUtility.UrlEncode(distributions[0].ToString())}");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            FileState? datasetState = storage.GetFileState(datasetId, accessPolicy);
+            Assert.NotNull(datasetState);
+            DcatDataset dataset = DcatDataset.Parse(datasetState.Content!)!;
+
+            HashSet<Triple> datasetTriples = new HashSet<Triple>(dataset.Graph.Triples);
+            Assert.DoesNotContain(new Triple(dataset.Node, dataset.Graph.CreateUriNode("dcat:distribution"), distribution.Node), datasetTriples);
+            Assert.True(distribution.Graph.Triples.All(t => !datasetTriples.Contains(t)));
         }
 
         [Fact]
