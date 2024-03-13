@@ -40,6 +40,18 @@ namespace WebApi
 
         public bool IsHarvested { get; set; }
 
+        private static Uri? TranslateToHttps(Uri? uri)
+        {
+            if (uri is not null && uri.Scheme == "http")
+            {
+                UriBuilder builder = new UriBuilder(uri);
+                builder.Scheme = "https";
+                builder.Port = 443;
+                return builder.Uri;
+            }
+            return uri;
+        }
+
         public static async Task<DistributionView> MapFromRdf(Guid id, Guid? datasetId, DcatDistribution distributionRdf, ICodelistProviderClient codelistProviderClient, string language, bool fetchAllLanguages)
         {
             LegTermsOfUse? legTermsOfUse = distributionRdf.TermsOfUse;
@@ -49,8 +61,8 @@ namespace WebApi
                 Id = id,
                 DatasetId = datasetId,
                 TermsOfUse = legTermsOfUse is not null ? await TermsOfUseView.MapFromRdf(legTermsOfUse, codelistProviderClient, language) : null,
-                DownloadUrl = distributionRdf.DownloadUrl,
-                AccessUrl = distributionRdf.AccessUrl,
+                DownloadUrl = TranslateToHttps(distributionRdf.DownloadUrl),
+                AccessUrl = TranslateToHttps(distributionRdf.AccessUrl),
                 Format = distributionRdf.Format,
                 MediaType = distributionRdf.MediaType,
                 ConformsTo = distributionRdf.ConformsTo,

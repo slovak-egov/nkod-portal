@@ -665,14 +665,13 @@ namespace WebApi.Test
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"), distribution.TermsOfUse.OriginalDatabaseType);
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"), distribution.TermsOfUse.DatabaseProtectedBySpecialRightsType);
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"), distribution.TermsOfUse.PersonalDataContainmentType);
-            Assert.Equal(new Uri("http://data.gov.sk/download"), distribution.DownloadUrl);
-            Assert.Equal(new Uri("http://data.gov.sk/"), distribution.AccessUrl);
+            Assert.Equal(new Uri("https://data.gov.sk/download"), distribution.DownloadUrl);
+            Assert.Equal(new Uri("https://data.gov.sk/"), distribution.AccessUrl);
             Assert.Equal(new Uri("http://publications.europa.eu/resource/dataset/file-type/1"), distribution.Format);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/text/csv"), distribution.MediaType);
             Assert.Equal(new Uri("http://data.gov.sk/specification"), distribution.ConformsTo);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/application/zip"), distribution.CompressFormat);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/application/zip"), distribution.PackageFormat);
-            Assert.Equal(new Uri("http://data.gov.sk/"), distribution.AccessUrl);
 
             Assert.Equal(new CodelistItemView("https://data.gov.sk/def/ontology/law/authorsWorkType/1", "work1sk"), distribution.TermsOfUse.AuthorsWorkTypeValue);
             Assert.Equal(new CodelistItemView("https://data.gov.sk/def/ontology/law/originalDatabaseType/1", "type1sk"), distribution.TermsOfUse.OriginalDatabaseTypeValue);
@@ -769,14 +768,13 @@ namespace WebApi.Test
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"), distribution.TermsOfUse.OriginalDatabaseType);
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"), distribution.TermsOfUse.DatabaseProtectedBySpecialRightsType);
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"), distribution.TermsOfUse.PersonalDataContainmentType);
-            Assert.Equal(new Uri("http://data.gov.sk/download"), distribution.DownloadUrl);
-            Assert.Equal(new Uri("http://data.gov.sk/"), distribution.AccessUrl);
+            Assert.Equal(new Uri("https://data.gov.sk/download"), distribution.DownloadUrl);
+            Assert.Equal(new Uri("https://data.gov.sk/"), distribution.AccessUrl);
             Assert.Equal(new Uri("http://publications.europa.eu/resource/dataset/file-type/1"), distribution.Format);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/text/csv"), distribution.MediaType);
             Assert.Equal(new Uri("http://data.gov.sk/specification"), distribution.ConformsTo);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/application/zip"), distribution.CompressFormat);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/application/zip"), distribution.PackageFormat);
-            Assert.Equal(new Uri("http://data.gov.sk/"), distribution.AccessUrl);
 
             Assert.Equal(new CodelistItemView("https://data.gov.sk/def/ontology/law/authorsWorkType/1", "work1en"), distribution.TermsOfUse.AuthorsWorkTypeValue);
             Assert.Equal(new CodelistItemView("https://data.gov.sk/def/ontology/law/originalDatabaseType/1", "type1en"), distribution.TermsOfUse.OriginalDatabaseTypeValue);
@@ -924,14 +922,13 @@ namespace WebApi.Test
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"), distribution.TermsOfUse.OriginalDatabaseType);
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"), distribution.TermsOfUse.DatabaseProtectedBySpecialRightsType);
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"), distribution.TermsOfUse.PersonalDataContainmentType);
-            Assert.Equal(new Uri("http://data.gov.sk/download"), distribution.DownloadUrl);
-            Assert.Equal(new Uri("http://data.gov.sk/"), distribution.AccessUrl);
+            Assert.Equal(new Uri("https://data.gov.sk/download"), distribution.DownloadUrl);
+            Assert.Equal(new Uri("https://data.gov.sk/"), distribution.AccessUrl);
             Assert.Equal(new Uri("http://publications.europa.eu/resource/dataset/file-type/1"), distribution.Format);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/text/csv"), distribution.MediaType);
             Assert.Equal(new Uri("http://data.gov.sk/specification"), distribution.ConformsTo);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/application/zip"), distribution.CompressFormat);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/application/zip"), distribution.PackageFormat);
-            Assert.Equal(new Uri("http://data.gov.sk/"), distribution.AccessUrl);
 
             Assert.Equal(new CodelistItemView("https://data.gov.sk/def/ontology/law/authorsWorkType/1", "work1en"), distribution.TermsOfUse.AuthorsWorkTypeValue);
             Assert.Equal(new CodelistItemView("https://data.gov.sk/def/ontology/law/originalDatabaseType/1", "type1en"), distribution.TermsOfUse.OriginalDatabaseTypeValue);

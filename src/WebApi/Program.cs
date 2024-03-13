@@ -130,6 +130,19 @@ builder.Services.AddCors(options =>
                       {
                           policy.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod().AllowCredentials();
                       });
+
+    options.AddPolicy(name: "eFormulare",
+                     policy =>
+                     {
+                         policy.WithOrigins(new[] {
+                         "https://app.eformulare.sk",
+                         "https://www.slovensko.sk",
+                         "https://portal.upvsfixnew.gov.sk",
+                         "https://schranka.slovensko.sk",
+                         "https://schranka.upvsfixnew.gov.sk"
+                         }).AllowAnyHeader().AllowAnyMethod();
+                     });
+
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -185,9 +198,12 @@ app.UseAuthorization();
 app.UseHeaderPropagation();
 app.UseRequestLocalization();
 
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    ServeUnknownFileTypes = true,
+    DefaultContentType = "text/plain"
+});
 
-app.UseCors("LocalhostOrigin");
 
 if (app.Environment.IsDevelopment())
 {
@@ -197,6 +213,11 @@ if (app.Environment.IsDevelopment())
     //    options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
     //    options.RoutePrefix = string.Empty;
     //});
+    app.UseCors("LocalhostOrigin");
+}
+else
+{
+    app.UseCors("eFormulare");
 }
 
 FileStorageQuery MapQuery(AbstractQuery query, string language, bool allowAll = false)
@@ -462,7 +483,7 @@ app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServi
 
                 if (fileState.DependentFiles is not null)
                 {
-                    foreach (FileState dependedState in fileState.DependentFiles)
+                    foreach (FileState dependedState in fileState.DependentFiles.Where(f => f.Metadata.Type == FileType.DistributionRegistration))
                     {
                         DcatDistribution? distributionRdf = dependedState.Content is not null ? DcatDistribution.Parse(dependedState.Content) : null;
                         if (distributionRdf is not null)
@@ -2078,7 +2099,7 @@ app.MapPut("/profile", [Authorize] async ([FromServices] IDocumentStorageClient 
     return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapPost("/upload", [RequestSizeLimit(100)] [RequestFormLimits(MultipartBodyLengthLimit = 200, ValueLengthLimit = 200)] [Authorize] async ([FromServices] IDocumentStorageClient client, ClaimsPrincipal identity, HttpRequest request, IFormFile file, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/upload", [Authorize] async ([FromServices] IDocumentStorageClient client, ClaimsPrincipal identity, HttpRequest request, IFormFile file, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
     {
@@ -2099,7 +2120,7 @@ app.MapPost("/upload", [RequestSizeLimit(100)] [RequestFormLimits(MultipartBodyL
                 return Results.Ok(new FileUploadResult
                 {
                     Id = metadata.Id.ToString(),
-                    Url = $"{request.Scheme}://{request.Host}/download?id={HttpUtility.HtmlEncode(metadata.Id)}"
+                    Url = $"https://{request.Host}/download?id={HttpUtility.HtmlEncode(metadata.Id)}"
                 });
             }
             else

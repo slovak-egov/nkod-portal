@@ -339,6 +339,8 @@ namespace WebApi.Test
             Assert.True(result.Success);
             Assert.True(result.Errors is null || result.Errors.Count == 0);
             ValidateValues(storage, result.Id, input);
+
+            Assert.Equal(1, storage.GetFileStates(new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.PublisherRegistration } }, accessPolicy).TotalCount);
         }
 
         [Fact]

@@ -209,6 +209,7 @@ namespace Frontend.Test
             await Page.AssertTableRowsCount(1);
 
             Assert.AreEqual(1, storage.GetFileStates(new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.PublisherRegistration } }, accessPolicy).TotalCount);
+            Assert.AreEqual(1, storage.GetFileStates(new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.PublisherRegistration }, QueryText = "NameSk" } , accessPolicy).Files.Count);
             Extensions.AssertAreEqual(input, storage.GetFileState(id, accessPolicy)!, false);
         }
 

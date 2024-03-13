@@ -11,6 +11,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.HttpResults;
 using System.Reflection.Metadata;
+using TestBase;
+using Newtonsoft.Json;
 
 namespace DocumentStorageApi.Test
 {
@@ -221,6 +223,54 @@ namespace DocumentStorageApi.Test
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             Assert.Null(storage.GetFileState(state.Metadata.Id, StaticAccessPolicy.Allow));
+        }
+
+        [Fact]
+        public async Task FileShoudBeReplacedInIndex()
+        {
+            using Storage storage = new Storage(fixture.GetStoragePath(true, false));
+
+            FoafAgent publisher = FoafAgent.Create(new Uri("http://data.gov.sk/publisher"));
+            publisher.SetNames(new Dictionary<string, string> { { "sk", "Test" }, { "en", "Test" } });
+            FileMetadata meatada = publisher.UpdateMetadata() with {  IsPublic = true };
+            storage.InsertFile(publisher.ToString(), meatada, true, new AllAccessFilePolicy());
+
+            publisher.SetNames(new Dictionary<string, string> { { "sk", "Test" }, { "en", "Test" } });
+            InsertModel model = new InsertModel(publisher.ToString(), meatada, true);
+
+            using DocumentStorageApplicationFactory applicationFactory = new DocumentStorageApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("Superadmin"));
+
+            async Task VerifySingleResult()
+            {
+                FileStorageQuery query = new FileStorageQuery
+                {
+                    QueryText = "test",
+                    Language = "sk",
+                    OnlyTypes = new List<FileType> { FileType.PublisherRegistration },
+                    OrderDefinitions = new List<FileStorageOrderDefinition> { new FileStorageOrderDefinition { Property = FileStorageOrderProperty.Relevance } }
+                };
+
+                using (HttpResponseMessage response = await client.PostAsync($"/files/query", JsonContent.Create(query)))
+                {
+                    string c = await response.Content.ReadAsStringAsync();
+                    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                    FileStorageResponse? storageResponse = JsonConvert.DeserializeObject<FileStorageResponse>(await response.Content.ReadAsStringAsync());
+                    Assert.NotNull(storageResponse);
+                    Assert.Single(storageResponse.Files);
+                    Assert.Equal(1, storageResponse.TotalCount);
+                }
+            }
+
+            await VerifySingleResult();
+
+            using (HttpResponseMessage response = await client.PostAsync($"/files", JsonContent.Create(model)))
+            {
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            }
+
+            await VerifySingleResult();
         }
     }
 }

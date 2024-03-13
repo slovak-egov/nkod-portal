@@ -664,5 +664,30 @@ namespace DocumentStorageClient.Test
             await client.DeleteFile(expected.Metadata.Id);
             Assert.Null(storage.GetFileState(expected.Metadata.Id, new AllAccessFilePolicy()));
         }
+
+        [Fact]
+        public async Task LargeStreamShouldBeUploadedForSuperadmin()
+        {
+            using Storage storage = new Storage(fixture.GetStoragePath());
+
+            using DocumentStorageApplicationFactory applicationFactory = new DocumentStorageApplicationFactory(storage);
+            using HttpClient httpClient = applicationFactory.CreateClient();
+            DefaultHttpClientFactory httpClientFactory = new DefaultHttpClientFactory(httpClient);
+            IHttpContextValueAccessor httpContextAccessor = applicationFactory.CreateAccessor("Superadmin");
+            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, httpContextAccessor.Token);
+            DocumentStorageClient client = new DocumentStorageClient(httpClientFactory, httpContextAccessor);
+
+            FileMetadata metadata = new FileMetadata(Guid.NewGuid(), "Test", FileType.DistributionFile, null, null, true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+            byte[] bytes = new byte[1024 * 1024 * 100];
+            using (Stream stream = new MemoryStream(bytes))
+            {
+                await client.UploadStream(stream, metadata, true);
+            }
+
+            FileState? state = storage.GetFileState(metadata.Id, new AllAccessFilePolicy());
+            Assert.NotNull(state);
+            Assert.Null(state.Content);
+            Assert.Equal(metadata, state.Metadata);
+        }
     }
 }

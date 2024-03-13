@@ -4,6 +4,7 @@ using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
@@ -112,6 +113,12 @@ builder.Services.AddApplicationInsightsTelemetry(options =>
 builder.Services.AddSingleton<ITelemetryInitializer, RequestTelementryInitializer>();
 
 builder.Services.AddTransient<StorageLogAdapter>();
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.ValueLengthLimit = int.MaxValue;
+    options.MultipartBodyLengthLimit = int.MaxValue;
+});
 
 var app = builder.Build();
 
@@ -244,7 +251,8 @@ app.MapPost("/files/query", [AllowAnonymous] ([FromServices] IFileStorage storag
     {
         FileStorageQuery fulltextQuery = new FileStorageQuery
         {
-            QueryText = query.QueryText
+            QueryText = query.QueryText,
+            Language = query.Language
         };
         FulltextResponse fulltextResponse = fulltextStorage.Search(fulltextQuery);
         if (fulltextResponse.Documents.Count > 0)
@@ -365,7 +373,7 @@ app.MapPost("/files", [Authorize] (IFileStorage storage, IFileStorageAccessPolic
     return Results.Ok();
 });
 
-app.MapPost("/files/stream", [Authorize] async (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] StorageLogAdapter logAdapter, HttpRequest request, IFormFile file) =>
+app.MapPost("/files/stream", [RequestSizeLimit(int.MaxValue)][RequestFormLimits(MultipartBodyLengthLimit = int.MaxValue, ValueLengthLimit = int.MaxValue)] [Authorize] async (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] StorageLogAdapter logAdapter, HttpRequest request, IFormFile file) =>
 {
     IFormCollection form = await request.ReadFormAsync();
 

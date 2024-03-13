@@ -814,10 +814,6 @@ namespace Frontend.Test
                 "codelists"
             });
             await page.WaitForURLAsync($"http://localhost:6001/sprava/datasety/pridat");
-
-            ILocator? button = page.GetByText("Beriem na vedomie");
-            Assert.IsNotNull(button);
-            await button.ClickAsync();
         }
 
         public static async Task RunAndWaitForDatasetEdit(this IPage page, Guid id, Func<Task> action)

@@ -252,6 +252,8 @@ namespace NkodSk.RdfFulltextIndex
                 TotalCount = topDocs.TotalHits
             };
 
+            HashSet<Guid> ids = new HashSet<Guid>();
+
             for (int i = 0;; i++)
             {
                 int index = externalQuery.SkipResults + i;
@@ -259,7 +261,11 @@ namespace NkodSk.RdfFulltextIndex
                 {
                     ScoreDoc scoreDoc = topDocs.ScoreDocs[index];
                     Document document = indexSearcher.Doc(scoreDoc.Doc);
-                    response.Documents.Add(new FulltextResponseDocument(Guid.Parse(document.Get("id"))));
+                    Guid id = Guid.Parse(document.Get("id"));
+                    if (ids.Add(id))
+                    {
+                        response.Documents.Add(new FulltextResponseDocument(id));
+                    }
                 }
                 else break;
             }
