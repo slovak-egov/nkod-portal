@@ -11,7 +11,7 @@ namespace NkodSk.Abstractions
     {
         public bool IsValid => Count == 0;
 
-        private void AddError(string key, string message)
+        public void AddError(string key, string message)
         {
             Add(key.ToLowerInvariant(), message);
         }
@@ -229,10 +229,16 @@ namespace NkodSk.Abstractions
             return true;
         }
 
-        public async Task<bool> ValidateDataset(string key, string? id, string publisher, IDocumentStorageClient documentStorage)
+        public async Task<bool> ValidateDataset(string key, string? id, string? childId, string publisher, IDocumentStorageClient documentStorage)
         {
             if (!string.IsNullOrEmpty(id) && Guid.TryParse(id, out Guid datasetId))
             {
+                if (Guid.TryParse(childId, out Guid partId) && !await documentStorage.CanBeAddedToSerie(datasetId, partId))
+                {
+                    AddError(key, "Dataset nie je platný");
+                    return false;
+                }
+
                 FileStorageQuery query = new FileStorageQuery
                 {
                     OnlyPublishers = new List<string> { publisher },

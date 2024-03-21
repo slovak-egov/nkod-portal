@@ -165,7 +165,7 @@ namespace Frontend.Test
                 new Uri("https://data.gov.sk/def/personal-data-occurence-type/2"),
                 string.Empty,
                 string.Empty);
-            input.DownloadUrl = new Uri("http://example.com/download");
+            input.DownloadUrl = new Uri("https://example.com/download");
             input.AccessUrl = input.DownloadUrl;
             input.Format = new Uri("http://publications.europa.eu/resource/dataset/file-type/1");
             input.MediaType = new Uri("http://www.iana.org/assignments/media-types/text/csv");
@@ -259,7 +259,7 @@ namespace Frontend.Test
             DcatDistribution distribution = DcatDistribution.Parse(state.Content!)!;
             Assert.IsNotNull(distribution.DownloadUrl);
             Assert.AreEqual(distribution.DownloadUrl, distribution.AccessUrl);
-            StringAssert.StartsWith(distribution.DownloadUrl.ToString(), "http://localhost:6001/download?");
+            StringAssert.StartsWith(distribution.DownloadUrl.ToString(), "https://localhost:6001/download?");
 
             input.DownloadUrl = distribution.DownloadUrl;
             input.AccessUrl = distribution.AccessUrl;

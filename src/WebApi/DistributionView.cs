@@ -46,7 +46,7 @@ namespace WebApi
             {
                 UriBuilder builder = new UriBuilder(uri);
                 builder.Scheme = "https";
-                builder.Port = 443;
+                builder.Port = -1;
                 return builder.Uri;
             }
             return uri;

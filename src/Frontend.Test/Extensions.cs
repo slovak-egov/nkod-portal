@@ -430,29 +430,22 @@ namespace Frontend.Test
             Assert.AreEqual(rdf.SpatialResolutionInMeters?.ToString("G29") ?? string.Empty, await (await test.GetInputInFormElementGroup("Priestorové rozlíšenie v metroch")).GetAttributeAsync("value"));
             Assert.AreEqual(rdf.TemporalResolution?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Časové rozlíšenie")).GetAttributeAsync("value"));
 
-            string serieSetting = "Samostatný dataset";
-            if (rdf.IsSerie)
-            {
-                serieSetting = "Dataset je séria";
-            }
-            else if (rdf.IsPartOf is not null)
-            {
-                serieSetting = "Dataset patrí do série";
-            }
-
-            Assert.AreEqual(serieSetting, await test.GetMultiRadioSelectedLabel("Údaje datasetu"));
-
-
-            IElementHandle? partOfGroup = await test.GetFormElementGroup("Nadradený dataset");
-
+            Assert.AreEqual(rdf.IsSerie, await test.GetByLabel("Dataset je séria").IsCheckedAsync());
+           
             if (rdf.IsPartOfInternalId is not null)
             {
+                IElementHandle? partOfGroup = await test.GetFormElementGroup("Nadradený dataset");
+                Assert.IsTrue(await test.GetByLabel("Dataset patrí do série").IsCheckedAsync());
                 Assert.IsNotNull(partOfGroup);
                 Assert.AreEqual(rdf.IsPartOfInternalId.ToString(), await (await partOfGroup.QuerySelectorAsync("select option:checked"))!.GetAttributeAsync("value"));
             }
             else
             {
-                Assert.IsNull(partOfGroup);
+                IReadOnlyList<IElementHandle> labels = await test.GetTestElements("is-part-of-serie");
+                if (labels.Count > 0)
+                {
+                    Assert.IsFalse(await test.GetByLabel("Dataset patrí do série").IsCheckedAsync());
+                }
             }
         }
 
@@ -551,18 +544,19 @@ namespace Frontend.Test
             await (await test.GetInputInFormElementGroup("Priestorové rozlíšenie v metroch")).FillAsync(rdf.SpatialResolutionInMeters?.ToString("G29") ?? string.Empty);
             await (await test.GetInputInFormElementGroup("Časové rozlíšenie")).FillAsync(rdf.TemporalResolution?.ToString() ?? string.Empty);
 
-            if (rdf.IsSerie)
+            await test.GetByLabel("Dataset je séria").SetCheckedAsync(rdf.IsSerie);
+
+            if (rdf.IsPartOfInternalId is not null)
             {
-                await test.CheckDatasetSerieRadio("Dataset je séria");
-            } 
-            else if (rdf.IsPartOfInternalId is not null)
-            {
-                await test.CheckDatasetSerieRadio("Dataset patrí do série");
+                await test.GetByLabel("Dataset patrí do série").SetCheckedAsync(true);
                 await (await test.GetSelectInFormElementGroup("Nadradený dataset"))!.SelectOptionAsync(rdf.IsPartOfInternalId);
             }
             else
             {
-                await test.CheckDatasetSerieRadio("Samostatný dataset");
+                foreach (IElementHandle element in await test.GetTestElements("is-part-of-serie"))
+                {
+                    await element.SetCheckedAsync(false);
+                }
             }
         }
 
@@ -597,17 +591,6 @@ namespace Frontend.Test
 
             await test.CheckLocalCatalogType(rdf.Type?.ToString());
             await (await test.GetInputInFormElementGroup("Prístupový bod katalógu")).FillAsync(rdf.EndpointUrl?.ToString() ?? string.Empty);
-        }
-
-        public static async Task CheckDatasetSerieRadio(this IPage test, string value)
-        {
-            IElementHandle? fieldset = await test.GetByFieldsetLegend("Údaje datasetu");
-            Assert.IsNotNull(fieldset);
-
-            IElementHandle? input = await GetInputByLabel(fieldset, value);
-            Assert.IsNotNull(input);
-
-            await input.CheckAsync();
         }
 
         public static async Task CheckDatasetPublicityRadio(this IPage test, bool value)

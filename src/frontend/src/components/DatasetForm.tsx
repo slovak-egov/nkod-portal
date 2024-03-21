@@ -1,47 +1,46 @@
-import { useEffect } from "react"
-import FormElementGroup from "./FormElementGroup"
-import MultiLanguageFormGroup from "./MultiLanguageFormGroup"
-import MultiRadio from "./MultiRadio"
-import { CodelistValue, Dataset, DatasetInput, UserInfo, extractLanguageErrors, knownCodelists, useCodelists, useDatasets } from "../client"
-import BaseInput from "./BaseInput"
-import TextArea from "./TextArea"
-import MultiSelectElementItems from "./MultiSelecteElementItems"
-import SelectElementItems from "./SelectElementItems"
-import MultiTextBox from "./MultiTextBox"
-import MultiCheckbox from "./MultiCheckbox"
-import ErrorAlert from "./ErrorAlert"
-import Loading from "./Loading"
-import { useTranslation } from "react-i18next"
-import DateInput from "./DateInput"
+import { useEffect } from 'react';
+import FormElementGroup from './FormElementGroup';
+import MultiLanguageFormGroup from './MultiLanguageFormGroup';
+import MultiRadio from './MultiRadio';
+import { CodelistValue, Dataset, DatasetInput, UserInfo, extractLanguageErrors, knownCodelists, useCodelists, useDatasets } from '../client';
+import BaseInput from './BaseInput';
+import TextArea from './TextArea';
+import MultiSelectElementItems from './MultiSelecteElementItems';
+import SelectElementItems from './SelectElementItems';
+import MultiTextBox from './MultiTextBox';
+import MultiCheckbox from './MultiCheckbox';
+import ErrorAlert from './ErrorAlert';
+import Loading from './Loading';
+import { useTranslation } from 'react-i18next';
+import DateInput from './DateInput';
+import Checkbox from './Checkbox';
 
 type Props = {
     dataset: DatasetInput;
     setDataset: (properties: Partial<DatasetInput>) => void;
     saving: boolean;
-    userInfo: UserInfo|null;
-    errors: {[id: string]: string}
-}
+    userInfo: UserInfo | null;
+    errors: { [id: string]: string };
+};
 
 type PublicOption = {
     name: string;
     value: boolean;
-}
+};
 
-const requiredCodelists = [knownCodelists.dataset.theme, knownCodelists.dataset.type, knownCodelists.dataset.accrualPeriodicity, knownCodelists.dataset.spatial];
+const requiredCodelists = [
+    knownCodelists.dataset.theme,
+    knownCodelists.dataset.type,
+    knownCodelists.dataset.accrualPeriodicity,
+    knownCodelists.dataset.spatial
+];
 
-type SerieSetting = {
-    name: string;
-    id: string;
-    enableDatasetSelection: boolean;
-}
+export function DatasetForm(props: Props) {
+    const { t } = useTranslation();
 
-export function DatasetForm(props: Props)
-{
-    const {t} = useTranslation();
-    
     const [datasets, , setDatasetQueryParameters, loadingDatasets, errorDatasets] = useDatasets({
         pageSize: -1,
-        page: 0,
+        page: 0
     });
 
     const [codelists, loadingCodelists, errorCodelists] = useCodelists(requiredCodelists);
@@ -74,70 +73,14 @@ export function DatasetForm(props: Props)
     const loading = loadingDatasets || loadingCodelists;
     const error = errorDatasets ?? errorCodelists;
 
-    const typeCodelist = codelists.find(c => c.id === knownCodelists.dataset.type);
-    const themeCodelist = codelists.find(c => c.id === knownCodelists.dataset.theme);
-    const accrualPeriodicityCodelist = codelists.find(c => c.id === knownCodelists.dataset.accrualPeriodicity);
-    const spatialCodelist = codelists.find(c => c.id === knownCodelists.dataset.spatial);
+    const typeCodelist = codelists.find((c) => c.id === knownCodelists.dataset.type);
+    const themeCodelist = codelists.find((c) => c.id === knownCodelists.dataset.theme);
+    const accrualPeriodicityCodelist = codelists.find((c) => c.id === knownCodelists.dataset.accrualPeriodicity);
+    const spatialCodelist = codelists.find((c) => c.id === knownCodelists.dataset.spatial);
 
     const saving = props.saving;
 
     const isEnabledPartOf = datasets && datasets.items.length > 0;
-
-    const serieSettings: SerieSetting[] = [
-        {
-            'name': t('singleDataset'),
-            'id': 'single',
-            'enableDatasetSelection': false
-        },
-        {
-            'name': t('datasetIsSerie'),
-            'id': 'serie',
-            'enableDatasetSelection': false
-        }
-    ];
-
-    if (isEnabledPartOf)
-    {
-        serieSettings.push({
-            'name': t('datasetIsPartOfSerie'),
-            'id': 'isPartOf',
-            'enableDatasetSelection': true
-        });
-    }
-
-    let selectedSerie: string;
-
-    if (dataset.isSerie)
-    {
-        selectedSerie = 'serie';
-    } 
-    else if (dataset.isPartOf)
-    {
-        selectedSerie = 'isPartOf';
-    } 
-    else
-    {
-        selectedSerie = 'single';
-    }
-
-    function setSerieSetting(setting: SerieSetting)
-    {
-        switch (setting.id)
-        {
-            case 'single':
-                setDataset({isPartOf: null, isSerie: false});
-                break;
-            case 'serie':
-                setDataset({isPartOf: null, isSerie: true});
-                break;
-            case 'isPartOf':
-                if (datasets && datasets.items.length > 0)
-                {
-                    setDataset({isPartOf: datasets.items[0].id, isSerie: false});
-                }
-                break;
-        }
-    }
 
     return (
         <>
@@ -262,9 +205,7 @@ export function DatasetForm(props: Props)
             <FormElementGroup
                 label={t('timeValidityDateFrom')}
                 errorMessage={errors['startdate']}
-                element={(id) => (
-                    <DateInput id={id} disabled={saving} value={dataset.startDate ?? ''} onDateChange={(e) => setDataset({ startDate: e })} />
-                )}
+                element={(id) => <DateInput id={id} disabled={saving} value={dataset.startDate ?? ''} onDateChange={(e) => setDataset({ startDate: e })} />}
             />
             <FormElementGroup
                 label={t('timeValidityDateTo')}
@@ -334,18 +275,22 @@ export function DatasetForm(props: Props)
                 )}
             />
 
-            <MultiRadio<SerieSetting>
-                label={t('datasetData')}
-                disabled={saving}
-                options={serieSettings}
-                onChange={setSerieSetting}
-                selectedOption={serieSettings.find((s) => s.id === selectedSerie) ?? serieSettings[0]}
-                id="serie-settings"
-                getValue={(v) => v.id}
-                renderOption={(v) => v.name}
-            />
+            <div style={{ marginBottom: '2em' }}>
+                <Checkbox label={t('datasetIsSerie')} checked={dataset.isSerie} onCheckedChange={(v) => setDataset({ isSerie: v })} />
+            </div>
 
-            {selectedSerie === 'isPartOf' && datasets ? (
+            {isEnabledPartOf ? (
+                <div style={{ marginBottom: '2em' }}>
+                    <Checkbox
+                        data-testid="is-part-of-serie"
+                        label={t('datasetIsPartOfSerie')}
+                        checked={dataset.isPartOf != null}
+                        onCheckedChange={(v) => setDataset({ isPartOf: v ? datasets.items[0].id ?? null : null })}
+                    />
+                </div>
+            ) : null}
+
+            {dataset.isPartOf != null && datasets ? (
                 <FormElementGroup
                     label={t('parentDataset')}
                     errorMessage={errors['ispartof']}

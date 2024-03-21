@@ -72,7 +72,7 @@ namespace WebApi.Test
             return input;
         }
 
-        private void ValidateValues(Storage storage, string? id, DatasetInput input, string publisher, bool shouldBePublic, DateTimeOffset? issued)
+        private void ValidateValues(Storage storage, string? id, DatasetInput input, string publisher, bool shouldBePublic, DateTimeOffset? issued, Guid? parentId = null)
         {
             Assert.NotNull(id);
             FileState? state = storage.GetFileState(Guid.Parse(id), accessPolicy);
@@ -81,7 +81,7 @@ namespace WebApi.Test
             Assert.Equal(shouldBePublic && input.IsPublic, state.Metadata.IsPublic);
             Assert.Equal(publisher, state.Metadata.Publisher);
             Assert.Equal(FileType.DatasetRegistration, state.Metadata.Type);
-            Assert.Null(state.Metadata.ParentFile);
+            Assert.Equal(parentId, state.Metadata.ParentFile);
             Assert.Equal("TestName", state.Metadata.Name["sk"]);
             if (issued.HasValue)
             {
@@ -112,7 +112,20 @@ namespace WebApi.Test
             Assert.Equal(input.Specification, dataset.Specification?.ToString());
             Assert.Equal(input.SpatialResolutionInMeters is not null ? decimal.Parse(input.SpatialResolutionInMeters, System.Globalization.CultureInfo.CurrentCulture) : null, dataset.SpatialResolutionInMeters);
             Assert.Equal(input.TemporalResolution, dataset.TemporalResolution);
-            Assert.Equal(input.IsPartOf, dataset.IsPartOf?.ToString());
+
+            if (input.IsPartOf is not null)
+            {
+                FileState parentState = storage.GetFileState(Guid.Parse(input.IsPartOf), accessPolicy)!;
+                DcatDataset parentDataset = DcatDataset.Parse(parentState.Content!)!;
+                Assert.Equal(parentDataset.Uri.ToString(), dataset.IsPartOf?.ToString());
+                Assert.Equal(input.IsPartOf, dataset.IsPartOfInternalId);
+            }
+            else
+            {
+                Assert.Null(dataset.IsPartOf);
+            }
+
+            Assert.Equal(input.IsSerie, dataset.IsSerie);
 
             if (input.TemporalResolution is not null)
             {
@@ -776,6 +789,225 @@ namespace WebApi.Test
             using HttpClient client = applicationFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             using HttpResponseMessage response = await client.DeleteAsync($"/datasets?id={HttpUtility.UrlEncode(datasetId.ToString())}");
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task TestSerieShouldBeCreated()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreatePublisher("Test", PublisherId);
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DatasetInput input = CreateInput();
+            input.IsSerie = true;
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/datasets", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            string content = await response.Content.ReadAsStringAsync();
+            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrEmpty(result.Id));
+            Assert.True(result.Success);
+            Assert.True(result.Errors is null || result.Errors.Count == 0);
+            ValidateValues(storage, result.Id, input, PublisherId, true, null);
+        }
+
+        private void ModifyAsSerie(Storage storage, Guid datasetId)
+        {
+            FileState state = storage.GetFileState(datasetId, accessPolicy)!;
+            DcatDataset dataset = DcatDataset.Parse(state.Content!)!;
+            dataset.IsSerie = true;
+            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, state.Metadata), true, accessPolicy);
+        }
+
+        private void ModifyAsPartOfSerie(Storage storage, Guid parentId, Guid datasetId)
+        {
+            FileState parentState = storage.GetFileState(parentId, accessPolicy)!;
+            FileState datasetState = storage.GetFileState(datasetId, accessPolicy)!;
+            
+            DcatDataset parent = DcatDataset.Parse(parentState.Content!)!;
+            DcatDataset dataset = DcatDataset.Parse(datasetState.Content!)!;
+
+            dataset.IsPartOf = parent.Uri;
+            dataset.IsPartOfInternalId = parentId.ToString();
+            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, datasetState.Metadata), true, accessPolicy);
+        }
+
+        [Fact]
+        public async Task TestDatasetInSerieShouldBeCreated()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreatePublisher("Test", PublisherId);
+
+            Guid parentId = fixture.CreateDataset("Test 1", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            ModifyAsSerie(storage, parentId);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DatasetInput input = CreateInput();
+            input.IsPartOf = parentId.ToString();
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/datasets", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            string content = await response.Content.ReadAsStringAsync();
+            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrEmpty(result.Id));
+            Assert.True(result.Success);
+            Assert.True(result.Errors is null || result.Errors.Count == 0);
+            ValidateValues(storage, result.Id, input, PublisherId, false, null, parentId);
+        }
+
+        [Fact]
+        public async Task TestSerieInSerieShouldBeCreated()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreatePublisher("Test", PublisherId);
+
+            Guid parentId = fixture.CreateDataset("Test 1", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            ModifyAsSerie(storage, parentId);
+            
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DatasetInput input = CreateInput();
+            input.IsPartOf = parentId.ToString();
+            input.IsSerie = true;
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/datasets", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            string content = await response.Content.ReadAsStringAsync();
+            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrEmpty(result.Id));
+            Assert.True(result.Success);
+            Assert.True(result.Errors is null || result.Errors.Count == 0);
+            ValidateValues(storage, result.Id, input, PublisherId, true, null, parentId);
+        }
+
+        [Fact]
+        public async Task TestSerieInSerieShouldNotBeModifiedWithCycleSelf()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreatePublisher("Test", PublisherId);
+
+            Guid datasetId = fixture.CreateDataset("Test 1", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            ModifyAsSerie(storage, datasetId);
+
+            DcatDataset dataset = DcatDataset.Parse(storage.GetFileState(datasetId, accessPolicy)!.Content!)!;
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DatasetInput input = CreateInput(true);
+            input.Id = datasetId.ToString();
+            input.IsSerie = true;
+            input.IsPartOf = datasetId.ToString();
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/datasets", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+
+        [Fact]
+        public async Task TestSerieInSerieShouldNotBeModifiedWithCycleDirect()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreatePublisher("Test", PublisherId);
+
+            Guid parentId1 = fixture.CreateDataset("Test 1", PublisherId);
+            Guid parentId2 = fixture.CreateDataset("Test 2", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            ModifyAsSerie(storage, parentId1);
+            ModifyAsSerie(storage, parentId2);
+            ModifyAsPartOfSerie(storage, parentId1, parentId2);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DatasetInput input = CreateInput(true);
+            input.Id = parentId1.ToString();
+            input.IsSerie = true;
+            input.IsPartOf = parentId2.ToString();
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/datasets", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task TestSerieShouldBeChangedToDatsetWhenDoesNotHaveParts()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreatePublisher("Test", PublisherId);
+
+            Guid parentId1 = fixture.CreateDataset("Test 1", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            ModifyAsSerie(storage, parentId1);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DatasetInput input = CreateInput(true);
+            input.Id = parentId1.ToString();
+            input.IsSerie = false;
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/datasets", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            string content = await response.Content.ReadAsStringAsync();
+            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrEmpty(result.Id));
+            Assert.True(result.Success);
+            Assert.True(result.Errors is null || result.Errors.Count == 0);
+            ValidateValues(storage, result.Id, input, PublisherId, false, null);
+        }
+
+        [Fact]
+        public async Task TestSerieShouldNotBeChangedToDatsetWhenHasParts()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreatePublisher("Test", PublisherId);
+
+            Guid parentId1 = fixture.CreateDataset("Test 1", PublisherId);
+            Guid datasetId = fixture.CreateDataset("Test 2", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            ModifyAsSerie(storage, parentId1);
+            ModifyAsPartOfSerie(storage, parentId1, datasetId);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DatasetInput input = CreateInput(true);
+            input.Id = parentId1.ToString();
+            input.IsSerie = false;
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/datasets", requestContent);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
     }

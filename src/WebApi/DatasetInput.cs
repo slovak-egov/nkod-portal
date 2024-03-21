@@ -77,7 +77,15 @@ namespace WebApi
             
             results.ValidateNumber(nameof(SpatialResolutionInMeters), SpatialResolutionInMeters);
             results.ValidateTemporalResolution(nameof(TemporalResolution), TemporalResolution);
-            await results.ValidateDataset(nameof(IsPartOf), IsPartOf, publisher, documentStorage);
+            await results.ValidateDataset(nameof(IsPartOf), IsPartOf, Id, publisher, documentStorage);
+
+            if (Guid.TryParse(Id, out Guid datasetId) && !IsSerie)
+            {
+                if (await documentStorage.GetDatasetParts(datasetId).ConfigureAwait(false) is { Count: > 0 })
+                {
+                    results.AddError(nameof(IsSerie), "Dataset je séria");
+                }
+            }
 
             return results;
         }

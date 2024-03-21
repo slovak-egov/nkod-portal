@@ -381,7 +381,7 @@ namespace Frontend.Test
             IElementHandle distribution = distributions[0];
             IElementHandle? distributionLink = await distribution.QuerySelectorAsync("a");
             Assert.IsNotNull(distributionLink);
-            Assert.AreEqual("http://example.com/distribution", await distributionLink.GetAttributeAsync("href"));
+            Assert.AreEqual("https://example.com/distribution", await distributionLink.GetAttributeAsync("href"));
             Assert.AreEqual("Test dataset", await distributionLink.TextContentAsync());
 
             Assert.IsNull(await Page.GetTestElement("related"));

@@ -920,11 +920,11 @@ namespace Frontend.Test
 
             Assert.AreEqual(1, await Page.GetByText("Uložiť dataset a pridať distribúciu").CountAsync());
 
-            await Page.CheckDatasetSerieRadio("Dataset je séria");
+            await Page.GetByLabel("Dataset je séria").SetCheckedAsync(true);
 
             Assert.AreEqual(0, await Page.GetByText("Uložiť dataset a pridať distribúciu").CountAsync());
 
-            await Page.CheckDatasetSerieRadio("Samostatný dataset");
+            await Page.GetByLabel("Dataset je séria").SetCheckedAsync(false);
 
             Assert.AreEqual(1, await Page.GetByText("Uložiť dataset a pridať distribúciu").CountAsync());
         }

@@ -65,7 +65,7 @@ namespace Frontend.Test
                 new Uri("https://data.gov.sk/def/personal-data-occurence-type/2"),
                 string.Empty,
                 string.Empty);
-            distribution.DownloadUrl = new Uri("http://example.com/download");
+            distribution.DownloadUrl = new Uri("https://example.com/download");
             distribution.AccessUrl = distribution.DownloadUrl;
             distribution.Format = new Uri("http://publications.europa.eu/resource/dataset/file-type/1");
             distribution.MediaType = new Uri("http://www.iana.org/assignments/media-types/text/csv");

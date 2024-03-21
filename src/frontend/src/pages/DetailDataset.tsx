@@ -41,14 +41,6 @@ export default function DetailDataset() {
         }
     }, [id, datasetsAsSiblingQuery, setDatasetsAsSiblingQuery, datasetsAsParentQuery, setDatasetsAsParentQuery]);
 
-    const datasets = [];
-    if (datasetsAsSibling) {
-        datasets.push(...datasetsAsSibling.items);
-    }
-    if (datasetsAsParent) {
-        datasets.push(...datasetsAsParent.items);
-    }
-    const total = (datasetsAsSibling?.totalCount ?? 0) + (datasetsAsParent?.totalCount ?? 0);
     const loadingDatasets = loadingDatasetsAsParent || loadingDatasetsAsSibling;
 
     const path = [
@@ -253,12 +245,12 @@ export default function DetailDataset() {
                                     </GridColumn>
                                 ) : null}
                             </GridRow>
-                            {datasets.length > 0 ? (
+                            {datasetsAsParent && datasetsAsParent.items.length > 0 ? (
                                 <GridRow>
                                     <GridColumn widthUnits={1} totalUnits={1} data-testid="related">
                                         <RelatedContent
-                                            header={dataset.isSerie ? t('datasetsFromList') : t('otherDatasetsFromList')}
-                                            links={datasets.map((d) => ({
+                                            header={t('datasetsFromList')}
+                                            links={datasetsAsParent.items.map((d) => ({
                                                 title: d.name ?? t('noName'),
                                                 url: '/datasety/' + d.id
                                             }))}
@@ -266,10 +258,31 @@ export default function DetailDataset() {
                                         {loadingDatasets ? <Loading /> : null}
                                         <Pagination
                                             currentPage={datasetsAsParentQuery.page}
-                                            totalItems={total}
+                                            totalItems={datasetsAsParent.totalCount}
                                             pageSize={25}
                                             onPageChange={(p) => {
                                                 setDatasetsAsParentQuery({ page: p });
+                                            }}
+                                        />
+                                    </GridColumn>
+                                </GridRow>
+                            ) : null}
+                            {datasetsAsSibling && datasetsAsSibling.items.length > 0 ? (
+                                <GridRow>
+                                    <GridColumn widthUnits={1} totalUnits={1} data-testid="related">
+                                        <RelatedContent
+                                            header={t('otherDatasetsFromList')}
+                                            links={datasetsAsSibling.items.map((d) => ({
+                                                title: d.name ?? t('noName'),
+                                                url: '/datasety/' + d.id
+                                            }))}
+                                        />
+                                        {loadingDatasets ? <Loading /> : null}
+                                        <Pagination
+                                            currentPage={datasetsAsParentQuery.page}
+                                            totalItems={datasetsAsSibling.totalCount}
+                                            pageSize={25}
+                                            onPageChange={(p) => {
                                                 setDatasetsAsSiblingQuery({ page: p });
                                             }}
                                         />
