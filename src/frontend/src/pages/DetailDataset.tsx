@@ -20,12 +20,12 @@ export default function DetailDataset() {
     const [datasetsAsSibling, datasetsAsSiblingQuery, setDatasetsAsSiblingQuery, loadingDatasetsAsSibling] = useDatasets({
         page: 0,
         pageSize: 25,
-        orderBy: 'modified'
+        orderBy: 'created'
     });
     const [datasetsAsParent, datasetsAsParentQuery, setDatasetsAsParentQuery, loadingDatasetsAsParent] = useDatasets({
         page: 0,
         pageSize: 25,
-        orderBy: 'modified'
+        orderBy: 'created'
     });
     const { t } = useTranslation();
     useDocumentTitle(dataset?.name ?? '');
@@ -279,7 +279,7 @@ export default function DetailDataset() {
                                         />
                                         {loadingDatasets ? <Loading /> : null}
                                         <Pagination
-                                            currentPage={datasetsAsParentQuery.page}
+                                            currentPage={datasetsAsSiblingQuery.page}
                                             totalItems={datasetsAsSibling.totalCount}
                                             pageSize={25}
                                             onPageChange={(p) => {
