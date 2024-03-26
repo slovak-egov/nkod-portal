@@ -1076,5 +1076,54 @@ namespace WebApi.Test
             Assert.NotNull(response.Headers.Location);
             Assert.Equal("/datasety/" + metadata.Id.ToString(), response.Headers.Location.OriginalString);
         }
+
+
+        [Fact]
+        public async Task DereferenceByLandingPageShouldBeRedirected3()
+        {
+            string path = fixture.GetStoragePath();
+
+            Uri uri = new Uri("https://data.gov.sk/set/codelist/CL003003");
+
+            DcatDataset dataset = DcatDataset.Create();
+            dataset.LandingPage = uri;
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = dataset.UpdateMetadata(true);
+            storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            using HttpResponseMessage response = await client.GetAsync("/set/codelist/CL003003");
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.NotNull(response.Headers.Location);
+            Assert.Equal("/datasety/" + metadata.Id.ToString(), response.Headers.Location.OriginalString);
+        }
+
+        [Fact]
+        public async Task DereferenceByLandingPageShouldBeRedirected4()
+        {
+            string path = fixture.GetStoragePath();
+
+            Uri uri = new Uri("https://data.gov.sk/set/codelist/CL003003");
+
+            DcatDataset dataset = DcatDataset.Create();
+            dataset.LandingPage = uri;
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = dataset.UpdateMetadata(true);
+            storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            using HttpResponseMessage response = await client.GetAsync("/datasety/codelist/CL003003");
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.NotNull(response.Headers.Location);
+            Assert.Equal("/datasety/" + metadata.Id.ToString(), response.Headers.Location.OriginalString);
+        }
     }
 }

@@ -37,6 +37,7 @@ using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using System.Net.Mime;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -190,6 +191,9 @@ builder.Services.Configure<FormOptions>(options =>
     options.ValueLengthLimit = maxFileSize;
     options.MultipartBodyLengthLimit = maxFileSize + 200;
 });
+
+ImportHarvestedHostedService importHarvestedHostedService = new ImportHarvestedHostedService(documentStorageUrl, iamClientUrl, builder.Configuration["HarvesterAuthToken"] ?? string.Empty, builder.Configuration["PublicSparqlEndpoint"] ?? string.Empty);
+builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService>(importHarvestedHostedService));
 
 var app = builder.Build();
 
@@ -2454,55 +2458,97 @@ app.Use(async (context, next) =>
     if (context.GetEndpoint() is null)
     {
         string path = context.Request.Path.Value ?? string.Empty;
-        if (path.StartsWith("/set/") || path.StartsWith("/dataset/") || path.StartsWith("/datasety/"))
+
+        string[] prefixes = new[] { "/set/", "/dataset/", "/datasety/" };
+
+        string prefix = prefixes.FirstOrDefault(path.StartsWith) ?? string.Empty;
+        if (!string.IsNullOrEmpty(prefix))
         {
+            path = path.Substring(prefix.Length);
+
             IDocumentStorageClient client = context.RequestServices.GetRequiredService<IDocumentStorageClient>();
 
-            UriBuilder uriBuilder = new UriBuilder();
-            uriBuilder.Scheme = "https";
-            uriBuilder.Host = "data.gov.sk";
-            
-            if (path.StartsWith("/datasety/"))
+            Uri BuildUri(string prefix)
             {
-                uriBuilder.Path = "/dataset/" + path.Substring(10);
-            }
-            else
-            {
-                uriBuilder.Path = path;
+                UriBuilder uriBuilder = new UriBuilder();
+                uriBuilder.Scheme = "https";
+                uriBuilder.Host = "data.gov.sk";
+                uriBuilder.Path = prefix + path;
+                return uriBuilder.Uri;
             }
 
-            Uri uri = uriBuilder.Uri;
-
-            FileStorageQuery query = new FileStorageQuery
+            async Task<bool> TryFindByQuery(Action<FileStorageQuery> queryDecorator)
             {
-                MaxResults = 1,
-                OnlyTypes = new List<FileType> { FileType.DatasetRegistration, FileType.DistributionRegistration },
-                AdditionalFilters = new Dictionary<string, string[]>(),
-            };
-
-            if (path.StartsWith("/set/"))
-            {
-                query.AdditionalFilters["key"] = new[] { uri.ToString() };
-            }
-            else 
-            {
-                query.AdditionalFilters["landingPage"] = new[] { uri.ToString() };
-            } 
-
-            FileStorageResponse response = await client.GetFileStates(query);
-            if (response.Files.Count >= 1)
-            {
-                FileState state = response.Files[0];
-                if (state.Metadata.Type == FileType.DatasetRegistration)
+                FileStorageQuery query = new FileStorageQuery
                 {
-                    context.Response.Redirect($"/datasety/{state.Metadata.Id}");
-                    return;
-                } 
-                else if (state.Metadata.Type == FileType.DistributionRegistration && state.Metadata.ParentFile.HasValue)
+                    MaxResults = 1,
+                    OnlyTypes = new List<FileType> { FileType.DatasetRegistration, FileType.DistributionRegistration },
+                    AdditionalFilters = new Dictionary<string, string[]>(),
+                };
+                queryDecorator(query);
+                FileStorageResponse response = await client.GetFileStates(query);
+                if (response.Files.Count >= 1)
                 {
-                    context.Response.Redirect($"/datasety/{state.Metadata.ParentFile.Value}");
+                    FileState state = response.Files[0];
+                    if (state.Metadata.Type == FileType.DatasetRegistration)
+                    {
+                        context.Response.Redirect($"/datasety/{state.Metadata.Id}");
+                        return true;
+                    }
+                    else if (state.Metadata.Type == FileType.DistributionRegistration && state.Metadata.ParentFile.HasValue)
+                    {
+                        context.Response.Redirect($"/datasety/{state.Metadata.ParentFile.Value}");
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            Task<bool> TryFindByKey(Uri uri)
+            {
+                return TryFindByQuery(q =>
+                {
+                    q.AdditionalFilters ??= new Dictionary<string, string[]>();
+                    q.AdditionalFilters["key"] = new[] { uri.ToString() };
+                });
+            }
+
+            Task<bool> TryFindByLandingPage(Uri uri)
+            {
+                return TryFindByQuery(q =>
+                {
+                    q.AdditionalFilters ??= new Dictionary<string, string[]>();
+                    q.AdditionalFilters["landingPage"] = new[] { uri.ToString() };
+                });
+            }
+
+            bool result;
+
+            if (prefix == "/set/")
+            {
+                result = await TryFindByKey(BuildUri("/set/"));
+                if (result)
+                {
                     return;
                 }
+            }
+
+            result = await TryFindByLandingPage(BuildUri("/dataset/"));
+            if (result)
+            {
+                return;
+            }
+
+            result = await TryFindByLandingPage(BuildUri("/datasety/"));
+            if (result)
+            {
+                return;
+            }
+
+            result = await TryFindByLandingPage(BuildUri("/set/"));
+            if (result)
+            {
+                return;
             }
         }
     }

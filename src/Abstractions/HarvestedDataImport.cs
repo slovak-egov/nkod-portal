@@ -28,7 +28,7 @@ namespace NkodSk.Abstractions
 
         public async Task Import()
         { 
-            async Task UpdateChildren<T>(FileType type, FileMetadata parentMetadata, bool removeChildren, Func<string, T?> parser, Func<Task<List<T>>> fetcher, Func<T, FileMetadata?, FileMetadata> metadataCreator, Func<Task> savedCallback, Func<FileMetadata, T, Task> innerUpdate) where T : RdfObject
+            async Task UpdateChildren<T>(FileType type, FileMetadata parentMetadata, Uri? localCatalogUri, bool removeChildren, Func<string, T?> parser, Func<Task<List<T>>> fetcher, Func<T, FileMetadata?, FileMetadata> metadataCreator, Func<Task> savedCallback, Func<FileMetadata, T, Task> innerUpdate) where T : RdfObject
             {
                 logger("Loading existing children from storage");
 
@@ -41,9 +41,9 @@ namespace NkodSk.Abstractions
                     },
                 };
 
-                if (type == FileType.DatasetRegistration)
+                if (type == FileType.DatasetRegistration && localCatalogUri is not null)
                 {
-                    query.AdditionalFilters["localCatalog"] = new[] { parentMetadata.Id.ToString() };
+                    query.AdditionalFilters["localCatalog"] = new[] { localCatalogUri.ToString() };
                 }
 
                 FileStorageResponse response = await documentStorageClient.GetFileStates(query);
@@ -225,16 +225,17 @@ namespace NkodSk.Abstractions
                     await UpdateChildren(
                         FileType.DatasetRegistration,
                         state.Metadata,
+                        catalog?.Uri,
                         catalog is null,
                         DcatDataset.Parse,
-                        () => catalog?.Uri is not null ? sparqlClient.GetDatasets(catalog.Uri) : Task.FromResult(new List<DcatDataset>()),
+                        () => catalog?.Uri is not null ? sparqlClient.GetDatasets(catalog.Uri, true) : Task.FromResult(new List<DcatDataset>()),
                         (d, m) =>
                         {
                             m = d.UpdateMetadata(true, m);
                             Dictionary<string, string[]> additionalValues = m.AdditionalValues ?? new Dictionary<string, string[]>();
                             if (catalog is not null)
                             {
-                                additionalValues["localCatalog"] = new[] { state.Metadata.Id.ToString() };
+                                additionalValues["localCatalog"] = new[] { catalog.Uri.ToString() };
                             }
                             m = m with { AdditionalValues = additionalValues };
                             return m;
@@ -245,9 +246,10 @@ namespace NkodSk.Abstractions
                             await UpdateChildren(
                                 FileType.DistributionRegistration,
                                 datasetMetadata,
+                                catalog?.Uri,
                                 false,
                                 DcatDistribution.Parse,
-                                () => sparqlClient.GetDistributions(dataset.Uri),
+                                () => sparqlClient.GetDistributions(dataset.Uri, true),
                                 (d, m) => d.UpdateMetadata(datasetMetadata, m),
                                 () => documentStorageClient.UpdateDatasetMetadata(datasetMetadata.Id, false),
                                 (_, _) => Task.CompletedTask
@@ -257,7 +259,16 @@ namespace NkodSk.Abstractions
                 }
                 catch (Exception e)
                 {
-                    logger(e.Message);
+                    Exception? ex = e;
+                    while (ex is not null)
+                    {
+                        logger(ex.Message);
+                        if (!string.IsNullOrEmpty(ex.StackTrace))
+                        {
+                            logger(ex.StackTrace);
+                        }
+                        ex = ex.InnerException;
+                    }
                     logger($"Error during local catalog: {state.Metadata.Id}");
                 }
             }

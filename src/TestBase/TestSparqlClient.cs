@@ -13,14 +13,14 @@ namespace TestBase
 
         private readonly Dictionary<Uri, List<DcatDistribution>> allDistributions = new Dictionary<Uri, List<DcatDistribution>>();
 
-        public Task<List<DcatDataset>> GetDatasets(Uri catalogId)
+        public Task<List<DcatDataset>> GetDatasets(Uri catalogId, bool _)
         {
             allDatasets.TryGetValue(catalogId, out List<DcatDataset>? datasets);
             datasets ??= new List<DcatDataset>();
             return Task.FromResult(datasets);
         }
 
-        public Task<List<DcatDistribution>> GetDistributions(Uri datasetId)
+        public Task<List<DcatDistribution>> GetDistributions(Uri datasetId, bool _)
         {
             allDistributions.TryGetValue(datasetId, out List<DcatDistribution>? distributions);
             distributions ??= new List<DcatDistribution>();

@@ -68,13 +68,13 @@ namespace ImportRegistrations.Test
             return (dataset, distribution);
         }
 
-        private void AssertExpectedState(Storage storage, string publisherId, Guid catalogId, DcatDataset dataset, DcatDistribution? distribution)
+        private void AssertExpectedState(Storage storage, string publisherId, Uri catalogUri, DcatDataset dataset, DcatDistribution? distribution)
         {
             FileStorageResponse importedDatasets = storage.GetFileStates(new FileStorageQuery
             {
                 AdditionalFilters = new Dictionary<string, string[]>
                 {
-                    { "localCatalog", new[]{ catalogId.ToString() } },
+                    { "localCatalog", new[]{ catalogUri.ToString() } },
                     { "key", new[]{ dataset.Uri.ToString() } }
                 },
                 OnlyTypes = new List<FileType> { FileType.DatasetRegistration }
@@ -161,7 +161,7 @@ namespace ImportRegistrations.Test
 
             await import.Import();
 
-            AssertExpectedState(storage, publisherId, catalogId, dataset, distribution);
+            AssertExpectedState(storage, publisherId, catalogUri, dataset, distribution);
         }
 
         [Fact]
@@ -193,7 +193,7 @@ namespace ImportRegistrations.Test
             await import.Import();
             await import.Import();
 
-            AssertExpectedState(storage, publisherId, catalogId, dataset, distribution);
+            AssertExpectedState(storage, publisherId, catalogUri, dataset, distribution);
         }
 
         [Fact]
@@ -229,7 +229,7 @@ namespace ImportRegistrations.Test
 
             await import.Import();
 
-            AssertExpectedState(storage, publisherId, catalogId, dataset, distribution);
+            AssertExpectedState(storage, publisherId, catalogUri, dataset, distribution);
         }
 
         [Fact]
@@ -275,7 +275,7 @@ namespace ImportRegistrations.Test
             string path = fixture.GetStoragePath();
 
             string publisherId = "http://data.gob.sk/test";
-            (Uri catalogUri, Guid catalogId) = fixture.CreateLocalCatalog("Test", publisherId);
+            (Uri catalogUri, Guid _) = fixture.CreateLocalCatalog("Test", publisherId);
             using Storage storage = new Storage(path);
             TestSparqlClient sparqlClient = new TestSparqlClient();
 
@@ -310,7 +310,7 @@ namespace ImportRegistrations.Test
             {
                 AdditionalFilters = new Dictionary<string, string[]>
                 {
-                    { "localCatalog", new[]{ catalogId.ToString() } },
+                    { "localCatalog", new[]{ catalogUri.ToString() } },
                     { "key", new[]{ datasetSerie.Uri.ToString() } }
                 },
                 OnlyTypes = new List<FileType> { FileType.DatasetRegistration }
@@ -318,8 +318,8 @@ namespace ImportRegistrations.Test
 
             datasetPart.IsPartOfInternalId = importedDatasets.Files[0].Metadata.Id.ToString();
 
-            AssertExpectedState(storage, publisherId, catalogId, datasetSerie, null);
-            AssertExpectedState(storage, publisherId, catalogId, datasetPart, distribution);
+            AssertExpectedState(storage, publisherId, catalogUri, datasetSerie, null);
+            AssertExpectedState(storage, publisherId, catalogUri, datasetPart, distribution);
         }
 
         private class HttpContextValueAccessor : IHttpContextValueAccessor
