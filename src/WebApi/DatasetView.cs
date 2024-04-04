@@ -68,7 +68,9 @@ namespace WebApi
 
         public bool IsHarvested { get; set; }
 
-        public DateTimeOffset? LastUpdated { get; set; }
+        public string? Issued { get; set; }
+
+        public string? LastUpdated { get; set; }
 
         public static async Task<DatasetView> MapFromRdf(FileMetadata metadata, DcatDataset datasetRdf, ICodelistProviderClient codelistProviderClient, string language, bool fetchAllLanguages)
         {
@@ -99,7 +101,8 @@ namespace WebApi
                 IsPartOf = datasetRdf.IsPartOfInternalId,
                 IsSerie = datasetRdf.IsSerie,
                 IsHarvested = datasetRdf.IsHarvested,
-                LastUpdated = datasetRdf.Modified,
+                Issued = datasetRdf.Issued?.LocalDateTime.ToString("g"),
+                LastUpdated = datasetRdf.Modified?.LocalDateTime.ToString("g"),
             };
 
             if (fetchAllLanguages)

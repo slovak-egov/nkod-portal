@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Dataset, Distribution } from '../client';
+import { CodelistValue, Dataset, Distribution } from '../client';
 import FileIcon from './FileIcon';
 import { useState } from 'react';
 
@@ -7,6 +7,13 @@ type Props = {
     distribution: Distribution;
     dataset: Dataset;
 };
+
+function ReferenceLink(props: { value: CodelistValue | null }) {
+    if (props.value) {
+        return <a href={'https://znalosti.gov.sk/resource?uri=' + encodeURIComponent(props.value.id)}>{props.value.label}</a>;
+    }
+    return null;
+}
 
 export default function DistributionRow(props: Props) {
     const [expanded, setExpanded] = useState(false);
@@ -34,25 +41,25 @@ export default function DistributionRow(props: Props) {
             >
                 {distribution.termsOfUse?.authorsWorkTypeValue ? (
                     <p className="govuk-body">
-                        {t('authorWorkType')}: {distribution.termsOfUse.authorsWorkTypeValue.label}
+                        {t('authorWorkType')}: <ReferenceLink value={distribution.termsOfUse.authorsWorkTypeValue} />
                     </p>
                 ) : null}
 
                 {distribution.termsOfUse?.originalDatabaseTypeValue ? (
                     <p className="govuk-body">
-                        {t('originalDatabaseType')}: {distribution.termsOfUse.originalDatabaseTypeValue.label}
+                        {t('originalDatabaseType')}: <ReferenceLink value={distribution.termsOfUse.originalDatabaseTypeValue} />
                     </p>
                 ) : null}
 
                 {distribution.termsOfUse?.databaseProtectedBySpecialRightsTypeValue ? (
                     <p className="govuk-body">
-                        {t('specialDatabaseRights')}: {distribution.termsOfUse.databaseProtectedBySpecialRightsTypeValue.label}
+                        {t('specialDatabaseRights')}: <ReferenceLink value={distribution.termsOfUse.databaseProtectedBySpecialRightsTypeValue} />
                     </p>
                 ) : null}
 
                 {distribution.termsOfUse?.personalDataContainmentTypeValue ? (
                     <p className="govuk-body">
-                        {t('personalDataType')}: {distribution.termsOfUse.personalDataContainmentTypeValue.label}
+                        {t('personalDataType')}:{distribution.termsOfUse.personalDataContainmentTypeValue.label}
                     </p>
                 ) : null}
 
@@ -70,13 +77,13 @@ export default function DistributionRow(props: Props) {
 
                 {distribution.formatValue ? (
                     <p className="govuk-body">
-                        {t('downloadFormat')}: {distribution.formatValue.label}
+                        {t('downloadFormat')}: <ReferenceLink value={distribution.formatValue} />
                     </p>
                 ) : null}
 
                 {distribution.mediaTypeValue ? (
                     <p className="govuk-body">
-                        {t('mediaType')}: {distribution.mediaTypeValue.label}
+                        {t('mediaType')}: <ReferenceLink value={distribution.mediaTypeValue} />
                     </p>
                 ) : null}
 
@@ -88,13 +95,13 @@ export default function DistributionRow(props: Props) {
 
                 {distribution.compressFormatValue ? (
                     <p className="govuk-body">
-                        {t('compressionMediaType')}: {distribution.compressFormatValue.label}
+                        {t('compressionMediaType')}: <ReferenceLink value={distribution.compressFormatValue} />
                     </p>
                 ) : null}
 
                 {distribution.packageFormatValue ? (
                     <p className="govuk-body">
-                        {t('packageMediaType')}: {distribution.packageFormatValue.label}
+                        {t('packageMediaType')}: <ReferenceLink value={distribution.packageFormatValue} />
                     </p>
                 ) : null}
             </div>

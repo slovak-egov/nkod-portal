@@ -1909,6 +1909,10 @@ app.MapPost("/users", [Authorize] async ([FromServices] IIdentityAccessManagemen
 {
     try
     {
+        input.FirstName = input.FirstName?.Trim() ?? string.Empty;
+        input.LastName = input.LastName?.Trim() ?? string.Empty;
+        input.Email = input.Email?.Trim();
+
         return Results.Ok(await client.CreateUser(input).ConfigureAwait(false));
     }
     catch (HttpRequestException e)
@@ -1932,6 +1936,10 @@ app.MapPut("/users", [Authorize] async ([FromServices] IIdentityAccessManagement
 {
     try
     {
+        input.FirstName = input.FirstName?.Trim() ?? string.Empty;
+        input.LastName = input.LastName?.Trim() ?? string.Empty;
+        input.Email = input.Email?.Trim();
+
         return Results.Ok(await client.UpdateUser(input).ConfigureAwait(false));
     }
     catch (HttpRequestException e)

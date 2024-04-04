@@ -224,6 +224,8 @@ export type Dataset = {
     isSerie: boolean;
     distributions: Distribution[];
     isHarvested: boolean;
+    issued: string | null;
+    lastUpdated: string | null;
 };
 
 type TermsOfUse = {

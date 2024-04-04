@@ -173,6 +173,16 @@ export default function DetailDataset() {
                                         </div>
                                     </GridColumn>
                                 ) : null}
+                                {dataset.key ? (
+                                    <GridColumn widthUnits={1} totalUnits={4}>
+                                        <div className="nkod-detail-attribute">
+                                            <div className="govuk-body nkod-detail-attribute-name">{t('datasetUri')}</div>
+                                            <div className="govuk-body nkod-detail-attribute-value" data-testid="uri" style={{ wordBreak: 'break-all' }}>
+                                                {dataset.key}
+                                            </div>
+                                        </div>
+                                    </GridColumn>
+                                ) : null}
                             </GridRow>
                             <GridRow>
                                 <GridColumn widthUnits={1} totalUnits={4}>
@@ -224,6 +234,22 @@ export default function DetailDataset() {
                                                         <span data-testid="temporal-resolution">{dataset.temporalResolution}</span>
                                                     </div>
                                                 ) : null}
+                                            </div>
+                                        </div>
+                                    ) : null}
+                                    {dataset.issued ? (
+                                        <div className="nkod-detail-attribute">
+                                            <div className="govuk-body nkod-detail-attribute-name">{t('issuedDate')}</div>
+                                            <div className="govuk-body nkod-detail-attribute-value" style={{ wordBreak: 'break-all' }}>
+                                                <span data-testid="spatial-resolution">{dataset.issued}</span>
+                                            </div>
+                                        </div>
+                                    ) : null}
+                                    {dataset.lastUpdated ? (
+                                        <div className="nkod-detail-attribute">
+                                            <div className="govuk-body nkod-detail-attribute-name">{t('lastModifiedDate')}</div>
+                                            <div className="govuk-body nkod-detail-attribute-value" style={{ wordBreak: 'break-all' }}>
+                                                <span data-testid="spatial-resolution">{dataset.lastUpdated}</span>
                                             </div>
                                         </div>
                                     ) : null}

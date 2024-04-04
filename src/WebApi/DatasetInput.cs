@@ -79,11 +79,34 @@ namespace WebApi
             results.ValidateTemporalResolution(nameof(TemporalResolution), TemporalResolution);
             await results.ValidateDataset(nameof(IsPartOf), IsPartOf, Id, publisher, documentStorage);
 
-            if (Guid.TryParse(Id, out Guid datasetId) && !IsSerie)
+            bool datasetGuidIsValid = Guid.TryParse(Id, out Guid datasetId);
+
+            if (datasetGuidIsValid && !IsSerie)
             {
                 if (await documentStorage.GetDatasetParts(datasetId).ConfigureAwait(false) is { Count: > 0 })
                 {
                     results.AddError(nameof(IsSerie), "Dataset je séria");
+                }
+            }
+
+            if (!string.IsNullOrEmpty(LandingPage))
+            {
+                FileStorageQuery query = new FileStorageQuery
+                {
+                    OnlyTypes = new List<FileType> { FileType.DatasetRegistration },
+                    AdditionalFilters = new Dictionary<string, string[]>
+                    {
+                        { "landingPage", new[]{ LandingPage } }
+                    }
+                };
+                FileStorageResponse response = await documentStorage.GetFileStates(query).ConfigureAwait(false);
+                foreach (FileState state in response.Files)
+                {
+                    if (state.Metadata.Id != datasetId)
+                    {
+                        results.AddError(nameof(LandingPage), "Nastavenú domovskú stránku používa iný dataset");
+                        break;
+                    }
                 }
             }
 

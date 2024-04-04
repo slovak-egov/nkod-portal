@@ -226,5 +226,8 @@
     "maximumFileUploadSize": "Maximal file size for upload",
     "fileSizeExceedLimit": "File size exceeds limit",
     "authorName": "The name of the author",
-    "originalDatabaseAuthorName": "The name of the author of the original database"
+    "originalDatabaseAuthorName": "The name of the author of the original database",
+    "datasetUri": "Dataset URI",
+    "issuedDate": "Issued",
+    "lastModifiedDate": "Last modified"
 }

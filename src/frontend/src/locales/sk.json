@@ -226,5 +226,8 @@
     "maximumFileUploadSize": "Maximálna veľkosť súboru na nahratie",
     "fileSizeExceedLimit": "Veľkosť súboru prekračuje limit",
     "authorName": "Meno autora diela",
-    "originalDatabaseAuthorName": "Meno autora originálnej databázy"
+    "originalDatabaseAuthorName": "Meno autora originálnej databázy",
+    "datasetUri": "URI datasetu",
+    "issuedDate": "Dátum vytvorenia",
+    "lastModifiedDate": "Dátum poslednej zmeny"
 }

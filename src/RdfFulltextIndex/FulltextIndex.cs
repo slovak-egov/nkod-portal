@@ -82,8 +82,7 @@ namespace NkodSk.RdfFulltextIndex
         {
             foreach (FileState state in states)
             {
-                if (state.Metadata.IsPublic && 
-                    state.Content is not null && 
+                if (state.Content is not null && 
                     (state.Metadata.Type == FileType.PublisherRegistration ||
                     state.Metadata.Type == FileType.DatasetRegistration ||
                     state.Metadata.Type == FileType.LocalCatalogRegistration))

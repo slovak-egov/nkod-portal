@@ -74,7 +74,8 @@ export default function DistributionList() {
                                         <TableCell>
                                             {d.downloadUrl ? (
                                                 <a href={d.downloadUrl} className="govuk-link">
-                                                    {d.title ?? d.formatValue?.label ?? d.id}
+                                                    <span style={{ display: 'block' }}>{d.title ?? d.formatValue?.label ?? d.id}</span>
+                                                    {d.title && d.formatValue ? <span style={{ display: 'block' }}>{d.formatValue.label}</span> : null}
                                                 </a>
                                             ) : (
                                                 <span></span>

@@ -193,11 +193,11 @@ namespace NkodSk.RdfFileStorage
                 {
                     try
                     {
-                        static void CheckFile(string path)
+                        void CheckFile(string path)
                         {
                             if (!File.Exists(path))
                             {
-                                throw new Exception($"Unable to find target file {path}");
+                                throw new Exception($"Unable to find target file {path} for source metadata {metadataPath}");
                             }
 
                             //using FileStream fs = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
@@ -306,7 +306,7 @@ namespace NkodSk.RdfFileStorage
                 {
                     if (!additionalFilters.ContainsKey(key))
                     {
-                        additionalFilters[key] = new Dictionary<string, HashSet<Guid>>(10);
+                        additionalFilters[key] = new Dictionary<string, HashSet<Guid>>(10, StringComparer.OrdinalIgnoreCase);
                     }
 
                     foreach (string value in values)
