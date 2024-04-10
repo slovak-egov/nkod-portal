@@ -7,6 +7,8 @@ namespace WebApi
     {
         public Guid Id { get; set; }
 
+        public string? Key { get; set; }
+
         public bool IsPublic { get; set; }
 
         public string? Name { get; set; }
@@ -38,6 +40,7 @@ namespace WebApi
             LocalCatalogView view = new LocalCatalogView
             {
                 Id = metadata.Id,
+                Key = catalogRdf.Uri.ToString(),
                 IsPublic = metadata.IsPublic,
                 Name = catalogRdf.GetTitle(language),
                 Description = catalogRdf.GetDescription(language),

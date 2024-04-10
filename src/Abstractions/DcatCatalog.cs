@@ -149,6 +149,7 @@ namespace NkodSk.Abstractions
             Guid id = metadata?.Id ?? createdId ?? Guid.NewGuid();
             DateTimeOffset now = DateTimeOffset.UtcNow;
             Dictionary<string, string[]> values = new Dictionary<string, string[]>();
+            values["key"] = new string[] { Uri.ToString() };
 
             values[LocalCatalogTypeCodelist] = Type is not null ? new[] { Type.ToString() } : Array.Empty<string>();
 

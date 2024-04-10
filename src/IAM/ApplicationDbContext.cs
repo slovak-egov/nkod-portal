@@ -66,6 +66,42 @@ namespace IAM
             return user;
         }
 
+        public async Task<UserRecord?> GetOrCreateExternalUser(string id, string? firstName, string? lastName, string? email, string authScheme)
+        {
+            string externalId = $"{authScheme}:{id}";
+
+            UserRecord? user = await Users.FirstOrDefaultAsync(u => u.ExternalId == id);
+
+            if (user is null)
+            {
+                if (user is null && !string.IsNullOrEmpty(firstName) && !string.IsNullOrEmpty(lastName) && !string.IsNullOrEmpty(email))
+                {
+                    if (!await Users.AnyAsync(u => u.Email == email))
+                    {
+                        user = new UserRecord
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            FirstName = firstName,
+                            LastName = lastName,
+                            Email = email,
+                            Role = "CommunityUser",
+                            IsActive = true,
+                            ExternalId = externalId
+                        };
+
+                        await Users.AddAsync(user);
+                        await SaveChangesAsync();
+                    }
+                }
+            }
+            else if (!user.IsActive)
+            {
+                user = null;
+            }
+
+            return user;
+        }
+
         public async Task<UserRecord?> GetUserByInvitation(string inviation)
         {
             return await Users.FirstOrDefaultAsync(u => u.InvitationToken == inviation);

@@ -199,6 +199,7 @@ namespace NkodSk.Abstractions
             string[] formatsAsArray = formats.ToArray();
             Array.Sort(formatsAsArray);
             values[FormatCodelist] = formatsAsArray;
+            values["key"] = new string[] { Uri.ToString() };
 
             HashSet<string> licences = values.ContainsKey(LicenseCodelist) ? new HashSet<string>(values[LicenseCodelist]) : new HashSet<string>();
             if (TermsOfUse?.AuthorsWorkType is not null)

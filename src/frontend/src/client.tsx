@@ -243,6 +243,7 @@ type TermsOfUse = {
 
 export type Distribution = {
     id: string;
+    key: string;
     datasetId: string | null;
     termsOfUse: TermsOfUse | null;
     downloadUrl: string | null;
@@ -263,11 +264,13 @@ export type Distribution = {
 
 export type LocalCatalog = {
     id: string;
+    key: string;
     isPublic: boolean;
     name: string;
     nameAll: LanguageDependentTexts | null;
     description: string | null;
     descriptionAll: LanguageDependentTexts | null;
+    publisherId: string | null;
     publisher: Publisher | null;
     contactPoint: CardView | null;
     homePage: string | null;

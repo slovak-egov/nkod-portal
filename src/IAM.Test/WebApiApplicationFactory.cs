@@ -18,6 +18,10 @@ using J2N.Collections.Generic.Extensions;
 using NkodSk.Abstractions;
 using TestBase;
 using Microsoft.Extensions.Hosting;
+using System.Security.Policy;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.AspNetCore.Cryptography.KeyDerivation;
+using Abstractions;
 
 namespace IAM.Test
 {
@@ -131,14 +135,17 @@ namespace IAM.Test
                 services.RemoveAll(s => s.ServiceType == typeof(DbContextOptions));
                 services.RemoveAll(s => s.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
                 services.RemoveAll(s => s.ServiceType == typeof(SigningCredentials));
+                services.RemoveAll(s => s.ServiceType == typeof(IEmailService));
 
                 services.AddSingleton(signingCredentials);
+                services.AddSingleton<IEmailService, TestEmailService>();
 
                 string name = Guid.NewGuid().ToString();
 
                 services.AddDbContext<ApplicationDbContext>(options =>
                 {
                     options.UseInMemoryDatabase(name);
+                    options.ConfigureWarnings(x => x.Ignore(InMemoryEventId.TransactionIgnoredWarning));
                 });
             });
 
@@ -161,6 +168,28 @@ namespace IAM.Test
             });
 
             return base.CreateHost(builder);
+        }
+
+        public async Task<UserRecord> CreateCommunityUser(string email, string password)
+        {
+            using IServiceScope scope = Services.CreateScope();
+            ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            UserRecord record = new UserRecord
+            {
+                Id = Guid.NewGuid().ToString(),
+                Email = email,
+                Role = "CommunityUser",
+                IsActive = true,
+                FirstName = "Test",
+                LastName = "User",
+            };
+
+            record.SetPassword(password);
+
+            context.Users.Add(record);
+            await context.SaveChangesAsync();
+            return record;
         }
     }
 }

@@ -131,10 +131,10 @@ namespace IAMClient
                 ?? throw new HttpRequestException("Invalid response");
         }
 
-        public async Task<DelegationAuthorizationResult> GetLogin()
+        public async Task<DelegationAuthorizationResult> GetLogin(string? method)
         {
             HttpClient client = CreateClient();
-            using HttpResponseMessage response = await client.GetAsync($"/login");
+            using HttpResponseMessage response = await client.GetAsync($"/login?method={HttpUtility.UrlEncode(method)}");
             response.EnsureSuccessStatusCode();
             return JsonConvert.DeserializeObject<DelegationAuthorizationResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
                 ?? throw new HttpRequestException("Invalid response");
@@ -166,6 +166,69 @@ namespace IAMClient
             using HttpResponseMessage response = await client.PostAsync($"/validate-invitation", null);
             response.EnsureSuccessStatusCode();
             return JsonConvert.DeserializeObject<CheckInvitationResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
+                ?? throw new HttpRequestException("Invalid response");
+        }
+
+        public async Task<TokenResult> Login(LoginInput? input)
+        {
+            HttpClient client = CreateClient();
+            using HttpResponseMessage response = await client.PostAsync($"/login", JsonContent.Create(input));
+            response.EnsureSuccessStatusCode();
+            return JsonConvert.DeserializeObject<TokenResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
+                ?? throw new HttpRequestException("Invalid response");
+        }
+
+        public async Task<TokenResult> SignGoogle(string? code, string? state)
+        {
+            HttpClient client = CreateClient();
+            using HttpResponseMessage response = await client.GetAsync($"/signin-google?code={HttpUtility.UrlEncode(code)}&state={HttpUtility.UrlEncode(state)}");
+            response.EnsureSuccessStatusCode();
+            return JsonConvert.DeserializeObject<TokenResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
+                ?? throw new HttpRequestException("Invalid response");
+        }
+
+        public async Task<SaveResult> Register(UserRegistrationInput? input)
+        {
+            HttpClient client = CreateClient();
+            using HttpResponseMessage response = await client.PostAsync($"/register", JsonContent.Create(input));
+            response.EnsureSuccessStatusCode();
+            return JsonConvert.DeserializeObject<SaveResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
+                ?? throw new HttpRequestException("Invalid response");
+        }
+
+        public async Task<SaveResult> ActivateAccount(ActivationInput? input)
+        {
+            HttpClient client = CreateClient();
+            using HttpResponseMessage response = await client.PostAsync($"/activation", JsonContent.Create(input));
+            response.EnsureSuccessStatusCode();
+            return JsonConvert.DeserializeObject<SaveResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
+                ?? throw new HttpRequestException("Invalid response");
+        }
+
+        public async Task<SaveResult> RequestPasswordRecovery(PasswordRecoveryInput? input)
+        {
+            HttpClient client = CreateClient();
+            using HttpResponseMessage response = await client.PostAsync($"/recovery", JsonContent.Create(input));
+            response.EnsureSuccessStatusCode();
+            return JsonConvert.DeserializeObject<SaveResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
+                ?? throw new HttpRequestException("Invalid response");
+        }
+
+        public async Task<SaveResult> ConfirmPasswordRecovery(PasswordRecoveryConfirmationInput? input)
+        {
+            HttpClient client = CreateClient();
+            using HttpResponseMessage response = await client.PostAsync($"/recovery-activation", JsonContent.Create(input));
+            response.EnsureSuccessStatusCode();
+            return JsonConvert.DeserializeObject<SaveResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
+                ?? throw new HttpRequestException("Invalid response");
+        }
+
+        public async Task<SaveResult> ChangePassword(PasswordChangeInput? input)
+        {
+            HttpClient client = CreateClient();
+            using HttpResponseMessage response = await client.PostAsync($"/change-password", JsonContent.Create(input));
+            response.EnsureSuccessStatusCode();
+            return JsonConvert.DeserializeObject<SaveResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
                 ?? throw new HttpRequestException("Invalid response");
         }
     }
