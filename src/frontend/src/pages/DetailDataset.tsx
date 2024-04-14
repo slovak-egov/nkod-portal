@@ -241,7 +241,7 @@ export default function DetailDataset() {
                                         <div className="nkod-detail-attribute">
                                             <div className="govuk-body nkod-detail-attribute-name">{t('issuedDate')}</div>
                                             <div className="govuk-body nkod-detail-attribute-value" style={{ wordBreak: 'break-all' }}>
-                                                <span data-testid="spatial-resolution">{dataset.issued}</span>
+                                                <span data-testid="date-issued">{dataset.issued}</span>
                                             </div>
                                         </div>
                                     ) : null}
@@ -249,7 +249,7 @@ export default function DetailDataset() {
                                         <div className="nkod-detail-attribute">
                                             <div className="govuk-body nkod-detail-attribute-name">{t('lastModifiedDate')}</div>
                                             <div className="govuk-body nkod-detail-attribute-value" style={{ wordBreak: 'break-all' }}>
-                                                <span data-testid="spatial-resolution">{dataset.lastUpdated}</span>
+                                                <span data-testid="data-last-updated">{dataset.lastUpdated}</span>
                                             </div>
                                         </div>
                                     ) : null}

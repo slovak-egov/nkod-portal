@@ -851,7 +851,7 @@ app.MapPost("/harvester-login", (IConfiguration configuration, [FromServices] Si
             claims.Add(new Claim("Publisher", message.PublisherId));
         }
 
-        return Results.Ok(CreateJwtToken(configuration, signingCredentials, claims, DateTimeOffset.UtcNow.AddMinutes(accessTokenValidInMinutes)));
+        return Results.Ok(CreateJwtToken(configuration, signingCredentials, claims, DateTimeOffset.UtcNow.AddHours(6)));
     }
     else
     {

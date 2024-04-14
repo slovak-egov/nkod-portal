@@ -124,7 +124,7 @@ namespace WebApi.Test
         {
             string path = fixture.GetStoragePath();
 
-            byte[] bytes = new byte[1024 * 1024  * 30];
+            byte[] bytes = new byte[1024 * 1024  * 250];
             const byte fillByte = (byte)'a';
             Array.Fill(bytes, fillByte);
 
@@ -179,7 +179,7 @@ namespace WebApi.Test
         {
             string path = fixture.GetStoragePath();
 
-            byte[] bytes = new byte[1024 * 1024 * 300 + 1];
+            byte[] bytes = new byte[1024 * 1024 * 250 + 1];
             Array.Fill(bytes, (byte)'a');
 
             string name = "test.txt";

@@ -45,6 +45,10 @@ namespace NkodSk.Abstractions
                 {
                     query.AdditionalFilters["localCatalog"] = new[] { localCatalogUri.ToString() };
                 }
+                else
+                {
+                    query.ParentFile = parentMetadata.Id;
+                }
 
                 FileStorageResponse response = await documentStorageClient.GetFileStates(query);
 

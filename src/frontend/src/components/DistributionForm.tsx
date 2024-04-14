@@ -233,7 +233,7 @@ export function DistributionForm(props: Props) {
                     )}
                 />
             ) : null}
-            <p className="govuk-hint">{t('maximumFileUploadSize')}: 30 MB</p>
+            <p className="govuk-hint">{t('maximumFileUploadSize')}: 250 MB</p>
 
             {uploading ? <Alert type="info">{t('fileUploadProgress')}</Alert> : null}
             {uploadError ? <ErrorAlert error={uploadError} /> : null}

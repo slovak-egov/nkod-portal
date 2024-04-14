@@ -73,7 +73,13 @@ namespace WebApi
 
             SparqlClient sparqlClient = new SparqlClient(httpClient);
 
-            HarvestedDataImport dataImport = new HarvestedDataImport(sparqlClient, documentStorageClient, p => iamClient.LoginHarvester(authToken, p), Console.WriteLine);
+            HarvestedDataImport dataImport = new HarvestedDataImport(sparqlClient, documentStorageClient, async p =>
+            {
+                string token = await iamClient.LoginHarvester(authToken, p);
+                Console.WriteLine($"Token: {token}");
+                httpContextValueAccessor.Token = token;
+                httpContextValueAccessor.Publisher = p;
+            }, Console.WriteLine);
             await dataImport.Import();
         }
 

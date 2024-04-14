@@ -184,15 +184,20 @@ builder.Services.AddApplicationInsightsTelemetry(options =>
 }).AddApplicationInsightsTelemetryProcessor<ExceptionFilter>();
 builder.Services.AddSingleton<ITelemetryInitializer, RequestTelementryInitializer>();
 
-const int maxFileSize = 30 * 1024 * 1024;
+const int maxFileSize = 250 * 1024 * 1024;
 
 builder.Services.Configure<FormOptions>(options =>
 {
     options.ValueLengthLimit = maxFileSize;
-    options.MultipartBodyLengthLimit = maxFileSize + 200;
+    options.MultipartBodyLengthLimit = maxFileSize + 10 * 1024 * 1024;
 });
 
-ImportHarvestedHostedService importHarvestedHostedService = new ImportHarvestedHostedService(documentStorageUrl, iamClientUrl, builder.Configuration["HarvesterAuthToken"] ?? string.Empty, builder.Configuration["PublicSparqlEndpoint"] ?? string.Empty);
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = maxFileSize + 10 * 1024 * 1024;
+});
+
+ImportHarvestedHostedService importHarvestedHostedService = new ImportHarvestedHostedService(documentStorageUrl, iamClientUrl, builder.Configuration["HarvesterAuthToken"] ?? string.Empty, builder.Configuration["PrivateSparqlEndpoint"] ?? string.Empty);
 builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService>(importHarvestedHostedService));
 
 var app = builder.Build();
@@ -2111,7 +2116,7 @@ app.MapPut("/profile", [Authorize] async ([FromServices] IDocumentStorageClient 
     return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapPost("/upload", [Authorize] async ([FromServices] IDocumentStorageClient client, ClaimsPrincipal identity, HttpRequest request, IFormFile file, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/upload", [Authorize] [RequestSizeLimit(314572800)] async ([FromServices] IDocumentStorageClient client, ClaimsPrincipal identity, HttpRequest request, IFormFile file, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
     {

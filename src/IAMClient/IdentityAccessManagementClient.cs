@@ -156,8 +156,8 @@ namespace IAMClient
             using JsonContent requestContent = JsonContent.Create(new HarvesterAuthMessage { Auth = auth, PublisherId = publisherId });
             using HttpResponseMessage response = await client.PostAsync($"/harvester-login", requestContent);
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsStringAsync().ConfigureAwait(false)
-                ?? throw new HttpRequestException("Invalid response");
+            return JsonConvert.DeserializeObject<string>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
+     ?? throw new HttpRequestException("Invalid response");
         }
 
         public async Task<CheckInvitationResult> CheckInvitation()

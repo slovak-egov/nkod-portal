@@ -868,7 +868,7 @@ export function useSingleFileUpload(url: string) {
             const formData = new FormData();
             formData.append('file', file, file.name);
 
-            if (file.size <= 31457280) {
+            if (file.size <= 262144000) {
                 setUploading(true);
                 setError(null);
                 try {
