@@ -1,10 +1,9 @@
-﻿using CMS.Models;
-using Piranha.Extend;
+﻿using Piranha.Extend;
 using Piranha.Extend.Fields;
 
-namespace CMS
+namespace CMS.Suggestions
 {
-    public class SuggestionRegion
+    public class Region
     {
         [Field] public StringField UserId { get; set; }
         [Field] public StringField UserOrgUri { get; set; }

@@ -1,4 +1,4 @@
-﻿namespace CMS.Models
+﻿namespace CMS.Suggestions
 {
     public enum ContentTypes
     {

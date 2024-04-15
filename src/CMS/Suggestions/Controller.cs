@@ -1,32 +1,31 @@
-﻿using CMS.Models;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Piranha;
 using Piranha.Extend.Fields;
 using Piranha.Models;
 
-namespace CMS
+namespace CMS.Suggestions
 {
-    [Route("content")]
+    [Route("suggestions")]
     [ApiController]
     [AllowAnonymous]
-    public class ContentController
+    public class Controller
     {
         private readonly IApi api;
 
-        public ContentController(IApi api)
+        public Controller(IApi api)
         {
             this.api = api;
         }
 
         [HttpGet]
-        [Route("suggestion")]
-        public async Task<IEnumerable<Suggestion>> GetSuggestions([FromQuery] string datasetUri)
+        [Route("")]
+        public async Task<IEnumerable<Dto>> GetSuggestions([FromQuery] string datasetUri)
         {
             var page = await api.Pages.GetBySlugAsync(datasetUri);
             var datasetPage = await api.Pages.GetByIdAsync<DatasetPage>(page.Id);
-            datasetPage.Archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id);
-            return datasetPage.Archive.Posts.Select(p => new Suggestion
+            datasetPage.Archive = await api.Archives.GetByIdAsync<Post>(page.Id);
+            return datasetPage.Archive.Posts.Select(p => new Dto
             {
                 State = p.Suggestion.State.Value,
                 OrgToUri = p.Suggestion.OrgToUri,
@@ -40,25 +39,25 @@ namespace CMS
         }
 
         [HttpPost]
-        [Route("suggestion")]
-        public async Task<IResult> Suggestion(Suggestion suggestion)
+        [Route("")]
+        public async Task<IResult> Suggestion(Dto dto)
         {
-            var archiveId = await GetDatasetGuidAsync(suggestion.DatasetUri);
-            var post = await api.Posts.CreateAsync<SuggestionPost>();
-            post.Title = suggestion.Title;
-            post.Suggestion = new SuggestionRegion
+            var archiveId = await GetDatasetGuidAsync(dto.DatasetUri);
+            var post = await api.Posts.CreateAsync<Post>();
+            post.Title = dto.Title;
+            post.Suggestion = new Region
             {
-                Description = suggestion.Description,
-                UserId = suggestion.UserId,
-                UserOrgUri = suggestion.UserOrgUri,
-                OrgToUri = suggestion.OrgToUri,
+                Description = dto.Description,
+                UserId = dto.UserId,
+                UserOrgUri = dto.UserOrgUri,
+                OrgToUri = dto.OrgToUri,
                 Type = new SelectField<ContentTypes>
                 {
-                    Value = suggestion.Type
+                    Value = dto.Type
                 },
                 State = new SelectField<States>
                 {
-                    Value = suggestion.State
+                    Value = dto.State
                 }
             };
 
@@ -66,7 +65,7 @@ namespace CMS
             {
                 Title = "Suggestion",
                 Slug = "suggestion",
-                Type = TaxonomyType.Category,
+                Type = TaxonomyType.Category
             };
             post.BlogId = archiveId;
             post.Published = DateTime.Now;

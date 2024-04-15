@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace CMS.Models
+namespace CMS.Suggestions
 {
-    public class Suggestion
+    public class Dto
     {
         public string UserId { get; set; }
         public string UserOrgUri { get; set; }
