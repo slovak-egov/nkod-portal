@@ -2,40 +2,22 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Piranha;
-using Piranha.AspNetCore.Identity;
-using Piranha.AspNetCore.Identity.SQLite;
 using Piranha.AttributeBuilder;
 using Piranha.Data.EF.SQLite;
 using Piranha.Local;
-using Piranha.Manager.Editor;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddPiranha(options =>
 {
     options.UseCms();
-    if (builder.Environment.IsDevelopment())
-    {
-        options.Services.Configure<MvcOptions>(o => o.Filters.Add(typeof(IgnoreAntiforgeryTokenAttribute), int.MaxValue));
-    }
-
-    options.UseManager();
 
     options.UseFileStorage(naming: FileStorageNaming.UniqueFolderNames);
     options.UseImageSharp();
-    options.UseTinyMCE();
     options.UseMemoryCache();
 
     var connectionString = builder.Configuration.GetConnectionString("piranha");
     options.UseEF<SQLiteDb>(db => db.UseSqlite(connectionString));
-    options.UseIdentityWithSeed<IdentitySQLiteDb>(db => db.UseSqlite(connectionString));
-    
-    options.Services.AddAuthorization(o => 
-        o.AddPolicy(Permissions.UsersSave, policy =>
-    {
-        policy.Requirements.Clear();
-        policy.RequireAssertion(_ => true);
-    }));
     
     options.UseSecurity(b =>
     {
@@ -82,19 +64,13 @@ app.UsePiranha(options =>
         }
     });
 
-    // Configure Tiny MCE
-    EditorConfig.FromFile("editorconfig.json");
+    app.MapControllers();
 
-    options.UseTinyMCE();
-    options.UseIdentity();
-    
     app.UseCors(x => x
         .AllowAnyMethod()
         .AllowAnyHeader()
         .SetIsOriginAllowed(_ => app.Environment.IsDevelopment())
         .AllowCredentials());
-
-    options.UseManager();
 });
 
 app.UseSwagger();
