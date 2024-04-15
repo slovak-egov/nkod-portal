@@ -25,6 +25,8 @@ namespace TestBase
 
         public string? UserId { get; }
 
+        public string? InvitationToken { get; set; }
+
         public bool HasRole(string role)
         {
             return string.Equals(this.role, role);

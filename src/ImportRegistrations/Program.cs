@@ -3,9 +3,6 @@ using Lucene.Net.Util.Fst;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using NkodSk.Abstractions;
-using System.Net.Security;
-using VDS.RDF.Query.Paths;
-using VDS.RDF.Storage;
 
 IConfiguration configuration = new ConfigurationBuilder()
   .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
@@ -60,7 +57,7 @@ IAMClient.IdentityAccessManagementClient iamClient = new IAMClient.IdentityAcces
 
 HttpClientHandler httpClientHandler = new HttpClientHandler
 {
-    SslProtocols = System.Security.Authentication.SslProtocols.Tls13
+    SslProtocols = System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12
 };
 HttpClient httpClient = new HttpClient(httpClientHandler);
 httpClient.BaseAddress = new Uri(sparqlEndpointUrl);
@@ -68,3 +65,4 @@ httpClient.BaseAddress = new Uri(sparqlEndpointUrl);
 SparqlClient sparqlClient = new SparqlClient(httpClient);
 
 HarvestedDataImport dataImport = new HarvestedDataImport(sparqlClient, documentStorageClient, p => iamClient.LoginHarvester(authToken, p), Console.WriteLine);
+await dataImport.Import();

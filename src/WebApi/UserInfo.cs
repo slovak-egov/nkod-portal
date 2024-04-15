@@ -11,5 +11,7 @@
         public string? PublisherPhone { get; set; }
 
         public bool PublisherActive { get; set; }
+
+        public string? PublisherLegalForm { get; set; }
     }
 }

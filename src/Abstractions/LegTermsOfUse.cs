@@ -36,5 +36,17 @@ namespace NkodSk.Abstractions
             get => GetUriFromUriNode("leg:personalDataContainmentType");
             set => SetUriNode("leg:personalDataContainmentType", value);
         }
+
+        public string? AuthorName
+        {
+            get => GetTextFromUriNode("leg:authorName");
+            set => SetTextToUriNode("leg:authorName", value);
+        }
+
+        public string? OriginalDatabaseAuthorName
+        {
+            get => GetTextFromUriNode("leg:originalDatabaseAuthorName");
+            set => SetTextToUriNode("leg:originalDatabaseAuthorName", value);
+        }
     }
 }

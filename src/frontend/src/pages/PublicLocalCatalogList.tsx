@@ -19,12 +19,15 @@ const codelistsKeys = ['publishers', 'https://data.gov.sk/def/local-catalog-type
 export default function PublicDatasetList() {
     const [catalogs, query, setQueryParameters, loading, error] = useLocalCatalogs({
         requiredFacets: codelistsKeys,
-        orderBy: 'name'
+        orderBy: 'relevance'
     });
     const {t} = useTranslation();
     useDocumentTitle(t('localCatalogs'));
 
-    const orderByOptions: OrderOption[] = [{ name: t('byName'), value: 'name' }];
+    const orderByOptions: OrderOption[] = [
+        { name: t('byRelevance'), value: 'relevance' },
+        { name: t('byName'), value: 'name' }
+    ];
 
     return (
         <>

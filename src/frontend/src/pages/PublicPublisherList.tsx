@@ -16,25 +16,23 @@ type OrderOption = {
 type Theme = {
     name: string;
     count: number;
-}
+};
 
 const codelistsKeys: [] = [];
 
 export default function PublicPublisherList() {
     const [publishers, query, setQueryParameters, loading, error] = usePublishers();
-    const {t} = useTranslation();
+    const { t } = useTranslation();
     useDocumentTitle(t('publishers'));
 
-    const orderByOptions: OrderOption[] = [{ name: t('byRelevance'), value: 'relevance' }, { name: t('byName'), value: 'name' }];
+    const orderByOptions: OrderOption[] = [
+        { name: t('byRelevance'), value: 'relevance' },
+        { name: t('byName'), value: 'name' }
+    ];
 
     return (
         <>
-            <Breadcrumbs
-                items={[
-                    { title: t('nkod'), link: '/' },
-                    { title: t('publishers') }
-                ]}
-            />
+            <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title: t('publishers') }]} />
             <MainContent>
                 <SearchResults
                     header={t('publishers')}
@@ -48,24 +46,35 @@ export default function PublicPublisherList() {
                     facets={publishers?.facets ?? []}
                 >
                     {publishers?.items.map((c, i) => {
-                        const themes : Theme[] = c.themes ? Object.entries(c.themes).filter((_, c) => c > 0).sort((a, b) => b[1] - a[1]).slice(0, 5).map(v => ({name: v[0], count: v[1]})) : [];
+                        const themes: Theme[] = c.themes
+                            ? Object.entries(c.themes)
+                                  .filter((_, c) => c > 0)
+                                  .sort((a, b) => b[1] - a[1])
+                                  .slice(0, 5)
+                                  .map((v) => ({ name: v[0], count: v[1] }))
+                            : [];
 
-                        return <Fragment key={c.id}><GridRow >
-                                <GridColumn widthUnits={1} totalUnits={1} data-testid="sr-result">
-                                    <Link
-                                        to={'/datasety?publisher=' + encodeURIComponent(c.key)}
-                                        className="idsk-card-title govuk-link"
-                                    >
-                                        {c.name} (datasetov: {c.datasetCount})
-                                    </Link>
-                                </GridColumn>
-                                {themes.length > 0 ? <GridColumn widthUnits={1} totalUnits={1}>
-                                    {themes.map(t => <span key={t.name} style={{marginRight: '10px'}}>{t.name} ({t.count})</span>)}
-                                </GridColumn> : null}
-                            </GridRow>
-                            {i < publishers.items.length - 1 ? (
-                                <hr className="idsk-search-results__card__separator" />
-                            ) : null}</Fragment>
+                        return (
+                            <Fragment key={c.id}>
+                                <GridRow>
+                                    <GridColumn widthUnits={1} totalUnits={1} data-testid="sr-result">
+                                        <Link to={'/datasety?publisher=' + encodeURIComponent(c.key)} className="idsk-card-title govuk-link">
+                                            {c.name} (datasetov: {c.datasetCount})
+                                        </Link>
+                                    </GridColumn>
+                                    {themes.length > 0 ? (
+                                        <GridColumn widthUnits={1} totalUnits={1}>
+                                            {themes.map((t) => (
+                                                <span key={t.name} style={{ marginRight: '10px' }}>
+                                                    {t.name} ({t.count})
+                                                </span>
+                                            ))}
+                                        </GridColumn>
+                                    ) : null}
+                                </GridRow>
+                                {i < publishers.items.length - 1 ? <hr className="idsk-search-results__card__separator" /> : null}
+                            </Fragment>
+                        );
                     })}
                 </SearchResults>
             </MainContent>

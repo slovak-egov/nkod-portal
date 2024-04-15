@@ -34,6 +34,10 @@ using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using System;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.DataContracts;
+using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Http.Features;
+using System.Net.Mime;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -55,6 +59,11 @@ if (!Uri.IsWellFormedUriString(iamClientUrl, UriKind.Absolute))
     throw new Exception("Unable to get IAMUrl");
 }
 
+builder.Services.AddHeaderPropagation(options =>
+{
+    options.Headers.Add("Cookie");
+});
+
 builder.Services.AddHttpClient(DocumentStorageClient.DocumentStorageClient.HttpClientName, c =>
 {
     c.BaseAddress = new Uri(documentStorageUrl);
@@ -72,7 +81,7 @@ builder.Services.AddTransient<ICodelistProviderClient, CodelistProviderClient.Co
 builder.Services.AddHttpClient(IdentityAccessManagementClient.HttpClientName, c =>
 {
     c.BaseAddress = new Uri(iamClientUrl);
-});
+}).AddHeaderPropagation();
 builder.Services.AddTransient<IIdentityAccessManagementClient, IdentityAccessManagementClient>();
 
 builder.Services.AddAuthentication(o =>
@@ -122,6 +131,19 @@ builder.Services.AddCors(options =>
                       {
                           policy.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod().AllowCredentials();
                       });
+
+    options.AddPolicy(name: "eFormulare",
+                     policy =>
+                     {
+                         policy.WithOrigins(new[] {
+                         "https://app.eformulare.sk",
+                         "https://www.slovensko.sk",
+                         "https://portal.upvsfixnew.gov.sk",
+                         "https://schranka.slovensko.sk",
+                         "https://schranka.upvsfixnew.gov.sk"
+                         }).AllowAnyHeader().AllowAnyMethod();
+                     });
+
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -158,18 +180,34 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddApplicationInsightsTelemetry(options =>
 {
     options.ConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
-    
-});
+    options.EnableAdaptiveSampling = false;    
+}).AddApplicationInsightsTelemetryProcessor<ExceptionFilter>();
 builder.Services.AddSingleton<ITelemetryInitializer, RequestTelementryInitializer>();
+
+const int maxFileSize = 30 * 1024 * 1024;
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.ValueLengthLimit = maxFileSize;
+    options.MultipartBodyLengthLimit = maxFileSize + 200;
+});
+
+ImportHarvestedHostedService importHarvestedHostedService = new ImportHarvestedHostedService(documentStorageUrl, iamClientUrl, builder.Configuration["HarvesterAuthToken"] ?? string.Empty, builder.Configuration["PublicSparqlEndpoint"] ?? string.Empty);
+builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService>(importHarvestedHostedService));
 
 var app = builder.Build();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseHeaderPropagation();
+app.UseRequestLocalization();
 
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    ServeUnknownFileTypes = true,
+    DefaultContentType = "text/plain"
+});
 
-app.UseCors("LocalhostOrigin");
 
 if (app.Environment.IsDevelopment())
 {
@@ -179,6 +217,11 @@ if (app.Environment.IsDevelopment())
     //    options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
     //    options.RoutePrefix = string.Empty;
     //});
+    app.UseCors("LocalhostOrigin");
+}
+else
+{
+    app.UseCors("eFormulare");
 }
 
 FileStorageQuery MapQuery(AbstractQuery query, string language, bool allowAll = false)
@@ -199,7 +242,7 @@ FileStorageQuery MapQuery(AbstractQuery query, string language, bool allowAll = 
             throw new BadHttpRequestException("PageSize must be greater than 0");
         }
 
-        if (pageSize > 100)
+        if (pageSize > 10000)
         {
             throw new BadHttpRequestException("PageSize must be less than or equal to 100");
         }
@@ -209,22 +252,21 @@ FileStorageQuery MapQuery(AbstractQuery query, string language, bool allowAll = 
         pageSize = null;
     }
 
-    FileStorageOrderProperty? orderProperty = query.OrderBy?.ToLowerInvariant() switch
+    FileStorageOrderDefinition? orderDefinition = query.OrderBy?.ToLowerInvariant() switch
     {
-        "name" => FileStorageOrderProperty.Name,
-        "relevance" => FileStorageOrderProperty.Revelance,
-        "created" => FileStorageOrderProperty.Created,
-        "modified" => FileStorageOrderProperty.LastModified,
+        "name" => new FileStorageOrderDefinition(FileStorageOrderProperty.Name, false),
+        "relevance" => new FileStorageOrderDefinition(FileStorageOrderProperty.Relevance, false),
+        "created" => new FileStorageOrderDefinition(FileStorageOrderProperty.Created, true),
+        "modified" => new FileStorageOrderDefinition(FileStorageOrderProperty.LastModified, true),
         _ => null
     };
 
     FileStorageQuery storageQuery = new FileStorageQuery
     {
         QueryText = query.QueryText,
-        IncludeDependentFiles = true,
         SkipResults = pageSize.HasValue ? (page - 1) * pageSize.Value : 0,
         MaxResults = pageSize,
-        OrderDefinitions = orderProperty.HasValue ? new List<FileStorageOrderDefinition> { new FileStorageOrderDefinition(orderProperty.Value, false) } : null,
+        OrderDefinitions = orderDefinition.HasValue ? new List<FileStorageOrderDefinition> { orderDefinition.Value } : null,
         RequiredFacets = query.RequiredFacets,
         Language = language
     };
@@ -350,7 +392,7 @@ async Task<Dictionary<string, PublisherView>> FetchPublishers(IDocumentStorageCl
                 FoafAgent? agent = FoafAgent.Parse(fileState.Content);
                 if (agent is not null)
                 {
-                    publishers[agent.Uri.ToString()] = PublisherView.MapFromRdf(fileState.Metadata.Id, fileState.Metadata.IsPublic, 0, agent, null, language);
+                    publishers[agent.Uri.ToString()] = PublisherView.MapFromRdf(fileState.Metadata.Id, fileState.Metadata.IsPublic, 0, agent, null, language, false);
                 }
             }
         }
@@ -380,7 +422,7 @@ app.MapPost("/publishers/search", async ([FromBody] PublisherQuery query, [FromS
                 FoafAgent? agent = FoafAgent.Parse(group.PublisherFileState.Content);
                 if (agent is not null)
                 {
-                    response.Items.Add(PublisherView.MapFromRdf(group.PublisherFileState.Metadata.Id, group.PublisherFileState.Metadata.IsPublic, group.Count, agent, group.Themes, language));
+                    response.Items.Add(PublisherView.MapFromRdf(group.PublisherFileState.Metadata.Id, group.PublisherFileState.Metadata.IsPublic, group.Count, agent, group.Themes, language, true));
                 }
             }
         }
@@ -411,12 +453,23 @@ app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServi
         bool isAuthenticated = user?.Identity?.IsAuthenticated ?? false;
 
         string language = query.Language ?? "sk";
-        FileStorageResponse storageResponse = await GetStorageResponse(query, language, q =>
+
+        FileStorageResponse storageResponse;
+
+        try
         {
-            q.OnlyTypes = new List<FileType> { FileType.DatasetRegistration };
-            q.IncludeDependentFiles = true;
-            return q;
-        }, client, isAuthenticated).ConfigureAwait(false);
+            storageResponse = await GetStorageResponse(query, language, q =>
+            {
+                q.OnlyTypes = new List<FileType> { FileType.DatasetRegistration };
+                q.IncludeDependentFiles = true;
+                return q;
+            }, client, isAuthenticated).ConfigureAwait(false);
+        } 
+        catch (BadHttpRequestException)
+        {
+            storageResponse = new FileStorageResponse(new List<FileState>(), 0, new List<Facet>());
+        }
+
         AbstractResponse<DatasetView> response = new AbstractResponse<DatasetView>
         {
             TotalCount = storageResponse.TotalCount,
@@ -434,7 +487,7 @@ app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServi
 
                 if (fileState.DependentFiles is not null)
                 {
-                    foreach (FileState dependedState in fileState.DependentFiles)
+                    foreach (FileState dependedState in fileState.DependentFiles.Where(f => f.Metadata.Type == FileType.DistributionRegistration))
                     {
                         DcatDistribution? distributionRdf = dependedState.Content is not null ? DcatDistribution.Parse(dependedState.Content) : null;
                         if (distributionRdf is not null)
@@ -602,16 +655,19 @@ app.MapGet("/codelists", async ([FromQuery(Name = "keys[]")] string[] keys, [Fro
         List<CodelistView> codelists = new List<CodelistView>();
         foreach (string key in keys)
         {
-            Codelist? codelist = await codelistProviderClient.GetCodelist(key).ConfigureAwait(false);
-            if (codelist is not null)
+            if (Uri.IsWellFormedUriString(key, UriKind.Absolute))
             {
-                List<CodelistItemView> values = new List<CodelistItemView>(codelist.Items.Count);
-                foreach (CodelistItem item in codelist.Items.Values)
+                Codelist? codelist = await codelistProviderClient.GetCodelist(key).ConfigureAwait(false);
+                if (codelist is not null)
                 {
-                    values.Add(new CodelistItemView(item.Id, item.GetCodelistValueLabel(language)));
+                    List<CodelistItemView> values = new List<CodelistItemView>(codelist.Items.Count);
+                    foreach (CodelistItem item in codelist.Items.Values)
+                    {
+                        values.Add(new CodelistItemView(item.Id, item.GetCodelistValueLabel(language)));
+                    }
+                    values.Sort((a, b) => StringComparer.CurrentCultureIgnoreCase.Compare(a.Label, b.Label));
+                    codelists.Add(new CodelistView(codelist.Id, codelist.GetLabel(language), values));
                 }
-                values.Sort((a, b) => StringComparer.CurrentCultureIgnoreCase.Compare(a.Label, b.Label));
-                codelists.Add(new CodelistView(codelist.Id, codelist.GetLabel(language), values));
             }
         }
         return Results.Ok(codelists);
@@ -784,6 +840,11 @@ app.MapPut("/datasets", [Authorize] async ([FromBody] DatasetInput? dataset, [Fr
                     FileState? state = await client.GetFileState(id);
                     if (state?.Content is not null && state.Metadata.Publisher == publisher.ToString())
                     {
+                        if (state.Metadata.IsHarvested)
+                        {
+                            return Results.BadRequest();
+                        }
+
                         FileStorageResponse response = await client.GetFileStates(new FileStorageQuery
                         {
                             ParentFile = id,
@@ -804,6 +865,7 @@ app.MapPut("/datasets", [Authorize] async ([FromBody] DatasetInput? dataset, [Fr
                                     parentDataset = parentDatasetId;
                                 }
 
+                                datasetRdf.Modified = DateTimeOffset.UtcNow;
                                 dataset.MapToRdf(publisher, datasetRdf);
                                 FileMetadata metadata = datasetRdf.UpdateMetadata(hasDistributions || dataset.IsSerie, state.Metadata);
                                 metadata = await datasetRdf.UpdateReferenceToParent(parentDataset, metadata, client);
@@ -880,13 +942,34 @@ app.MapDelete("/datasets", [Authorize] async ([FromQuery] string? id, [FromServi
     {
         if (Guid.TryParse(id, out Guid key))
         {
-            await client.DeleteFile(key).ConfigureAwait(false);
-            return Results.Ok();
+            FileMetadata? metadata = await client.GetFileMetadata(key);
+            if (metadata is not null && metadata.Type == FileType.DatasetRegistration && metadata.Publisher == publisher.ToString())
+            {
+                if (metadata.IsHarvested)
+                {
+                    return Results.BadRequest();
+                }
+
+                FileStorageResponse response = await client.GetFileStates(new FileStorageQuery
+                {
+                    ParentFile = key,
+                    OnlyTypes = new List<FileType> { FileType.DatasetRegistration },
+                    MaxResults = 0
+                }).ConfigureAwait(false);
+
+                if (response.TotalCount == 0)
+                {
+                    await client.DeleteFile(key).ConfigureAwait(false);
+                    return Results.Ok();
+                }
+                else
+                {
+                    return Results.BadRequest("Dátovú sériu nie je možné zmazať, najskôr prosím zmažte všetky datasety z tejto série.");
+                }
+            }
         }
-        else
-        {
-            return Results.Forbid();
-        }
+
+        return Results.Forbid();
     }
     catch (HttpRequestException e)
     {
@@ -929,6 +1012,11 @@ app.MapPost("/distributions", [Authorize] async ([FromBody] DistributionInput? d
                 FileState? datasetState = await client.GetFileState(datasetId).ConfigureAwait(false);
                 if (datasetState?.Content is not null && datasetState.Metadata.Publisher == publisher.ToString())
                 {
+                    if (datasetState.Metadata.IsHarvested)
+                    {
+                        return Results.BadRequest();
+                    }
+
                     DcatDataset? dataset = DcatDataset.Parse(datasetState.Content);
                     if (dataset is not null)
                     {
@@ -956,7 +1044,7 @@ app.MapPost("/distributions", [Authorize] async ([FromBody] DistributionInput? d
                             distribution.MapToRdf(distributionRdf);
                             FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata);
                             await client.InsertFile(distributionRdf.ToString(), false, metadata).ConfigureAwait(false);
-                            await client.UpdateDatasetMetadata(datasetId).ConfigureAwait(false);  
+                            await client.UpdateDatasetMetadata(datasetId, true).ConfigureAwait(false);  
                             if (distributionFileMetadata is not null)
                             {
                                 await client.UpdateMetadata(distributionFileMetadata with { ParentFile = metadata.Id }).ConfigureAwait(false);
@@ -1024,6 +1112,11 @@ app.MapPut("/distributions", [Authorize] async ([FromBody] DistributionInput dis
                 FileState? state = await client.GetFileState(id);
                 if (state?.Content is not null && state.Metadata.Type == FileType.DistributionRegistration && state.Metadata.Publisher == publisher.ToString() && state.Metadata.ParentFile.HasValue)
                 {
+                    if (state.Metadata.IsHarvested)
+                    {
+                        return Results.BadRequest();
+                    }
+
                     Guid datasetId = state.Metadata.ParentFile.Value;
 
                     DcatDistribution? distributionRdf = DcatDistribution.Parse(state.Content);
@@ -1058,7 +1151,7 @@ app.MapPut("/distributions", [Authorize] async ([FromBody] DistributionInput dis
                                     distribution.MapToRdf(distributionRdf);
                                     FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata, state.Metadata);
                                     await client.InsertFile(distributionRdf.ToString(), true, metadata).ConfigureAwait(false);
-                                    await client.UpdateDatasetMetadata(datasetId).ConfigureAwait(false);
+                                    await client.UpdateDatasetMetadata(datasetId, true).ConfigureAwait(false);
 
                                     if (distributionFileMetadata is not null)
                                     {
@@ -1072,6 +1165,109 @@ app.MapPut("/distributions", [Authorize] async ([FromBody] DistributionInput dis
                                 {
                                     result.Errors = validationResults;
                                 }
+                            }
+                            else
+                            {
+                                return Results.Problem("Source rdf entity is not valid state");
+                            }
+                        }
+                        else
+                        {
+                            return Results.Forbid();
+                        }
+                    }
+                    else
+                    {
+                        return Results.Problem("Source rdf entity is not valid state");
+                    }
+                }
+                else
+                {
+                    return Results.Forbid();
+                }
+            }
+            else
+            {
+                return Results.Forbid();
+            }
+        }
+        else
+        {
+            result.Errors ??= new Dictionary<string, string>();
+            result.Errors["generic"] = "Bad request";
+        }
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        result.Errors ??= new Dictionary<string, string>();
+        result.Errors["generic"] = "Generic error";
+    }
+    return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
+});
+
+app.MapPut("/distributions/licences", [Authorize] async ([FromBody] DistributionLicenceInput distribution, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
+    if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
+    {
+        return Results.Forbid();
+    }
+
+    FileState? publisherState = await client.GetPublisherFileState(publisherId).ConfigureAwait(false);
+    if (publisherState is null || !publisherState.Metadata.IsPublic)
+    {
+        return Results.Forbid();
+    }
+
+    SaveResult result = new SaveResult();
+    try
+    {
+        if (distribution is not null)
+        {
+            if (Guid.TryParse(distribution.Id, out Guid id))
+            {
+                FileState? state = await client.GetFileState(id);
+                if (state?.Content is not null && state.Metadata.Type == FileType.DistributionRegistration && state.Metadata.Publisher == publisher.ToString() && state.Metadata.ParentFile.HasValue)
+                {
+                    if (state.Metadata.IsHarvested)
+                    {
+                        return Results.BadRequest();
+                    }
+
+                    Guid datasetId = state.Metadata.ParentFile.Value;
+
+                    DcatDistribution? distributionRdf = DcatDistribution.Parse(state.Content);
+                    if (distributionRdf is not null)
+                    {
+                        FileState? datasetState = await client.GetFileState(datasetId).ConfigureAwait(false);
+                        if (datasetState?.Content is not null && datasetState.Metadata.Publisher == publisher.ToString())
+                        {
+                            DcatDataset? dataset = DcatDataset.Parse(datasetState.Content);
+                            if (dataset is not null)
+                            {
+                                ValidationResults validationResults = await distribution.Validate(publisherId, client, codelistProviderClient);
+                                if (validationResults.IsValid)
+                                {
+                                    FileMetadata? distributionFileMetadata = null;
+
+                                    distribution.MapToRdf(distributionRdf);
+                                    FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata, state.Metadata);
+                                    await client.InsertFile(distributionRdf.ToString(), true, metadata).ConfigureAwait(false);
+                                    await client.UpdateDatasetMetadata(datasetId, false).ConfigureAwait(false);
+
+                                    if (distributionFileMetadata is not null)
+                                    {
+                                        await client.UpdateMetadata(distributionFileMetadata with { ParentFile = metadata.Id }).ConfigureAwait(false);
+                                    }
+
+                                    result.Id = metadata.Id.ToString();
+                                    result.Success = true;
+                                }
+                                else
+                                {
+                                    result.Errors = validationResults;
+                                }                                    
                             }
                             else
                             {
@@ -1134,9 +1330,14 @@ app.MapDelete("/distributions", [Authorize] async ([FromQuery] string? id, [From
             FileMetadata? metadata = await client.GetFileMetadata(key);
             if (metadata is not null && metadata.Type == FileType.DistributionRegistration && metadata.Publisher == publisher.ToString() && metadata.ParentFile.HasValue)
             {
+                if (metadata.IsHarvested)
+                {
+                    return Results.BadRequest();
+                }
+
                 Guid datasetId = metadata.ParentFile.Value;
                 await client.DeleteFile(key).ConfigureAwait(false);
-                await client.UpdateDatasetMetadata(datasetId).ConfigureAwait(false); 
+                await client.UpdateDatasetMetadata(datasetId, true).ConfigureAwait(false); 
             }
 
             return Results.Ok();
@@ -1326,46 +1527,135 @@ app.MapDelete("/local-catalogs", [Authorize] async ([FromQuery] string? id, [Fro
     }
 });
 
-app.MapPut("/publishers", [Authorize] async ([FromBody] PublisherInput input, [FromServices] IDocumentStorageClient client, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/publishers", [Authorize] async ([FromBody] AdminPublisherInput? input, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
     {
         if (user.IsInRole("Superadmin"))
         {
-            if (!string.IsNullOrEmpty(input?.PublisherId) && Guid.TryParse(input.PublisherId, out Guid id))
+            SaveResult result = new SaveResult();
+            try
             {
-                FileState? state = await client.GetFileState(id).ConfigureAwait(false);
-                if (state is not null)
+                if (input is not null)
                 {
-                    FileMetadata metadata = state.Metadata with { IsPublic = input.IsEnabled };
-                    await client.UpdateMetadata(metadata).ConfigureAwait(false);
-
-                    if (!input.IsEnabled && state.Metadata.Publisher is not null)
+                    ValidationResults validationResults = await input.Validate(codelistProviderClient);
+                    if (validationResults.IsValid && input.Uri is not null)
                     {
-                        FileStorageQuery query = new FileStorageQuery
+                        FileState? existingPublisher = await client.GetPublisherFileState(input.Uri);
+                        if (existingPublisher is null)
                         {
-                            OnlyPublished = true,
-                            OnlyPublishers = new List<string> { state.Metadata.Publisher },
-                            OnlyTypes = new List<FileType> { FileType.DatasetRegistration, FileType.LocalCatalogRegistration }
-                        };
-                        FileStorageResponse response = await client.GetFileStates(query).ConfigureAwait(false);
-                        foreach (FileState fileState in response.Files)
+                            FoafAgent agent = FoafAgent.Create(new Uri(input.Uri));
+                            input.MapToRdf(agent);
+                            FileMetadata metadata = agent.UpdateMetadata();
+                            metadata = metadata with { IsPublic = input.IsEnabled };
+                            await client.InsertFile(agent.ToString(), false, metadata).ConfigureAwait(false);
+                            result.Id = metadata.Id.ToString();
+                            result.Success = true;
+                        }
+                        else
                         {
-                            await client.UpdateMetadata(fileState.Metadata with { IsPublic = false }).ConfigureAwait(false);
+                            result.Errors ??= new Dictionary<string, string>();
+                            result.Errors["generic"] = "Poskytovateľ dát už existuje";
                         }
                     }
-
-                    return Results.Ok();
+                    else
+                    {
+                        result.Errors = validationResults;
+                    }
                 }
                 else
                 {
-                    return Results.NotFound();
+                    result.Errors ??= new Dictionary<string, string>();
+                    result.Errors["generic"] = "Bad request";
                 }
             }
-            else
+            catch (Exception e)
             {
-                return Results.BadRequest();
+                telemetryClient?.TrackException(e);
+                result.Errors ??= new Dictionary<string, string>();
+                result.Errors["generic"] = "Generic error";
             }
+            return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
+        }
+        else
+        {
+            return Results.Forbid();
+        }
+    }
+    catch (HttpRequestException e)
+    {
+        telemetryClient?.TrackException(e);
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+});
+
+app.MapPut("/publishers", [Authorize] async ([FromBody] AdminPublisherInput input, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        if (user.IsInRole("Superadmin"))
+        {
+            SaveResult result = new SaveResult();
+
+            try
+            {
+                if (!string.IsNullOrEmpty(input?.Id) && Guid.TryParse(input.Id, out Guid id))
+                {
+                    FileState? state = await client.GetFileState(id).ConfigureAwait(false);
+                    if (state is not null)
+                    {
+                        if (input is not null)
+                        {
+                            ValidationResults validationResults = await input.Validate(codelistProviderClient);
+                            if (validationResults.IsValid && input.Uri is not null)
+                            {
+                                FileState? existingPublisher = await client.GetPublisherFileState(input.Uri);
+                                if (existingPublisher is null || existingPublisher.Metadata.Id == state.Metadata.Id)
+                                {
+                                    FoafAgent agent = FoafAgent.Create(new Uri(input.Uri));
+                                    input.MapToRdf(agent);
+                                    FileMetadata metadata = agent.UpdateMetadata(state.Metadata);
+                                    metadata = metadata with { IsPublic = input.IsEnabled };
+                                    await client.InsertFile(agent.ToString(), true, metadata).ConfigureAwait(false);
+                                    result.Id = metadata.Id.ToString();
+                                    result.Success = true;
+                                }
+                                else
+                                {
+                                    result.Errors ??= new Dictionary<string, string>();
+                                    result.Errors["generic"] = "Poskytovateľ dát už existuje";
+                                }                                    
+                            }
+                            else
+                            {
+                                result.Errors = validationResults;
+                            }
+                        }
+                        else
+                        {
+                            result.Errors ??= new Dictionary<string, string>();
+                            result.Errors["generic"] = "Bad request";
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                telemetryClient?.TrackException(e);
+                result.Errors ??= new Dictionary<string, string>();
+                result.Errors["generic"] = "Generic error";
+            }
+            return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
         }
         else
         {
@@ -1439,7 +1729,7 @@ app.MapPost("user-info", [Authorize] async ([FromServices] IDocumentStorageClien
                     agent = FoafAgent.Parse(state.Content);
                     if (agent is not null)
                     {
-                        publisherView = PublisherView.MapFromRdf(state.Metadata.Id, state.Metadata.IsPublic, 0, agent, null, "sk");
+                        publisherView = PublisherView.MapFromRdf(state.Metadata.Id, state.Metadata.IsPublic, 0, agent, null, "sk", true);
                     }
                 }
             }
@@ -1456,7 +1746,8 @@ app.MapPost("user-info", [Authorize] async ([FromServices] IDocumentStorageClien
             PublisherEmail = agent?.EmailAddress,
             PublisherHomePage = agent?.HomePage?.ToString(),
             PublisherPhone = agent?.Phone,
-            PublisherActive = publisherActive
+            PublisherActive = publisherActive,
+            PublisherLegalForm = agent?.LegalForm?.ToString()
         });
     }
     catch (HttpRequestException e)
@@ -1476,7 +1767,7 @@ app.MapPost("user-info", [Authorize] async ([FromServices] IDocumentStorageClien
     }
 });
 
-app.MapPost("publishers/impersonate", [Authorize] async ([FromQuery] string? id, [FromServices] IIdentityAccessManagementClient client, [FromServices] IDocumentStorageClient documentStorageClient, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("publishers/impersonate", [Authorize] async ([FromQuery] string? id, [FromServices] IIdentityAccessManagementClient client, [FromServices] IDocumentStorageClient documentStorageClient, ClaimsPrincipal user, HttpResponse response, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
     {
@@ -1487,7 +1778,10 @@ app.MapPost("publishers/impersonate", [Authorize] async ([FromQuery] string? id,
                 FileState? state = await documentStorageClient.GetFileState(fileId).ConfigureAwait(false);
                 if (state?.Metadata.Publisher is not null)
                 {
-                    return Results.Ok(await client.DelegatePublisher(state.Metadata.Publisher).ConfigureAwait(false));
+                    TokenResult token = await client.DelegatePublisher(state.Metadata.Publisher).ConfigureAwait(false);
+                    string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+                    response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+                    return Results.Ok(token);
                 }
                 else
                 {
@@ -1549,7 +1843,7 @@ app.MapPost("/codelists/search", [Authorize] async ([FromServices] ICodelistProv
     }
 });
 
-app.MapPut("/codelists", [Authorize] async ([FromServices] ICodelistProviderClient codelistProviderClient, IFormFile file, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/codelists", [Authorize] async ([FromServices] ICodelistProviderClient codelistProviderClient, IFormFile file, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
 {
     if (user.IsInRole("Superadmin"))
     {
@@ -1685,7 +1979,7 @@ app.MapDelete("/users", [Authorize] async ([FromQuery] string? id, [FromServices
     return Results.NotFound();
 });
 
-app.MapPost("/registration", [Authorize] async ([FromServices] IDocumentStorageClient documentStorageClient, RegistrationInput? input, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/registration", [Authorize] async ([FromServices] IDocumentStorageClient documentStorageClient, RegistrationInput? input, ClaimsPrincipal user, [FromServices] ICodelistProviderClient codelistProviderClient, [FromServices] TelemetryClient? telemetryClient) =>
 {
     string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
     if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
@@ -1704,7 +1998,7 @@ app.MapPost("/registration", [Authorize] async ([FromServices] IDocumentStorageC
     {
         if (input is not null)
         {
-            ValidationResults validationResults = input.Validate();
+            ValidationResults validationResults = await input.Validate(codelistProviderClient);
             if (validationResults.IsValid)
             {
                 FileState? state = await documentStorageClient.GetPublisherFileState(publisherId).ConfigureAwait(false);
@@ -1743,7 +2037,7 @@ app.MapPost("/registration", [Authorize] async ([FromServices] IDocumentStorageC
     return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapPut("/profile", [Authorize] async ([FromServices] IDocumentStorageClient documentStorageClient, RegistrationInput? input, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPut("/profile", [Authorize] async ([FromServices] IDocumentStorageClient documentStorageClient, RegistrationInput? input, ClaimsPrincipal user, [FromServices] ICodelistProviderClient codelistProviderClient, [FromServices] TelemetryClient? telemetryClient) =>
 {
     string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
     if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
@@ -1762,7 +2056,7 @@ app.MapPut("/profile", [Authorize] async ([FromServices] IDocumentStorageClient 
     {
         if (input is not null)
         {
-            ValidationResults validationResults = input.Validate();
+            ValidationResults validationResults = await input.Validate(codelistProviderClient);
             if (validationResults.IsValid)
             {
                 FileState? state = await documentStorageClient.GetPublisherFileState(publisherId).ConfigureAwait(false);
@@ -1818,6 +2112,11 @@ app.MapPost("/upload", [Authorize] async ([FromServices] IDocumentStorageClient 
             string? publisher = identity.FindFirstValue("Publisher");
             if (!string.IsNullOrEmpty(publisher))
             {
+                if (file.Length > maxFileSize)
+                {
+                    return Results.BadRequest("File is too large");
+                }
+
                 DateTimeOffset now = DateTimeOffset.UtcNow;
                 FileMetadata metadata = new FileMetadata(Guid.NewGuid(), file.FileName, FileType.DistributionFile, null, publisher, true, file.FileName, now, now);
                 using Stream stream = file.OpenReadStream();
@@ -1825,7 +2124,7 @@ app.MapPost("/upload", [Authorize] async ([FromServices] IDocumentStorageClient 
                 return Results.Ok(new FileUploadResult
                 {
                     Id = metadata.Id.ToString(),
-                    Url = $"{request.Scheme}://{request.Host}/download?id={HttpUtility.HtmlEncode(metadata.Id)}"
+                    Url = $"https://{request.Host}/download?id={HttpUtility.HtmlEncode(metadata.Id)}"
                 });
             }
             else
@@ -1855,6 +2154,69 @@ app.MapPost("/upload", [Authorize] async ([FromServices] IDocumentStorageClient 
     }
 }).Produces<FileUploadResult>();
 
+async Task<FileMetadata?> FindAndValidateDownload(IDocumentStorageClient client, Guid id)
+{
+    FileMetadata? metadata = await client.GetFileMetadata(id).ConfigureAwait(false);
+    if (metadata is not null)
+    {
+        if (metadata.Type == FileType.DistributionFile && metadata.ParentFile.HasValue)
+        {
+            FileMetadata? distributionMetadata = await client.GetFileMetadata(metadata.ParentFile.Value).ConfigureAwait(false);
+            if (distributionMetadata is not null && distributionMetadata.Type == FileType.DistributionRegistration && distributionMetadata.ParentFile.HasValue)
+            {
+                FileMetadata? datasetMetadata = await client.GetFileMetadata(distributionMetadata.ParentFile.Value).ConfigureAwait(false);
+                if (datasetMetadata is not null && datasetMetadata.Type == FileType.DatasetRegistration)
+                {
+                    return metadata;
+                }
+            }
+        }
+    }
+    return null;
+}
+
+app.MapMethods("/download", new[] { "HEAD" }, async ([FromServices] IDocumentStorageClient client, [FromQuery] string? id, HttpResponse response, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        if (Guid.TryParse(id, out Guid key))
+        {
+            FileMetadata? metadata = await FindAndValidateDownload(client, key).ConfigureAwait(false);
+            if (metadata is not null)
+            {
+                ContentDisposition contentDisposition = new ContentDisposition
+                {
+                    DispositionType = "attachment",
+                    FileName = metadata.OriginalFileName
+                };
+                response.Headers.ContentDisposition = contentDisposition.ToString();
+                long? size = await client.GetSize(key).ConfigureAwait(false);
+                if (size.HasValue)
+                {
+                    response.ContentLength = size;
+                }
+                return Results.Ok();
+            }
+        }
+        return Results.NotFound();
+    }
+    catch (HttpRequestException e)
+    {
+        telemetryClient?.TrackException(e);
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+});
+
 app.MapGet("/download", async ([FromServices] IDocumentStorageClient client, [FromQuery] string? id, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
@@ -1862,18 +2224,14 @@ app.MapGet("/download", async ([FromServices] IDocumentStorageClient client, [Fr
         string language = "sk";
         if (Guid.TryParse(id, out Guid key))
         {
-            FileMetadata? metadata = await client.GetFileMetadata(key).ConfigureAwait(false);
+            FileMetadata? metadata = await FindAndValidateDownload(client, key).ConfigureAwait(false);
             if (metadata is not null)
             {
-                if (metadata.Type == FileType.DistributionFile)
+                Stream? stream = await client.DownloadStream(key).ConfigureAwait(false);
+                if (stream is not null)
                 {
-                    Stream? stream = await client.DownloadStream(key).ConfigureAwait(false);
-                    if (stream is not null)
-                    {
-                        FileStreamHttpResult r = (FileStreamHttpResult)Results.File(stream, fileDownloadName: metadata.OriginalFileName ?? metadata.Name.GetText(language) ?? metadata.Id.ToString());
-
-                        return r;
-                    }
+                    FileStreamHttpResult r = TypedResults.File(stream, fileDownloadName: metadata.OriginalFileName ?? metadata.Name.GetText(language) ?? metadata.Id.ToString());
+                    return r;
                 }
             }
         }
@@ -1903,8 +2261,11 @@ app.MapPost("/refresh", async ([FromServices] IIdentityAccessManagementClient cl
         if (!string.IsNullOrEmpty(request?.AccessToken) && !string.IsNullOrEmpty(request?.RefreshToken))
         {
             TokenResult token = await client.RefreshToken(request.AccessToken, request.RefreshToken);
-            string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
-            response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+            if (!string.IsNullOrEmpty(token.Token))
+            {
+                string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+                response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+            }
 
             return Results.Ok(token);
         }
@@ -1974,18 +2335,19 @@ app.MapGet("/saml/logout", async ([FromServices] IIdentityAccessManagementClient
     }
     catch (HttpRequestException e)
     {
-        telemetryClient?.TrackException(e);
-        return e.StatusCode switch
+        response.Cookies.Delete("accessToken");
+        if (e.StatusCode == System.Net.HttpStatusCode.Unauthorized || e.StatusCode == System.Net.HttpStatusCode.Forbidden)
         {
-            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
-            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
-            _ => Results.Problem()
-        };
+            return Results.Redirect("/");
+        }
+
+        telemetryClient?.TrackException(e);
+        return Results.Redirect("/");
     }
     catch (Exception e)
     {
         telemetryClient?.TrackException(e);
-        return Results.Problem();
+        return Results.Redirect("/");
     }
 });
 
@@ -2010,6 +2372,34 @@ app.MapPost("/saml/consume", async ([FromServices] IIdentityAccessManagementClie
     }
     catch (HttpRequestException e)
     {
+        if (e.StatusCode == System.Net.HttpStatusCode.Unauthorized || e.StatusCode == System.Net.HttpStatusCode.Forbidden)
+        {
+            return Results.Redirect("/");
+        }
+
+        telemetryClient?.TrackException(e);
+        return Results.Redirect("/");
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Redirect("/");
+    }
+});
+
+app.MapGet("/sparql-endpoint-url", (IConfiguration configuration) =>
+{
+    return Results.Ok(configuration["PublicSparqlEndpoint"]);
+});
+
+app.MapGet("/validate-inviation", async ([FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        return Results.Ok(await client.CheckInvitation().ConfigureAwait(false));
+    }
+    catch (HttpRequestException e)
+    {
         telemetryClient?.TrackException(e);
         return e.StatusCode switch
         {
@@ -2025,11 +2415,6 @@ app.MapPost("/saml/consume", async ([FromServices] IIdentityAccessManagementClie
     }
 });
 
-app.MapGet("/sparql-endpoint-url", (IConfiguration configuration) =>
-{
-    return Results.Ok(configuration["PublicSparqlEndpoint"]);
-});
-
 app.Use(async (context, next) =>
 {
     if (context.Request.Method == HttpMethods.Post || context.Request.Method == HttpMethods.Put)
@@ -2039,7 +2424,7 @@ app.Use(async (context, next) =>
         if (!string.IsNullOrEmpty(logPath) && Directory.Exists(logPath))
         {
             context.Request.EnableBuffering();
-            string logName = $"{DateTimeOffset.UtcNow:yyyyMMddHHiiss.fffff}_{Guid.NewGuid():N}";
+            string logName = $"{DateTimeOffset.UtcNow:yyyyMMddHHmmss.fffff}_{Guid.NewGuid():N}";
             string path = Path.Combine(logPath, logName);
             using (FileStream fs = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
@@ -2065,6 +2450,110 @@ app.Use(async (context, next) =>
         return;
     }
     context.Response.Redirect(context.Request.GetUri().ToString());
+    return;
+});
+
+app.Use(async (context, next) =>
+{
+    if (context.GetEndpoint() is null)
+    {
+        string path = context.Request.Path.Value ?? string.Empty;
+
+        string[] prefixes = new[] { "/set/", "/dataset/", "/datasety/" };
+
+        string prefix = prefixes.FirstOrDefault(path.StartsWith) ?? string.Empty;
+        if (!string.IsNullOrEmpty(prefix))
+        {
+            path = path.Substring(prefix.Length);
+
+            IDocumentStorageClient client = context.RequestServices.GetRequiredService<IDocumentStorageClient>();
+
+            Uri BuildUri(string prefix)
+            {
+                UriBuilder uriBuilder = new UriBuilder();
+                uriBuilder.Scheme = "https";
+                uriBuilder.Host = "data.gov.sk";
+                uriBuilder.Path = prefix + path;
+                return uriBuilder.Uri;
+            }
+
+            async Task<bool> TryFindByQuery(Action<FileStorageQuery> queryDecorator)
+            {
+                FileStorageQuery query = new FileStorageQuery
+                {
+                    MaxResults = 1,
+                    OnlyTypes = new List<FileType> { FileType.DatasetRegistration, FileType.DistributionRegistration },
+                    AdditionalFilters = new Dictionary<string, string[]>(),
+                };
+                queryDecorator(query);
+                FileStorageResponse response = await client.GetFileStates(query);
+                if (response.Files.Count >= 1)
+                {
+                    FileState state = response.Files[0];
+                    if (state.Metadata.Type == FileType.DatasetRegistration)
+                    {
+                        context.Response.Redirect($"/datasety/{state.Metadata.Id}");
+                        return true;
+                    }
+                    else if (state.Metadata.Type == FileType.DistributionRegistration && state.Metadata.ParentFile.HasValue)
+                    {
+                        context.Response.Redirect($"/datasety/{state.Metadata.ParentFile.Value}");
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            Task<bool> TryFindByKey(Uri uri)
+            {
+                return TryFindByQuery(q =>
+                {
+                    q.AdditionalFilters ??= new Dictionary<string, string[]>();
+                    q.AdditionalFilters["key"] = new[] { uri.ToString() };
+                });
+            }
+
+            Task<bool> TryFindByLandingPage(Uri uri)
+            {
+                return TryFindByQuery(q =>
+                {
+                    q.AdditionalFilters ??= new Dictionary<string, string[]>();
+                    q.AdditionalFilters["landingPage"] = new[] { uri.ToString() };
+                });
+            }
+
+            bool result;
+
+            if (prefix == "/set/")
+            {
+                result = await TryFindByKey(BuildUri("/set/"));
+                if (result)
+                {
+                    return;
+                }
+            }
+
+            result = await TryFindByLandingPage(BuildUri("/dataset/"));
+            if (result)
+            {
+                return;
+            }
+
+            result = await TryFindByLandingPage(BuildUri("/datasety/"));
+            if (result)
+            {
+                return;
+            }
+
+            result = await TryFindByLandingPage(BuildUri("/set/"));
+            if (result)
+            {
+                return;
+            }
+        }
+    }
+
+    await next(context);
     return;
 });
 

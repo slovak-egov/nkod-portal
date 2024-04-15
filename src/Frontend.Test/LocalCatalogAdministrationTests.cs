@@ -101,17 +101,14 @@ namespace Frontend.Test
             {
                 Dictionary<string, string> values = input.Title;
                 values["en"] = "NameEn";
-                values["de"] = "NameDe";
                 input.SetTitle(values);
 
                 values = input.Description;
                 values["en"] = "DescriptionEn";
-                values["de"] = "DescriptionDe";
                 input.SetDescription(values);
 
                 values = input.ContactPoint!.Name;
                 values["en"] = "ContactEn";
-                values["de"] = "ContactDe";
                 input.ContactPoint!.SetNames(values);
             }
 
@@ -169,8 +166,6 @@ namespace Frontend.Test
             await Page.RunAndWaitForLocalCatalogList(async () =>
             {
                 await Page.GetByText("Uložiť", new PageGetByTextOptions { Exact = true }).ClickAsync();
-
-                await Page.TakeScreenshot();
             });
 
             await Page.AssertTableRowsCount(1);
@@ -370,8 +365,6 @@ namespace Frontend.Test
             await Page.RunAndWaitForLocalCatalogList(async () =>
             {
                 await Page.GetByText("Uložiť", new PageGetByTextOptions { Exact = true }).ClickAsync();
-
-                await Page.TakeScreenshot();
             });
 
             await Page.AssertTableRowsCount(1);
@@ -403,14 +396,14 @@ namespace Frontend.Test
 
             DcatCatalog input = DcatCatalog.Create();
             input.Publisher = new Uri(PublisherId);
-            input.SetTitle(new Dictionary<string, string> { { "sk", "NameSk2" }, { "en", "NameEn2" }, { "de", "NameDe2" } });
-            input.SetDescription(new Dictionary<string, string> { { "sk", "DescriptionSk2" }, { "en", "DescriptionEn2" }, { "de", "DescriptionDe2" } });
+            input.SetTitle(new Dictionary<string, string> { { "sk", "NameSk2" }, { "en", "NameEn2" } });
+            input.SetDescription(new Dictionary<string, string> { { "sk", "DescriptionSk2" }, { "en", "DescriptionEn2" } });
             input.HomePage = new Uri("http://example.com/catalog/other");
             input.ShouldBePublic = false;
             input.Type = new Uri("https://data.gov.sk/def/local-catalog-type/2");
             input.EndpointUrl = new Uri("http://example.com/endpoint/other");
 
-            input.SetContactPoint(new LanguageDependedTexts(new Dictionary<string, string> { { "sk", "ContactSk2" }, { "en", "ContactEn2" }, { "de", "ContactDe2" } }), "test2@example.com");
+            input.SetContactPoint(new LanguageDependedTexts(new Dictionary<string, string> { { "sk", "ContactSk2" }, { "en", "ContactEn2" } }), "test2@example.com");
 
             await Page.FillLocalCatalogFields(input);
 

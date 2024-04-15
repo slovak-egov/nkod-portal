@@ -98,7 +98,12 @@ namespace NkodSk.Abstractions
             Dictionary<string, string> values = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
             foreach (ILiteralNode node in GetLiteralNodesFromUriNode(name))
             {
-                values[node.Language] = node.Value;
+                string lang = node.Language;
+                if (string.IsNullOrEmpty(lang))
+                {
+                    lang = "sk";
+                }
+                values[lang] = node.Value;
             }
             return values;
         }
@@ -108,10 +113,15 @@ namespace NkodSk.Abstractions
             Dictionary<string, List<string>> values = new Dictionary<string, List<string>>(StringComparer.CurrentCultureIgnoreCase);
             foreach (ILiteralNode node in GetLiteralNodesFromUriNode(name))
             {
-                if (!values.TryGetValue(node.Language, out List<string>? list))
+                string lang = node.Language;
+                if (string.IsNullOrEmpty(lang))
+                {
+                    lang = "sk";
+                }
+                if (!values.TryGetValue(lang, out List<string>? list))
                 {
                     list = new List<string>();
-                    values[node.Language] = list;
+                    values[lang] = list;
                 }
                 list.Add(node.Value);
             }
@@ -122,7 +132,7 @@ namespace NkodSk.Abstractions
         {
             IEnumerable<string> GetTexts(string language)
             {
-                return GetLiteralNodesFromUriNode(name).Where(n => n.Language == language).Select(n => n.Value);
+                return GetLiteralNodesFromUriNode(name).Where(n => n.Language == language || (language == "sk" && string.IsNullOrEmpty(n.Language))).Select(n => n.Value);
             }
 
             IEnumerable<string> texts = GetTexts(language);
@@ -151,13 +161,14 @@ namespace NkodSk.Abstractions
             return null;
         }
 
-        public void SetTextToUriNode(string name, string? text)
+        public void SetTextToUriNode(string name, string? text, Uri? dataType = null)
         {
             RemoveUriNodes(name);
             if (text is not null)
             {
                 IUriNode? typeNode = GetOrCreateUriNode(name);
-                Graph.Assert(Node, typeNode, Graph.CreateLiteralNode(text));
+                ILiteralNode node = dataType is null ? Graph.CreateLiteralNode(text) : Graph.CreateLiteralNode(text, dataType);
+                Graph.Assert(Node, typeNode, node);
             }
         }
 
@@ -205,9 +216,27 @@ namespace NkodSk.Abstractions
             return null;
         }
 
+        public DateTimeOffset? GetDateTimeFromUriNode(string name)
+        {
+            string? dateText = GetTextFromUriNode(name);
+            if (dateText is not null)
+            {
+                if (DateTimeOffset.TryParse(dateText, out DateTimeOffset date))
+                {
+                    return date;
+                }
+            }
+            return null;
+        }
+
         public void SetDateToUriNode(string name, DateOnly? value)
         {
-            SetTextToUriNode(name, value?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+            SetTextToUriNode(name, value?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), new Uri(RdfDocument.XsdPrefix + "date"));
+        }
+
+        public void SetDateTimeToUriNode(string name, DateTimeOffset? value)
+        {
+            SetTextToUriNode(name, value?.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ssZ", System.Globalization.CultureInfo.InvariantCulture), new Uri(RdfDocument.XsdPrefix + "dateTime"));
         }
 
         public void SetBooleanToUriNode(string name, bool? value)
@@ -287,10 +316,39 @@ namespace NkodSk.Abstractions
 
         public virtual IEnumerable<RdfObject> RootObjects => new[] { this };
 
+        public void RemoveTriples(Uri subject)
+        {
+            IUriNode? uriNode = Graph.GetUriNode(subject);
+            if (uriNode is not null)
+            {
+                RemoveTriples(Graph, uriNode, new HashSet<INode>());
+            }
+        }
+
+        public void RemoveTriples(IUriNode node)
+        {
+            RemoveTriples(Graph, node, new HashSet<INode>());
+        }
+
+        private static void RemoveTriples(IGraph graph, IUriNode node, ISet<INode> visited)
+        {
+            foreach (Triple t in graph.GetTriplesWithSubject(node).ToList())
+            {
+                graph.Retract(t);
+                if (t.Object is IUriNode uriNode)
+                {
+                    if (visited.Add(uriNode))
+                    {
+                        RemoveTriples(graph, uriNode, visited);
+                    }
+                }
+            }
+        }
+
         public override string ToString()
         {
             Graph newGraph = new Graph();
-            Graph.NamespaceMap.Import(Graph.NamespaceMap);
+            newGraph.NamespaceMap.Import(Graph.NamespaceMap);
             foreach (RdfObject obj in RootObjects)
             {
                 foreach (Triple t in obj.Triples)

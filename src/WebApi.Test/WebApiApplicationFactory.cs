@@ -33,7 +33,7 @@ namespace WebApi.Test
             this.storage = storage;
         }
 
-        public string CreateToken(string? role, string? publisher = null, string name = "Test User", int lifetimeMinutes = 15, string? companyName = null)
+        public string CreateToken(string? role, string? publisher = null, string name = "Test User", int lifetimeMinutes = 15, string? companyName = null, string? userId = null)
         {
             List<Claim> claims = new List<Claim>();
             if (!string.IsNullOrEmpty(role))
@@ -47,6 +47,10 @@ namespace WebApi.Test
             if (!string.IsNullOrEmpty(companyName))
             {
                 claims.Add(new Claim("CompanyName", companyName));
+            }
+            if (!string.IsNullOrEmpty(userId))
+            {
+                claims.Add(new Claim(ClaimTypes.NameIdentifier, userId));
             }
             claims.Add(new Claim(ClaimTypes.Name, name));
 
@@ -100,13 +104,13 @@ namespace WebApi.Test
             });
         }
 
-        public Task<TokenResult> DelegateToken(IHttpContextValueAccessor httpContextValueAccessor, string publisherId)
+        public Task<TokenResult> DelegateToken(IHttpContextValueAccessor httpContextValueAccessor, string publisherId, string userId)
         {
             if (httpContextValueAccessor.HasRole("Superadmin"))
             {
                 return Task.FromResult(new TokenResult
                 {
-                    Token = CreateToken("Superadmin", publisherId),
+                    Token = CreateToken("Superadmin", publisherId, userId: userId),
                     RefreshToken = "12345"
                 });
             }

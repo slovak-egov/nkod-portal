@@ -23,7 +23,12 @@ namespace Frontend.Test
         public void CreateFile(FileState state)
         {
             bool isPublic = Storage.ShouldBePublic(state.Metadata);
-            string filePath = Path.Combine(path, isPublic ? "public" : "protected", state.Metadata.Id.ToString("N") + (isPublic ? ".ttl" : string.Empty));
+            string folder = Path.Combine(path, Storage.GetDefaultSubfolderName(state.Metadata));
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+            string filePath = Path.Combine(folder, state.Metadata.Id.ToString("N") + (isPublic ? ".ttl" : string.Empty));
             string metadataPath = Path.Combine(path, "protected", state.Metadata.Id.ToString("N") + ".metadata");
             File.WriteAllText(filePath, state.Content);
             state.Metadata.SaveTo(metadataPath);
@@ -54,11 +59,13 @@ namespace Frontend.Test
         {
             DcatDistribution distribution = DcatDistribution.Create(datasetId);
             distribution.SetTermsOfUse(
-                new Uri("https://creativecommons.org/licenses/by/4.0/"),
-                new Uri("https://creativecommons.org/licenses/by/4.0/"),
-                new Uri("https://creativecommons.org/publicdomain/zero/1.0/"),
-                new Uri("https://data.gov.sk/def/personal-data-occurence-type/2"));
-            distribution.DownloadUrl = new Uri("http://example.com/download");
+                new Uri("http://publications.europa.eu/resource/authority/licence/CC_BY_4_0"),
+                new Uri("http://publications.europa.eu/resource/authority/licence/CC_BY_4_0"),
+                new Uri("http://publications.europa.eu/resource/authority/licence/CC_BY_4_0"),
+                new Uri("https://data.gov.sk/def/personal-data-occurence-type/2"),
+                string.Empty,
+                string.Empty);
+            distribution.DownloadUrl = new Uri("https://example.com/download");
             distribution.AccessUrl = distribution.DownloadUrl;
             distribution.Format = new Uri("http://publications.europa.eu/resource/dataset/file-type/1");
             distribution.MediaType = new Uri("http://www.iana.org/assignments/media-types/text/csv");
@@ -144,20 +151,13 @@ namespace Frontend.Test
 
         public void CreateDistributionCodelists()
         {
-            CreateCodelistFile(DcatDistribution.AuthorsWorkTypeCodelist, new Dictionary<string, LanguageDependedTexts>
+            CreateCodelistFile(DcatDistribution.LicenseCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "https://data.gov.sk/def/authors-work-type/1", new LanguageDependedTexts{ { "sk", "work1sk" }, { "en", "work1en" } } },
-                { "https://creativecommons.org/licenses/by/4.0/", new LanguageDependedTexts{ { "sk", "CC sk" }, { "en", "CC en" } } },
-            });
-            CreateCodelistFile(DcatDistribution.OriginalDatabaseTypeCodelist, new Dictionary<string, LanguageDependedTexts>
-            {
                 { "https://data.gov.sk/def/original-database-type/1", new LanguageDependedTexts{ { "sk", "type1sk" }, { "en", "type1en" } } },
-                { "https://creativecommons.org/licenses/by/4.0/", new LanguageDependedTexts{ { "sk", "CC sk" }, { "en", "CC en" } } }
-            });
-            CreateCodelistFile(DcatDistribution.DatabaseProtectedBySpecialRightsTypeCodelist, new Dictionary<string, LanguageDependedTexts>
-            {
                 { "https://data.gov.sk/def/codelist/database-creator-special-rights-type/2", new LanguageDependedTexts{ { "sk", "rights1sk" }, { "en", "rights1en" } } },
-                { "https://creativecommons.org/publicdomain/zero/1.0/", new LanguageDependedTexts{ { "sk", "CC sk" }, { "en", "CC en" } } }
+                { "https://creativecommons.org/publicdomain/zero/1.0/", new LanguageDependedTexts{ { "sk", "CC sk" }, { "en", "CC en" } } },
+                { "http://publications.europa.eu/resource/authority/licence/CC_BY_4_0", new LanguageDependedTexts{ { "sk", "CC sk" }, { "en", "CC en" } } }
             });
             CreateCodelistFile(DcatDistribution.PersonalDataContainmentTypeCodelist, new Dictionary<string, LanguageDependedTexts>
             {
@@ -185,6 +185,15 @@ namespace Frontend.Test
             {
                 { DcatCatalog.LocalCatalogTypeCodelist + "/1", new LanguageDependedTexts{ { "sk", "DCAT Dokumenty" }, { "en", "DCAT Documents" } } },
                 { DcatCatalog.LocalCatalogTypeCodelist + "/2", new LanguageDependedTexts{ { "sk", "SPARQL" }, { "en", "SPARQL" } } },
+            });
+        }
+
+        public void CreatePublisherCodelists()
+        {
+            CreateCodelistFile(FoafAgent.LegalFormCodelist, new Dictionary<string, LanguageDependedTexts>
+            {
+                { "https://data.gov.sk/def/legal-form-type/321", new LanguageDependedTexts{ { "sk", "Rozpočtová organizácia" }, { "en", "Rozpočtová organizácia EN" } } },
+                { "https://data.gov.sk/def/legal-form-type/331", new LanguageDependedTexts{ { "sk", "Príspevková organizácia" }, { "en", "Príspevková organizácia EN" } } },
             });
         }
 

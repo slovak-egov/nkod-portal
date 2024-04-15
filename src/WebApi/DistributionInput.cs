@@ -17,6 +17,10 @@ namespace WebApi
 
         public string? PersonalDataContainmentType { get; set; }
 
+        public string? AuthorName { get; set; }
+        
+        public string? OriginalDatabaseAuthorName { get; set; }
+
         public string? DownloadUrl { get; set; }
 
         public string? Format { get; set; }
@@ -37,9 +41,29 @@ namespace WebApi
         {
             ValidationResults results = new ValidationResults();
 
-            await results.ValidateRequiredCodelistValue(nameof(AuthorsWorkType), AuthorsWorkType, DcatDistribution.AuthorsWorkTypeCodelist, codelistProvider);
-            await results.ValidateRequiredCodelistValue(nameof(OriginalDatabaseType), OriginalDatabaseType, DcatDistribution.OriginalDatabaseTypeCodelist, codelistProvider);
-            await results.ValidateRequiredCodelistValue(nameof(DatabaseProtectedBySpecialRightsType), DatabaseProtectedBySpecialRightsType, DcatDistribution.DatabaseProtectedBySpecialRightsTypeCodelist, codelistProvider);
+            DcatDataset? dataset = null;
+
+            if (Guid.TryParse(DatasetId, out Guid datasetId))
+            {
+                FileState? datasetFileState = await documentStorage.GetFileState(datasetId);
+                if (datasetFileState?.Content is not null)
+                {
+                    dataset = DcatDataset.Parse(datasetFileState.Content);
+                }
+            }
+
+            if (dataset is null)
+            {
+                results["dataset"] = "Dataset nebol nájdený";
+            } 
+            else if (dataset.IsSerie)
+            {
+                results["dataset"] = "Dátová séria nemôže mať distribúcie";
+            }
+
+            await results.ValidateRequiredCodelistValue(nameof(AuthorsWorkType), AuthorsWorkType, DcatDistribution.LicenseCodelist, codelistProvider);
+            await results.ValidateRequiredCodelistValue(nameof(OriginalDatabaseType), OriginalDatabaseType, DcatDistribution.LicenseCodelist, codelistProvider);
+            await results.ValidateRequiredCodelistValue(nameof(DatabaseProtectedBySpecialRightsType), DatabaseProtectedBySpecialRightsType, DcatDistribution.LicenseCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(PersonalDataContainmentType), PersonalDataContainmentType, DcatDistribution.PersonalDataContainmentTypeCodelist, codelistProvider);
             results.ValidateUrl(nameof(DownloadUrl), DownloadUrl, true);
             await results.ValidateRequiredCodelistValue(nameof(Format), Format, DcatDistribution.FormatCodelist, codelistProvider);
@@ -49,12 +73,20 @@ namespace WebApi
             await results.ValidateCodelistValue(nameof(PackageFormat), PackageFormat, DcatDistribution.MediaTypeCodelist, codelistProvider);
             results.ValidateLanguageTexts(nameof(Title), Title, null, false);
 
+            if (PersonalDataContainmentType == "https://data.gov.sk/def/personal-data-occurence-type/3")
+            {
+                results.Add("personaldatacontainmenttype", "Typ výskytu osobných údajov nemôže ostať nešpecifikovaný");
+            }
+
             return results;
         }
 
         public void MapToRdf(DcatDistribution distribution)
         {
-            distribution.SetTermsOfUse(AuthorsWorkType.AsUri(), OriginalDatabaseType.AsUri(), DatabaseProtectedBySpecialRightsType.AsUri(), PersonalDataContainmentType.AsUri());
+            string? authorName = !string.IsNullOrWhiteSpace(AuthorName) ? AuthorName : null;
+            string? originalDatabaseAuthorName = !string.IsNullOrWhiteSpace(OriginalDatabaseAuthorName) ? OriginalDatabaseAuthorName : null;
+
+            distribution.SetTermsOfUse(AuthorsWorkType.AsUri(), OriginalDatabaseType.AsUri(), DatabaseProtectedBySpecialRightsType.AsUri(), PersonalDataContainmentType.AsUri(), authorName, originalDatabaseAuthorName);
             distribution.DownloadUrl = DownloadUrl.AsUri();
             distribution.AccessUrl = DownloadUrl.AsUri();
             distribution.Format = Format.AsUri();

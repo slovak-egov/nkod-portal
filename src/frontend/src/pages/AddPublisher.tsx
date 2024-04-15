@@ -1,41 +1,62 @@
-import PageHeader from "../components/PageHeader";
-import Button from "../components/Button";
-import Breadcrumbs from "../components/Breadcrumbs";
-import MainContent from "../components/MainContent";
-import FormElementGroup from "../components/FormElementGroup";
-import BaseInput from "../components/BaseInput";
-import { useDocumentTitle, usePublisherAdd } from "../client";
-import { useNavigate } from "react-router";
-import { useTranslation } from "react-i18next";
+import { AdminPublisherInput, useDocumentTitle, useEntityAdd } from '../client';
 
-export default function AddPublisher()
-{
-    const [publisher, setPublisher, errors, saving, save] = usePublisherAdd({
+import PageHeader from '../components/PageHeader';
+import Breadcrumbs from '../components/Breadcrumbs';
+import MainContent from '../components/MainContent';
+import Button from '../components/Button';
+import ValidationSummary from '../components/ValidationSummary';
+import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import { AdminPublisherForm } from '../components/AdminPublisherForm';
+
+export default function AddPublisher() {
+    const [publisher, setPublisher, errors, saving, save] = useEntityAdd<AdminPublisherInput>('publishers', {
+        id: null,
+        name: { sk: '' },
         website: '',
         email: '',
-        phone: ''
+        phone: '',
+        legalForm: 'https://data.gov.sk/def/legal-form-type/321',
+        uri: 'https://data.gov.sk/id/legal-subject/',
+        isEnabled: false
     });
+
     const navigate = useNavigate();
-    const {t} = useTranslation();
-    useDocumentTitle(t('publisherRegistration'));
+    const { t } = useTranslation();
+    useDocumentTitle(t('newPublisher'));
 
-    return <>
-    <Breadcrumbs items={[{title: t('nkod'), link: '/'},{title: t('publisherRegistration')}]} />
+    return (
+        <>
+            <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title: t('publishers'), link: '/sprava/poskytovatelia' }, { title: t('newPublisher') }]} />
             <MainContent>
-            <PageHeader>{t('publisherRegistration')}</PageHeader>
+                <div className="nkod-form-page">
+                    <PageHeader>{t('newPublisher')}</PageHeader>
 
-                    <FormElementGroup label={t('websiteAddress')} errorMessage={errors['website']} element={id => <BaseInput id={id} disabled={saving} value={publisher.website} onChange={e => setPublisher({website: e.target.value})} />} />
-                    <FormElementGroup label={t('contantEmailAddress')} errorMessage={errors['email']} element={id => <BaseInput id={id} disabled={saving} value={publisher.email} onChange={e => setPublisher({email: e.target.value})} />} />
-                    <FormElementGroup label={t('contactPhoneNumber')} errorMessage={errors['phone']} element={id => <BaseInput id={id} disabled={saving} value={publisher.phone} onChange={e => setPublisher({phone: e.target.value})} />} />
-                    
-                    <Button style={{marginRight: '20px'}} onClick={async () => {
-                        const result = await save();
-                        if (result?.success) {
-                            navigate('/sprava/caka-na-schvalenie');
-                        }
-                    }} disabled={saving}>
-                        {t('register')}
+                    {Object.keys(errors).length > 0 ? (
+                        <ValidationSummary
+                            elements={Object.entries(errors).map((k) => ({
+                                elementId: k[0],
+                                message: k[1]
+                            }))}
+                        />
+                    ) : null}
+
+                    <AdminPublisherForm publisher={publisher} setPublisher={setPublisher} errors={errors} saving={saving} />
+
+                    <Button
+                        style={{ marginRight: '20px' }}
+                        onClick={async () => {
+                            const result = await save();
+                            if (result?.success) {
+                                navigate('/sprava/poskytovatelia');
+                            }
+                        }}
+                        disabled={saving}
+                    >
+                        {t('save')}
                     </Button>
+                </div>
             </MainContent>
-        </>;
+        </>
+    );
 }

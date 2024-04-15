@@ -14,6 +14,7 @@ using TestBase;
 using System.Data;
 using static Lucene.Net.Documents.Field;
 using System.Security.Policy;
+using VDS.RDF;
 
 namespace WebApi.Test
 {
@@ -39,6 +40,8 @@ namespace WebApi.Test
                 OriginalDatabaseType = "https://data.gov.sk/def/ontology/law/originalDatabaseType/1",
                 DatabaseProtectedBySpecialRightsType = "https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1",
                 PersonalDataContainmentType = "https://data.gov.sk/def/ontology/law/personalDataContainmentType/1",
+                AuthorName = "AuthorName",
+                OriginalDatabaseAuthorName = "OriginalDatabaseAuthorName",
                 DownloadUrl = "http://data.gov.sk/download",
                 Format = "http://publications.europa.eu/resource/dataset/file-type/1",
                 MediaType = "http://www.iana.org/assignments/media-types/text/csv",
@@ -80,6 +83,8 @@ namespace WebApi.Test
             Assert.Equal(input.OriginalDatabaseType, distribution.TermsOfUse?.OriginalDatabaseType?.ToString());
             Assert.Equal(input.DatabaseProtectedBySpecialRightsType, distribution.TermsOfUse?.DatabaseProtectedBySpecialRightsType?.ToString());
             Assert.Equal(input.PersonalDataContainmentType, distribution.TermsOfUse?.PersonalDataContainmentType?.ToString());
+            Assert.Equal(input.AuthorName, distribution.TermsOfUse?.AuthorName);
+            Assert.Equal(input.OriginalDatabaseAuthorName, distribution.TermsOfUse?.OriginalDatabaseAuthorName);
             Assert.Equal(input.DownloadUrl, distribution.DownloadUrl?.ToString());
             Assert.Equal(input.Format, distribution.Format?.ToString());
             Assert.Equal(input.MediaType, distribution.MediaType?.ToString());
@@ -87,6 +92,21 @@ namespace WebApi.Test
             Assert.Equal(input.CompressFormat, distribution.CompressFormat?.ToString());
             Assert.Equal(input.PackageFormat, distribution.PackageFormat?.ToString());
             Extensions.AssertTextsEqual(input.Title, distribution.Title);
+
+            ValidateDatasetModifyChange(storage, datasetId);
+        }
+
+        private void ValidateDatasetModifyChange(Storage storage, Guid datasetId)
+        {
+            FileState? datasetState = storage.GetFileState(datasetId, accessPolicy);
+            Assert.NotNull(datasetState);
+            Assert.NotNull(datasetState.Content);
+            Assert.True((DateTimeOffset.Now - datasetState.Metadata.LastModified).Duration().TotalMinutes < 1);
+
+            DcatDataset? dataset = DcatDataset.Parse(datasetState.Content);
+            Assert.NotNull(dataset);
+
+            Assert.True((dataset.Modified!.Value - DateTimeOffset.Now).Duration().TotalMinutes < 1);
         }
 
         [Fact]
@@ -126,6 +146,57 @@ namespace WebApi.Test
             Assert.True(result.Success);
             Assert.True(result.Errors is null || result.Errors.Count == 0);
             ValidateValues(storage, result.Id, input, datasetId, PublisherId);
+        }
+
+        [Fact]
+        public async Task TestCreateMinimalWithWrongPersonalData()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, Guid publisherId, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            input.PersonalDataContainmentType = "https://data.gov.sk/def/ontology/law/personalDataContainmentType/3";
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            string content = await response.Content.ReadAsStringAsync();
+            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
+            Assert.NotNull(result);
+            Assert.True(string.IsNullOrEmpty(result.Id));
+            Assert.False(result.Success);
+            Assert.NotNull(result.Errors);
+            Assert.NotEmpty(result.Errors["personaldatacontainmenttype"]);
+        }
+
+        [Fact]
+        public async Task TestCreateMinimalInSerie()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+
+            fixture.CreatePublisher("Test", PublisherId);
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            FileState parentState = storage.GetFileState(datasetId, accessPolicy)!;
+            DcatDataset parentDataset = DcatDataset.Parse(parentState.Content!)!;
+            parentDataset.IsSerie = true;
+            storage.InsertFile(parentDataset.ToString(), parentState.Metadata, true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
         [Fact]
@@ -196,6 +267,33 @@ namespace WebApi.Test
         }
 
         [Fact]
+        public async Task TestModifyWithWrongPersonalData()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, Guid publisherId, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            using Storage storage = new Storage(path);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            input.Id = distributions[0].ToString();
+            input.PersonalDataContainmentType = "https://data.gov.sk/def/ontology/law/personalDataContainmentType/3";
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            string content = await response.Content.ReadAsStringAsync();
+            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
+            Assert.NotNull(result);
+            Assert.True(string.IsNullOrEmpty(result.Id));
+            Assert.False(result.Success);
+            Assert.NotNull(result.Errors);
+            Assert.NotEmpty(result.Errors["personaldatacontainmenttype"]);
+        }
+
+        [Fact]
         public async Task TestModifyOtherPublisher()
         {
             string path = fixture.GetStoragePath();
@@ -240,6 +338,7 @@ namespace WebApi.Test
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             Assert.Null(storage.GetFileMetadata(distributions[0], accessPolicy));
+            ValidateDatasetModifyChange(storage, datasetId);
         }
 
         [Fact]
@@ -556,6 +655,185 @@ namespace WebApi.Test
 
             metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
             Assert.Equal(Array.Empty<string>(), metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
+        }
+
+        [Fact]
+        public async Task TestCreateShouldAddDistrubutionToDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+
+            (Guid datasetId, _, _) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            string content = await response.Content.ReadAsStringAsync();
+            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrEmpty(result.Id));
+            FileState? distributionState = storage.GetFileState(Guid.Parse(result.Id), accessPolicy);
+            FileState? datasetState = storage.GetFileState(datasetId, accessPolicy);
+
+            Assert.NotNull(distributionState);
+            Assert.NotNull(datasetState);
+
+            DcatDataset dataset = DcatDataset.Parse(datasetState.Content!)!;
+            DcatDistribution distribution = DcatDistribution.Parse(distributionState.Content!)!;
+
+            HashSet<Triple> datasetTriples = new HashSet<Triple>(dataset.Graph.Triples);
+            HashSet<Triple> distributionTriples = new HashSet<Triple>(distribution.Graph.Triples);
+            Assert.Contains(new Triple(dataset.Node, dataset.Graph.CreateUriNode("dcat:distribution"), distribution.Node), datasetTriples);
+            List<Triple> notFound = distributionTriples.Where(t => !datasetTriples.Contains(t)).ToList();
+            Assert.Empty(notFound);
+        }
+
+        [Fact]
+        public async Task TestModifyShouldModifyDistrubutionToDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+
+            (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            FileState distributionStateBefore = storage.GetFileState(distributions[0], accessPolicy)!;
+            DcatDistribution distributionBefore = DcatDistribution.Parse(distributionStateBefore.Content!)!;
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            input.Id = distributions[0].ToString();
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            string content = await response.Content.ReadAsStringAsync();
+            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrEmpty(result.Id));
+            FileState? distributionState = storage.GetFileState(Guid.Parse(result.Id), accessPolicy);
+            FileState? datasetState = storage.GetFileState(datasetId, accessPolicy);
+
+            Assert.NotNull(distributionState);
+            Assert.NotNull(datasetState);
+
+            DcatDataset dataset = DcatDataset.Parse(datasetState.Content!)!;
+            DcatDistribution distribution = DcatDistribution.Parse(distributionState.Content!)!;
+
+            HashSet<Triple> datasetTriples = new HashSet<Triple>(dataset.Graph.Triples);
+            HashSet<Triple> distributionTriples = new HashSet<Triple>(distribution.Graph.Triples);
+            Assert.Contains(new Triple(dataset.Node, dataset.Graph.CreateUriNode("dcat:distribution"), distribution.Node), datasetTriples);
+            List<Triple> notFound = distributionTriples.Where(t => !datasetTriples.Contains(t)).ToList();
+            Assert.Empty(notFound);
+
+            HashSet<Triple> distributionBeforeTriples = new HashSet<Triple>(distributionBefore.Graph.Triples);
+            distributionBeforeTriples.ExceptWith(distribution.Graph.Triples);
+            Assert.True(distributionBeforeTriples.All(t => !datasetTriples.Contains(t)));
+        }
+
+        [Fact]
+        public async Task TestDeleteShouldRemoveDistributionFromDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            FileState distributionState = storage.GetFileState(distributions[0], accessPolicy)!;
+            DcatDistribution distribution = DcatDistribution.Parse(distributionState.Content!)!;
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            using HttpResponseMessage response = await client.DeleteAsync($"/distributions?id={HttpUtility.UrlEncode(distributions[0].ToString())}");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            FileState? datasetState = storage.GetFileState(datasetId, accessPolicy);
+            Assert.NotNull(datasetState);
+            DcatDataset dataset = DcatDataset.Parse(datasetState.Content!)!;
+
+            HashSet<Triple> datasetTriples = new HashSet<Triple>(dataset.Graph.Triples);
+            Assert.DoesNotContain(new Triple(dataset.Node, dataset.Graph.CreateUriNode("dcat:distribution"), distribution.Node), datasetTriples);
+            Assert.True(distribution.Graph.Triples.All(t => !datasetTriples.Contains(t)));
+        }
+
+        [Fact]
+        public async Task DistributionShouldNotBeAddedToHarvestedDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, Guid publisherId, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            using Storage storage = new Storage(path);
+
+            DcatDataset dataset = DcatDataset.Parse(storage.GetFileState(datasetId, accessPolicy)!.Content!)!;
+            dataset.IsHarvested = true;
+            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, storage.GetFileState(datasetId, accessPolicy)!.Metadata), true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task HarvestedDistributionShouldNotBeEdited()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, Guid publisherId, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            using Storage storage = new Storage(path);
+
+            DcatDistribution distribution = DcatDistribution.Parse(storage.GetFileState(distributions[0], accessPolicy)!.Content!)!;
+            distribution.IsHarvested = true;
+            storage.InsertFile(distribution.ToString(), distribution.UpdateMetadata(datasetId, PublisherId, storage.GetFileState(distributions[0], accessPolicy)!.Metadata), true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateInput(datasetId);
+            input.Id = distributions[0].ToString();
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task HarvestedDistributionShouldNotBeDeleted()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, Guid publisherId, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            using Storage storage = new Storage(path);
+
+            DcatDistribution distribution = DcatDistribution.Parse(storage.GetFileState(distributions[0], accessPolicy)!.Content!)!;
+            distribution.IsHarvested = true;
+            storage.InsertFile(distribution.ToString(), distribution.UpdateMetadata(datasetId, PublisherId, storage.GetFileState(distributions[0], accessPolicy)!.Metadata), true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            using HttpResponseMessage response = await client.DeleteAsync($"/distributions?id={HttpUtility.UrlEncode(distributions[0].ToString())}");
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
     }
 }

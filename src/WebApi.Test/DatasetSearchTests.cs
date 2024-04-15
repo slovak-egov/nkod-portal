@@ -1,5 +1,7 @@
 ﻿using Abstractions;
+using AngleSharp.Dom;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using NkodSk.Abstractions;
 using NkodSk.RdfFileStorage;
@@ -13,6 +15,8 @@ using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using TestBase;
+using VDS.RDF;
+using VDS.RDF.Parsing;
 using VDS.RDF.Query.Algebra;
 using static Lucene.Net.Documents.Field;
 
@@ -339,6 +343,22 @@ namespace WebApi.Test
         }
 
         [Fact]
+        public async Task FilterByNonExistingIdTest()
+        {
+            string path = fixture.GetStoragePath();
+
+            Guid id = fixture.CreateDataset("Cestovné poriadky", PublisherId);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView> result = await client.SearchDatasets(JsonContent.Create(new { Filters = new Dictionary<string, string[]> { { "id", new[] { "test" } } } }));
+            Assert.Equal(0, result.TotalCount);
+            Assert.Empty(result.Items);
+        }
+
+        [Fact]
         public async Task FilterByParentTest()
         {
             string path = fixture.GetStoragePath();
@@ -450,7 +470,7 @@ namespace WebApi.Test
             using Storage storage = new Storage(path);
 
             IFileStorageAccessPolicy accessPolicy = new AllAccessFilePolicy();
-            fixture.CreateDistrbution(storage.GetFileMetadata(id1, accessPolicy)!,
+            fixture.CreateDistrbution(storage.GetFileState(id1, accessPolicy)!,
                 new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
@@ -460,7 +480,7 @@ namespace WebApi.Test
                 new Uri("http://publications.europa.eu/resource/dataset/file-type/1"),
                 new Uri("http://www.iana.org/assignments/media-types/text/csv"));
 
-            fixture.CreateDistrbution(storage.GetFileMetadata(id1, accessPolicy)!,
+            fixture.CreateDistrbution(storage.GetFileState(id1, accessPolicy)!,
                 new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
@@ -470,7 +490,7 @@ namespace WebApi.Test
                 new Uri("http://publications.europa.eu/resource/dataset/file-type/2"),
                 new Uri("http://www.iana.org/assignments/media-types/text/xml"));
 
-            fixture.CreateDistrbution(storage.GetFileMetadata(id2, accessPolicy)!,
+            fixture.CreateDistrbution(storage.GetFileState(id2, accessPolicy)!,
                 new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
@@ -480,7 +500,7 @@ namespace WebApi.Test
                 new Uri("http://publications.europa.eu/resource/dataset/file-type/2"),
                 new Uri("http://www.iana.org/assignments/media-types/text/xml"));
 
-            fixture.CreateDistrbution(storage.GetFileMetadata(id2, accessPolicy)!,
+            fixture.CreateDistrbution(storage.GetFileState(id2, accessPolicy)!,
                 new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
@@ -596,7 +616,7 @@ namespace WebApi.Test
             Assert.NotNull(view.ContactPoint);
             Assert.Equal("nameSk", view.ContactPoint.Name);
             Assert.Equal("test@example.com", view.ContactPoint.Email);
-            Assert.Equal(new Uri("http://example.com/documentation"), view.Documentation);
+            Assert.Equal(new Uri("http://example.com/documentation"), view.LandingPage);
             Assert.Equal(new Uri("http://example.com/specification"), view.Specification);
             Assert.Equal(new[] { new Uri("http://eurovoc.europa.eu/6409"), new Uri("http://eurovoc.europa.eu/6410") }, view.EuroVocThemes);
             Assert.Equal(10, view.SpatialResolutionInMeters);
@@ -645,14 +665,13 @@ namespace WebApi.Test
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"), distribution.TermsOfUse.OriginalDatabaseType);
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"), distribution.TermsOfUse.DatabaseProtectedBySpecialRightsType);
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"), distribution.TermsOfUse.PersonalDataContainmentType);
-            Assert.Equal(new Uri("http://data.gov.sk/download"), distribution.DownloadUrl);
-            Assert.Equal(new Uri("http://data.gov.sk/"), distribution.AccessUrl);
+            Assert.Equal(new Uri("https://data.gov.sk/download"), distribution.DownloadUrl);
+            Assert.Equal(new Uri("https://data.gov.sk/"), distribution.AccessUrl);
             Assert.Equal(new Uri("http://publications.europa.eu/resource/dataset/file-type/1"), distribution.Format);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/text/csv"), distribution.MediaType);
             Assert.Equal(new Uri("http://data.gov.sk/specification"), distribution.ConformsTo);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/application/zip"), distribution.CompressFormat);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/application/zip"), distribution.PackageFormat);
-            Assert.Equal(new Uri("http://data.gov.sk/"), distribution.AccessUrl);
 
             Assert.Equal(new CodelistItemView("https://data.gov.sk/def/ontology/law/authorsWorkType/1", "work1sk"), distribution.TermsOfUse.AuthorsWorkTypeValue);
             Assert.Equal(new CodelistItemView("https://data.gov.sk/def/ontology/law/originalDatabaseType/1", "type1sk"), distribution.TermsOfUse.OriginalDatabaseTypeValue);
@@ -700,7 +719,7 @@ namespace WebApi.Test
             Assert.NotNull(view.ContactPoint);
             Assert.Equal("nameEn", view.ContactPoint.Name);
             Assert.Equal("test@example.com", view.ContactPoint.Email);
-            Assert.Equal(new Uri("http://example.com/documentation"), view.Documentation);
+            Assert.Equal(new Uri("http://example.com/documentation"), view.LandingPage);
             Assert.Equal(new Uri("http://example.com/specification"), view.Specification);
             Assert.Equal(new[] { new Uri("http://eurovoc.europa.eu/6409"), new Uri("http://eurovoc.europa.eu/6410") }, view.EuroVocThemes);
             Assert.Equal(10, view.SpatialResolutionInMeters);
@@ -749,14 +768,13 @@ namespace WebApi.Test
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"), distribution.TermsOfUse.OriginalDatabaseType);
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"), distribution.TermsOfUse.DatabaseProtectedBySpecialRightsType);
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"), distribution.TermsOfUse.PersonalDataContainmentType);
-            Assert.Equal(new Uri("http://data.gov.sk/download"), distribution.DownloadUrl);
-            Assert.Equal(new Uri("http://data.gov.sk/"), distribution.AccessUrl);
+            Assert.Equal(new Uri("https://data.gov.sk/download"), distribution.DownloadUrl);
+            Assert.Equal(new Uri("https://data.gov.sk/"), distribution.AccessUrl);
             Assert.Equal(new Uri("http://publications.europa.eu/resource/dataset/file-type/1"), distribution.Format);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/text/csv"), distribution.MediaType);
             Assert.Equal(new Uri("http://data.gov.sk/specification"), distribution.ConformsTo);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/application/zip"), distribution.CompressFormat);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/application/zip"), distribution.PackageFormat);
-            Assert.Equal(new Uri("http://data.gov.sk/"), distribution.AccessUrl);
 
             Assert.Equal(new CodelistItemView("https://data.gov.sk/def/ontology/law/authorsWorkType/1", "work1en"), distribution.TermsOfUse.AuthorsWorkTypeValue);
             Assert.Equal(new CodelistItemView("https://data.gov.sk/def/ontology/law/originalDatabaseType/1", "type1en"), distribution.TermsOfUse.OriginalDatabaseTypeValue);
@@ -794,7 +812,7 @@ namespace WebApi.Test
             dataset.AccrualPeriodicity = new Uri("http://publications.europa.eu/resource/dataset/frequency/1");
             dataset.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") };
             dataset.SetTemporal(new DateOnly(2023, 8, 16), new DateOnly(2023, 9, 10));
-            dataset.Documentation = new Uri("http://example.com/documentation");
+            dataset.LandingPage = new Uri("http://example.com/documentation");
             dataset.Specification = new Uri("http://example.com/specification");
             dataset.SpatialResolutionInMeters = 10;
             dataset.TemporalResolution = "P2D";
@@ -807,10 +825,11 @@ namespace WebApi.Test
 
 
             FileMetadata metadata = dataset.UpdateMetadata(true);
-            fixture.CreateFile(new FileState(metadata, dataset.ToString()));
+            FileState state = new FileState(metadata, dataset.ToString());
+            fixture.CreateFile(state);
             Guid id = metadata.Id;
 
-            Guid[] distributions = new[] { fixture.CreateDistrbution(metadata,
+            Guid[] distributions = new[] { fixture.CreateDistrbution(state,
                 new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
@@ -854,7 +873,7 @@ namespace WebApi.Test
             Assert.NotNull(view.ContactPoint);
             Assert.Equal("ContactSk", view.ContactPoint.Name);
             Assert.Equal("test@test.sk", view.ContactPoint.Email);
-            Assert.Equal(new Uri("http://example.com/documentation"), view.Documentation);
+            Assert.Equal(new Uri("http://example.com/documentation"), view.LandingPage);
             Assert.Equal(new Uri("http://example.com/specification"), view.Specification);
             Assert.Equal(new[] { new Uri("http://eurovoc.europa.eu/6409"), new Uri("http://eurovoc.europa.eu/6410") }, view.EuroVocThemes);
             Assert.Equal(10, view.SpatialResolutionInMeters);
@@ -903,14 +922,13 @@ namespace WebApi.Test
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"), distribution.TermsOfUse.OriginalDatabaseType);
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"), distribution.TermsOfUse.DatabaseProtectedBySpecialRightsType);
             Assert.Equal(new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"), distribution.TermsOfUse.PersonalDataContainmentType);
-            Assert.Equal(new Uri("http://data.gov.sk/download"), distribution.DownloadUrl);
-            Assert.Equal(new Uri("http://data.gov.sk/"), distribution.AccessUrl);
+            Assert.Equal(new Uri("https://data.gov.sk/download"), distribution.DownloadUrl);
+            Assert.Equal(new Uri("https://data.gov.sk/"), distribution.AccessUrl);
             Assert.Equal(new Uri("http://publications.europa.eu/resource/dataset/file-type/1"), distribution.Format);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/text/csv"), distribution.MediaType);
             Assert.Equal(new Uri("http://data.gov.sk/specification"), distribution.ConformsTo);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/application/zip"), distribution.CompressFormat);
             Assert.Equal(new Uri("http://www.iana.org/assignments/media-types/application/zip"), distribution.PackageFormat);
-            Assert.Equal(new Uri("http://data.gov.sk/"), distribution.AccessUrl);
 
             Assert.Equal(new CodelistItemView("https://data.gov.sk/def/ontology/law/authorsWorkType/1", "work1en"), distribution.TermsOfUse.AuthorsWorkTypeValue);
             Assert.Equal(new CodelistItemView("https://data.gov.sk/def/ontology/law/originalDatabaseType/1", "type1en"), distribution.TermsOfUse.OriginalDatabaseTypeValue);
@@ -920,6 +938,192 @@ namespace WebApi.Test
             Assert.Equal(new CodelistItemView("http://www.iana.org/assignments/media-types/text/csv", "CSV"), distribution.MediaTypeValue);
             Assert.Equal(new CodelistItemView("http://www.iana.org/assignments/media-types/application/zip", "ZIP"), distribution.CompressFormatValue);
             Assert.Equal(new CodelistItemView("http://www.iana.org/assignments/media-types/application/zip", "ZIP"), distribution.PackageFormatValue);
+        }
+
+        [Fact]
+        public async Task DereferenceByDatasetUriShouldBeRedirected()
+        {
+            string path = fixture.GetStoragePath();
+
+            Uri uri = new Uri($"https://data.gov.sk/set/{Guid.NewGuid()}");
+
+            IGraph graph = new VDS.RDF.Graph();
+            RdfDocument.AddDefaultNamespaces(graph);
+            IUriNode subject = graph.CreateUriNode(uri);
+            IUriNode rdfTypeNode = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode targetTypeNode = graph.CreateUriNode("dcat:Dataset");
+            graph.Assert(subject, rdfTypeNode, targetTypeNode);
+            DcatDataset dataset = new DcatDataset(graph, subject);
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = dataset.UpdateMetadata(true);
+            storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            using HttpResponseMessage response = await client.GetAsync(uri.PathAndQuery);
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.NotNull(response.Headers.Location);
+            Assert.Equal("/datasety/" + metadata.Id.ToString(), response.Headers.Location.OriginalString);
+        }
+
+        [Fact]
+        public async Task DereferenceByDatasetUriShouldBeRedirected2()
+        {
+            string path = fixture.GetStoragePath();
+
+            Uri uri = new Uri($"https://data.gov.sk/set/{Guid.NewGuid()}/test");
+
+            IGraph graph = new VDS.RDF.Graph();
+            RdfDocument.AddDefaultNamespaces(graph);
+            IUriNode subject = graph.CreateUriNode(uri);
+            IUriNode rdfTypeNode = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode targetTypeNode = graph.CreateUriNode("dcat:Dataset");
+            graph.Assert(subject, rdfTypeNode, targetTypeNode);
+            DcatDataset dataset = new DcatDataset(graph, subject);
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = dataset.UpdateMetadata(true);
+            storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            using HttpResponseMessage response = await client.GetAsync(uri.PathAndQuery);
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.NotNull(response.Headers.Location);
+            Assert.Equal("/datasety/" + metadata.Id.ToString(), response.Headers.Location.OriginalString);
+        }
+
+        [Fact]
+        public async Task DereferenceByDistributionUriShouldBeRedirected()
+        {
+            string path = fixture.GetStoragePath();
+
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            Uri uri = new Uri($"https://data.gov.sk/set/{Guid.NewGuid()}/{Guid.NewGuid()}");
+
+            IGraph graph = new VDS.RDF.Graph();
+            RdfDocument.AddDefaultNamespaces(graph);
+            IUriNode subject = graph.CreateUriNode(uri);
+            IUriNode rdfTypeNode = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode targetTypeNode = graph.CreateUriNode("dcat:Distribution");
+            graph.Assert(subject, rdfTypeNode, targetTypeNode);
+            DcatDistribution distribution = new DcatDistribution(graph, subject);
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = distribution.UpdateMetadata(datasetId, PublisherId);
+            storage.InsertFile(distribution.ToString(), metadata, false, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            using HttpResponseMessage response = await client.GetAsync(uri.PathAndQuery);
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.NotNull(response.Headers.Location);
+            Assert.Equal("/datasety/" + datasetId.ToString(), response.Headers.Location.OriginalString);
+        }
+
+        [Fact]
+        public async Task DereferenceByLandingPageShouldBeRedirected()
+        {
+            string path = fixture.GetStoragePath();
+
+            Uri uri = new Uri($"https://data.gov.sk/dataset/{Guid.NewGuid()}");
+
+            DcatDataset dataset = DcatDataset.Create();
+            dataset.LandingPage = uri;
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = dataset.UpdateMetadata(true);
+            storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            using HttpResponseMessage response = await client.GetAsync(uri.PathAndQuery);
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.NotNull(response.Headers.Location);
+            Assert.Equal("/datasety/" + metadata.Id.ToString(), response.Headers.Location.OriginalString);
+        }
+
+        [Fact]
+        public async Task DereferenceByLandingPageShouldBeRedirected2()
+        {
+            string path = fixture.GetStoragePath();
+
+            Uri uri = new Uri($"https://data.gov.sk/dataset/test");
+
+            DcatDataset dataset = DcatDataset.Create();
+            dataset.LandingPage = uri;
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = dataset.UpdateMetadata(true);
+            storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            using HttpResponseMessage response = await client.GetAsync("/datasety/test");
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.NotNull(response.Headers.Location);
+            Assert.Equal("/datasety/" + metadata.Id.ToString(), response.Headers.Location.OriginalString);
+        }
+
+
+        [Fact]
+        public async Task DereferenceByLandingPageShouldBeRedirected3()
+        {
+            string path = fixture.GetStoragePath();
+
+            Uri uri = new Uri("https://data.gov.sk/set/codelist/CL003003");
+
+            DcatDataset dataset = DcatDataset.Create();
+            dataset.LandingPage = uri;
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = dataset.UpdateMetadata(true);
+            storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            using HttpResponseMessage response = await client.GetAsync("/set/codelist/CL003003");
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.NotNull(response.Headers.Location);
+            Assert.Equal("/datasety/" + metadata.Id.ToString(), response.Headers.Location.OriginalString);
+        }
+
+        [Fact]
+        public async Task DereferenceByLandingPageShouldBeRedirected4()
+        {
+            string path = fixture.GetStoragePath();
+
+            Uri uri = new Uri("https://data.gov.sk/set/codelist/CL003003");
+
+            DcatDataset dataset = DcatDataset.Create();
+            dataset.LandingPage = uri;
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = dataset.UpdateMetadata(true);
+            storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            using HttpResponseMessage response = await client.GetAsync("/datasety/codelist/CL003003");
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.NotNull(response.Headers.Location);
+            Assert.Equal("/datasety/" + metadata.Id.ToString(), response.Headers.Location.OriginalString);
         }
     }
 }

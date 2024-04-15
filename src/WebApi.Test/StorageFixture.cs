@@ -26,7 +26,12 @@ namespace WebApi.Test
         public void CreateFile(FileState state)
         {
             bool isPublic = Storage.ShouldBePublic(state.Metadata);
-            string filePath = Path.Combine(path, isPublic ? "public" : "protected", state.Metadata.Id.ToString("N") + (isPublic ? ".ttl" : string.Empty));
+            string folder = Path.Combine(path, Storage.GetDefaultSubfolderName(state.Metadata));
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+            string filePath = Path.Combine(folder, state.Metadata.Id.ToString("N") + (isPublic ? ".ttl" : string.Empty));
             File.WriteAllText(filePath, state.Content);
             UpdateMetadata(state.Metadata);
         }
@@ -112,12 +117,12 @@ namespace WebApi.Test
             return metadata.Id;
         }
 
-        public Guid CreateDistrbution(FileMetadata datasetMetadata, Uri? authorsWorkType, Uri? originalDatabaseType, Uri? databaseProtectedBySpecialRightsType, Uri? personalDataContainmentType,
+        public Guid CreateDistrbution(FileState datasetState, Uri? authorsWorkType, Uri? originalDatabaseType, Uri? databaseProtectedBySpecialRightsType, Uri? personalDataContainmentType,
             Uri? downloadUri, Uri? accessUri, Uri? format, Uri? mediaType, Uri? conformsTo = null, Uri? compressFormat = null, Uri? packageFormat = null, string? title = null, string? titleEn = null, Uri? accessService = null)
         {
-            DcatDistribution distribution = DcatDistribution.Create(datasetMetadata.Id);
+            DcatDistribution distribution = DcatDistribution.Create(datasetState.Metadata.Id);
 
-            distribution.SetTermsOfUse(authorsWorkType, originalDatabaseType, databaseProtectedBySpecialRightsType, personalDataContainmentType);
+            distribution.SetTermsOfUse(authorsWorkType, originalDatabaseType, databaseProtectedBySpecialRightsType, personalDataContainmentType, string.Empty, string.Empty);
             distribution.DownloadUrl = downloadUri;
             distribution.AccessUrl = accessUri;
             distribution.Format = format;
@@ -138,8 +143,10 @@ namespace WebApi.Test
             }
             distribution.SetTitle(titles);
 
-            datasetMetadata = distribution.UpdateDatasetMetadata(datasetMetadata);
-            UpdateMetadata(datasetMetadata);
+            FileMetadata datasetMetadata = distribution.UpdateDatasetMetadata(datasetState.Metadata);
+            DcatDataset dataset = DcatDataset.Parse(datasetState.Content!)!;
+            distribution.IncludeInDataset(dataset);
+            CreateFile(new FileState(datasetMetadata, dataset.ToString()));
 
             FileMetadata metadata = distribution.UpdateMetadata(datasetMetadata);
             CreateFile(new FileState(metadata, distribution.ToString()));
@@ -168,7 +175,7 @@ namespace WebApi.Test
             dataset.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") };
             dataset.SetTemporal(new DateOnly(2023, 8, 16), new DateOnly(2023, 9, 10));
             dataset.SetContactPoint(new LanguageDependedTexts { { "sk", "nameSk" }, { "en", "nameEn" } }, "test@example.com");
-            dataset.Documentation = new Uri("http://example.com/documentation");
+            dataset.LandingPage = new Uri("http://example.com/documentation");
             dataset.Specification = new Uri("http://example.com/specification");
             dataset.SpatialResolutionInMeters = 10;
             dataset.TemporalResolution = "P2D";
@@ -178,11 +185,14 @@ namespace WebApi.Test
                 { "sk", new List<string> { "nepovolená likvidácia odpadu", "chemický odpad" } },
                 { "en", new List<string> { "unauthorised dumping", "chemical waste" } }
             });
+            dataset.Issued = new DateTimeOffset(2023, 8, 16, 0, 0, 0, TimeSpan.Zero);
+            dataset.Modified = new DateTimeOffset(2023, 8, 16, 0, 0, 0, TimeSpan.Zero);
 
             FileMetadata metadata = dataset.UpdateMetadata(true);
-            CreateFile(new FileState(metadata, dataset.ToString()));
+            FileState datasetState = new FileState(metadata, dataset.ToString());
+            CreateFile(datasetState);
 
-            Guid distributionId = CreateDistrbution(metadata, 
+            Guid distributionId = CreateDistrbution(datasetState, 
                 new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
                 new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
@@ -262,16 +272,10 @@ namespace WebApi.Test
 
         public void CreateDistributionCodelists()
         {
-            CreateCodelistFile(DcatDistribution.AuthorsWorkTypeCodelist, new Dictionary<string, LanguageDependedTexts>
+            CreateCodelistFile(DcatDistribution.LicenseCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "https://data.gov.sk/def/ontology/law/authorsWorkType/1", new LanguageDependedTexts{ { "sk", "work1sk" }, { "en", "work1en" } } },
-            });
-            CreateCodelistFile(DcatDistribution.OriginalDatabaseTypeCodelist, new Dictionary<string, LanguageDependedTexts>
-            {
-                { "https://data.gov.sk/def/ontology/law/originalDatabaseType/1", new LanguageDependedTexts{ { "sk", "type1sk" }, { "en", "type1en" } } }
-            });
-            CreateCodelistFile(DcatDistribution.DatabaseProtectedBySpecialRightsTypeCodelist, new Dictionary<string, LanguageDependedTexts>
-            {
+                { "https://data.gov.sk/def/ontology/law/originalDatabaseType/1", new LanguageDependedTexts{ { "sk", "type1sk" }, { "en", "type1en" } } },
                 { "https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1", new LanguageDependedTexts{ { "sk", "rights1sk" }, { "en", "rights1en" } } }
             });
             CreateCodelistFile(DcatDistribution.PersonalDataContainmentTypeCodelist, new Dictionary<string, LanguageDependedTexts>
@@ -299,10 +303,19 @@ namespace WebApi.Test
             });
         }
 
-        public Guid CreateDistributionFile(string name, string content, bool isPublic = true)
+        public void CreatePublisherCodelists()
+        {
+            CreateCodelistFile(FoafAgent.LegalFormCodelist, new Dictionary<string, LanguageDependedTexts>
+            {
+                { "https://data.gov.sk/def/legal-form-type/321", new LanguageDependedTexts{ { "sk", "Rozpočtová organizácia" }, { "en", "Rozpočtová organizácia EN" } } },
+                { "https://data.gov.sk/def/legal-form-type/331", new LanguageDependedTexts{ { "sk", "Príspevková organizácia" }, { "en", "Príspevková organizácia EN" } } },
+            });
+        }
+
+        public Guid CreateDistributionFile(string name, string content, bool isPublic = true, Guid? parentId = null)
         {
             Guid id = Guid.NewGuid();
-            FileMetadata metadata = new FileMetadata(id, id.ToString(), FileType.DistributionFile, null, null, isPublic, name, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+            FileMetadata metadata = new FileMetadata(id, id.ToString(), FileType.DistributionFile, parentId, null, isPublic, name, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
             CreateFile(new FileState(metadata, content));
             return id;
         }

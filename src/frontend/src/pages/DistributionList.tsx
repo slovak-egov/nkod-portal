@@ -34,7 +34,6 @@ export default function DistributionList() {
                 items={[{ title: t('nkod'), link: '/' }, { title: t('distributionList'), link: '/sprava/datasety' }, { title: t('distributionList') }]}
             />
             <MainContent>
-                <AlertPublisher />
                 <PageHeader>{t('distributionList')}</PageHeader>
                 {userInfo?.publisherView ? (
                     <p className="govuk-body nkod-publisher-name">
@@ -50,9 +49,12 @@ export default function DistributionList() {
                         {dataset.name}
                     </p>
                 ) : null}
-                <p>
-                    <Button onClick={() => navigate('/sprava/distribucie/' + datasetId + '/pridat')}>{t('newDistribution')}</Button>
-                </p>
+
+                {dataset && !dataset.isHarvested ? (
+                    <p>
+                        <Button onClick={() => navigate('/sprava/distribucie/' + datasetId + '/pridat')}>{t('newDistribution')}</Button>
+                    </p>
+                ) : null}
 
                 {loading ? <Loading /> : null}
                 {error ? <ErrorAlert error={error} /> : null}
@@ -92,23 +94,27 @@ export default function DistributionList() {
                                                     {t('download')}
                                                 </Button>
                                             ) : null}
-                                            <Button
-                                                className="idsk-button idsk-button--secondary"
-                                                style={{ marginRight: '10px' }}
-                                                onClick={() => navigate('/sprava/distribucie/' + datasetId + '/upravit/' + d.id)}
-                                            >
-                                                {t('edit')}
-                                            </Button>
-                                            <Button
-                                                className="idsk-button idsk-button--secondary"
-                                                onClick={async () => {
-                                                    if (await removeDistribution(t('removePrompt'), d.id, headers)) {
-                                                        refresh();
-                                                    }
-                                                }}
-                                            >
-                                                {t('remove')}
-                                            </Button>
+                                            {!d.isHarvested ? (
+                                                <>
+                                                    <Button
+                                                        className="idsk-button idsk-button--secondary"
+                                                        style={{ marginRight: '10px' }}
+                                                        onClick={() => navigate('/sprava/distribucie/' + datasetId + '/upravit/' + d.id)}
+                                                    >
+                                                        {t('edit')}
+                                                    </Button>
+                                                    <Button
+                                                        className="idsk-button idsk-button--secondary"
+                                                        onClick={async () => {
+                                                            if (await removeDistribution(t('removePrompt'), d.id, headers)) {
+                                                                refresh();
+                                                            }
+                                                        }}
+                                                    >
+                                                        {t('remove')}
+                                                    </Button>
+                                                </>
+                                            ) : null}
                                         </TableCell>
                                     </TableRow>
                                 ))}

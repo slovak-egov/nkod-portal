@@ -26,6 +26,8 @@ namespace NkodSk.Abstractions
 
         void DeleteFile(Guid id, IFileStorageAccessPolicy accessPolicy);
 
+        long? GetSize(Guid id, IFileStorageAccessPolicy accessPolicy);
+
         FileState? GetPublisherState(string publisher, IFileStorageAccessPolicy accessPolicy)
         {
             FileStorageQuery query = new FileStorageQuery

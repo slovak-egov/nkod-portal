@@ -4,6 +4,7 @@ using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
@@ -14,9 +15,12 @@ using NkodSk.RdfFileStorage;
 using NkodSk.RdfFulltextIndex;
 using System.IO;
 using System.IO.Compression;
+using System.Net.Mime;
 using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks.Dataflow;
+using static Lucene.Net.QueryParsers.Flexible.Core.Nodes.PathQueryNode;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -104,10 +108,17 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddApplicationInsightsTelemetry(options =>
 {
     options.ConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+    options.EnableAdaptiveSampling = false;
 });
 builder.Services.AddSingleton<ITelemetryInitializer, RequestTelementryInitializer>();
 
 builder.Services.AddTransient<StorageLogAdapter>();
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.ValueLengthLimit = int.MaxValue;
+    options.MultipartBodyLengthLimit = int.MaxValue;
+});
 
 var app = builder.Build();
 
@@ -140,6 +151,8 @@ bool ContainsExecutableFiles(FileMetadata metadata, Stream source)
 
     bool DetectExecutable(Stream source)
     {
+        return false;
+
         try
         {
             using PEReader reader = new PEReader(source, PEStreamOptions.LeaveOpen);
@@ -192,6 +205,30 @@ app.MapGet("/files/{id}", [AllowAnonymous] (IFileStorage storage, IFileStorageAc
     return fileState is not null ? Results.Ok(fileState) : Results.NotFound();
 });
 
+app.MapMethods("/files/{id}/content", new[] { "HEAD" }, [AllowAnonymous] (IFileStorage storage, HttpResponse response, IFileStorageAccessPolicy accessPolicy, Guid id) =>
+{
+    FileMetadata? metadata = storage.GetFileMetadata(id, accessPolicy);
+    if (metadata is not null)
+    {
+        long? size = storage.GetSize(id, accessPolicy);
+        if (size.HasValue)
+        {
+            ContentDisposition contentDisposition = new ContentDisposition
+            {
+                DispositionType = "attachment",
+                FileName = metadata.OriginalFileName
+            };
+            response.Headers.ContentDisposition = contentDisposition.ToString();
+            response.ContentLength = size;
+        }
+        return Results.Ok();
+    }
+    else
+    {
+        return Results.NotFound();
+    }
+});
+
 app.MapGet("/files/{id}/content", [AllowAnonymous] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, Guid id) =>
 {
     Stream? stream = storage.OpenReadStream(id, accessPolicy);
@@ -212,7 +249,12 @@ app.MapPost("/files/query", [AllowAnonymous] ([FromServices] IFileStorage storag
     FileStorageResponse response;
     if (!string.IsNullOrEmpty(query.QueryText))
     {
-        FulltextResponse fulltextResponse = fulltextStorage.Search(query);
+        FileStorageQuery fulltextQuery = new FileStorageQuery
+        {
+            QueryText = query.QueryText,
+            Language = query.Language
+        };
+        FulltextResponse fulltextResponse = fulltextStorage.Search(fulltextQuery);
         if (fulltextResponse.Documents.Count > 0)
         {
             FileStorageQuery internalQuery = new FileStorageQuery
@@ -264,15 +306,19 @@ app.MapPost("/files/by-publisher", [AllowAnonymous] (IFileStorage storage, IFile
         });
         if (fulltextResponse.Documents.Count > 0)
         {
-            HashSet<Guid> keys = new HashSet<Guid>(fulltextResponse.Documents.Count);
-            foreach (FulltextResponseDocument document in fulltextResponse.Documents)
-            {
-                keys.Add(document.Id);
-            }
-            List<FileStorageGroup> groups = new List<FileStorageGroup>(response.Groups.Count);
+            Dictionary<Guid, FileStorageGroup> groupsById = new Dictionary<Guid, FileStorageGroup>(response.Groups.Count);
             foreach (FileStorageGroup group in response.Groups)
             {
-                if (group.PublisherFileState?.Metadata is not null && keys.Contains(group.PublisherFileState.Metadata.Id))
+                if (group.PublisherFileState?.Metadata is not null)
+                {
+                    groupsById[group.PublisherFileState.Metadata.Id] = group;
+                }
+            }
+
+            List<FileStorageGroup> groups = new List<FileStorageGroup>(response.Groups.Count);
+            foreach (Guid id in fulltextResponse.Documents.Select(d => d.Id))
+            {
+                if (groupsById.TryGetValue(id, out FileStorageGroup? group))
                 {
                     groups.Add(group);
                 }
@@ -327,7 +373,7 @@ app.MapPost("/files", [Authorize] (IFileStorage storage, IFileStorageAccessPolic
     return Results.Ok();
 });
 
-app.MapPost("/files/stream", [Authorize] async (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] StorageLogAdapter logAdapter, HttpRequest request, IFormFile file) =>
+app.MapPost("/files/stream", [RequestSizeLimit(int.MaxValue)][RequestFormLimits(MultipartBodyLengthLimit = int.MaxValue, ValueLengthLimit = int.MaxValue)] [Authorize] async (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] StorageLogAdapter logAdapter, HttpRequest request, IFormFile file) =>
 {
     IFormCollection form = await request.ReadFormAsync();
 

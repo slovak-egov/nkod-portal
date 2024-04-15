@@ -26,6 +26,10 @@ namespace NkodSk.Abstractions
 
         private Guid? createdId;
 
+        private DateTimeOffset? issued;
+
+        private DateTimeOffset? modified;
+
         public DcatDataset(IGraph graph, IUriNode node) : base(graph, node)
         {
         }
@@ -151,10 +155,10 @@ namespace NkodSk.Abstractions
             }
         }
 
-        public Uri? Documentation
+        public Uri? LandingPage
         {
-            get => GetUriFromUriNode("foaf:page");
-            set => SetUriNode("foaf:page", value);
+            get => GetUriFromUriNode("dcat:landingPage");
+            set => SetUriNode("dcat:landingPage", value);
         }
 
         public Uri? Specification
@@ -172,7 +176,7 @@ namespace NkodSk.Abstractions
         public string? TemporalResolution
         {
             get => GetTextFromUriNode("dct:temporalResolution");
-            set => SetTextToUriNode("dct:temporalResolution", value);
+            set => SetTextToUriNode("dct:temporalResolution", value, new Uri(RdfDocument.XsdPrefix + "duration"));
         }
 
 
@@ -200,7 +204,29 @@ namespace NkodSk.Abstractions
             set => SetBooleanToUriNode("custom:isSerie", value);
         }
 
+        public DateTimeOffset? Issued
+        {
+            get => issued ?? GetDateTimeFromUriNode("dct:issued");
+            set
+            {
+                issued = value;
+                SetDateTimeToUriNode("dct:issued", value);
+            }
+        }
+
+        public DateTimeOffset? Modified
+        {
+            get => modified ?? GetDateTimeFromUriNode("dct:modified");
+            set
+            {
+                modified = value;
+                SetDateTimeToUriNode("dct:modified", value);
+            }
+        }
+
         public IEnumerable<Uri> Distributions => GetUrisFromUriNode("dcat:distribution");
+
+        public bool UpdateModifiedDate { get; set; }
 
         public static DcatDataset Create()
         {
@@ -215,6 +241,9 @@ namespace NkodSk.Abstractions
             graph.Assert(subject, rdfTypeNode, targetTypeNode);
             DcatDataset dataset = new DcatDataset(graph, subject);
             dataset.createdId = id;
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            dataset.Issued = now;
+            dataset.Modified = now;
             return dataset;
         }
 
@@ -229,11 +258,11 @@ namespace NkodSk.Abstractions
             return null;
         }
 
-        public FileMetadata UpdateMetadata(bool isPublic, FileMetadata? metadata = null)
+        public FileMetadata UpdateMetadata(bool isPublic, FileMetadata? metadata = null, DateTimeOffset? effectiveDate = null)
         {
             Guid id = metadata?.Id ?? createdId ?? Guid.NewGuid();
-            DateTimeOffset now = DateTimeOffset.UtcNow;
-            Dictionary<string, string[]> values = new Dictionary<string, string[]>();
+            DateTimeOffset now = effectiveDate ?? DateTimeOffset.UtcNow;
+            Dictionary<string, string[]> values = metadata?.AdditionalValues ?? new Dictionary<string, string[]>();
             isPublic = isPublic && ShouldBePublic;
 
             values[TypeCodelist] = Type.Select(v => v.ToString()).ToArray();
@@ -241,10 +270,23 @@ namespace NkodSk.Abstractions
             values[AccrualPeriodicityCodelist] = AccrualPeriodicity is not null ? new[] { AccrualPeriodicity.ToString() } : Array.Empty<string>();
             values["serie"] = new string[] { IsSerie ? "1" : "0" };
             values["key"] = new string[] { Uri.ToString() };
+            
+            if (LandingPage is not null)
+            {
+                values["landingPage"] = new string[] { LandingPage.ToString() };
+            }
+            else
+            {
+                values.Remove("landingPage");
+            }
 
             if (IsHarvested)
             {
                 values["Harvested"] = new string[] { "true" };
+            }
+            else
+            {
+                values.Remove("Harvested");
             }
 
             foreach ((string language, List<string> texts) in Keywords)
@@ -261,11 +303,11 @@ namespace NkodSk.Abstractions
             LanguageDependedTexts names = GetLiteralNodesFromUriNode("dct:title").ToArray();
             if (metadata is null)
             {
-                metadata = new FileMetadata(id, names, FileType.DatasetRegistration, parentId, Publisher?.ToString(), isPublic, null, now, now, values);
+                metadata = new FileMetadata(id, names, FileType.DatasetRegistration, parentId, Publisher?.ToString(), isPublic, null, Issued ?? now, Modified ?? now, values);
             }
             else
             {
-                metadata = metadata with { Name = names, ParentFile = parentId, Publisher = Publisher?.ToString(), IsPublic = isPublic, AdditionalValues = values, LastModified = now };
+                metadata = metadata with { Name = names, ParentFile = parentId, Publisher = Publisher?.ToString(), IsPublic = isPublic, AdditionalValues = values, LastModified = UpdateModifiedDate ? now : (Modified ?? now) };
             }
             return metadata;
         }
@@ -295,6 +337,18 @@ namespace NkodSk.Abstractions
             return metadata with { ParentFile = parentId };
         }
 
+        public void RemoveAllDistributions()
+        {
+            foreach (Triple t in Graph.GetTriplesWithSubjectPredicate(Node, Graph.CreateUriNode("dcat:distribution")).ToList())
+            {
+                Graph.Retract(t);
+                if (t.Object is IUriNode node)
+                {
+                    RemoveTriples(node);
+                }
+            }
+        }
+
         public bool IsEqualTo(DcatDataset dataset)
         {
             if (!AreLaguagesEqual(Title, dataset.Title) ||
@@ -307,7 +361,7 @@ namespace NkodSk.Abstractions
                 !Equals(Temporal?.EndDate, dataset.Temporal?.EndDate) ||
                 !AreLaguagesEqual(ContactPoint?.Name, dataset.ContactPoint?.Name) ||
                 !Equals(ContactPoint?.Email, dataset.ContactPoint?.Email) ||
-                !Equals(Documentation, dataset.Documentation) ||
+                !Equals(LandingPage, dataset.LandingPage) ||
                 !Equals(Specification, dataset.Specification) ||
                 !Equals(SpatialResolutionInMeters, dataset.SpatialResolutionInMeters) ||
                 !Equals(TemporalResolution, dataset.TemporalResolution) ||

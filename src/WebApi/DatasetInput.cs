@@ -31,7 +31,7 @@ namespace WebApi
 
         public string? ContactEmail { get; set; }
 
-        public string? Documentation { get; set; }
+        public string? LandingPage { get; set; }
 
         public string? Specification { get; set; }
 
@@ -68,7 +68,7 @@ namespace WebApi
             results.ValidateDate(nameof(EndDate), EndDate);
             results.ValidateLanguageTexts(nameof(ContactName), ContactName, languages, false);
             results.ValidateEmail(nameof(ContactEmail), ContactEmail, false);
-            results.ValidateUrl(nameof(Documentation), Documentation, false);
+            results.ValidateUrl(nameof(LandingPage), LandingPage, false);
             results.ValidateUrl(nameof(Specification), Specification, false);
             
             loadedEuroVocLabels ??= new Dictionary<string, List<string>>();
@@ -77,7 +77,15 @@ namespace WebApi
             
             results.ValidateNumber(nameof(SpatialResolutionInMeters), SpatialResolutionInMeters);
             results.ValidateTemporalResolution(nameof(TemporalResolution), TemporalResolution);
-            await results.ValidateDataset(nameof(IsPartOf), IsPartOf, publisher, documentStorage);
+            await results.ValidateDataset(nameof(IsPartOf), IsPartOf, Id, publisher, documentStorage);
+
+            if (Guid.TryParse(Id, out Guid datasetId) && !IsSerie)
+            {
+                if (await documentStorage.GetDatasetParts(datasetId).ConfigureAwait(false) is { Count: > 0 })
+                {
+                    results.AddError(nameof(IsSerie), "Dataset je séria");
+                }
+            }
 
             return results;
         }
@@ -94,12 +102,12 @@ namespace WebApi
             dataset.Type = (Type ?? new List<string>()).Select(s => new Uri(s, UriKind.Absolute));
             dataset.Spatial = (Spatial ?? new List<string>()).Select(s => new Uri(s, UriKind.Absolute));
             dataset.SetTemporal(
-                StartDate is not null ? DateOnly.Parse(StartDate, System.Globalization.CultureInfo.CurrentCulture) : null,
-                EndDate is not null ? DateOnly.Parse(EndDate, System.Globalization.CultureInfo.CurrentCulture) : null);
+                !string.IsNullOrEmpty(StartDate) ? DateOnly.Parse(StartDate, System.Globalization.CultureInfo.CurrentCulture) : null,
+                !string.IsNullOrEmpty(EndDate) ? DateOnly.Parse(EndDate, System.Globalization.CultureInfo.CurrentCulture) : null);
             dataset.SetContactPoint(
                 ContactName is not null ? new LanguageDependedTexts(ContactName) : null,
                 ContactEmail);
-            dataset.Documentation = Documentation.AsUri();
+            dataset.LandingPage = LandingPage.AsUri();
             dataset.Specification = Specification.AsUri();
             dataset.SpatialResolutionInMeters = SpatialResolutionInMeters is not null ? decimal.Parse(SpatialResolutionInMeters, System.Globalization.CultureInfo.CurrentCulture) : null;
             dataset.TemporalResolution = TemporalResolution;

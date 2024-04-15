@@ -23,6 +23,8 @@ using System.Security.Policy;
 using static Lucene.Net.Queries.Function.ValueSources.MultiFunction;
 using System.Data;
 using Lucene.Net.Analysis.Cz;
+using static System.Net.Mime.MediaTypeNames;
+using System.Globalization;
 
 namespace NkodSk.RdfFulltextIndex
 {
@@ -109,7 +111,7 @@ namespace NkodSk.RdfFulltextIndex
                                 }
                                 description += string.Join(" ", dataset.GetKeywords(lang));
 
-                                doc.AddTextField("title", title, Lucene.Net.Documents.Field.Store.NO);
+                                doc.AddTextField("title", title, Lucene.Net.Documents.Field.Store.NO).Boost = 2;
                                 doc.AddTextField("description", description, Lucene.Net.Documents.Field.Store.NO);
 
                                 doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
@@ -132,7 +134,7 @@ namespace NkodSk.RdfFulltextIndex
                                 string title = catalog.GetTitle(lang) ?? string.Empty;
                                 string description = catalog.GetDescription(lang) ?? string.Empty;
 
-                                doc.AddTextField("title", title, Lucene.Net.Documents.Field.Store.NO);
+                                doc.AddTextField("title", title, Lucene.Net.Documents.Field.Store.NO).Boost = 2;
                                 doc.AddTextField("description", description, Lucene.Net.Documents.Field.Store.NO);
                                 doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
 
@@ -153,7 +155,7 @@ namespace NkodSk.RdfFulltextIndex
 
                                 string title = agent.GetName(lang) ?? string.Empty;
 
-                                doc.AddTextField("title", title, Lucene.Net.Documents.Field.Store.NO);
+                                doc.AddTextField("title", title, Lucene.Net.Documents.Field.Store.NO).Boost = 2;
                                 doc.AddStringField("type", type, Lucene.Net.Documents.Field.Store.NO);
 
                                 indexWriter.AddDocument(facetsConfig.Build(taxonomyWriter, doc));
@@ -201,11 +203,27 @@ namespace NkodSk.RdfFulltextIndex
 
             booleanClauses.Add(new TermQuery(new Term("lang", externalQuery.Language)), Occur.MUST);
 
-            if (!string.IsNullOrWhiteSpace(externalQuery.QueryText))
+            string query = externalQuery.QueryText?.Trim() ?? string.Empty;
+
+            StringBuilder sb = new StringBuilder();
+            string normalizedString = query.Normalize(NormalizationForm.FormD);
+            for (int i = 0; i < normalizedString.Length; i++)
+            {
+                char c = normalizedString[i];
+                var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c);
+                if (unicodeCategory != UnicodeCategory.NonSpacingMark)
+                {
+                    sb.Append(c);
+                }
+            }
+
+            query = sb.ToString().Normalize(NormalizationForm.FormC);
+
+            if (!string.IsNullOrWhiteSpace(query))
             {
                 BooleanQuery textQueries = new BooleanQuery();
 
-                string escapedQuery = QueryParserBase.Escape(externalQuery.QueryText);
+                string escapedQuery = QueryParserBase.Escape(query) + "*";
 
                 QueryParser queryParserTitle = new QueryParser(Version, "title", analyzer);
                 textQueries.Add(queryParserTitle.Parse(escapedQuery), Occur.SHOULD);
@@ -214,32 +232,6 @@ namespace NkodSk.RdfFulltextIndex
                 textQueries.Add(queryParserDescription.Parse(escapedQuery), Occur.SHOULD);
 
                 booleanClauses.Add(textQueries, Occur.MUST);
-            }
-
-            if (externalQuery.OnlyTypes is not null && externalQuery.OnlyTypes.Count > 0)
-            {
-                //BooleanQuery valueQuery = new BooleanQuery();
-                //foreach (FileType fileType in externalQuery.OnlyTypes)
-                //{
-                //    valueQuery.Add(new TermQuery(new Term("type", Enum.GetName(fileType))), Occur.SHOULD);
-                //}
-                //booleanClauses.Add(valueQuery, Occur.MUST);
-            }
-
-            if (externalQuery.AdditionalFilters is not null)
-            {
-                //foreach ((string key, string[] values) in externalQuery.AdditionalFilters)
-                //{
-                //    if (values.Length > 0)
-                //    {
-                //        BooleanQuery valueQuery = new BooleanQuery();
-                //        foreach (string value in values)
-                //        {
-                //            valueQuery.Add(new TermQuery(new Term(key, value)), Occur.SHOULD);
-                //        }
-                //        booleanClauses.Add(valueQuery, Occur.MUST);
-                //    }
-                //}
             }
 
             if (externalQuery.DateTo.HasValue)
@@ -253,22 +245,27 @@ namespace NkodSk.RdfFulltextIndex
             }
 
             FacetsCollector facetsCollector = new FacetsCollector();
-            int maxResults = externalQuery.MaxResults.GetValueOrDefault(int.MaxValue);
-            TopDocs topDocs = FacetsCollector.Search(indexSearcher, booleanClauses, externalQuery.SkipResults + maxResults, facetsCollector);
+            TopDocs topDocs = FacetsCollector.Search(indexSearcher, booleanClauses, 50000, facetsCollector);
 
             FulltextResponse response = new FulltextResponse
             {
                 TotalCount = topDocs.TotalHits
             };
 
-            for (int i = 0; i < maxResults; i++)
+            HashSet<Guid> ids = new HashSet<Guid>();
+
+            for (int i = 0;; i++)
             {
                 int index = externalQuery.SkipResults + i;
                 if (index < topDocs.ScoreDocs.Length)
                 {
                     ScoreDoc scoreDoc = topDocs.ScoreDocs[index];
                     Document document = indexSearcher.Doc(scoreDoc.Doc);
-                    response.Documents.Add(new FulltextResponseDocument(Guid.Parse(document.Get("id"))));
+                    Guid id = Guid.Parse(document.Get("id"));
+                    if (ids.Add(id))
+                    {
+                        response.Documents.Add(new FulltextResponseDocument(id));
+                    }
                 }
                 else break;
             }

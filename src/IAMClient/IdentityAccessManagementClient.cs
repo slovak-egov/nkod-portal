@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Security.Policy;
@@ -38,13 +39,13 @@ namespace IAMClient
             return client;
         }
 
-        public async Task<SaveResult> CreateUser(NewUserInput input)
+        public async Task<UserSaveResult> CreateUser(NewUserInput input)
         {
             HttpClient client = CreateClient();
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PostAsync($"/users", requestContent);
             response.EnsureSuccessStatusCode();
-            return JsonConvert.DeserializeObject<SaveResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
+            return JsonConvert.DeserializeObject<UserSaveResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
                 ?? throw new HttpRequestException("Invalid response");
         }
 
@@ -82,13 +83,13 @@ namespace IAMClient
                 ?? throw new HttpRequestException("Invalid response");
         }
 
-        public async Task<SaveResult> UpdateUser(EditUserInput input)
+        public async Task<UserSaveResult> UpdateUser(EditUserInput input)
         {
             HttpClient client = CreateClient();
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PutAsync($"/users", requestContent);
             response.EnsureSuccessStatusCode();
-            return JsonConvert.DeserializeObject<SaveResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
+            return JsonConvert.DeserializeObject<UserSaveResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
                 ?? throw new HttpRequestException("Invalid response");
         }
 
@@ -156,6 +157,15 @@ namespace IAMClient
             using HttpResponseMessage response = await client.PostAsync($"/harvester-login", requestContent);
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync().ConfigureAwait(false)
+                ?? throw new HttpRequestException("Invalid response");
+        }
+
+        public async Task<CheckInvitationResult> CheckInvitation()
+        {
+            HttpClient client = CreateClient();
+            using HttpResponseMessage response = await client.PostAsync($"/validate-invitation", null);
+            response.EnsureSuccessStatusCode();
+            return JsonConvert.DeserializeObject<CheckInvitationResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
                 ?? throw new HttpRequestException("Invalid response");
         }
     }

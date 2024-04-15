@@ -171,6 +171,17 @@ namespace Frontend.Test
             return null;
         }
 
+        public static async Task<IReadOnlyList<string>> GetAlerts(this IPage test)
+        {
+            IReadOnlyList<IElementHandle> alerts = await test.QuerySelectorAllAsync(".custom-alert");
+            List<string> texts = new List<string>();
+            foreach (IElementHandle alert in alerts)
+            {
+                texts.Add(await alert.TextContentAsync() ?? string.Empty);
+            }
+            return texts;
+        }
+
         public static async Task<string?> GetMultiRadioSelectedLabel(this IPage test, string legendText)
         {
             IElementHandle? fieldset = await test.GetByFieldsetLegend(legendText);
@@ -411,7 +422,7 @@ namespace Frontend.Test
             await test.AssertLangaugeValuesInput("Kontaktný bod, meno", rdf.ContactPoint?.Name ?? new Dictionary<string, string>());
             Assert.AreEqual(rdf.ContactPoint?.Email ?? string.Empty, await (await test.GetInputInFormElementGroup("Kontaktný bod, e-mailová adresa")).GetAttributeAsync("value"));
 
-            Assert.AreEqual(rdf.Documentation?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Odkaz na dokumentáciu")).GetAttributeAsync("value"));
+            Assert.AreEqual(rdf.LandingPage?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Domovská webová stránka")).GetAttributeAsync("value"));
             Assert.AreEqual(rdf.Specification?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Odkaz na špecifikáciu")).GetAttributeAsync("value"));
 
             CollectionAssert.AreEqual(rdf.EuroVocThemes.Select(e => e.ToString()).ToList(), await test.GetMultiSelectItems("Klasifikácia podľa EuroVoc"));
@@ -419,29 +430,22 @@ namespace Frontend.Test
             Assert.AreEqual(rdf.SpatialResolutionInMeters?.ToString("G29") ?? string.Empty, await (await test.GetInputInFormElementGroup("Priestorové rozlíšenie v metroch")).GetAttributeAsync("value"));
             Assert.AreEqual(rdf.TemporalResolution?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Časové rozlíšenie")).GetAttributeAsync("value"));
 
-            string serieSetting = "Samostatný dataset";
-            if (rdf.IsSerie)
-            {
-                serieSetting = "Dataset je séria";
-            }
-            else if (rdf.IsPartOf is not null)
-            {
-                serieSetting = "Dataset patrí do série";
-            }
-
-            Assert.AreEqual(serieSetting, await test.GetMultiRadioSelectedLabel("Údaje datasetu"));
-
-
-            IElementHandle? partOfGroup = await test.GetFormElementGroup("Nadradený dataset");
-
+            Assert.AreEqual(rdf.IsSerie, await test.GetByLabel("Dataset je séria").IsCheckedAsync());
+           
             if (rdf.IsPartOfInternalId is not null)
             {
+                IElementHandle? partOfGroup = await test.GetFormElementGroup("Nadradený dataset");
+                Assert.IsTrue(await test.GetByLabel("Dataset patrí do série").IsCheckedAsync());
                 Assert.IsNotNull(partOfGroup);
                 Assert.AreEqual(rdf.IsPartOfInternalId.ToString(), await (await partOfGroup.QuerySelectorAsync("select option:checked"))!.GetAttributeAsync("value"));
             }
             else
             {
-                Assert.IsNull(partOfGroup);
+                IReadOnlyList<IElementHandle> labels = await test.GetTestElements("is-part-of-serie");
+                if (labels.Count > 0)
+                {
+                    Assert.IsFalse(await test.GetByLabel("Dataset patrí do série").IsCheckedAsync());
+                }
             }
         }
 
@@ -472,9 +476,9 @@ namespace Frontend.Test
                     IElementHandle? addLanguage = await group.QuerySelectorAsync(".add-language");
                     Assert.IsNotNull(addLanguage);
 
-                    IElementHandle? select = await addLanguage.QuerySelectorAsync("select");
-                    Assert.IsNotNull(select);
-                    await select.SelectOptionAsync(lang);
+                    //IElementHandle? select = await addLanguage.QuerySelectorAsync("select");
+                    //Assert.IsNotNull(select);
+                    //await select.SelectOptionAsync(lang);
 
                     IElementHandle? button = await addLanguage.QuerySelectorAsync("button");
                     Assert.IsNotNull(button);
@@ -532,7 +536,7 @@ namespace Frontend.Test
             await test.FillLangaugeValuesInput("Kontaktný bod, meno", rdf.ContactPoint?.Name ?? new Dictionary<string, string>());
             await (await test.GetInputInFormElementGroup("Kontaktný bod, e-mailová adresa")).FillAsync(rdf.ContactPoint?.Email ?? string.Empty);
 
-            await (await test.GetInputInFormElementGroup("Odkaz na dokumentáciu")).FillAsync(rdf.Documentation?.ToString() ?? string.Empty);
+            await (await test.GetInputInFormElementGroup("Domovská webová stránka")).FillAsync(rdf.LandingPage?.ToString() ?? string.Empty);
             await (await test.GetInputInFormElementGroup("Odkaz na špecifikáciu")).FillAsync(rdf.Specification?.ToString() ?? string.Empty);
 
             await FillMultiInput((await test.GetFormElementGroup("Klasifikácia podľa EuroVoc"))!, rdf.EuroVocThemes.Select(t => t.ToString()));
@@ -540,18 +544,19 @@ namespace Frontend.Test
             await (await test.GetInputInFormElementGroup("Priestorové rozlíšenie v metroch")).FillAsync(rdf.SpatialResolutionInMeters?.ToString("G29") ?? string.Empty);
             await (await test.GetInputInFormElementGroup("Časové rozlíšenie")).FillAsync(rdf.TemporalResolution?.ToString() ?? string.Empty);
 
-            if (rdf.IsSerie)
+            await test.GetByLabel("Dataset je séria").SetCheckedAsync(rdf.IsSerie);
+
+            if (rdf.IsPartOfInternalId is not null)
             {
-                await test.CheckDatasetSerieRadio("Dataset je séria");
-            } 
-            else if (rdf.IsPartOfInternalId is not null)
-            {
-                await test.CheckDatasetSerieRadio("Dataset patrí do série");
+                await test.GetByLabel("Dataset patrí do série").SetCheckedAsync(true);
                 await (await test.GetSelectInFormElementGroup("Nadradený dataset"))!.SelectOptionAsync(rdf.IsPartOfInternalId);
             }
             else
             {
-                await test.CheckDatasetSerieRadio("Samostatný dataset");
+                foreach (IElementHandle element in await test.GetTestElements("is-part-of-serie"))
+                {
+                    await element.SetCheckedAsync(false);
+                }
             }
         }
 
@@ -586,17 +591,6 @@ namespace Frontend.Test
 
             await test.CheckLocalCatalogType(rdf.Type?.ToString());
             await (await test.GetInputInFormElementGroup("Prístupový bod katalógu")).FillAsync(rdf.EndpointUrl?.ToString() ?? string.Empty);
-        }
-
-        public static async Task CheckDatasetSerieRadio(this IPage test, string value)
-        {
-            IElementHandle? fieldset = await test.GetByFieldsetLegend("Údaje datasetu");
-            Assert.IsNotNull(fieldset);
-
-            IElementHandle? input = await GetInputByLabel(fieldset, value);
-            Assert.IsNotNull(input);
-
-            await input.CheckAsync();
         }
 
         public static async Task CheckDatasetPublicityRadio(this IPage test, bool value)
@@ -724,7 +718,7 @@ namespace Frontend.Test
             Assert.AreEqual(expected.Temporal?.EndDate, actual.Temporal?.EndDate);
             AssertAreEqualLanguage(expected.ContactPoint?.Name, actual.ContactPoint?.Name);
             Assert.AreEqual(expected.ContactPoint?.Email, actual.ContactPoint?.Email);
-            Assert.AreEqual(expected.Documentation, actual.Documentation);
+            Assert.AreEqual(expected.LandingPage, actual.LandingPage);
             Assert.AreEqual(expected.Specification, actual.Specification);
 
             Assert.AreEqual(expected.SpatialResolutionInMeters, actual.SpatialResolutionInMeters);
@@ -803,10 +797,6 @@ namespace Frontend.Test
                 "codelists"
             });
             await page.WaitForURLAsync($"http://localhost:6001/sprava/datasety/pridat");
-
-            ILocator? button = page.GetByText("Beriem na vedomie");
-            Assert.IsNotNull(button);
-            await button.ClickAsync();
         }
 
         public static async Task RunAndWaitForDatasetEdit(this IPage page, Guid id, Func<Task> action)
@@ -828,6 +818,7 @@ namespace Frontend.Test
             });
 
             await page.WaitForURLAsync($"http://localhost:6001/sprava/datasety");
+            await page.WaitForLoadingDone();
         }
 
         public static async Task RunAndWaitForLocalCatalogCreate(this IPage page, Func<Task> action)
@@ -873,9 +864,12 @@ namespace Frontend.Test
         {
             await page.RunAndWaitForRequests(action, new List<string>
             {
-                "codelists"
-            });
+                "codelists",
+                "distributions/search",
+            });            
             await page.WaitForURLAsync($"http://localhost:6001/sprava/distribucie/{datasetId}/pridat");
+            await page.WaitForLoadingDone();
+            await page.WaitForLoadingDone();
         }
 
         public static async Task RunAndWaitForDistributionEdit(this IPage page, Guid id, Guid datasetId, Func<Task> action)
@@ -923,6 +917,9 @@ namespace Frontend.Test
             Assert.AreEqual(rdf.TermsOfUse?.DatabaseProtectedBySpecialRightsType?.ToString(), await test.GetSelectItemFormElementGroup("Typ špeciálnej právnej ochrany databázy"));
             Assert.AreEqual(rdf.TermsOfUse?.PersonalDataContainmentType?.ToString(), await test.GetSelectItemFormElementGroup("Typ výskytu osobných údajov"));
 
+            Assert.AreEqual(rdf.TermsOfUse?.AuthorName?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Meno autora diela")).GetAttributeAsync("value"));
+            Assert.AreEqual(rdf.TermsOfUse?.OriginalDatabaseAuthorName?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Meno autora originálnej databázy")).GetAttributeAsync("value"));
+
             Assert.AreEqual(rdf.DownloadUrl?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("URL súboru na stiahnutie")).GetAttributeAsync("value"));
             Assert.AreEqual(rdf.Format?.ToString(), await test.GetSelectItemFormElementGroup("Formát súboru na stiahnutie"));
             Assert.AreEqual(rdf.MediaType?.ToString(), await test.GetSelectItemFormElementGroup("Typ média súboru na stiahnutie"));
@@ -938,6 +935,9 @@ namespace Frontend.Test
             await (await test.GetSelectInFormElementGroup("Typ originálnej databázy"))!.SelectOptionAsync(rdf.TermsOfUse?.OriginalDatabaseType?.ToString() ?? string.Empty);
             await (await test.GetSelectInFormElementGroup("Typ špeciálnej právnej ochrany databázy"))!.SelectOptionAsync(rdf.TermsOfUse?.DatabaseProtectedBySpecialRightsType?.ToString() ?? string.Empty);
             await (await test.GetSelectInFormElementGroup("Typ výskytu osobných údajov"))!.SelectOptionAsync(rdf.TermsOfUse?.PersonalDataContainmentType?.ToString() ?? string.Empty);
+
+            await (await test.GetInputInFormElementGroup("Meno autora diela"))!.FillAsync(rdf.TermsOfUse?.AuthorName?.ToString() ?? string.Empty);
+            await (await test.GetInputInFormElementGroup("Meno autora originálnej databázy"))!.FillAsync(rdf.TermsOfUse?.OriginalDatabaseAuthorName?.ToString() ?? string.Empty);
 
             await (await test.GetInputInFormElementGroup("URL súboru na stiahnutie"))!.FillAsync(rdf.DownloadUrl?.ToString() ?? string.Empty);
             await (await test.GetSelectInFormElementGroup("Formát súboru na stiahnutie"))!.SelectOptionAsync(rdf.Format?.ToString() ?? string.Empty);
@@ -1130,7 +1130,6 @@ namespace Frontend.Test
             Assert.AreEqual(input.FirstName, await (await test.GetInputInFormElementGroup("Meno")).GetAttributeAsync("value"));
             Assert.AreEqual(input.LastName, await (await test.GetInputInFormElementGroup("Priezvisko")).GetAttributeAsync("value"));
             Assert.AreEqual(input.Email, await (await test.GetInputInFormElementGroup("E-mailová adresa")).GetAttributeAsync("value"));
-            Assert.AreEqual(input.IdentificationNumber, await (await test.GetInputInFormElementGroup("Identifikačné číslo")).GetAttributeAsync("value"));
 
             Assert.AreEqual(GetRoleName(input.Role), await test.GetMultiRadioSelectedLabel("Rola"));
         }
@@ -1151,7 +1150,6 @@ namespace Frontend.Test
             await (await test.GetInputInFormElementGroup("Meno"))!.FillAsync(input.FirstName);
             await (await test.GetInputInFormElementGroup("Priezvisko"))!.FillAsync(input.LastName);
             await (await test.GetInputInFormElementGroup("E-mailová adresa"))!.FillAsync(input.Email ?? string.Empty);
-            await (await test.GetInputInFormElementGroup("Identifikačné číslo"))!.FillAsync(input.IdentificationNumber ?? string.Empty);
             await test.FillUserRole(input.Role);
         }
 
@@ -1226,6 +1224,94 @@ namespace Frontend.Test
                 }
                 return requiredRequests.Count == 0;
             });
+        }
+
+        public static async Task AssertAdminPublisherForm(this IPage test, FoafAgent rdf, bool isEnabled)
+        {
+            await test.WaitForLoadingDone();
+
+            Assert.AreEqual(isEnabled ? "publikovaný" : "nepublikovaný", await test.GetMultiRadioSelectedLabel("Stav"));
+            await test.AssertLangaugeValuesInput("Názov poskytovateľa dát", rdf.Name);
+            Assert.AreEqual(rdf.Uri.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("URI")).GetAttributeAsync("value"));
+            await test.AssertPublisherForm(rdf);
+        }
+
+        public static async Task AssertPublisherForm(this IPage test, FoafAgent rdf)
+        {
+            await test.WaitForLoadingDone();
+            
+            Assert.AreEqual(rdf.HomePage?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Adresa webového sídla")).GetAttributeAsync("value"));
+            Assert.AreEqual(rdf.EmailAddress?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("E-mailová adresa kontaktnej osoby")).GetAttributeAsync("value"));
+            Assert.AreEqual(rdf.Phone?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Telefónne číslo kontaktnej osoby")).GetAttributeAsync("value"));
+
+            Assert.AreEqual(rdf.LegalForm?.ToString(), await test.GetSelectItemFormElementGroup("Právna forma"));
+        }
+
+        public static async Task FillAdminPublisherForm(this IPage test, FoafAgent rdf, bool isEnabled)
+        {
+            IElementHandle? fieldset = await test.GetByFieldsetLegend("Stav");
+            Assert.IsNotNull(fieldset);
+
+            IElementHandle? input = await GetInputByLabel(fieldset, isEnabled ? "publikovaný" : "nepublikovaný");
+            Assert.IsNotNull(input);
+
+            await input.CheckAsync();
+
+            await test.FillLangaugeValuesInput("Názov", rdf.Name);
+            await (await test.GetInputInFormElementGroup("URI")).FillAsync(rdf.Uri.ToString());
+
+            await test.FillPublisherForm(rdf);
+        }
+
+        public static async Task FillPublisherForm(this IPage test, FoafAgent rdf)
+        {
+            await (await test.GetInputInFormElementGroup("Adresa webového sídla")).FillAsync(rdf.HomePage?.ToString() ?? string.Empty);
+            await (await test.GetInputInFormElementGroup("E-mailová adresa kontaktnej osoby")).FillAsync(rdf.EmailAddress ?? string.Empty);
+            await (await test.GetInputInFormElementGroup("Telefónne číslo kontaktnej osoby")).FillAsync(rdf.Phone ?? string.Empty);
+            await (await test.GetSelectInFormElementGroup("Právna forma"))!.SelectOptionAsync(rdf.LegalForm?.ToString() ?? string.Empty);
+        }
+
+        public static void AssertAreEqual(FoafAgent expected, FileState state, bool isEnabled)
+        {
+            FoafAgent actual = FoafAgent.Parse(state.Content!)!;
+
+            AssertAreEqualLanguage(expected.Name, actual.Name);
+            Assert.AreEqual(expected.Uri, actual.Uri);
+            Assert.AreEqual(expected.HomePage, actual.HomePage);
+            Assert.AreEqual(expected.EmailAddress, actual.EmailAddress);
+            Assert.AreEqual(expected.Phone, actual.Phone);
+            Assert.AreEqual(expected.LegalForm, actual.LegalForm);
+            Assert.AreEqual(isEnabled, state.Metadata.IsPublic);
+        }
+
+
+        public static async Task RunAndWaitForPublisherCreate(this IPage page, Func<Task> action)
+        {
+            await page.RunAndWaitForRequests(action, new List<string>
+            {
+                "codelists"
+            });
+            await page.WaitForURLAsync($"http://localhost:6001/sprava/poskytovatelia/pridat");
+        }
+
+        public static async Task RunAndWaitForPublisherEdit(this IPage page, Guid id, Func<Task> action)
+        {
+            await page.RunAndWaitForRequests(action, new List<string>
+            {
+                "publishers/search",
+                "codelists"
+            });
+            await page.WaitForURLAsync($"http://localhost:6001/sprava/poskytovatelia/upravit/{id}");
+        }
+
+        public static async Task RunAndWaitForChangeLicenses(this IPage page, Func<Task> action)
+        {
+            await page.RunAndWaitForRequests(action, new List<string>
+            {
+                "codelists",
+            });
+            await page.WaitForURLAsync($"http://localhost:6001/sprava/zmena-licencii");
+            await page.WaitForLoadingDone();
         }
     }
 }

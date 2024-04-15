@@ -50,6 +50,21 @@ namespace DocumentStorageClient
             }
         }
 
+        public async Task<long?> GetSize(Guid id)
+        {
+            HttpClient client = CreateClient();
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Head, $"files/{id}/content");
+            using HttpResponseMessage response = await client.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                return response.Content.Headers.ContentLength;
+            }
+            else
+            {
+                throw new Exception($"Unable to get file {id} from DocumentStorage, StatusCode = {response.StatusCode}");
+            }
+        }
+
         public async Task<Stream?> DownloadStream(Guid id)
         {
             HttpClient client = CreateClient();

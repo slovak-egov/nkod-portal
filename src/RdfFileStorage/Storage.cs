@@ -2,17 +2,21 @@
 using Lucene.Net.QueryParsers.Classic;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Similarities;
+using Lucene.Net.Util;
 using Newtonsoft.Json;
 using NkodSk.Abstractions;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Metadata;
 using System.Runtime;
 using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
+using VDS.RDF.Query.Expressions.Functions.Sparql.String;
 using static Lucene.Net.Queries.Function.ValueSources.MultiFunction;
 using static Lucene.Net.Search.FieldValueHitQueue;
 
@@ -44,6 +48,8 @@ namespace NkodSk.RdfFileStorage
 
         private readonly ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();
 
+        private readonly ReadOnlyDictionary<FileType, string> fileTypeFolders;
+
         private int disposed;
 
         private int defaultCapacity;
@@ -63,6 +69,19 @@ namespace NkodSk.RdfFileStorage
                 Directory.CreateDirectory(publicTurtlePath);
             }
 
+            FileType[] fileTypes = Enum.GetValues<FileType>();
+            Dictionary<FileType, string> fileTypeFolders = new Dictionary<FileType, string>(fileTypes.Length);
+            foreach (FileType fileType in Enum.GetValues<FileType>())
+            {
+                string folderPath = Path.Combine(publicTurtlePath, GetFileTypeSubfolderName(fileType));
+                if (!Directory.Exists(folderPath))
+                {
+                    Directory.CreateDirectory(folderPath);
+                }
+                fileTypeFolders[fileType] = folderPath;
+            }
+            this.fileTypeFolders = new ReadOnlyDictionary<FileType, string>(fileTypeFolders);
+
             protectedPath = Path.Combine(path, protectedFolderName);
             if (!Directory.Exists(protectedPath))
             {
@@ -76,7 +95,7 @@ namespace NkodSk.RdfFileStorage
             entryProperties = new Dictionary<Guid, Entry>(defaultCapacity);
             dependentEntries = new Dictionary<Guid, HashSet<Guid>>(defaultCapacity);
             entriesByPublisher = new Dictionary<string, HashSet<Guid>>(defaultCapacity);
-            entriesByType = new Dictionary<FileType, HashSet<Guid>>(Enum.GetValues<FileType>().Length);
+            entriesByType = new Dictionary<FileType, HashSet<Guid>>(fileTypes.Length);
             entriesByLanguage = new Dictionary<string, HashSet<Guid>>();
             additionalFilters = new Dictionary<string, Dictionary<string, HashSet<Guid>>>();
 
@@ -112,7 +131,7 @@ namespace NkodSk.RdfFileStorage
                 CheckDispose();
 
                 ClearEntries();
-                
+
                 foreach (FileType fileType in Enum.GetValues<FileType>())
                 {
                     if (!entriesByType.ContainsKey(fileType))
@@ -134,8 +153,8 @@ namespace NkodSk.RdfFileStorage
                         {
                             fs.Write(Encoding.UTF8.GetBytes(testFileName));
                             fs.Close();
-                        }                            
-                        File.Delete(testFileName);
+                        }
+                        File.Delete(path);
                     }
 
                     TestFolder(publicTurtlePath);
@@ -145,6 +164,30 @@ namespace NkodSk.RdfFileStorage
                 {
                     exceptions.Add(e);
                 }
+
+                int total = files.Length;
+                int count = 0;
+                int reportedProgress = 0;
+                object? reportLock = new object();
+
+                void IncreaseProgress()
+                {
+                    int newCount = Interlocked.Increment(ref count);
+                    int newRatio = total > 0 ? (int)Math.Floor((double)newCount * 100 / total) : 0;
+                    if (newRatio >= reportedProgress + 10)
+                    {
+                        lock (reportLock)
+                        {
+                            if (newRatio >= reportedProgress + 10)
+                            {
+                                Trace.TraceInformation($"Load progress: {newCount} / {total} ({newRatio}%)");
+                                reportedProgress = newRatio;
+                            }
+                        }
+                    }
+                }
+
+                Trace.TraceInformation($"Total entries to load: {total}");
 
                 Parallel.ForEach(files, metadataPath =>
                 {
@@ -157,15 +200,15 @@ namespace NkodSk.RdfFileStorage
                                 throw new Exception($"Unable to find target file {path}");
                             }
 
-                            using FileStream fs = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
-                            if (!fs.CanRead)
-                            {
-                                throw new Exception($"File {path} is not readable");
-                            }
-                            if (!fs.CanWrite)
-                            {
-                                throw new Exception($"File {path} is not writable");
-                            }
+                            //using FileStream fs = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+                            //if (!fs.CanRead)
+                            //{
+                            //    throw new Exception($"File {path} is not readable");
+                            //}
+                            //if (!fs.CanWrite)
+                            //{
+                            //    throw new Exception($"File {path} is not writable");
+                            //}
                         }
 
                         CheckFile(metadataPath);
@@ -179,6 +222,7 @@ namespace NkodSk.RdfFileStorage
                         {
                             InsertFileEntry(metadata, filePath);
                         }
+                        IncreaseProgress();
                     }
                     catch (Exception e)
                     {
@@ -188,6 +232,8 @@ namespace NkodSk.RdfFileStorage
                         }
                     }
                 });
+
+                Trace.TraceInformation($"Loading entries completed ({total})");
 
                 if (exceptions.Count > 0)
                 {
@@ -336,11 +382,37 @@ namespace NkodSk.RdfFileStorage
 
         public static bool ShouldBePublic(FileMetadata metadata) => metadata.IsPublic && IsTurtleFile(metadata) && !metadata.IsHarvested;
 
+        private static string GetFileTypeSubfolderName(FileType fileType)
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (char c in Enum.GetName(fileType) ?? fileType.ToString())
+            {
+                if (sb.Length > 0 && char.IsUpper(c))
+                {
+                    sb.Append('_');
+                }
+                sb.Append(char.ToLowerInvariant(c));
+            }
+            return sb.ToString();
+        }
+
+        public static string GetDefaultSubfolderName(FileMetadata metadata)
+        {
+            if (ShouldBePublic(metadata))
+            {
+                return Path.Combine("public", GetFileTypeSubfolderName(metadata.Type));
+            }
+            else
+            {
+                return "protected";
+            }
+        }
+
         private string GetFilePath(FileMetadata metadata)
         {
             if (ShouldBePublic(metadata))
             {
-                return Path.Combine(publicTurtlePath, metadata.Id.ToString("N") + ".ttl");
+                return Path.Combine(fileTypeFolders[metadata.Type], metadata.Id.ToString("N") + ".ttl");
             }
             else
             {
@@ -501,7 +573,7 @@ namespace NkodSk.RdfFileStorage
                 List<FileStorageOrderDefinition> orderDefinitions = query.OrderDefinitions?.ToList() ?? new List<FileStorageOrderDefinition>(1);
                 if (orderDefinitions.Count == 0)
                 {
-                      orderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.LastModified, true));
+                    orderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.LastModified, true));
                 }
 
                 int CompareEntries(Entry a, Entry b)
@@ -517,8 +589,10 @@ namespace NkodSk.RdfFileStorage
                                 compare = a.Metadata.Created.CompareTo(b.Metadata.Created) * reverseCoefficient;
                                 break;
                             case FileStorageOrderProperty.LastModified:
-                            case FileStorageOrderProperty.Revelance:
                                 compare = a.Metadata.LastModified.CompareTo(b.Metadata.LastModified) * reverseCoefficient;
+                                break;
+                            case FileStorageOrderProperty.Relevance:
+                                compare = a.Metadata.LastModified.CompareTo(b.Metadata.LastModified) * -reverseCoefficient;
                                 break;
                             case FileStorageOrderProperty.Name:
                                 compare = StringComparer.CurrentCultureIgnoreCase.Compare(a.Metadata.Name.GetText(query.Language), b.Metadata.Name.GetText(query.Language)) * reverseCoefficient;
@@ -543,7 +617,7 @@ namespace NkodSk.RdfFileStorage
                     if (query.RequiredFacets.Contains("publishers") && query.OnlyPublishers is not null && query.OnlyPublishers.Count > 0)
                     {
                         HashSet<string> publisherKeys = new HashSet<string>(query.OnlyPublishers);
-                        
+
                         HashSet<Entry> filteredEntries = new HashSet<Entry>(results);
                         filteredEntries.RemoveWhere(e => e.Metadata.Publisher == null || !publisherKeys.Contains(e.Metadata.Publisher));
 
@@ -563,7 +637,7 @@ namespace NkodSk.RdfFileStorage
                                 filteredEntries.RemoveWhere(e => e.Metadata.AdditionalValues == null || !e.Metadata.AdditionalValues.TryGetValue(filterId, out string[]? entryValues) || !keys.Overlaps(entryValues));
 
                                 resultsWithFacet[facetId] = filteredEntries;
-                            }                                
+                            }
                         }
                     }
 
@@ -628,9 +702,9 @@ namespace NkodSk.RdfFileStorage
                     }
                 }
 
-                if (orderDefinitions.Count >= 1 && orderDefinitions[0].Property == FileStorageOrderProperty.Revelance && !orderDefinitions[0].ReverseOrder && query.OnlyIds is not null && query.OnlyIds.Count > 0)
+                if (orderDefinitions.Count >= 1 && orderDefinitions[0].Property == FileStorageOrderProperty.Relevance && !orderDefinitions[0].ReverseOrder && query.OnlyIds is not null && query.OnlyIds.Count > 0)
                 {
-                    orderDefinitions.RemoveAt(0);
+                    orderDefinitions.Clear();
                     Dictionary<Guid, Entry> indexedEntries = new Dictionary<Guid, Entry>(results.Count);
                     foreach (Entry entry in results)
                     {
@@ -683,7 +757,7 @@ namespace NkodSk.RdfFileStorage
                             dependentStates = new List<FileState>();
                         }
                     }
-                    
+
                     FileState fileState = new FileState(entry.Metadata, fileContent, dependentStates);
 
                     pageResults.Add(fileState);
@@ -798,13 +872,13 @@ namespace NkodSk.RdfFileStorage
                     countByPublisher.TryGetValue(publisher, out int count);
                     themesByPublisher.TryGetValue(publisher, out Dictionary<string, int>? themes);
                     groups.Add(new FileStorageGroup(publisher, publisherState, count, themes));
-                }                
+                }
             }
 
             List<FileStorageOrderDefinition> orderDefinitions = query.OrderDefinitions?.ToList() ?? new List<FileStorageOrderDefinition>(2);
             if (orderDefinitions.Count == 0)
             {
-                orderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.Revelance, true));
+                orderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.Relevance, true));
                 orderDefinitions.Add(new FileStorageOrderDefinition(FileStorageOrderProperty.Name, false));
             }
 
@@ -816,7 +890,7 @@ namespace NkodSk.RdfFileStorage
                     int reverseCoefficient = orderDefinition.ReverseOrder ? -1 : 1;
                     switch (orderDefinition.Property)
                     {
-                        case FileStorageOrderProperty.Revelance:
+                        case FileStorageOrderProperty.Relevance:
                             return a.Count.CompareTo(b.Count) * -reverseCoefficient;
                         case FileStorageOrderProperty.Name:
                             string na = a.PublisherFileState?.Metadata.Name.GetText(query.Language) ?? string.Empty;
@@ -827,7 +901,10 @@ namespace NkodSk.RdfFileStorage
                 return 0;
             }
 
-            groups.Sort(CompareEntries);
+            if (orderDefinitions.Count > 0)
+            {
+                groups.Sort(CompareEntries);
+            }
 
             List<FileStorageGroup> pageResults;
 
@@ -858,6 +935,24 @@ namespace NkodSk.RdfFileStorage
                 if (entryProperties.TryGetValue(id, out Entry? entry) && entry.CanBeReadWithPolicy(accessPolicy))
                 {
                     return entry.Metadata;
+                }
+                return null;
+            }
+            finally
+            {
+                rwLock.ExitReadLock();
+            }
+        }
+
+        public long? GetSize(Guid id, IFileStorageAccessPolicy accessPolicy)
+        {
+            rwLock.EnterReadLock();
+            try
+            {
+                if (entryProperties.TryGetValue(id, out Entry? entry) && entry.CanBeReadWithPolicy(accessPolicy))
+                {
+                    FileInfo fileInfo = new FileInfo(entry.Path);
+                    return fileInfo.Exists ? fileInfo.Length : null;
                 }
                 return null;
             }
@@ -1132,10 +1227,10 @@ namespace NkodSk.RdfFileStorage
                         streamLocks = new StreamLocks(newPath);
                     }
 
-                    metadata.SaveTo(GetMetadataPath(metadata.Id));                    
+                    metadata.SaveTo(GetMetadataPath(metadata.Id));
                     RemoveFileEntry(metadata.Id);
 
-                    Entry newEntry = existingEntry with { Metadata = metadata, Path = newPath, StreamLocks = streamLocks };                    
+                    Entry newEntry = existingEntry with { Metadata = metadata, Path = newPath, StreamLocks = streamLocks };
                     InsertFileEntry(newEntry);
                 }
             }

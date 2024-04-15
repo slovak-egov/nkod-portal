@@ -11,6 +11,6 @@ namespace NkodSk.Abstractions
         Created,
         LastModified,
         Name,
-        Revelance
+        Relevance
     }
 }

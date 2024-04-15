@@ -20,6 +20,10 @@ namespace WebApi
 
         public CodelistItemView? PersonalDataContainmentTypeValue { get; set; }
 
+        public string? AuthorName { get; set; }
+
+        public string? OriginalDatabaseAuthorName { get; set; }
+
         public static async Task<TermsOfUseView> MapFromRdf(LegTermsOfUse rdf, ICodelistProviderClient codelistProviderClient, string language)
         {
             TermsOfUseView view = new TermsOfUseView
@@ -27,12 +31,14 @@ namespace WebApi
                 AuthorsWorkType = rdf.AuthorsWorkType,
                 OriginalDatabaseType = rdf.OriginalDatabaseType,
                 DatabaseProtectedBySpecialRightsType = rdf.DatabaseProtectedBySpecialRightsType,
-                PersonalDataContainmentType = rdf.PersonalDataContainmentType
+                PersonalDataContainmentType = rdf.PersonalDataContainmentType,
+                AuthorName = rdf.AuthorName,
+                OriginalDatabaseAuthorName = rdf.OriginalDatabaseAuthorName,
             };
 
-            view.AuthorsWorkTypeValue = await codelistProviderClient.MapCodelistValue(DcatDistribution.AuthorsWorkTypeCodelist, view.AuthorsWorkType?.ToString(), language);
-            view.OriginalDatabaseTypeValue = await codelistProviderClient.MapCodelistValue(DcatDistribution.OriginalDatabaseTypeCodelist, view.OriginalDatabaseType?.ToString(), language);
-            view.DatabaseProtectedBySpecialRightsTypeValue = await codelistProviderClient.MapCodelistValue(DcatDistribution.DatabaseProtectedBySpecialRightsTypeCodelist, view.DatabaseProtectedBySpecialRightsType?.ToString(), language);
+            view.AuthorsWorkTypeValue = await codelistProviderClient.MapCodelistValue(DcatDistribution.LicenseCodelist, view.AuthorsWorkType?.ToString(), language);
+            view.OriginalDatabaseTypeValue = await codelistProviderClient.MapCodelistValue(DcatDistribution.LicenseCodelist, view.OriginalDatabaseType?.ToString(), language);
+            view.DatabaseProtectedBySpecialRightsTypeValue = await codelistProviderClient.MapCodelistValue(DcatDistribution.LicenseCodelist, view.DatabaseProtectedBySpecialRightsType?.ToString(), language);
             view.PersonalDataContainmentTypeValue = await codelistProviderClient.MapCodelistValue(DcatDistribution.PersonalDataContainmentTypeCodelist, view.PersonalDataContainmentType?.ToString(), language);
 
             return view;

@@ -10,6 +10,7 @@ using System.Web;
 using TestBase;
 using MySqlX.XDevAPI;
 using System.Security.Claims;
+using AngleSharp.Io;
 
 namespace IAMClient.Test
 {
@@ -17,15 +18,25 @@ namespace IAMClient.Test
     { 
         private const string PublisherId = "http://example.com/publisher";
 
-        private async Task<UserRecord> CreateDefaultUser(ApplicationDbContext context)
+        private async Task<UserRecord> CreateDefaultUser(ApplicationDbContext context, bool isActive)
         {
             UserRecord record = new UserRecord
             {
                 Id = Guid.NewGuid().ToString(),
                 Publisher = PublisherId,
                 Email = "test@example.com",
-                Role = "Publisher"
+                Role = "Publisher",
+                IsActive = isActive
             };
+
+
+            if (!isActive)
+            {
+                record.InvitationToken = Guid.NewGuid().ToString();
+                record.InvitedBy = Guid.NewGuid();
+                record.InvitedAt = DateTimeOffset.UtcNow;
+            }
+
             context.Users.Add(record);
             await context.SaveChangesAsync();
             return record;
@@ -40,7 +51,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             using HttpClient client = applicationFactory.CreateClient();
@@ -55,17 +66,14 @@ namespace IAMClient.Test
         {
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
 
-            UserRecord record;
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
             }
 
             NewUserInput input = new NewUserInput
             {
                 Email = "test@example.com",
-                IdentificationNumber = "1234567890",
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Role = "Publisher",
@@ -86,7 +94,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             EditUserInput input = new EditUserInput
@@ -112,7 +120,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             using HttpClient client = applicationFactory.CreateClient();
@@ -131,7 +139,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             using HttpClient client = applicationFactory.CreateClient();
@@ -146,17 +154,14 @@ namespace IAMClient.Test
         {
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
 
-            UserRecord record;
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
             }
 
             NewUserInput input = new NewUserInput
             {
                 Email = "test@example.com",
-                IdentificationNumber = "1234567890",
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Role = "Publisher",
@@ -179,7 +184,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             EditUserInput input = new EditUserInput
@@ -207,7 +212,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("Publisher", PublisherId);
@@ -228,7 +233,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("PublisherAdmin", PublisherId);
@@ -247,38 +252,37 @@ namespace IAMClient.Test
         {
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
 
-            UserRecord record;
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
             }
 
             NewUserInput input = new NewUserInput
             {
                 Email = "test@example.com",
-                IdentificationNumber = "1234567890",
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Role = "Publisher",
             };
 
+            Guid id = Guid.NewGuid();
 
-            IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("PublisherAdmin", PublisherId);
+            IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("PublisherAdmin", PublisherId, id: id.ToString());
             HttpClient client = applicationFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, contextValueAccessor.Token);
             IdentityAccessManagementClient iamClient = new IdentityAccessManagementClient(new DefaultHttpClientFactory(client), contextValueAccessor);
 
-            SaveResult result = await iamClient.CreateUser(input);
+            UserSaveResult result = await iamClient.CreateUser(input);
             Assert.NotNull(result);
             Assert.False(string.IsNullOrEmpty(result.Id));
             Assert.True(result.Success);
             Assert.Null(result.Errors);
+            Assert.NotNull(result.InvitationToken);
 
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                Assert.Equal(2, await context.Users.CountAsync());
+                Assert.Equal(1, await context.Users.CountAsync());
 
                 UserRecord? user = await context.Users.FirstOrDefaultAsync(u => u.Id == result.Id);
                 Assert.NotNull(user);
@@ -287,6 +291,11 @@ namespace IAMClient.Test
                 Assert.Equal(input.Role, user.Role);
                 Assert.Null(user.RefreshToken);
                 Assert.Null(user.RefreshTokenExpiryTime);
+                Assert.False(string.IsNullOrEmpty(user.InvitationToken));
+                Assert.Equal(id, user.InvitedBy);
+                Assert.NotNull(user.InvitedAt);
+                Assert.Null(user.ActivatedAt);
+                Assert.False(user.IsActive);
             }
         }
 
@@ -299,7 +308,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             EditUserInput input = new EditUserInput
@@ -316,7 +325,7 @@ namespace IAMClient.Test
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             IdentityAccessManagementClient iamClient = new IdentityAccessManagementClient(new DefaultHttpClientFactory(client), contextValueAccessor);
 
-            SaveResult result = await iamClient.UpdateUser(input);
+            UserSaveResult result = await iamClient.UpdateUser(input);
             Assert.NotNull(result);
             Assert.Equal(record.Id, result.Id);
             Assert.True(result.Success);
@@ -346,7 +355,85 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
+            }
+
+            IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("PublisherAdmin", PublisherId);
+            HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, contextValueAccessor.Token);
+            IdentityAccessManagementClient iamClient = new IdentityAccessManagementClient(new DefaultHttpClientFactory(client), contextValueAccessor);
+
+            await iamClient.DeleteUser(record.Id);
+
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                Assert.Equal(0, await context.Users.CountAsync());
+            }
+        }
+
+        [Fact]
+        public async Task EditUserNotActiveShouldBeAllowedForPublisherAdmin()
+        {
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
+
+            UserRecord record;
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                record = await CreateDefaultUser(context, false);
+            }
+
+            EditUserInput input = new EditUserInput
+            {
+                Id = record.Id,
+                Email = "test@example.com",
+                Role = "Publisher",
+                FirstName = "Meno",
+                LastName = "Priezvisko"
+            };
+
+            IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("PublisherAdmin", PublisherId);
+            HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            IdentityAccessManagementClient iamClient = new IdentityAccessManagementClient(new DefaultHttpClientFactory(client), contextValueAccessor);
+
+            UserSaveResult result = await iamClient.UpdateUser(input);
+            Assert.NotNull(result);
+            Assert.Equal(record.Id, result.Id);
+            Assert.True(result.Success);
+            Assert.Null(result.Errors);
+            Assert.False(string.IsNullOrEmpty(result.InvitationToken));
+
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                Assert.Equal(1, await context.Users.CountAsync());
+
+                UserRecord? user = await context.Users.FirstOrDefaultAsync(u => u.Id == result.Id);
+                Assert.NotNull(user);
+                Assert.Equal(PublisherId, user.Publisher);
+                Assert.Equal(input.Email, user.Email);
+                Assert.Equal(input.Role, user.Role);
+                Assert.Null(user.RefreshToken);
+                Assert.Null(user.RefreshTokenExpiryTime);
+                Assert.Equal(user.InvitedBy, record.InvitedBy);
+                Assert.True(user.InvitedAt > record.InvitedAt);
+                Assert.Equal(user.InvitationToken, record.InvitationToken);
+                Assert.False(user.IsActive);
+            }
+        }
+
+        [Fact]
+        public async Task DeleteUserNotActiveShouldBeAllowedForPublisherAdmin()
+        {
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
+
+            UserRecord record;
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                record = await CreateDefaultUser(context, false);
             }
 
             IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("PublisherAdmin", PublisherId);
@@ -372,7 +459,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("Superadmin", PublisherId);
@@ -391,29 +478,27 @@ namespace IAMClient.Test
         {
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
 
-            UserRecord record;
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
             }
 
             NewUserInput input = new NewUserInput
             {
                 Email = "test@example.com",
-                IdentificationNumber = "1234567890",
                 FirstName = "Meno",
                 LastName = "Priezvisko",
                 Role = "Publisher",
             };
 
+            Guid id = Guid.NewGuid();
 
-            IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("Superadmin", PublisherId);
+            IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("Superadmin", PublisherId, id: id.ToString());
             HttpClient client = applicationFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, contextValueAccessor.Token);
             IdentityAccessManagementClient iamClient = new IdentityAccessManagementClient(new DefaultHttpClientFactory(client), contextValueAccessor);
 
-            SaveResult result = await iamClient.CreateUser(input);
+            UserSaveResult result = await iamClient.CreateUser(input);
             Assert.NotNull(result);
             Assert.False(string.IsNullOrEmpty(result.Id));
             Assert.True(result.Success);
@@ -422,7 +507,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                Assert.Equal(2, await context.Users.CountAsync());
+                Assert.Equal(1, await context.Users.CountAsync());
 
                 UserRecord? user = await context.Users.FirstOrDefaultAsync(u => u.Id == result.Id);
                 Assert.NotNull(user);
@@ -431,6 +516,11 @@ namespace IAMClient.Test
                 Assert.Equal(input.Role, user.Role);
                 Assert.Null(user.RefreshToken);
                 Assert.Null(user.RefreshTokenExpiryTime);
+                Assert.False(string.IsNullOrEmpty(user.InvitationToken));
+                Assert.Equal(id, user.InvitedBy);
+                Assert.NotNull(user.InvitedAt);
+                Assert.Null(user.ActivatedAt);
+                Assert.False(user.IsActive);
             }
         }
 
@@ -443,7 +533,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             EditUserInput input = new EditUserInput
@@ -460,7 +550,7 @@ namespace IAMClient.Test
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, contextValueAccessor.Token);
             IdentityAccessManagementClient iamClient = new IdentityAccessManagementClient(new DefaultHttpClientFactory(client), contextValueAccessor);
 
-            SaveResult result = await iamClient.UpdateUser(input);
+            UserSaveResult result = await iamClient.UpdateUser(input);
             Assert.NotNull(result);
             Assert.Equal(record.Id, result.Id);
             Assert.True(result.Success);
@@ -490,7 +580,85 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
+            }
+
+            IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("Superadmin", PublisherId);
+            HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, contextValueAccessor.Token);
+            IdentityAccessManagementClient iamClient = new IdentityAccessManagementClient(new DefaultHttpClientFactory(client), contextValueAccessor);
+
+            await iamClient.DeleteUser(record.Id);
+
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                Assert.Equal(0, await context.Users.CountAsync());
+            }
+        }
+
+        [Fact]
+        public async Task EditUserNotActiveShouldBeAllowedForSuperadmin()
+        {
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
+
+            UserRecord record;
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                record = await CreateDefaultUser(context, false);
+            }
+
+            EditUserInput input = new EditUserInput
+            {
+                Id = record.Id,
+                Email = "test@example.com",
+                Role = "Publisher",
+                FirstName = "Meno",
+                LastName = "Priezvisko"
+            };
+
+            IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("Superadmin", PublisherId);
+            HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, contextValueAccessor.Token);
+            IdentityAccessManagementClient iamClient = new IdentityAccessManagementClient(new DefaultHttpClientFactory(client), contextValueAccessor);
+
+            UserSaveResult result = await iamClient.UpdateUser(input);
+            Assert.NotNull(result);
+            Assert.Equal(record.Id, result.Id);
+            Assert.True(result.Success);
+            Assert.Null(result.Errors);
+            Assert.False(string.IsNullOrEmpty(result.InvitationToken));
+
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                Assert.Equal(1, await context.Users.CountAsync());
+
+                UserRecord? user = await context.Users.FirstOrDefaultAsync(u => u.Id == result.Id);
+                Assert.NotNull(user);
+                Assert.Equal(PublisherId, user.Publisher);
+                Assert.Equal(input.Email, user.Email);
+                Assert.Equal(input.Role, user.Role);
+                Assert.Null(user.RefreshToken);
+                Assert.Null(user.RefreshTokenExpiryTime);
+                Assert.Equal(user.InvitedBy, record.InvitedBy);
+                Assert.True(user.InvitedAt > record.InvitedAt);
+                Assert.Equal(user.InvitationToken, record.InvitationToken);
+                Assert.False(user.IsActive);
+            }
+        }
+
+        [Fact]
+        public async Task DeleteUserNotActiveShouldBeAllowedForSuperadmin()
+        {
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
+
+            UserRecord record;
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                record = await CreateDefaultUser(context, false);
             }
 
             IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("Superadmin", PublisherId);
@@ -516,7 +684,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor();
@@ -536,7 +704,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("Publisher", PublisherId, id: record.Id);
@@ -563,7 +731,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
                 record.RefreshToken = "1234";
                 record.RefreshTokenExpiryTime = DateTimeOffset.UtcNow.AddDays(1);
                 await context.SaveChangesAsync();
@@ -609,7 +777,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
                 record.RefreshToken = "1234";
                 record.RefreshTokenExpiryTime = DateTimeOffset.UtcNow.AddDays(1);
                 await context.SaveChangesAsync();
@@ -620,8 +788,10 @@ namespace IAMClient.Test
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, contextValueAccessor.Token);
             IdentityAccessManagementClient iamClient = new IdentityAccessManagementClient(new DefaultHttpClientFactory(client), contextValueAccessor);
 
-            HttpRequestException e = await Assert.ThrowsAsync<HttpRequestException>(async () => await iamClient.RefreshToken(contextValueAccessor.Token!, "1235"));
-            Assert.Equal(HttpStatusCode.Forbidden, e.StatusCode);
+            TokenResult? result = await iamClient.RefreshToken(contextValueAccessor.Token!, "1235");
+            Assert.NotNull(result);
+            Assert.Null(result.RefreshToken);
+            Assert.Equal(string.Empty, result.Token);
         }
 
         [Fact]
@@ -633,7 +803,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
                 record.RefreshToken = "1234";
                 record.RefreshTokenExpiryTime = DateTimeOffset.UtcNow.AddSeconds(-1);
                 await context.SaveChangesAsync();
@@ -644,8 +814,10 @@ namespace IAMClient.Test
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, contextValueAccessor.Token);
             IdentityAccessManagementClient iamClient = new IdentityAccessManagementClient(new DefaultHttpClientFactory(client), contextValueAccessor);
 
-            HttpRequestException e = await Assert.ThrowsAsync<HttpRequestException>(async () => await iamClient.RefreshToken(contextValueAccessor.Token!, record.RefreshToken));
-            Assert.Equal(HttpStatusCode.Forbidden, e.StatusCode);
+            TokenResult? result = await iamClient.RefreshToken(contextValueAccessor.Token!, record.RefreshToken);
+            Assert.NotNull(result);
+            Assert.Null(result.RefreshToken);
+            Assert.Equal(string.Empty, result.Token);
         }
 
         [Fact]
@@ -657,7 +829,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
                 record.Publisher = null;
                 record.Role = "Superadmin";
                 await context.SaveChangesAsync();
@@ -703,7 +875,7 @@ namespace IAMClient.Test
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
                 ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                record = await CreateDefaultUser(context);
+                record = await CreateDefaultUser(context, true);
             }
 
             IHttpContextValueAccessor contextValueAccessor = applicationFactory.CreateAccessor("Superadmin", PublisherId);

@@ -1,9 +1,11 @@
-﻿using System;
+﻿using Lucene.Net.Search.Similarities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Schema;
 using VDS.RDF;
 using VDS.RDF.Parsing;
 
@@ -11,13 +13,15 @@ namespace NkodSk.Abstractions
 {
     public class DcatDistribution : RdfObject
     {
-        public const string AuthorsWorkTypeCodelist = "https://data.gov.sk/set/codelist/authors-work-type";
+        //public const string AuthorsWorkTypeCodelist = "https://data.gov.sk/set/codelist/authors-work-type";
 
-        public const string OriginalDatabaseTypeCodelist = "https://data.gov.sk/set/codelist/original-database-type";
+        //public const string OriginalDatabaseTypeCodelist = "https://data.gov.sk/set/codelist/original-database-type";
 
-        public const string DatabaseProtectedBySpecialRightsTypeCodelist = "https://data.gov.sk/set/codelist/database-creator-special-rights-type";
+        //public const string DatabaseProtectedBySpecialRightsTypeCodelist = "https://data.gov.sk/set/codelist/database-creator-special-rights-type";
 
         public const string PersonalDataContainmentTypeCodelist = "https://data.gov.sk/set/codelist/personal-data-occurence-type";
+
+        public const string LicenseCodelist = "http://publications.europa.eu/resource/authority/licence";
 
         public const string FormatCodelist = "http://publications.europa.eu/resource/authority/file-type";
 
@@ -46,7 +50,7 @@ namespace NkodSk.Abstractions
             }
         }
 
-        public void SetTermsOfUse(Uri? authorsWorkType, Uri? originalDatabaseType, Uri? databaseProtectedBySpecialRightsType, Uri? personalDataContainmentType)
+        public void SetTermsOfUse(Uri? authorsWorkType, Uri? originalDatabaseType, Uri? databaseProtectedBySpecialRightsType, Uri? personalDataContainmentType, string? authorName, string? originalDatabaseAuthorName)
         {
             RemoveUriNodes("leg:termsOfUse");
             LegTermsOfUse termsOfUse = new LegTermsOfUse(Graph, CreateSubject("leg:termsOfUse", "leg:TermsOfUse", "terms"));
@@ -54,6 +58,8 @@ namespace NkodSk.Abstractions
             termsOfUse.OriginalDatabaseType = originalDatabaseType;
             termsOfUse.DatabaseProtectedBySpecialRightsType = databaseProtectedBySpecialRightsType;
             termsOfUse.PersonalDataContainmentType = personalDataContainmentType;
+            termsOfUse.OriginalDatabaseAuthorName = originalDatabaseAuthorName;
+            termsOfUse.AuthorName = authorName;
         }
 
 
@@ -147,6 +153,8 @@ namespace NkodSk.Abstractions
             DateTimeOffset now = DateTimeOffset.UtcNow;
             Dictionary<string, string[]> values = new Dictionary<string, string[]>();
 
+            values["key"] = new string[] { Uri.ToString() };
+
             if (IsHarvested)
             {
                 values["Harvested"] = new string[] { "true" };
@@ -168,6 +176,17 @@ namespace NkodSk.Abstractions
             return UpdateMetadata(datasetMetadata.Id, datasetMetadata.Publisher, metadata);
         }
 
+        public static FileMetadata ClearDatasetMetadata(FileMetadata metadata)
+        {
+            if (metadata.AdditionalValues is not null)
+            {
+                metadata.AdditionalValues.Remove(FormatCodelist);
+                metadata.AdditionalValues.Remove(LicenseCodelist);
+                metadata.AdditionalValues.Remove(PersonalDataContainmentTypeCodelist);
+            }
+            return metadata;
+        }
+
         public FileMetadata UpdateDatasetMetadata(FileMetadata metadata)
         {
             Dictionary<string, string[]> values = metadata.AdditionalValues ?? new Dictionary<string, string[]>();
@@ -181,7 +200,42 @@ namespace NkodSk.Abstractions
             Array.Sort(formatsAsArray);
             values[FormatCodelist] = formatsAsArray;
 
+            HashSet<string> licences = values.ContainsKey(LicenseCodelist) ? new HashSet<string>(values[LicenseCodelist]) : new HashSet<string>();
+            if (TermsOfUse?.AuthorsWorkType is not null)
+            {
+                licences.Add(TermsOfUse.AuthorsWorkType.ToString());
+            }
+            if (TermsOfUse?.OriginalDatabaseType is not null)
+            {
+                licences.Add(TermsOfUse.OriginalDatabaseType.ToString());
+            }
+            if (TermsOfUse?.DatabaseProtectedBySpecialRightsType is not null)
+            {
+                licences.Add(TermsOfUse.DatabaseProtectedBySpecialRightsType.ToString());
+            }
+            string[] licencesAsArray = licences.ToArray();
+            Array.Sort(licencesAsArray);
+            values[LicenseCodelist] = licencesAsArray;
+
+            HashSet<string> personalDatas = values.ContainsKey(PersonalDataContainmentTypeCodelist) ? new HashSet<string>(values[PersonalDataContainmentTypeCodelist]) : new HashSet<string>();
+            if (TermsOfUse?.PersonalDataContainmentType is not null)
+            {
+                personalDatas.Add(TermsOfUse.PersonalDataContainmentType.ToString());
+            }
+            string[] personalDatasAsArray = personalDatas.ToArray();
+            Array.Sort(personalDatasAsArray);
+            values[PersonalDataContainmentTypeCodelist] = personalDatasAsArray;
+
             return metadata with { AdditionalValues = values };
+        }
+
+        public void IncludeInDataset(DcatDataset dataset)
+        {
+            dataset.Graph.Assert(dataset.Node, dataset.Graph.CreateUriNode("dcat:distribution"), Node);
+            foreach (Triple t in Triples)
+            {
+                dataset.Graph.Assert(t);
+            }
         }
 
         public bool IsEqualTo(DcatDistribution distribution)
@@ -190,6 +244,8 @@ namespace NkodSk.Abstractions
                 !Equals(TermsOfUse?.OriginalDatabaseType, distribution.TermsOfUse?.OriginalDatabaseType) ||
                 !Equals(TermsOfUse?.DatabaseProtectedBySpecialRightsType, distribution.TermsOfUse?.DatabaseProtectedBySpecialRightsType) ||
                 !Equals(TermsOfUse?.PersonalDataContainmentType, distribution.TermsOfUse?.PersonalDataContainmentType) ||
+                !Equals(TermsOfUse?.AuthorName, distribution.TermsOfUse?.AuthorName) ||
+                !Equals(TermsOfUse?.OriginalDatabaseAuthorName, distribution.TermsOfUse?.OriginalDatabaseAuthorName) ||
                 !Equals(DownloadUrl, distribution.DownloadUrl) ||
                 !Equals(AccessUrl, distribution.AccessUrl) ||
                 !Equals(Format, distribution.Format) ||

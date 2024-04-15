@@ -102,7 +102,7 @@ namespace WebApi.Test
                 { new ByteArrayContent(bytes, 0, bytes.Length), "file", "codelist.ttl" }
             };
 
-            using HttpResponseMessage response = await client.PutAsync("/codelists", requestContent);
+            using HttpResponseMessage response = await client.PostAsync("/codelists", requestContent);
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
 
             await ValidateCodelistOld(client);
@@ -126,7 +126,7 @@ namespace WebApi.Test
                 { new ByteArrayContent(bytes, 0, bytes.Length), "file", "codelist.ttl" }
             };
 
-            using HttpResponseMessage response = await client.PutAsync("/codelists", requestContent);
+            using HttpResponseMessage response = await client.PostAsync("/codelists", requestContent);
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
             await ValidateCodelistOld(client);
@@ -150,7 +150,7 @@ namespace WebApi.Test
                 { new ByteArrayContent(bytes, 0, bytes.Length), "file", "codelist.ttl" }
             };
 
-            using HttpResponseMessage response = await client.PutAsync("/codelists", requestContent);
+            using HttpResponseMessage response = await client.PostAsync("/codelists", requestContent);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             await ValidateCodelistNew(client);

@@ -12,9 +12,13 @@ namespace NkodSk.Abstractions
 {
     public class FoafAgent : RdfObject
     {
+        public const string LegalFormCodelist = "https://data.gov.sk/set/codelist/CL000056";
+
         public FoafAgent(IGraph graph, IUriNode node) : base(graph, node)
         {
         }
+
+        public Dictionary<string, string> Name => GetTextsFromUriNode("foaf:name");
 
         public string? GetName(string language) => GetTextFromUriNode("foaf:name", language);
 
@@ -39,6 +43,12 @@ namespace NkodSk.Abstractions
         {
             get => GetTextFromUriNode("foaf:phone");
             set => SetTextToUriNode("foaf:phone", value);
+        }
+
+        public Uri? LegalForm
+        {
+            get => GetUriFromUriNode("ls:legalForm");
+            set => SetUriNode("ls:legalForm", value);
         }
 
         public static FoafAgent? Parse(string text)

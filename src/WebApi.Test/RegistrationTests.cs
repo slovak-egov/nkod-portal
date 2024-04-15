@@ -32,7 +32,8 @@ namespace WebApi.Test
             {
                 Website = "http://example.com/",
                 Email = "info@example.sk",
-                Phone = "+421 123 456 789"
+                Phone = "+421 123 456 789",
+                LegalForm = "https://data.gov.sk/def/legal-form-type/331",
             };
         }
 
@@ -40,6 +41,8 @@ namespace WebApi.Test
         public async Task RegistrationIsNotAllowedWithoutToken()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisherCodelists();
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -53,6 +56,8 @@ namespace WebApi.Test
         public async Task RegistrationIsNotAllowedWithoutPublisher()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisherCodelists();
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -67,6 +72,8 @@ namespace WebApi.Test
         public async Task RegistrationIsPerformed()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisherCodelists();
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -104,6 +111,7 @@ namespace WebApi.Test
         {
             string path = fixture.GetStoragePath();
 
+            fixture.CreatePublisherCodelists();
             fixture.CreatePublisher("Test", PublisherId, isPublic: false);
 
             using Storage storage = new Storage(path);
@@ -128,6 +136,8 @@ namespace WebApi.Test
         public async Task RegistrationWebsiteIsRequired()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisherCodelists();
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -151,6 +161,8 @@ namespace WebApi.Test
         public async Task RegistrationEmailIsRequired()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisherCodelists();
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -171,9 +183,11 @@ namespace WebApi.Test
         }
 
         [Fact]
-        public async Task RegistrationPhoneIsRequired()
+        public async Task RegistrationPhoneIsNotRequired()
         {
             string path = fixture.GetStoragePath();
+            fixture.CreatePublisherCodelists();
+
             using Storage storage = new Storage(path);
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
@@ -182,15 +196,29 @@ namespace WebApi.Test
             input.Phone = string.Empty;
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PostAsync("/registration", requestContent);
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             string content = await response.Content.ReadAsStringAsync();
             SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
             Assert.NotNull(result);
-            Assert.False(result.Success);
-            Assert.True(string.IsNullOrEmpty(result.Id));
-            Assert.NotNull(result.Errors);
-            Assert.Single(result.Errors);
-            Assert.False(string.IsNullOrEmpty(result.Errors["phone"]));
+            Assert.True(result.Success);
+            Assert.False(string.IsNullOrEmpty(result.Id));
+            Assert.Null(result.Errors);
+
+            FileState? state = storage.GetFileState(Guid.Parse(result.Id), accessPolicy);
+            Assert.NotNull(state);
+            Assert.NotNull(state.Content);
+            Assert.Equal(FileType.PublisherRegistration, state.Metadata.Type);
+            Assert.False(state.Metadata.IsPublic);
+            Assert.True((DateTimeOffset.Now - state.Metadata.Created).Duration().TotalMinutes < 1);
+            Assert.True((DateTimeOffset.Now - state.Metadata.LastModified).Duration().TotalMinutes < 1);
+
+            FoafAgent? agent = FoafAgent.Parse(state.Content);
+            Assert.NotNull(agent);
+            Assert.Equal(PublisherId, agent.Uri.ToString());
+            Assert.Equal("Test Company", agent.GetName("sk"));
+            Assert.Equal(input.Website, agent.HomePage?.ToString());
+            Assert.Equal(input.Email, agent.EmailAddress);
+            Assert.Equal(input.Phone, agent.Phone);
         }
     }
 }

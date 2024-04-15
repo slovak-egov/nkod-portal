@@ -20,18 +20,8 @@ import EditDistribution from './pages/EditDistribution';
 import Sparql from './pages/Sparql';
 import Quality from './pages/Quality';
 import Profile from './pages/Profile';
-import {
-    Language,
-    LanguageOptionsContext,
-    sendPost,
-    supportedLanguages,
-    TokenContext,
-    TokenResult,
-    UserInfo,
-    useUserInfo
-} from './client';
-import {CmsUser, CmsUserContext, getCmsUser} from "./cms";
-import React, {useContext, useEffect, useState} from 'react';
+import { Language, LanguageOptionsContext, sendPost, supportedLanguages, TokenContext, TokenResult, UserInfo, sendPost, supportedLanguages, useUserInfo } from './client';
+import React, { useEffect, useState, useContext, useCallback } from 'react';
 import PublisherList from './pages/PublisherList';
 import UserList from './pages/UserList';
 import EditUser from './pages/EditUser';
@@ -42,6 +32,11 @@ import InfoPageInvalidDelegation from './pages/InfoPageInvalidDelegation';
 import InfoPageWaitingForApprove from './pages/InfoPageWaitingForApprove';
 import {AxiosResponse, RawAxiosRequestHeaders} from 'axios';
 import NotFound from './pages/NotFound';
+import Invitation from './pages/Invitation';
+import LoginInProgress from './pages/LoginInProgress';
+import EditPublisher from './pages/EditPublisher';
+import PublisherRegistration from './pages/PublisherRegistration';
+import ChangeLicenses from './pages/ChangeLicenses';
 import ODCommunityStartPage from "./pages/cms/ODCommunityStartPage";
 import UserPage from "./pages/cms/UserPage";
 import RegisterUser from "./pages/cms/RegisterUser";
@@ -104,8 +99,8 @@ function App(props: Props) {
         }
     }, [token]);
 
-    useEffect(() => {
-        async function load() {
+    const refreshToken = useCallback(
+        async function () {
             try {
                 if (token?.refreshToken) {
                     const response: AxiosResponse<TokenResult> = await sendPost(
@@ -118,31 +113,34 @@ function App(props: Props) {
                     );
                     if (response.data?.token) {
                         setToken(response.data);
+                        if (response.data.refreshTokenInSeconds > 0) {
+                            setTimeout(refreshToken, response.data.refreshTokenInSeconds * 1000);
+                        }
                     }
                 }
             } catch (err) {}
-        }
+        },
+        [token, headers]
+    );
 
-        let timer: NodeJS.Timeout | null = null;
+    useEffect(() => {
         if (token?.refreshTokenAfter) {
             const refreshTokenAfter = new Date(token.refreshTokenAfter);
             const now = new Date();
-            if (refreshTokenAfter.getTime() > now.getTime()) {
-                const diff = refreshTokenAfter.getTime() - now.getTime();
-                timer = setTimeout(() => {
-                    load();
+            const diff = refreshTokenAfter.getTime() - now.getTime();
+            if (diff > 0) {
+                const timeout = setTimeout(() => {
+                    refreshToken();
                 }, diff);
+
+                return () => {
+                    clearTimeout(timeout);
+                };
             } else {
-                load();
+                refreshToken();
             }
         }
-
-        return () => {
-            if (timer) {
-                clearInterval(timer);
-            }
-        };
-    }, [token, headers]);
+    }, [token, refreshToken]);
 
     useEffect(() => {
         async function load() {
@@ -233,9 +231,6 @@ function App(props: Props) {
                     }}
                 >
                     <BrowserRouter>
-                        <Alert type="warning" style={{ margin: 0 }}>
-                            Registrácia datasetov začína až 15.1.2024! Dovtedy použite <a href="https://data.gov.sk">data.gov.sk</a>.
-                        </Alert>
                         <Header />
                         <AppNavigator {...props} />
                         <div className="govuk-width-container">
@@ -252,6 +247,9 @@ function App(props: Props) {
                                         <Route path="/sparql" Component={Sparql} />
                                         <Route path="/kvalita-metadat" Component={Quality} />
     
+                                    <Route path="/pozvanka" Component={Invitation} />
+                                    <Route path="/saml/consume" Component={LoginInProgress} />
+
                                         {userInfo ? (
                                             <>
                                                 <Route path="/sprava/neplatne-zastupenie" Component={InfoPageInvalidDelegation} />
@@ -259,7 +257,9 @@ function App(props: Props) {
                                             </>
                                         ) : null}
     
-                                        {userInfo?.publisher && userInfo.publisherView == null ? <Route path="/registracia" Component={AddPublisher} /> : null}
+                                    {userInfo?.publisher && userInfo.publisherView == null ? (
+                                        <Route path="/registracia" Component={PublisherRegistration} />
+                                    ) : null}
     
                                         {userInfo?.publisher && userInfo.publisherActive && userInfo.role ? (
                                             <>
@@ -274,6 +274,8 @@ function App(props: Props) {
                                                 <Route path="/sprava/lokalne-katalogy" Component={CatalogList} />
                                                 <Route path="/sprava/lokalne-katalogy/pridat" Component={AddCatalog} />
                                                 <Route path="/sprava/lokalne-katalogy/upravit/:id" Component={EditCatalog} />
+
+                                            <Route path="/sprava/zmena-licencii" Component={ChangeLicenses} />
                                             </>
                                         ) : null}
     
@@ -291,6 +293,8 @@ function App(props: Props) {
                                         {userInfo?.role === 'Superadmin' ? (
                                             <>
                                                 <Route path="/sprava/poskytovatelia" Component={PublisherList} />
+                                            <Route path="/sprava/poskytovatelia/pridat" Component={AddPublisher} />
+                                            <Route path="/sprava/poskytovatelia/upravit/:id" Component={EditPublisher} />
                                                 <Route path="/sprava/ciselniky" Component={Codelists} />
                                             </>
                                         ) : null}

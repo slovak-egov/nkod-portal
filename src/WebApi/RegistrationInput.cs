@@ -13,13 +13,15 @@ namespace WebApi
 
         public string? Phone { get; set; }
 
-        public ValidationResults Validate()
+        public string? LegalForm { get; set; }
+
+        public async Task<ValidationResults> Validate(ICodelistProviderClient codelistProvider)
         {
             ValidationResults results = new ValidationResults();
 
             results.ValidateUrl(nameof(Website), Website, true);
             results.ValidateEmail(nameof(Email), Email, true);
-            results.ValidateRequiredText(nameof(Phone), Phone);
+            await results.ValidateRequiredCodelistValue(nameof(LegalForm), LegalForm, FoafAgent.LegalFormCodelist, codelistProvider);
 
             return results;
         }
@@ -33,6 +35,7 @@ namespace WebApi
             agent.HomePage = Website.AsUri();
             agent.EmailAddress = Email;
             agent.Phone = Phone;
+            agent.LegalForm = LegalForm.AsUri();
         }
     }
 }

@@ -11,6 +11,6 @@ namespace TestBase
     {
         Task<TokenResult> RefreshToken(string token, string refreshToken);
 
-        Task<TokenResult> DelegateToken(IHttpContextValueAccessor httpContextValueAccessor, string publisherId);
+        Task<TokenResult> DelegateToken(IHttpContextValueAccessor httpContextValueAccessor, string publisherId, string userId);
     }
 }

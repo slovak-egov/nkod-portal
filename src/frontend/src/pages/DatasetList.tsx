@@ -13,15 +13,20 @@ import { removeDataset, useDatasets, useDefaultHeaders, useDocumentTitle, useUse
 import ErrorAlert from '../components/ErrorAlert';
 import { useNavigate } from 'react-router';
 import Loading from '../components/Loading';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AlertPublisher from '../components/AlertPublisher';
+import Alert from '../components/Alert';
+import { Link } from 'react-router-dom';
+import FormElementGroup from '../components/FormElementGroup';
+import BaseInput from '../components/BaseInput';
 
 export default function DatasetList() {
     const [datasets, query, setQueryParameters, loading, error, refresh] = useDatasets({ pageSize: 20, page: 0 });
     const navigate = useNavigate();
     const [userInfo] = useUserInfo();
     const headers = useDefaultHeaders();
+    const [alert, setAlert] = useState<string | null>(null);
 
     useEffect(() => {
         if (userInfo?.publisher) {
@@ -41,7 +46,6 @@ export default function DatasetList() {
             <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title: t('datasetList') }]} />
 
             <MainContent>
-                <AlertPublisher />
                 <PageHeader>{t('datasetList')}</PageHeader>
 
                 {userInfo?.publisherView ? (
@@ -54,10 +58,25 @@ export default function DatasetList() {
 
                 <p>
                     <Button onClick={() => navigate('/sprava/datasety/pridat')}>{t('newDataset')}</Button>
+                    <Button style={{ marginLeft: '10px' }} onClick={() => navigate('/sprava/zmena-licencii')}>
+                        {t('changeLicensesBulk')}
+                    </Button>
                 </p>
+
+                <FormElementGroup
+                    label={t('search')}
+                    element={(id) => <BaseInput id={id} value={query.queryText ?? ''} onChange={(e) => setQueryParameters({ queryText: e.target.value })} />}
+                />
 
                 {loading ? <Loading /> : null}
                 {error ? <ErrorAlert error={error} /> : null}
+                {alert ? (
+                    <div className="custom-alert">
+                        <Alert type="warning">
+                            <div style={{ padding: '5px 10px' }}>{alert}</div>
+                        </Alert>
+                    </div>
+                ) : null}
 
                 {datasets ? (
                     <>
@@ -95,33 +114,43 @@ export default function DatasetList() {
                                                             return null;
                                                         })}
                                                     </div>
-                                                    <Button
-                                                        className="idsk-button idsk-button--secondary"
-                                                        style={{ marginTop: '10px', marginBottom: '10px' }}
-                                                        onClick={() => navigate('/sprava/distribucie/' + d.id)}
-                                                    >
-                                                        {t('editDistributions')}
-                                                    </Button>
+                                                    {!d.isSerie ? (
+                                                        <Button
+                                                            className="idsk-button idsk-button--secondary"
+                                                            style={{ marginTop: '10px', marginBottom: '10px' }}
+                                                            onClick={() => navigate('/sprava/distribucie/' + d.id)}
+                                                        >
+                                                            {t('editDistributions')}
+                                                        </Button>
+                                                    ) : null}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Button
-                                                        className="idsk-button idsk-button--secondary"
-                                                        style={{ marginRight: '10px', marginTop: '10px', marginBottom: '10px' }}
-                                                        onClick={() => navigate('/sprava/datasety/upravit/' + d.id)}
-                                                    >
-                                                        {t('edit')}
-                                                    </Button>
-                                                    <Button
-                                                        className="idsk-button idsk-button--secondary"
-                                                        style={{ marginTop: '10px', marginBottom: '10px' }}
-                                                        onClick={async () => {
-                                                            if (await removeDataset(t('removePrompt'), d.id, headers)) {
-                                                                refresh();
-                                                            }
-                                                        }}
-                                                    >
-                                                        {t('remove')}
-                                                    </Button>
+                                                    {!d.isHarvested ? (
+                                                        <>
+                                                            <Button
+                                                                className="idsk-button idsk-button--secondary"
+                                                                style={{ marginRight: '10px', marginTop: '10px', marginBottom: '10px' }}
+                                                                onClick={() => navigate('/sprava/datasety/upravit/' + d.id)}
+                                                            >
+                                                                {t('edit')}
+                                                            </Button>
+                                                            <Button
+                                                                className="idsk-button idsk-button--secondary"
+                                                                style={{ marginTop: '10px', marginBottom: '10px' }}
+                                                                onClick={async () => {
+                                                                    setAlert(null);
+                                                                    const r = await removeDataset(t('removePrompt'), d.id, headers);
+                                                                    if (r === true) {
+                                                                        refresh();
+                                                                    } else if (typeof r === 'string') {
+                                                                        setAlert(r);
+                                                                    }
+                                                                }}
+                                                            >
+                                                                {t('remove')}
+                                                            </Button>
+                                                        </>
+                                                    ) : null}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
