@@ -15,7 +15,9 @@ namespace WebApi
 
         private Task lastWorkTask = Task.CompletedTask;
 
-        private Timer? timer;
+        private Timer? onceTimer;
+
+        private Timer? periodicTimer;
 
         public ImportHarvestedHostedService(string documentStorageUrl, string iamUrl, string authToken, string sparqlEndpointUrl)
         {
@@ -27,19 +29,30 @@ namespace WebApi
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            timer = new Timer(OnTimerTick, null, TimeSpan.FromSeconds(10), Timeout.InfiniteTimeSpan);
+            onceTimer = new Timer(OnTimerTick, null, TimeSpan.FromSeconds(10), Timeout.InfiniteTimeSpan);
+            
+            DateTime now = DateTime.Now;
+            DateTime firstRun = now.Date.AddDays(now.Hour >= 6 ? 1 : 0).AddHours(6);
+            TimeSpan delay = firstRun - now;
+            if (delay.TotalMinutes < 10)
+            {
+                delay = TimeSpan.FromMinutes(10);
+            }
+            
+            periodicTimer = new Timer(OnTimerTick, null, delay, TimeSpan.FromDays(1));
             return Task.CompletedTask;
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
             await lastWorkTask;
-            timer?.Dispose();
-            timer = null;
+            onceTimer?.Dispose();
+            periodicTimer?.Dispose();
         }
 
-        private void OnTimerTick(object? state)
+        private async void OnTimerTick(object? state)
         {
+            await lastWorkTask;
             lastWorkTask = Task.Run(() => ExecuteAsync(CancellationToken.None));
         }
 

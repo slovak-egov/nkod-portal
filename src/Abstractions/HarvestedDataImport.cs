@@ -186,9 +186,9 @@ namespace NkodSk.Abstractions
                 }
                 finally
                 {
-                    foreach ((FileState existingState, _) in objectsById.Values)
+                    foreach ((string key, (FileState existingState, _)) in objectsById)
                     {
-                        logger($"Removing child: {existingState.Metadata.Id}");
+                        logger($"Removing child: {existingState.Metadata.Id} {key}");
 
                         await documentStorageClient.DeleteFile(existingState.Metadata.Id);
 
