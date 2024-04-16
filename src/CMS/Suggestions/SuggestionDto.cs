@@ -2,7 +2,7 @@
 
 namespace CMS.Suggestions
 {
-    public class Dto
+    public class SuggestionDto
     {
         public string UserId { get; set; }
         public string UserOrgUri { get; set; }
@@ -13,6 +13,6 @@ namespace CMS.Suggestions
         public string Title { get; set; }
         public string Description { get; set; }
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public States State { get; set; }
+        public SuggestionStates State { get; set; }
     }
 }

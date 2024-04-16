@@ -1,6 +1,6 @@
 ﻿namespace CMS.Suggestions
 {
-    public enum States
+    public enum SuggestionStates
     {
         C,
         P,

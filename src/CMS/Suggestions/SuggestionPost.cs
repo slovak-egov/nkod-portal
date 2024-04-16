@@ -5,8 +5,8 @@ using Piranha.Models;
 namespace CMS.Suggestions
 {
     [PostType(Title = "Suggestion post")]
-    public class Post : Post<Post>
+    public class SuggestionPost : Post<SuggestionPost>
     {
-        [Region] public Region Suggestion { get; set; }
+        [Region] public SuggestionRegion Suggestion { get; set; }
     }
 }

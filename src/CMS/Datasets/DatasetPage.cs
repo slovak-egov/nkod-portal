@@ -5,9 +5,9 @@ using Piranha.Models;
 namespace CMS
 {
     [PageType(Title = "Dataset Page", UseBlocks = false, IsArchive = true)]
-    [PageTypeArchiveItem(typeof(Post))]
+    [PageTypeArchiveItem(typeof(SuggestionPost))]
     public class DatasetPage : Page<DatasetPage>
     {
-        public PostArchive<Post> Archive { get; set; }
+        public PostArchive<SuggestionPost> Archive { get; set; }
     }
 }
