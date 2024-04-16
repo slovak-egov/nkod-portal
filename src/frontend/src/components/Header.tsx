@@ -60,6 +60,16 @@ export default function Header() {
                 title: t('localCatalogs'),
                 link: '/sprava/lokalne-katalogy',
                 submenu: []
+            },
+            {
+                title: t('application'),
+                link: '/sprava/aplikacia',
+                submenu: []
+            },
+            {
+                title: t('suggestion'),
+                link: '/podnet',
+                submenu: []
             }
         );
 

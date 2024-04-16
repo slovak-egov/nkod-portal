@@ -18,11 +18,12 @@ type Props = {
     saving: boolean;
 }
 
+
 const requiredCodelists = [
-    knownCodelists.distribution.authorsWorkType, 
+    knownCodelists.distribution.authorsWorkType,
     knownCodelists.distribution.originalDatabaseType,
-    knownCodelists.distribution.databaseProtectedBySpecialRightsType, 
-    knownCodelists.distribution.personalDataContainmentType, 
+    knownCodelists.distribution.databaseProtectedBySpecialRightsType,
+    knownCodelists.distribution.personalDataContainmentType,
     knownCodelists.distribution.format,
     knownCodelists.distribution.mediaType];
 
@@ -32,7 +33,7 @@ type UploadSetting = {
     enableUpload: boolean;
     enableUrl: boolean;
 }
-    
+
 
 export function DistributionForm(props: Props)
 {
@@ -83,40 +84,40 @@ export function DistributionForm(props: Props)
         {loading ? <Loading /> : null}
         {error ? <ErrorAlert error={error} /> : null}
 
-        {authorsWorkTypeCodelist ? <FormElementGroup label={t('authorWorkType')} errorMessage={errors['authorsworktype']} element={id => <SelectElementItems<CodelistValue> 
-            id={id} 
+        {authorsWorkTypeCodelist ? <FormElementGroup label={t('authorWorkType')} errorMessage={errors['authorsworktype']} element={id => <SelectElementItems<CodelistValue>
+            id={id}
             disabled={saving}
-            options={authorsWorkTypeCodelist.values} 
-            selectedValue={distribution.authorsWorkType ?? ''} 
-            renderOption={v => v.label} 
-            getValue={v => v.id} 
+            options={authorsWorkTypeCodelist.values}
+            selectedValue={distribution.authorsWorkType ?? ''}
+            renderOption={v => v.label}
+            getValue={v => v.id}
             onChange={v => {setDistribution({authorsWorkType: v}) }} />} /> : null}
 
-        {originalDatabaseTypeCodelist ? <FormElementGroup label={t('originalDatabaseType')} errorMessage={errors['originaldatabasetype']} element={id => <SelectElementItems<CodelistValue> 
-            id={id} 
+        {originalDatabaseTypeCodelist ? <FormElementGroup label={t('originalDatabaseType')} errorMessage={errors['originaldatabasetype']} element={id => <SelectElementItems<CodelistValue>
+            id={id}
             disabled={saving}
-            options={originalDatabaseTypeCodelist.values} 
-            selectedValue={distribution.originalDatabaseType ?? ''} 
-            renderOption={v => v.label} 
-            getValue={v => v.id} 
+            options={originalDatabaseTypeCodelist.values}
+            selectedValue={distribution.originalDatabaseType ?? ''}
+            renderOption={v => v.label}
+            getValue={v => v.id}
             onChange={v => {setDistribution({originalDatabaseType: v}) }} />} /> : null}
 
-        {databaseProtectedBySpecialRightsTypeCodelist ? <FormElementGroup label={t('specialDatabaseRights')} errorMessage={errors['databaseprotectedbyspecialrightstype']} element={id => <SelectElementItems<CodelistValue> 
-            id={id} 
+        {databaseProtectedBySpecialRightsTypeCodelist ? <FormElementGroup label={t('specialDatabaseRights')} errorMessage={errors['databaseprotectedbyspecialrightstype']} element={id => <SelectElementItems<CodelistValue>
+            id={id}
             disabled={saving}
-            options={databaseProtectedBySpecialRightsTypeCodelist.values} 
-            selectedValue={distribution.databaseProtectedBySpecialRightsType ?? ''} 
-            renderOption={v => v.label} 
-            getValue={v => v.id} 
+            options={databaseProtectedBySpecialRightsTypeCodelist.values}
+            selectedValue={distribution.databaseProtectedBySpecialRightsType ?? ''}
+            renderOption={v => v.label}
+            getValue={v => v.id}
             onChange={v => {setDistribution({databaseProtectedBySpecialRightsType: v}) }} />} /> : null}
 
-        {personalDataContainmentTypeCodelist ? <FormElementGroup label={t('personalDataType')} errorMessage={errors['personaldatacontainmenttype']} element={id => <SelectElementItems<CodelistValue> 
-            id={id} 
+        {personalDataContainmentTypeCodelist ? <FormElementGroup label={t('personalDataType')} errorMessage={errors['personaldatacontainmenttype']} element={id => <SelectElementItems<CodelistValue>
+            id={id}
             disabled={saving}
-            options={personalDataContainmentTypeCodelist.values} 
-            selectedValue={distribution.personalDataContainmentType ?? ''} 
-            renderOption={v => v.label} 
-            getValue={v => v.id} 
+            options={personalDataContainmentTypeCodelist.values}
+            selectedValue={distribution.personalDataContainmentType ?? ''}
+            renderOption={v => v.label}
+            getValue={v => v.id}
             onChange={v => {setDistribution({personalDataContainmentType: v}) }} />} /> : null}
 
         <MultiRadio<UploadSetting> label={t('distributionFile')} options={uploadSettings} onChange={setUploadSetting} selectedOption={uploadSetting} id="upload-settings" getValue={v => v.id} renderOption={v => v.name} />
@@ -137,42 +138,42 @@ export function DistributionForm(props: Props)
             {t('fileUploadProgress')}
         </Alert> : null}
 
-        {formatCodelist ? <FormElementGroup label={t('downloadFormat')} errorMessage={errors['format']} element={id => <SelectElementItems<CodelistValue> 
-            id={id} 
+        {formatCodelist ? <FormElementGroup label={t('downloadFormat')} errorMessage={errors['format']} element={id => <SelectElementItems<CodelistValue>
+            id={id}
             disabled={saving}
-            options={formatCodelist.values} 
-            selectedValue={distribution.format ?? ''} 
-            renderOption={v => v.label} 
-            getValue={v => v.id} 
+            options={formatCodelist.values}
+            selectedValue={distribution.format ?? ''}
+            renderOption={v => v.label}
+            getValue={v => v.id}
             onChange={v => {setDistribution({format: v}) }} />} /> : null}
 
-        {mediaTypeCodelist ? <FormElementGroup label={t('mediaType')} errorMessage={errors['mediatype']} element={id => <SelectElementItems<CodelistValue> 
-            id={id} 
+        {mediaTypeCodelist ? <FormElementGroup label={t('mediaType')} errorMessage={errors['mediatype']} element={id => <SelectElementItems<CodelistValue>
+            id={id}
             disabled={saving}
-            options={mediaTypeCodelist.values} 
-            selectedValue={distribution.mediaType ?? ''} 
-            renderOption={v => v.label} 
-            getValue={v => v.id} 
+            options={mediaTypeCodelist.values}
+            selectedValue={distribution.mediaType ?? ''}
+            renderOption={v => v.label}
+            getValue={v => v.id}
             onChange={v => {setDistribution({mediaType: v}) }} />} /> : null}
 
         <FormElementGroup label={t('conformsTo')} errorMessage={errors['conformsto']} element={id => <BaseInput id={id} disabled={saving} value={distribution.conformsTo ?? ''} onChange={e => setDistribution({conformsTo: e.target.value})} />} />
 
-        {mediaTypeCodelist ? <FormElementGroup label={t('compressionMediaType')} errorMessage={errors['compressformat']} element={id => <SelectElementItems<CodelistValue> 
-            id={id} 
+        {mediaTypeCodelist ? <FormElementGroup label={t('compressionMediaType')} errorMessage={errors['compressformat']} element={id => <SelectElementItems<CodelistValue>
+            id={id}
             disabled={saving}
-            options={[{id: '', label: t('none')}, ...mediaTypeCodelist.values]} 
-            selectedValue={distribution.compressFormat ?? ''} 
-            renderOption={v => v.label} 
-            getValue={v => v.id}  
+            options={[{id: '', label: t('none')}, ...mediaTypeCodelist.values]}
+            selectedValue={distribution.compressFormat ?? ''}
+            renderOption={v => v.label}
+            getValue={v => v.id}
             onChange={v => {setDistribution({compressFormat: v === '' ? null : v}) }} />} /> : null}
 
-        {mediaTypeCodelist ? <FormElementGroup label={t('packageMediaType')} errorMessage={errors['packageformat']} element={id => <SelectElementItems<CodelistValue> 
-            id={id} 
+        {mediaTypeCodelist ? <FormElementGroup label={t('packageMediaType')} errorMessage={errors['packageformat']} element={id => <SelectElementItems<CodelistValue>
+            id={id}
             disabled={saving}
-            options={[{id: '', label: t('none')}, ...mediaTypeCodelist.values]} 
-            selectedValue={distribution.packageFormat ?? ''} 
-            renderOption={v => v.label} 
-            getValue={v => v.id} 
+            options={[{id: '', label: t('none')}, ...mediaTypeCodelist.values]}
+            selectedValue={distribution.packageFormat ?? ''}
+            renderOption={v => v.label}
+            getValue={v => v.id}
             onChange={v => {setDistribution({packageFormat: v === '' ? null : v}) }} />} /> : null}
 
         <MultiLanguageFormGroup<string> label={t('distributionName')} errorMessage={extractLanguageErrors(errors, 'title')} values={distribution.title ?? {}} onChange={v => setDistribution({title: v})} emptyValue="" element={(id, value, onChange) => <BaseInput id={id} disabled={saving} value={value} onChange={e => onChange(e.target.value)} />} />

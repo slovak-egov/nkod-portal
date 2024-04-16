@@ -101,7 +101,8 @@
     "innerNavigation": "Vnútorná navigácia",
     "expandMenu": "Rozbaliť menu",
     "hideMenu": "Skryť menu",
-    "login": "Prihlásiť sa",
+    "login": "Prihlásenie do systému",
+    "loginPageSubtitle": "Používateľ",
     "homePageLink": "Odkaz na úvodnú stránku",
     "singleDataset": "Samostatný dataset",
     "datasetIsSerie": "Dataset je séria",
@@ -141,7 +142,7 @@
     "contacts": "Kontakty",
     "websiteOwner": "Prevádzkovateľom služby je Ministerstvo investícií, regionálneho rozvoja a informatizácie SR.",
     "nkodPart": "Národný katalóg otvorených dát je súčasťou projektu",
-    "idsk": "Jednotným dizajn manuálom elektronických služieb",    
+    "idsk": "Jednotným dizajn manuálom elektronických služieb",
     "createdWith": "Vytvorené v súlade s",
     "openData20": "Otvorené údaje 2.0 - Rozvoj centrálnych komponentov pre kvalitné zabezpečenie otvorených údajov",
     "expandLanguageMenu": "Rozbaliť jazykové menu",
@@ -153,5 +154,7 @@
     "distributionName": "Názov distribúcie",
     "parentDataset": "Nadradený dataset",
     "catalogType": "Typ katalógu",
-    "catalogEndpoint": "Prístupový bod katalógu"
+    "catalogEndpoint": "Prístupový bod katalógu",
+    "userName": "Login / E-mailová adresa",
+    "password": "Heslo"
 }

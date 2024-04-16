@@ -1,10 +1,16 @@
-import axios, { AxiosError, AxiosResponse, RawAxiosRequestHeaders } from "axios";
-import React, { useCallback, useContext, useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useParams } from "react-router";
-import { useSearchParams } from "react-router-dom";
+import axios, { AxiosError, AxiosResponse, RawAxiosRequestHeaders } from 'axios';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useParams } from 'react-router';
+import { useSearchParams } from 'react-router-dom';
+import { Suggestion, SuggestionStatusCode, SuggestionType } from './cms';
 
 const baseUrl = process.env.REACT_APP_API_URL;
+
+export type OrderOption = {
+    name: string;
+    value: string;
+};
 
 export type TokenContextType = {
     token: TokenResult|null;
@@ -399,7 +405,7 @@ export function useEntity<T>(url: string, sourceId?: string) {
                     },
                     requiredFacets: []
                 }
-    
+
                 setLoading(true);
                 setError(null);
                 setItem(null);
@@ -434,7 +440,7 @@ export function useLocalCatalog() {
 
 export function useDatasets(initialQuery?: Partial<RequestQuery>) {
     let defaultParams: Partial<RequestQuery> = {...initialQuery};
-    
+
     const [searchParams] = useSearchParams();
     if (searchParams.has('publisher')) {
         defaultParams = {
@@ -447,6 +453,68 @@ export function useDatasets(initialQuery?: Partial<RequestQuery>) {
     }
 
     return useEntities<Dataset>('datasets/search', {orderBy: 'created', ...defaultParams});
+}
+
+export function useSuggestions(initialQuery?: Partial<RequestQuery>) {
+    let defaultParams: Partial<RequestQuery> = { ...initialQuery };
+
+    const [searchParams] = useSearchParams();
+    if (searchParams.has('query')) {
+        defaultParams = {
+            ...defaultParams,
+            queryText: searchParams.get('query')!
+        };
+    }
+
+
+    const json: Suggestion[] = [
+        {
+            id: '1',
+            organization: 'Ministerstvo financií SR',
+            suggestionType: SuggestionType.SUGGESTION_FOR_PUBLISHED_DATASET,
+            suggestionTitle: 'Zverejňovanie CRZ ako opendata',
+            suggestionDescription: 'CRZ je centrálny register zmlúv, kde publikujú povinné osoby zmluvy podľa rôznych zákonov. Avšak samotné údaje CRZ nie sú prístupné ako otvorené údaje.',
+            suggestionStatus: SuggestionStatusCode.PROPOSAL_FOR_CHANGE,
+            likeCount: 32,
+            commentCount: 3,
+            createdDate: new Date(),
+            createdBy: 'Janko Hraško'
+        },
+        {
+            id: '2',
+            organization: 'Ministerstvo investícií SR',
+            suggestionType: SuggestionType.SUGGESTION_FOR_QUALITY_OF_METADATA,
+            suggestionTitle: 'Opendata finančnej správy nie sú zapísané v NKODE.',
+            suggestionDescription: 'Otvorené údaje finančnej správy nie sú skatalogizované v Centrálnom portáli otvorených údajov. Návštevník vyhľadávača nad Národným katalógom ich nenájde.',
+            suggestionStatus: SuggestionStatusCode.PROPOSAL_FOR_CREATIOM,
+            likeCount: 31,
+            commentCount: 17,
+            createdDate: new Date(),
+            createdBy: 'Janko Hraško'
+        },
+        {
+            id: '3',
+            organization: 'Hlavné mesto Bratislava',
+            suggestionType: SuggestionType.SUGGESTION_FOR_QUALITY_OF_PUBLISHED_DATASET,
+            suggestionTitle: 'Opendata BA nie sú zapísané v NKODE.',
+            suggestionDescription: 'Otvorené údaje finančnej správy nie sú skatalogizované v Centrálnom portáli otvorených údajov. Návštevník vyhľadávača nad Národným katalógom ich nenájde.',
+            suggestionStatus: SuggestionStatusCode.PROPOSAL_FOR_CREATIOM,
+            likeCount: 11,
+            commentCount: 8,
+            createdDate: new Date(),
+            createdBy: 'Janko Hraško'
+        }
+    ];
+
+    let [items, query, setQueryParameters, loading, error, refresh] = useEntities<Suggestion>('datasets/suggestions', { orderBy: 'relevance', ...defaultParams });
+
+    items = {
+        ...items,
+        items: json,
+        totalCount: json.length
+    } as Response<Suggestion>
+
+    return [items, query, setQueryParameters, false, error, refresh] as const;
 }
 
 export function useLocalCatalogs(initialQuery?: Partial<RequestQuery>) {
@@ -640,7 +708,7 @@ export function useEntityEdit<TEntity, TInput>(url: string, loadUrl: string, ini
                     },
                     requiredFacets: []
                 }
-    
+
                 setLoading(true);
                 setItem(null);
                 try{
@@ -828,6 +896,11 @@ export function useCodelistFileUpload() {
     return useSingleFileUpload('codelists');
 }
 
+export function useAppRegistrationFileUpload() {
+    return useSingleFileUpload('logo');
+
+}
+
 export function useCodelistAdmin() {
     const [items, setItems] = useState<CodelistAdminView[]|null>(null);
     const [loading, setLoading] = useState(false);
@@ -900,7 +973,7 @@ export function useUserEdit() {
                 const query = {
                     id: id
                 };
-    
+
                 setLoading(true);
                 setItem(null);
                 try{

@@ -4,25 +4,21 @@ import MainContent from '../components/MainContent';
 import GridRow from '../components/GridRow';
 import GridColumn from '../components/GridColumn';
 import { Link } from 'react-router-dom';
-import { useDatasets, useDocumentTitle } from '../client';
+import { OrderOption, useDatasets, useDocumentTitle } from '../client';
 import SearchResults from '../components/SearchResults';
 import { useTranslation } from 'react-i18next';
 
-type OrderOption = {
-    name: string;
-    value: string;
-};
-
 const codelistsKeys = [
-    'publishers', 
+    'publishers',
     'https://data.gov.sk/set/codelist/dataset-type',
-    'http://publications.europa.eu/resource/authority/data-theme', 
+    'http://publications.europa.eu/resource/authority/data-theme',
     'http://publications.europa.eu/resource/authority/file-type',
     'http://publications.europa.eu/resource/authority/frequency',
     'keywords'
 ];
 
 export default function PublicDatasetList() {
+    console.log('PublicDatasetList');
     const [datasets, query, setQueryParameters, loading, error] = useDatasets({
         requiredFacets: codelistsKeys
     });

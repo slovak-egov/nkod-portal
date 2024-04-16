@@ -1,8 +1,9 @@
-import { InputHTMLAttributes } from "react";
+import { InputHTMLAttributes, forwardRef, ForwardedRef } from "react";
 
-type Props = InputHTMLAttributes<HTMLInputElement>
+type Props = InputHTMLAttributes<HTMLInputElement>;
 
-export default function FileUpload(props: Props)
-{
-    return <input className="govuk-file-upload" type="file" {...props} />
-}
+const FileUpload = forwardRef((props: Props, ref: ForwardedRef<HTMLInputElement>) => {
+    return <input ref={ref} className="govuk-file-upload" type="file" {...props} />;
+});
+
+export default FileUpload;
