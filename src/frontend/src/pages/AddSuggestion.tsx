@@ -1,9 +1,10 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Controller, SubmitHandler, useForm } from 'react-hook-form';
+import Select from 'react-select/async';
 
-import { CodelistValue, sendPost, TokenContext, useDefaultHeaders, useDocumentTitle, useUserInfo } from '../client';
-import { SuggestionFormValues, SuggestionType, useCmsPublisherLists } from '../cms';
+import { CodelistValue, sendPost, useDefaultHeaders, useDocumentTitle, useUserInfo } from '../client';
+import { AutocompleteOption, SuggestionFormValues, SuggestionType, useSearchDataset, useSearchPublisher } from '../cms';
 import Breadcrumbs from '../components/Breadcrumbs';
 import MainContent from '../components/MainContent';
 import PageHeader from '../components/PageHeader';
@@ -12,7 +13,7 @@ import SelectElementItems from '../components/SelectElementItems';
 import BaseInput from '../components/BaseInput';
 import TextArea from '../components/TextArea';
 import Button from '../components/Button';
-import Select from 'react-select';
+
 
 export const suggestionTypeCodeList: CodelistValue[] = [
     {
@@ -38,15 +39,34 @@ const AddSuggestion = () => {
     const headers = useDefaultHeaders();
     const { t } = useTranslation();
     useDocumentTitle(t('addApplicationPage.headerTitle'));
-    const tokenContext = useContext(TokenContext);
+    // const tokenContext = useContext(TokenContext);
 
-    const [organizationCodeList, loadingOrganizationCodeList, errorOrganizationCodeList] = useCmsPublisherLists({ language: 'sk' });
+    const [publisherList, loadingPublisherList, errorPublisherList, searchPublisher] = useSearchPublisher({
+        language: 'sk', query: ''
+    });
+    const [datasetList, loadingDatasetList, errorDatasetList, searchDataset] = useSearchDataset({
+        language: 'sk', query: ''
+    });
 
     const { control, register, handleSubmit, watch, formState: { errors } } = useForm<SuggestionFormValues>();
 
     const onSubmit: SubmitHandler<SuggestionFormValues> = async (data) => {
         const result = await sendPost<SuggestionFormValues>(`/api/suggestion`, data, headers);
         // setSaveResult(result.data);
+    };
+
+    const loadOrganizationOptions = (inputValue: string, callback: (options: AutocompleteOption[]) => void) => {
+        searchPublisher(inputValue).then((options) => {
+            console.log('options: ', options);
+            return callback(options || []);
+        });
+    };
+
+    const loadDatasetOptions = (inputValue: string, callback: (options: AutocompleteOption[]) => void) => {
+        searchDataset(inputValue).then((options) => {
+            console.log('options: ', options);
+            return callback(options || []);
+        });
     };
 
     return (
@@ -67,43 +87,75 @@ const AddSuggestion = () => {
                         {t('addSuggestion.subtitle')}
                     </h2>
 
-                    {/*<Controller*/}
-                    {/*    render={({ field }) => (*/}
-                    {/*        <FormElementGroup*/}
-                    {/*            label={t('addSuggestion.fields.organization')}*/}
-                    {/*            element={id => <SelectElementItems<CodelistValue>*/}
-                    {/*                id={id}*/}
-                    {/*                disabled={false}*/}
-                    {/*                options={organizationCodeList}*/}
-                    {/*                selectedValue={field.value}*/}
-                    {/*                onChange={field.onChange}*/}
-                    {/*                renderOption={v => v.label}*/}
-                    {/*                getValue={v => v.id}*/}
-                    {/*            />}*/}
-                    {/*        />*/}
-                    {/*    )}*/}
-                    {/*    name='organization'*/}
-                    {/*    control={control}*/}
-                    {/*/>*/}
-
                     <Controller
                         render={({ field }) => (
                             <FormElementGroup
                                 label={t('addSuggestion.fields.organization')}
                                 element={id => <Select
-                                    // className='govuk-select'
-                                    // classNamePrefix='govuk-select'
-                                    classNames={{
-
+                                    id={id}
+                                    styles={{
+                                        control: (provided, state) => (state.isFocused ? {
+                                            ...provided,
+                                            outline: '3px solid #ffdf0f!important',
+                                            borderColor: '#0b0c0c!important',
+                                            outlineOffset: '0!important',
+                                            boxShadow: 'inset 0 0 0 2px!important'
+                                        } : {
+                                            ...provided,
+                                            border: '2px solid #0b0c0c'
+                                        })
                                     }}
-                                    options={organizationCodeList}
-                                    value={organizationCodeList.find(x => x.value === field.value)}
+                                    isClearable
+                                    components={{ IndicatorSeparator: () => null }}
+                                    loadingMessage={t('searchAutocomplete.loading')}
+                                    noOptionsMessage={t('searchAutocomplete.noResults')}
+                                    placeholder={t('searchAutocomplete.placeholder')}
+                                    isLoading={loadingPublisherList}
+                                    loadOptions={loadOrganizationOptions}
+                                    value={publisherList.find(x => x.value === field.value)}
                                     getOptionLabel={x => x.label}
                                     onChange={x => field.onChange(x?.value)}
+                                    defaultOptions={publisherList}
                                 />}
                             />
                         )}
                         name='organization'
+                        control={control}
+                    />
+
+                    <Controller
+                        render={({ field }) => (
+                            <FormElementGroup
+                                label={t('addSuggestion.fields.dataset')}
+                                element={id => <Select
+                                    id={id}
+                                    styles={{
+                                        control: (provided, state) => (state.isFocused ? {
+                                            ...provided,
+                                            outline: '3px solid #ffdf0f!important',
+                                            borderColor: '#0b0c0c!important',
+                                            outlineOffset: '0!important',
+                                            boxShadow: 'inset 0 0 0 2px!important'
+                                        } : {
+                                            ...provided,
+                                            border: '2px solid #0b0c0c'
+                                        })
+                                    }}
+                                    isClearable
+                                    components={{ IndicatorSeparator: () => null }}
+                                    loadingMessage={t('searchAutocomplete.loading')}
+                                    noOptionsMessage={t('searchAutocomplete.noResults')}
+                                    placeholder={t('searchAutocomplete.placeholder')}
+                                    isLoading={loadingDatasetList}
+                                    loadOptions={loadDatasetOptions}
+                                    value={datasetList.find(x => x.value === field.value)}
+                                    getOptionLabel={x => x.label}
+                                    onChange={x => field.onChange(x?.value)}
+                                    defaultOptions={datasetList}
+                                />}
+                            />
+                        )}
+                        name='dataset'
                         control={control}
                     />
 

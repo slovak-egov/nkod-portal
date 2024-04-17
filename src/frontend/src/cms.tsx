@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
-import { CodelistValue } from './client';
+import { Dataset } from './client';
 
 const baseUrl = process.env.REACT_APP_CMS_API_URL ?? process.env.REACT_APP_API_URL + 'cms/';
 
@@ -86,6 +86,7 @@ export enum SuggestionStatusCode {
 
 export interface SuggestionFormValues {
     organization: string,
+    dataset: string,
     suggestionType: string,
     suggestionTitle: string,
     suggestionDescription: string,
@@ -110,7 +111,7 @@ export enum SuggestionOrganizationCode {
     MCRAS = 'MCRAS'
 }
 
-export type SuggestionOrganizationItem = {
+export type OrganizationItem = {
     id: string
     key: string
     name: string
@@ -128,8 +129,17 @@ export type SuggestionOrganizationItem = {
     legalForm: any
 }
 
-export type SuggestionOrganizationList = {
-    items: SuggestionOrganizationItem[]
+export type OrganizationList = {
+    items: OrganizationItem[]
+    facets: []
+    totalCount: number
+}
+
+
+export type DatasetList = {
+    items: Dataset[]
+    facets: []
+    totalCount: number
 }
 
 
@@ -328,7 +338,7 @@ export function useCmsPublisherLists({ language, page = 1, pageSize = 10000, ord
             setError(null);
             setPublishers([]);
             try {
-                const response = await axios.post<SuggestionOrganizationList>('https://wpnkod.informo.sk/publishers/search',
+                const response = await axios.post<OrganizationList>('https://wpnkod.informo.sk/publishers/search',
                     {
                         language: language,
                         page: page,
@@ -359,4 +369,148 @@ export function useCmsPublisherLists({ language, page = 1, pageSize = 10000, ord
     }, [language, page, pageSize, orderBy]);
 
     return [publishers, loading, error] as const;
+}
+
+export const useCmsSearchPublisherLists = ({ language, page = 1, pageSize = 50, orderBy = 'name', queryText }: {
+    language: 'sk' | 'en',
+    page?: number,
+    pageSize?: number,
+    orderBy?: string,
+    queryText: string
+}) => {
+    const [publishers, setPublishers] = useState<AutocompleteOption[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+
+    const load = async (query: string) => {
+        setLoading(true);
+        setError(null);
+        setPublishers([]);
+        try {
+            const response = await axios.post<OrganizationList>('https://wpnkod.informo.sk/publishers/search',
+                {
+                    language: language,
+                    page: page,
+                    pageSize: pageSize,
+                    orderBy: orderBy,
+                    queryText: queryText
+                }
+            );
+            if (response.data.items.length > 0) {
+                setPublishers(
+                    response.data.items
+                        .map(item => ({
+                            value: item.id,
+                            label: item.nameAll.sk
+                        }))
+                        .sort((a, b) => a.label.localeCompare(b.label))
+                );
+            } else {
+                setPublishers([]);
+            }
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        load(queryText);
+    }, [language, page, pageSize, orderBy, queryText]);
+
+    return [publishers, loading, error] as const;
+};
+
+export const useSearchPublisher =  ({ language, query }: {language: string, query: string}) => {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const [publishers, setPublishers] = useState<AutocompleteOption[]>([]);
+
+    const load = async (query: string) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await axios.post<OrganizationList>('https://wpnkod.informo.sk/publishers/search',
+                {
+                    language: language,
+                    page: 1,
+                    pageSize: 50,
+                    orderBy: 'name',
+                    queryText: query
+                }
+            );
+            let data: AutocompleteOption[] = [];
+            if (response.data.items.length > 0) {
+                 data = response.data.items
+                    .map(item => ({
+                        value: item.id,
+                        label: item.nameAll.sk
+                    }))
+                    .sort((a, b) => a.label.localeCompare(b.label));
+
+            }
+            setPublishers(data);
+            return data as AutocompleteOption[];
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        load(query);
+    }, [query]);
+
+    return [publishers, loading, error, load] as const;
+};
+
+export const useSearchDataset =  ({ language, query }: {language: string, query: string}) => {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const [datasets, setDatasets] = useState<AutocompleteOption[]>([]);
+
+    const load = async (query: string) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await axios.post<DatasetList>('https://wpnkod.informo.sk/datasets/search',
+                {
+                    language: language,
+                    page: 1,
+                    pageSize: 50,
+                    orderBy: 'name',
+                    queryText: query
+                }
+            );
+            let data: AutocompleteOption[] = [];
+            if (response.data.items.length > 0) {
+                data = response.data.items
+                    .map(item => ({
+                        value: item.id,
+                        label: item.name ?? ''
+                    }))
+                    .sort((a, b) => a.label.localeCompare(b.label));
+            }
+            setDatasets(data);
+            return data as AutocompleteOption[];
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        load(query);
+    }, [query]);
+
+    return [datasets, loading, error, load] as const;
 }

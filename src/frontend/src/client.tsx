@@ -471,6 +471,7 @@ export function useSuggestions(initialQuery?: Partial<RequestQuery>) {
         {
             id: '1',
             organization: 'Ministerstvo financií SR',
+            dataset: 'bc49b1a6-ef84-bd81-adfa-b252dbe6e4fd',
             suggestionType: SuggestionType.SUGGESTION_FOR_PUBLISHED_DATASET,
             suggestionTitle: 'Zverejňovanie CRZ ako opendata',
             suggestionDescription: 'CRZ je centrálny register zmlúv, kde publikujú povinné osoby zmluvy podľa rôznych zákonov. Avšak samotné údaje CRZ nie sú prístupné ako otvorené údaje.',
@@ -483,6 +484,7 @@ export function useSuggestions(initialQuery?: Partial<RequestQuery>) {
         {
             id: '2',
             organization: 'Ministerstvo investícií SR',
+            dataset: 'bc49b1a6-ef84-bd81-adfa-b252dbe6e4fd',
             suggestionType: SuggestionType.SUGGESTION_FOR_QUALITY_OF_METADATA,
             suggestionTitle: 'Opendata finančnej správy nie sú zapísané v NKODE.',
             suggestionDescription: 'Otvorené údaje finančnej správy nie sú skatalogizované v Centrálnom portáli otvorených údajov. Návštevník vyhľadávača nad Národným katalógom ich nenájde.',
@@ -495,6 +497,7 @@ export function useSuggestions(initialQuery?: Partial<RequestQuery>) {
         {
             id: '3',
             organization: 'Hlavné mesto Bratislava',
+            dataset: 'bc49b1a6-ef84-bd81-adfa-b252dbe6e4fd',
             suggestionType: SuggestionType.SUGGESTION_FOR_QUALITY_OF_PUBLISHED_DATASET,
             suggestionTitle: 'Opendata BA nie sú zapísané v NKODE.',
             suggestionDescription: 'Otvorené údaje finančnej správy nie sú skatalogizované v Centrálnom portáli otvorených údajov. Návštevník vyhľadávača nad Národným katalógom ich nenájde.',

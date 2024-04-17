@@ -2,7 +2,7 @@ $idsk-assets-path: "~/idsk-assets/";
 $govuk-assets-path: "~/idsk-assets/";
 $govuk-link-visited-colour: #0065B3;
 
-@import  '@id-sk/frontend/idsk/all';  
+@import  '@id-sk/frontend/idsk/all';
 
 body {
     margin: 0;
@@ -43,11 +43,11 @@ body {
     margin-bottom: 50px;
 
     .nkod-detail-attribute-name {
-        font-weight: bold;    
+        font-weight: bold;
         color: #2B8CC4;
         margin: 0 0 10px 0;
     }
-    
+
     .nkod-detail-attribute-value {
         margin: 0;
     }
@@ -70,7 +70,7 @@ body {
             vertical-align: middle;
         }
     }
-    
+
     .nkod-detail-distribution-url {
         margin: 0;
     }
@@ -89,4 +89,8 @@ body {
 .nkod-current-page {
     background-color: #1d70b8;
     color: white;
+}
+
+.nkod-autocomplete {
+    border: 2px solid #0b0c0c
 }

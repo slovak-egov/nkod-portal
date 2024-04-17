@@ -82,7 +82,8 @@
     "subtitle": "dáva vo veci zverejňovania otvorených údajov podnet",
     "addButton": "Uložiť",
     "fields": {
-      "organization": "Organizácii",
+      "organization": "Organizácia",
+      "dataset": "Dataset",
       "suggestionType": "Typ podnetu",
       "suggestionTitle": "Názov podnetu",
       "suggestionDescription": "Popis podnetu"
@@ -103,6 +104,11 @@
       "suggestionDescription": "Popis podnetu",
       "suggestionStatus": "Stav podnetu"
     }
+  },
+  "searchAutocomplete": {
+    "placeholder": "Zadajte hľadaný výraz",
+    "noResults": "Nenašli sa žiadne výsledky",
+    "loading": "Vyhľadávam..."
   },
   "enterSearchTerm": "Zadajte hľadaný výraz",
   "search": "Vyhľadávanie",
