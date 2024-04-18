@@ -41,6 +41,10 @@ import ODCommunityStartPage from "./pages/cms/ODCommunityStartPage";
 import UserPage from "./pages/cms/UserPage";
 import RegisterUser from "./pages/cms/RegisterUser";
 import Login from "./pages/cms/Login";
+import AddApplication from './pages/AddApplication';
+import AddSuggestion from './pages/AddSuggestion';
+import SuggestionList from './pages/SuggestionList';
+import EditSuggestion from './pages/EditSuggestion';
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -163,7 +167,7 @@ function App(props: Props) {
                             accessFailedCount: 0,
                             concurrencyStamp: undefined
                         });
-                    
+
                     setUserInfo({
                         publisher: 'test',
                         publisherEmail: 'test@test.tst',
@@ -187,7 +191,7 @@ function App(props: Props) {
                     });
                 } else {
                     setCmsUser(await getCmsUser());
-                    
+
                     if (!headers['Authorization']) {
                         setUserInfo(null);
                         setUserInfoIsLoading(false);
@@ -198,7 +202,7 @@ function App(props: Props) {
 
                     setUserInfo((await sendPost('user-info', {}, headers)).data);
                 }
-                
+
             } catch (err) {
                 setUserInfo(null);
             } finally {
@@ -238,7 +242,7 @@ function App(props: Props) {
                                 <div className="govuk-grid-column-full">
                                     <Routes>
                                         <Route path="/" Component={HomePage} />
-    
+
                                         <Route path="/datasety/:id" element={<DetailDataset />} />
                                         <Route path="/datasety" element={<PublicDatasetList />} />
                                         <Route path="/poskytovatelia" element={<PublicPublisherList />} />
@@ -246,7 +250,7 @@ function App(props: Props) {
                                         <Route path="/lokalne-katalogy" element={<PublicLocalCatalogList />} />
                                         <Route path="/sparql" Component={Sparql} />
                                         <Route path="/kvalita-metadat" Component={Quality} />
-    
+
                                     <Route path="/pozvanka" Component={Invitation} />
                                     <Route path="/saml/consume" Component={LoginInProgress} />
 
@@ -256,21 +260,21 @@ function App(props: Props) {
                                                 <Route path="/sprava/caka-na-schvalenie" Component={InfoPageWaitingForApprove} />
                                             </>
                                         ) : null}
-    
+
                                     {userInfo?.publisher && userInfo.publisherView == null ? (
                                         <Route path="/registracia" Component={PublisherRegistration} />
                                     ) : null}
-    
+
                                         {userInfo?.publisher && userInfo.publisherActive && userInfo.role ? (
                                             <>
                                                 <Route path="/sprava/datasety" Component={DatasetList} />
                                                 <Route path="/sprava/datasety/pridat" Component={AddDataset} />
                                                 <Route path="/sprava/datasety/upravit/:id" Component={EditDataset} />
-    
+
                                                 <Route path="/sprava/distribucie/:datasetId" Component={DistributionList} />
                                                 <Route path="/sprava/distribucie/:datasetId/pridat" Component={AddDistribution} />
                                                 <Route path="/sprava/distribucie/:datasetId/upravit/:id" Component={EditDistribution} />
-    
+
                                                 <Route path="/sprava/lokalne-katalogy" Component={CatalogList} />
                                                 <Route path="/sprava/lokalne-katalogy/pridat" Component={AddCatalog} />
                                                 <Route path="/sprava/lokalne-katalogy/upravit/:id" Component={EditCatalog} />
@@ -278,7 +282,7 @@ function App(props: Props) {
                                             <Route path="/sprava/zmena-licencii" Component={ChangeLicenses} />
                                             </>
                                         ) : null}
-    
+
                                         {userInfo?.publisher &&
                                         userInfo.publisherActive &&
                                         (userInfo.role === 'PublisherAdmin' || userInfo.role === 'Superadmin') ? (
@@ -287,9 +291,16 @@ function App(props: Props) {
                                                 <Route path="/sprava/pouzivatelia/pridat" Component={AddUser} />
                                                 <Route path="/sprava/pouzivatelia/upravit/:id" Component={EditUser} />
                                                 <Route path="/sprava/profil" Component={Profile} />
+                                                {/*<Route path="/sprava/aplikacia" Component={AddApplication} />*/}
                                             </>
                                         ) : null}
-    
+
+                                        <Route path="/sprava/aplikacia" Component={AddApplication} />
+                                        <Route path="/podnet" Component={SuggestionList} />
+                                        {/*<Route path="/podnet/:id" element={<DetailDataset />} />*/}
+                                        <Route path="/podnet/pridat" Component={AddSuggestion} />
+                                        <Route path="/podnet/upravit/:id" Component={EditSuggestion} />
+
                                         {userInfo?.role === 'Superadmin' ? (
                                             <>
                                                 <Route path="/sprava/poskytovatelia" Component={PublisherList} />
@@ -298,12 +309,12 @@ function App(props: Props) {
                                                 <Route path="/sprava/ciselniky" Component={Codelists} />
                                             </>
                                         ) : null}
-                                        
+
                                         <Route path="/odkomunita" Component={ODCommunityStartPage} />
                                         <Route path="/odkomunita/register-user" Component={RegisterUser} />
                                         <Route path="/odkomunita/user-page" Component={UserPage} />
                                         <Route path="/odkomunita/login" Component={Login} />
-    
+
                                         <Route path="*" Component={NotFound} />
                                     </Routes>
                                 </div>

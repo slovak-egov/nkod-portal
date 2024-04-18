@@ -3,8 +3,14 @@ import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { useSearchParams } from 'react-router-dom';
+import { Suggestion, SuggestionStatusCode, SuggestionType } from './cms';
 
 const baseUrl = process.env.REACT_APP_API_URL;
+
+export type OrderOption = {
+    name: string;
+    value: string;
+};
 
 export type TokenContextType = {
     token: TokenResult | null;
@@ -496,6 +502,71 @@ export function useDatasets(initialQuery?: Partial<RequestQuery>) {
     return useEntities<Dataset>('datasets/search', { orderBy: 'modified', ...defaultParams });
 }
 
+export function useSuggestions(initialQuery?: Partial<RequestQuery>) {
+    let defaultParams: Partial<RequestQuery> = { ...initialQuery };
+
+    const [searchParams] = useSearchParams();
+    if (searchParams.has('query')) {
+        defaultParams = {
+            ...defaultParams,
+            queryText: searchParams.get('query')!
+        };
+    }
+
+
+    const json: Suggestion[] = [
+        {
+            id: '1',
+            organization: 'Ministerstvo financií SR',
+            dataset: 'bc49b1a6-ef84-bd81-adfa-b252dbe6e4fd',
+            suggestionType: SuggestionType.SUGGESTION_FOR_PUBLISHED_DATASET,
+            suggestionTitle: 'Zverejňovanie CRZ ako opendata',
+            suggestionDescription: 'CRZ je centrálny register zmlúv, kde publikujú povinné osoby zmluvy podľa rôznych zákonov. Avšak samotné údaje CRZ nie sú prístupné ako otvorené údaje.',
+            suggestionStatus: SuggestionStatusCode.PROPOSAL_FOR_CHANGE,
+            likeCount: 32,
+            commentCount: 3,
+            createdDate: new Date(),
+            createdBy: 'Janko Hraško'
+        },
+        {
+            id: '2',
+            organization: 'Ministerstvo investícií SR',
+            dataset: 'bc49b1a6-ef84-bd81-adfa-b252dbe6e4fd',
+            suggestionType: SuggestionType.SUGGESTION_FOR_QUALITY_OF_METADATA,
+            suggestionTitle: 'Opendata finančnej správy nie sú zapísané v NKODE.',
+            suggestionDescription: 'Otvorené údaje finančnej správy nie sú skatalogizované v Centrálnom portáli otvorených údajov. Návštevník vyhľadávača nad Národným katalógom ich nenájde.',
+            suggestionStatus: SuggestionStatusCode.PROPOSAL_FOR_CREATIOM,
+            likeCount: 31,
+            commentCount: 17,
+            createdDate: new Date(),
+            createdBy: 'Janko Hraško'
+        },
+        {
+            id: '3',
+            organization: 'Hlavné mesto Bratislava',
+            dataset: 'bc49b1a6-ef84-bd81-adfa-b252dbe6e4fd',
+            suggestionType: SuggestionType.SUGGESTION_FOR_QUALITY_OF_PUBLISHED_DATASET,
+            suggestionTitle: 'Opendata BA nie sú zapísané v NKODE.',
+            suggestionDescription: 'Otvorené údaje finančnej správy nie sú skatalogizované v Centrálnom portáli otvorených údajov. Návštevník vyhľadávača nad Národným katalógom ich nenájde.',
+            suggestionStatus: SuggestionStatusCode.PROPOSAL_FOR_CREATIOM,
+            likeCount: 11,
+            commentCount: 8,
+            createdDate: new Date(),
+            createdBy: 'Janko Hraško'
+        }
+    ];
+
+    let [items, query, setQueryParameters, loading, error, refresh] = useEntities<Suggestion>('datasets/suggestions', { orderBy: 'relevance', ...defaultParams });
+
+    items = {
+        ...items,
+        items: json,
+        totalCount: json.length
+    } as Response<Suggestion>
+
+    return [items, query, setQueryParameters, false, error, refresh] as const;
+}
+
 export function useLocalCatalogs(initialQuery?: Partial<RequestQuery>) {
     return useEntities<LocalCatalog>('local-catalogs/search', initialQuery);
 }
@@ -900,6 +971,11 @@ export function useDistributionFileUpload() {
 
 export function useCodelistFileUpload() {
     return useSingleFileUpload('codelists');
+}
+
+export function useAppRegistrationFileUpload() {
+    return useSingleFileUpload('logo');
+
 }
 
 export function useCodelistAdmin() {

@@ -4,15 +4,10 @@ import MainContent from '../components/MainContent';
 import GridRow from '../components/GridRow';
 import GridColumn from '../components/GridColumn';
 import { Link } from 'react-router-dom';
-import { knownCodelists, useDatasets, useDocumentTitle } from '../client';
+import { knownCodelists, OrderOption, useDatasets, useDocumentTitle } from '../client';
 import SearchResults from '../components/SearchResults';
 import { useTranslation } from 'react-i18next';
 import multiIcon from '../icons/multi.png';
-
-type OrderOption = {
-    name: string;
-    value: string;
-};
 
 const codelistsKeys = [
     'publishers',
@@ -26,6 +21,7 @@ const codelistsKeys = [
 ];
 
 export default function PublicDatasetList() {
+    console.log('PublicDatasetList');
     const [datasets, query, setQueryParameters, loading, error] = useDatasets({
         requiredFacets: codelistsKeys,
         orderBy: 'relevance'
