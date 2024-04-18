@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Controller, SubmitHandler, useForm } from 'react-hook-form';
 import Select from 'react-select/async';
 
-import { CodelistValue, sendPost, useDefaultHeaders, useDocumentTitle, useUserInfo } from '../client';
-import { AutocompleteOption, SuggestionFormValues, SuggestionType, useSearchDataset, useSearchPublisher } from '../cms';
+import { CodelistValue, useDefaultHeaders, useDocumentTitle, useUserInfo } from '../client';
+import { AutocompleteOption, sendPost, SuggestionFormValues, SuggestionType, useSearchDataset, useSearchPublisher } from '../cms';
 import Breadcrumbs from '../components/Breadcrumbs';
 import MainContent from '../components/MainContent';
 import PageHeader from '../components/PageHeader';
@@ -51,7 +51,11 @@ const AddSuggestion = () => {
     const { control, register, handleSubmit, watch, formState: { errors } } = useForm<SuggestionFormValues>();
 
     const onSubmit: SubmitHandler<SuggestionFormValues> = async (data) => {
-        const result = await sendPost<SuggestionFormValues>(`/api/suggestion`, data, headers);
+        data.userID = userInfo?.id;
+        data.userOrgURI = userInfo?.companyName;
+        data.status = 'C';
+        //const result = await sendPost<SuggestionFormValues>(`cms/suggestions`, data, headers);
+        const result = await sendPost<SuggestionFormValues>(`cms/suggestions`, data);
         // setSaveResult(result.data);
     };
 
@@ -90,7 +94,7 @@ const AddSuggestion = () => {
                     <Controller
                         render={({ field }) => (
                             <FormElementGroup
-                                label={t('addSuggestion.fields.organization')}
+                                label={t('addSuggestion.fields.orgToURI')}
                                 element={id => <Select
                                     id={id}
                                     styles={{
@@ -119,14 +123,14 @@ const AddSuggestion = () => {
                                 />}
                             />
                         )}
-                        name='organization'
+                        name='orgToURI'
                         control={control}
                     />
 
                     <Controller
                         render={({ field }) => (
                             <FormElementGroup
-                                label={t('addSuggestion.fields.dataset')}
+                                label={t('addSuggestion.fields.datasetURI')}
                                 element={id => <Select
                                     id={id}
                                     styles={{
@@ -155,14 +159,14 @@ const AddSuggestion = () => {
                                 />}
                             />
                         )}
-                        name='dataset'
+                        name='datasetURI'
                         control={control}
                     />
 
                     <Controller
                         render={({ field }) => (
                             <FormElementGroup
-                                label={t('addSuggestion.fields.suggestionType')}
+                                label={t('addSuggestion.fields.type')}
                                 element={id => <SelectElementItems<CodelistValue>
                                     id={id}
                                     disabled={false}
@@ -174,29 +178,29 @@ const AddSuggestion = () => {
                                 />}
                             />
                         )}
-                        name='suggestionType'
+                        name='type'
                         control={control}
                     />
 
                     <FormElementGroup
-                        label={t('addSuggestion.fields.suggestionTitle')}
+                        label={t('addSuggestion.fields.title')}
                         element={id =>
                             <BaseInput
                                 id={id}
                                 disabled={false}
-                                {...register('suggestionTitle')}
+                                {...register('title')}
                                 placeholder='Výber'
                             />
                         }
                     />
 
                     <FormElementGroup
-                        label={t('addSuggestion.fields.suggestionDescription')}
+                        label={t('addSuggestion.fields.description')}
                         element={id =>
                             <TextArea
                                 id={id}
                                 disabled={false}
-                                {...register('suggestionTitle')}
+                                {...register('description')}
                             />
                         }
                     />

@@ -47,7 +47,7 @@ const EditSuggestion = () => {
 
     const suggestionStatusList: CodelistValue[] = [
         {
-            id: SuggestionStatusCode.PROPOSAL_FOR_CHANGE,
+            id: SuggestionStatusCode.PROPOSAL_FOR_CREATIOM,
             label: 'Návrh na zmenu'
         },
         {
@@ -59,7 +59,7 @@ const EditSuggestion = () => {
             label: 'Návrh zamietnutý'
         },
         {
-            id: SuggestionStatusCode.PROPOSAL_APPROVED,
+            id: SuggestionStatusCode.PROPOSAL_IN_PROGRESS,
             label: 'Návrh schválený'
         },
         {
@@ -133,7 +133,7 @@ const EditSuggestion = () => {
                                 />}
                             />
                         )}
-                        name='organization'
+                        name='userOrgURI'
                         control={control}
                     />
 
@@ -169,14 +169,14 @@ const EditSuggestion = () => {
                                 />}
                             />
                         )}
-                        name='dataset'
+                        name='datasetURI'
                         control={control}
                     />
 
                     <Controller
                         render={({ field }) => (
                             <FormElementGroup
-                                label={t('editSuggestion.fields.suggestionType')}
+                                label={t('editSuggestion.fields.type')}
                                 element={id => <SelectElementItems<CodelistValue>
                                     id={id}
                                     disabled={false}
@@ -188,29 +188,29 @@ const EditSuggestion = () => {
                                 />}
                             />
                         )}
-                        name='suggestionType'
+                        name='type'
                         control={control}
                     />
 
                     <FormElementGroup
-                        label={t('editSuggestion.fields.suggestionTitle')}
+                        label={t('editSuggestion.fields.title')}
                         element={id =>
                             <BaseInput
                                 id={id}
                                 disabled={false}
-                                {...register('suggestionTitle')}
+                                {...register('title')}
                                 placeholder='Výber'
                             />
                         }
                     />
 
                     <FormElementGroup
-                        label={t('editSuggestion.fields.suggestionDescription')}
+                        label={t('editSuggestion.fields.description')}
                         element={id =>
                             <TextArea
                                 id={id}
                                 disabled={false}
-                                {...register('suggestionTitle')}
+                                {...register('title')}
                             />
                         }
                     />
@@ -219,7 +219,7 @@ const EditSuggestion = () => {
                     <Controller
                         render={({ field }) => (
                             <FormElementGroup
-                                label={t('editSuggestion.fields.suggestionStatus')}
+                                label={t('editSuggestion.fields.status')}
                                 element={id => <SelectElementItems<CodelistValue>
                                     id={id}
                                     disabled={false}

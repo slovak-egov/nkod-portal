@@ -45,18 +45,18 @@ const SuggestionList = () => {
                                         to={'/datasety/' + suggestion.id}
                                         className="idsk-card-title govuk-link"
                                     >
-                                        {suggestion.suggestionTitle}
+                                        {suggestion.title}
                                     </Link>
                                 </GridColumn>
-                                {suggestion.suggestionDescription && (
+                                {suggestion.description && (
                                     <GridColumn widthUnits={1} totalUnits={1}>
-                                        <div style={{WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box'}}>{suggestion.suggestionDescription}</div>
+                                        <div style={{ WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box' }}>{suggestion.description}</div>
                                     </GridColumn>
                                 )}
-                                {suggestion.organization && (
+                                {suggestion.orgToURI && (
                                     <GridColumn widthUnits={1} totalUnits={1} data-testid="sr-result-publisher" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                        <span style={{color: '#000', fontStyle: 'italic', fontWeight: 'bold', paddingRight: '0.2rem'}}>{t('suggestionList.investigator')}:</span>
-                                        <span style={{color: '#777', fontStyle: 'italic', paddingLeft: '0.2rem'}}>{suggestion.organization}</span>
+                                        <span style={{ color: '#000', fontStyle: 'italic', fontWeight: 'bold', paddingRight: '0.2rem' }}>{t('suggestionList.investigator')}:</span>
+                                        <span style={{ color: '#777', fontStyle: 'italic', paddingLeft: '0.2rem' }}>{suggestion.orgToURI}</span>
                                     </GridColumn>
                                 ) }
                             </GridRow>

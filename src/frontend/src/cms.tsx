@@ -70,26 +70,27 @@ export enum ApplicationTheme {
 }
 
 export enum SuggestionType {
-    SUGGESTION_FOR_PUBLISHED_DATASET = 'SUGGESTION_FOR_PUBLISHED_DATASET',
-    SUGGESTION_FOR_QUALITY_OF_PUBLISHED_DATASET = 'SUGGESTION_FOR_QUALITY_OF_PUBLISHED_DATASET',
-    SUGGESTION_FOR_QUALITY_OF_METADATA = 'SUGGESTION_FOR_QUALITY_OF_METADATA',
-    SUGGESTION_OTHER = 'SUGGESTION_OTHER',
+    SUGGESTION_FOR_PUBLISHED_DATASET = 'PN',
+    SUGGESTION_FOR_QUALITY_OF_PUBLISHED_DATASET = 'DQ',
+    SUGGESTION_FOR_QUALITY_OF_METADATA = 'NQ',
+    SUGGESTION_OTHER = 'O',
 }
 
 export enum SuggestionStatusCode {
-    PROPOSAL_FOR_CHANGE = 'PROPOSAL_FOR_CHANGE',
-    PROPOSAL_FOR_CREATIOM = 'PROPOSAL_FOR_CREATIOM',
-    PROPOSAL_REJECTED = 'PROPOSAL_REJECTED',
-    PROPOSAL_APPROVED = 'PROPOSAL_APPROVED',
-    PROPOSAL_IN_PROGRESS = 'PROPOSAL_IN_PROGRESS'
+    PROPOSAL_FOR_CREATIOM = 'C',
+    PROPOSAL_REJECTED = 'R',
+    PROPOSAL_IN_PROGRESS = 'P'
 }
 
 export interface SuggestionFormValues {
-    organization: string,
-    dataset: string,
-    suggestionType: string,
-    suggestionTitle: string,
-    suggestionDescription: string,
+    userID: string | undefined,
+    userOrgURI: string | null | undefined,
+    orgToURI?: string,
+    type: string,
+    datasetURI: string,
+    title: string,
+    description: string,
+    status: string
 }
 
 
