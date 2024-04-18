@@ -9,7 +9,6 @@ import PublicPublisherList from './pages/PublicPublisherList';
 import PublicLocalCatalogList from './pages/PublicLocalCatalogList';
 import DetailLocalCatalog from './pages/DetailLocalCatalog';
 import PublicDatasetList from './pages/PublicDatasetList';
-import Alert from './components/Alert';
 import EditDataset from './pages/EditDataset';
 import DistributionList from './pages/DistributionList';
 import AddDistribution from './pages/AddDistribution';
@@ -20,7 +19,7 @@ import EditDistribution from './pages/EditDistribution';
 import Sparql from './pages/Sparql';
 import Quality from './pages/Quality';
 import Profile from './pages/Profile';
-import { Language, LanguageOptionsContext, sendPost, supportedLanguages, TokenContext, TokenResult, UserInfo, sendPost, supportedLanguages, useUserInfo } from './client';
+import { Language, LanguageOptionsContext, TokenContext, TokenResult, UserInfo, sendPost, supportedLanguages, useUserInfo } from './client';
 import React, { useEffect, useState, useContext, useCallback } from 'react';
 import PublisherList from './pages/PublisherList';
 import UserList from './pages/UserList';
@@ -45,6 +44,7 @@ import AddApplication from './pages/AddApplication';
 import AddSuggestion from './pages/AddSuggestion';
 import SuggestionList from './pages/SuggestionList';
 import EditSuggestion from './pages/EditSuggestion';
+import {CmsUser, getCmsUser, CmsUserContext} from "./cms";
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -178,7 +178,12 @@ function App(props: Props) {
                             isPublic: true,
                             name: 'test',
                             datasetCount: 0,
-                            themes: null
+                            themes: null,
+                            email: null,
+                            legalForm: null,
+                            nameAll: null,
+                            phone: null,
+                            website: null
                         },
                         publisherActive: true,
                         publisherPhone: '',
@@ -187,7 +192,8 @@ function App(props: Props) {
                         lastName: 'test',
                         email: 'test@test.tst',
                         role: 'Superadmin',
-                        companyName: 'test'
+                        companyName: 'test',
+                        publisherLegalForm: null
                     });
                 } else {
                     setCmsUser(await getCmsUser());
