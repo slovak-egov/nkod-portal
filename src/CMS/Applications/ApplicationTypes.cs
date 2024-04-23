@@ -1,7 +1,11 @@
 ﻿namespace CMS.Applications
 {
     public enum ApplicationTypes
-    {
-        WA
+    {		
+		MA,
+        WA,
+        WP,
+        V,
+        A
     }
 }

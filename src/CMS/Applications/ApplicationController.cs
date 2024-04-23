@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Piranha;
 using Piranha.Extend.Fields;
 using Piranha.Models;
+using System.Text.Json.Serialization;
 
 namespace CMS.Applications
 {
@@ -31,14 +32,18 @@ namespace CMS.Applications
         {
             return new ApplicationDto
             {
+                Id = p.Id,
                 Type = p.Application.Type.Value,
+                Theme = p.Application.Theme.Value,
                 Description = p.Application.Description,
                 Title = p.Title,
-                OwnerName = p.Application.OwnerName,
-                OwnerSurname = p.Application.OwnerSurname,
-                OwnerEmail = p.Application.OwnerEmail,
-                Url = p.Application.Url
-            };
+                ContactName = p.Application.ContactName,
+                ContactSurname = p.Application.ContactSurname,
+                ContactEmail = p.Application.ContactEmail,
+                Url = p.Application.Url,
+                Logo = p.Application.Logo,
+                DatasetURIs = (p.Application.DatasetURIs != null) ? p.Application.DatasetURIs.Select(d => d.Value).ToList() : null
+			};
         }
 
         [HttpPost]
@@ -51,15 +56,21 @@ namespace CMS.Applications
             post.Application = new ApplicationRegion
             {
                 Description = dto.Description,
-                Url = dto.Url,
-                OwnerName = dto.OwnerName,
-                OwnerSurname = dto.OwnerSurname,
-                OwnerEmail = dto.OwnerEmail,
                 Type = new SelectField<ApplicationTypes>
                 {
-                    Value = dto.Type
-                }
-            };
+                    Value = dto.Type    
+                },
+				Theme = new SelectField<ApplicationThemes>
+				{
+					Value = dto.Theme
+				},
+                Url = dto.Url,
+				Logo = dto.Logo,
+				ContactName = dto.ContactName,
+				ContactSurname = dto.ContactSurname,
+				ContactEmail = dto.ContactEmail,
+				DatasetURIs = (dto.DatasetURIs != null) ? dto.DatasetURIs.Select(d => (StringField)d).ToList() : null
+			};
 
             post.Category = new Taxonomy
             {

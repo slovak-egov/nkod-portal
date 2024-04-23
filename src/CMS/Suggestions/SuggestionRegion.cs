@@ -10,6 +10,6 @@ namespace CMS.Suggestions
         [Field] public StringField OrgToUri { get; set; }
         [Field] public TextField Description { get; set; }
         [Field] public SelectField<ContentTypes> Type { get; set; }
-        [Field] public SelectField<SuggestionStates> State { get; set; }
+        [Field] public SelectField<SuggestionStates> Status { get; set; }
     }
 }

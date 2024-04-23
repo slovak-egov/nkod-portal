@@ -1,3 +1,4 @@
+using CMS;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
@@ -5,6 +6,7 @@ using Piranha;
 using Piranha.AttributeBuilder;
 using Piranha.Data.EF.SQLite;
 using Piranha.Local;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,7 +33,13 @@ builder.AddPiranha(options =>
     {
         options.SwaggerDoc("v1", new OpenApiInfo { Title = "CMS API", Version = "v1" });
         options.CustomSchemaIds(x => x.FullName);
-    });
+		options.SchemaFilter<EnumSchemaFilter>();		
+	});
+
+	options.Services.AddControllers().AddJsonOptions(options =>
+	{
+		options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+	});
 });
 
 var app = builder.Build();

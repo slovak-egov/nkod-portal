@@ -1,18 +1,38 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 
 namespace CMS.Suggestions
 {
     public class SuggestionDto
     {
-        public string UserId { get; set; }
-        public string UserOrgUri { get; set; }
-        public string OrgToUri { get; set; }
-        [JsonConverter(typeof(JsonStringEnumConverter))]
+		public Guid Id { get; set; }
+
+        [Required]
+		public Guid UserId { get; set; }
+
+		[Url]
+		public string UserOrgUri { get; set; }
+
+		[Required]
+		[Url]
+		public string OrgToUri { get; set; }
+
+		[Required]
+		[JsonConverter(typeof(JsonStringEnumConverter))]        
         public ContentTypes Type { get; set; }
-        public string DatasetUri { get; set; }
-        public string Title { get; set; }
-        public string Description { get; set; }
-        [JsonConverter(typeof(JsonStringEnumConverter))]
-        public SuggestionStates State { get; set; }
+
+		[Url]
+		public string DatasetUri { get; set; }
+
+		[Required]
+		public string Title { get; set; }
+
+		[Required]
+		public string Description { get; set; }
+
+		[Required]
+		[JsonConverter(typeof(JsonStringEnumConverter))]        
+        public SuggestionStates Status { get; set; }
     }
 }

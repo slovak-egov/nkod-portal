@@ -63,11 +63,12 @@ namespace CMS.Suggestions
         {
             return new SuggestionDto
             {
-                State = p.Suggestion.State.Value,
+                Id = p.Id,
+                Status = p.Suggestion.Status.Value,
                 OrgToUri = p.Suggestion.OrgToUri,
                 Type = p.Suggestion.Type.Value,
                 Description = p.Suggestion.Description,
-                UserId = p.Suggestion.UserId,
+                UserId = Guid.Parse(p.Suggestion.UserId.Value),
                 UserOrgUri = p.Suggestion.UserOrgUri,
                 DatasetUri = datasetUri,
                 Title = p.Title
@@ -84,16 +85,16 @@ namespace CMS.Suggestions
             post.Suggestion = new SuggestionRegion
             {
                 Description = dto.Description,
-                UserId = dto.UserId,
+                UserId = dto.UserId.ToString("D"),
                 UserOrgUri = dto.UserOrgUri,
                 OrgToUri = dto.OrgToUri,
                 Type = new SelectField<ContentTypes>
                 {
                     Value = dto.Type
                 },
-                State = new SelectField<SuggestionStates>
+                Status = new SelectField<SuggestionStates>
                 {
-                    Value = dto.State
+                    Value = dto.Status
                 }
             };
 

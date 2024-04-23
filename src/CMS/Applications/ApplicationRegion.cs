@@ -7,9 +7,12 @@ namespace CMS.Applications
     {
         [Field] public TextField Description { get; set; }
         [Field] public SelectField<ApplicationTypes> Type { get; set; }
-        [Field] public StringField Url { get; set; }
-        [Field] public StringField OwnerName { get; set; }
-        [Field] public StringField OwnerSurname { get; set; }
-        [Field] public StringField OwnerEmail { get; set; }
-    }
+		[Field] public SelectField<ApplicationThemes> Theme { get; set; }
+		[Field] public StringField Url { get; set; }
+		[Field] public StringField Logo { get; set; }
+		[Field] public IList<StringField> DatasetURIs { get; set; }
+		[Field] public StringField ContactName { get; set; }
+        [Field] public StringField ContactSurname { get; set; }
+        [Field] public StringField ContactEmail { get; set; }
+	}
 }

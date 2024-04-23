@@ -1,19 +1,42 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace CMS.Applications
 {
     public class ApplicationDto
     {
-        public string Title { get; set; }
-        public string Description { get; set; }
+		public Guid Id { get; set; }
 
-        [JsonConverter(typeof(JsonStringEnumConverter))]
+		[Required]
+		public string Title { get; set; }
+
+		[Required]
+		public string Description { get; set; }
+
+		[Required]
+		[JsonConverter(typeof(JsonStringEnumConverter))]
         public ApplicationTypes Type { get; set; }
 
+		[Required]
+		[JsonConverter(typeof(JsonStringEnumConverter))]
+		public ApplicationThemes Theme { get; set; }
+ 
+		[Url] 
         public string Url { get; set; }
-        public string OwnerName { get; set; }
-        public string OwnerSurname { get; set; }
-        [EmailAddress] public string OwnerEmail { get; set; }
-    }
+
+		public string Logo { get; set; }
+
+		public IList<string> DatasetURIs { get; set; }
+
+		[Required]
+		public string ContactName { get; set; }
+
+		[Required]
+		public string ContactSurname { get; set; }
+
+		[Required]
+		[EmailAddress] 
+        public string ContactEmail { get; set; }
+	}
 }
