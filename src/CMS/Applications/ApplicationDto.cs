@@ -38,5 +38,9 @@ namespace CMS.Applications
 		[Required]
 		[EmailAddress] 
         public string ContactEmail { get; set; }
+
+		public DateTime Created { get; set; }
+
+		public DateTime Updated { get; set; }
 	}
 }

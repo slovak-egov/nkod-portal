@@ -32,7 +32,9 @@ namespace CMS.Suggestions
             return new SuggestionDto
             {
                 Id = p.Id,
-                Status = p.Suggestion.Status.Value,
+				Created = p.Created,
+				Updated = p.LastModified,
+				Status = p.Suggestion.Status.Value,
                 OrgToUri = p.Suggestion.OrgToUri,
                 Type = p.Suggestion.Type.Value,
                 Description = p.Suggestion.Description,

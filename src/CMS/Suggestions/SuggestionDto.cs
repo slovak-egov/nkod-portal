@@ -34,5 +34,9 @@ namespace CMS.Suggestions
 		[Required]
 		[JsonConverter(typeof(JsonStringEnumConverter))]        
         public SuggestionStates Status { get; set; }
-    }
+
+		public DateTime Created { get; set; }
+
+		public DateTime Updated { get; set; }
+	}
 }

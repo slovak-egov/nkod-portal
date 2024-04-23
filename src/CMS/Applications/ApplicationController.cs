@@ -33,6 +33,8 @@ namespace CMS.Applications
             return new ApplicationDto
             {
                 Id = p.Id,
+                Created = p.Created,
+                Updated = p.LastModified,
                 Type = p.Application.Type.Value,
                 Theme = p.Application.Theme.Value,
                 Description = p.Application.Description,
@@ -42,7 +44,7 @@ namespace CMS.Applications
                 ContactEmail = p.Application.ContactEmail,
                 Url = p.Application.Url,
                 Logo = p.Application.Logo,
-                DatasetURIs = p.Application.DatasetURIs?.Value.ToList() ?? new List<string>()
+                DatasetURIs = (p.Application.DatasetURIs?.Value != null) ? p.Application.DatasetURIs?.Value.ToList() : new List<string>()
 			};
         }
 
