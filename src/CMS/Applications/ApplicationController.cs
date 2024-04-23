@@ -42,7 +42,7 @@ namespace CMS.Applications
                 ContactEmail = p.Application.ContactEmail,
                 Url = p.Application.Url,
                 Logo = p.Application.Logo,
-                DatasetURIs = (p.Application.DatasetURIs != null) ? p.Application.DatasetURIs.Select(d => d.Value).ToList() : null
+                DatasetURIs = p.Application.DatasetURIs?.Value.ToList() ?? new List<string>()
 			};
         }
 
@@ -69,7 +69,7 @@ namespace CMS.Applications
 				ContactName = dto.ContactName,
 				ContactSurname = dto.ContactSurname,
 				ContactEmail = dto.ContactEmail,
-				DatasetURIs = (dto.DatasetURIs != null) ? dto.DatasetURIs.Select(d => (StringField)d).ToList() : null
+				DatasetURIs = (dto.DatasetURIs != null) ? new MultiSelectField { Value = dto.DatasetURIs } : null
 			};
 
             post.Category = new Taxonomy
