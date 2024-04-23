@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Piranha;
 using Piranha.Extend.Fields;
@@ -21,45 +20,14 @@ namespace CMS.Suggestions
 
         [HttpGet]
         [Route("")]
-        public async Task<IEnumerable<SuggestionDto>> Get([FromQuery] SuggestionQueryDto query)
+        public async Task<IEnumerable<SuggestionDto>> Get()
         {
-            var page = await api.Pages.GetBySlugAsync(GetSlug(query.Id, query.Type));
-            if (!IsValidType(query.Type, page))
-            {
-                return Enumerable.Empty<SuggestionDto>();
-            }
+            var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
             var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id);
-            return archive.Posts.Select(p => Convert(query.Id, p));
+            return archive.Posts.Select(Convert);
         }
 
-        private static bool IsValidType(ContentTypes type, ContentBase content)
-        {
-            return content?.TypeId == GetType(type);
-        }
-        
-        private static string GetType(ContentTypes type)
-        {
-            return type switch
-            {
-                ContentTypes.DQ => nameof(DatasetPage),
-                ContentTypes.MQ => nameof(DatasetPage),
-                ContentTypes.PN => nameof(NewDatasetSuggestionsPage),
-                ContentTypes.O => nameof(GeneralSuggestionsPage),
-                _ => string.Empty
-            };
-        }
-
-        private static string GetSlug(string id, ContentTypes type)
-        {
-            return type switch
-            {
-                ContentTypes.PN => NewDatasetSuggestionsPage.WellKnownSlug,
-                ContentTypes.O => GeneralSuggestionsPage.WellKnownSlug,
-                _ => Utils.GenerateSlug(id)
-            };
-        }
-
-        private static SuggestionDto Convert(string datasetUri, SuggestionPost p)
+        private static SuggestionDto Convert(SuggestionPost p)
         {
             return new SuggestionDto
             {
@@ -70,7 +38,7 @@ namespace CMS.Suggestions
                 Description = p.Suggestion.Description,
                 UserId = Guid.Parse(p.Suggestion.UserId.Value),
                 UserOrgUri = p.Suggestion.UserOrgUri,
-                DatasetUri = datasetUri,
+                DatasetUri = p.Suggestion.DatasetUri.Value,
                 Title = p.Title
             };
         }
@@ -79,7 +47,7 @@ namespace CMS.Suggestions
         [Route("")]
         public async Task<IResult> Save(SuggestionDto dto)
         {
-            var archiveId = await GetArchiveGuidAsync(dto);
+            var archiveId = await GetArchiveGuidAsync();
             var post = await api.Posts.CreateAsync<SuggestionPost>();
             post.Title = dto.Title;
             post.Suggestion = new SuggestionRegion
@@ -88,6 +56,7 @@ namespace CMS.Suggestions
                 UserId = dto.UserId.ToString("D"),
                 UserOrgUri = dto.UserOrgUri,
                 OrgToUri = dto.OrgToUri,
+                DatasetUri = dto.DatasetUri,
                 Type = new SelectField<ContentTypes>
                 {
                     Value = dto.Type
@@ -111,24 +80,17 @@ namespace CMS.Suggestions
             return Results.Ok();
         }
 
-        private async Task<Guid> GetArchiveGuidAsync(SuggestionDto dto)
+        private async Task<Guid> GetArchiveGuidAsync()
         {
-            var page = await api.Pages.GetBySlugAsync(GetSlug(dto.DatasetUri, dto.Type));
-            return page?.Id ?? (await CreatePage(dto)).Id;
+            var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
+            return page?.Id ?? (await CreatePage()).Id;
         }
 
-        private async Task<PageBase> CreatePage(SuggestionDto dto)
+        private async Task<PageBase> CreatePage()
         {
-            PageBase newPage = dto.Type switch
-            {
-                ContentTypes.DQ => await api.Pages.CreateAsync<DatasetPage>(),
-                ContentTypes.MQ => await api.Pages.CreateAsync<DatasetPage>(),
-                ContentTypes.PN => await api.Pages.CreateAsync<NewDatasetSuggestionsPage>(),
-                ContentTypes.O => await api.Pages.CreateAsync<GeneralSuggestionsPage>(),
-                _ => await api.Pages.CreateAsync<GeneralSuggestionsPage>()
-            };
+            PageBase newPage = await api.Pages.CreateAsync<SuggestionsPage>();
 
-            newPage.Title = GetSlug(dto.DatasetUri, dto.Type);
+            newPage.Title = SuggestionsPage.WellKnownSlug;
             newPage.EnableComments = true;
             newPage.Published = DateTime.Now;
             newPage.SiteId = await GetSiteGuidAsync();
