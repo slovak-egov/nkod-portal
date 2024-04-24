@@ -5,7 +5,8 @@ namespace CMS.Applications
 {
     public class ApplicationRegion
     {
-        [Field] public TextField Description { get; set; }
+		[Field] public StringField UserId { get; set; }
+		[Field] public TextField Description { get; set; }
         [Field] public SelectField<ApplicationTypes> Type { get; set; }
 		[Field] public SelectField<ApplicationThemes> Theme { get; set; }
 		[Field] public StringField Url { get; set; }

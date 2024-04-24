@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace CMS.Suggestions
 {
     public class SuggestionDto
-    {
+	{
 		public Guid Id { get; set; }
 
         [Required]

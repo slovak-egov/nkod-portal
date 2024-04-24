@@ -18,7 +18,7 @@ namespace CMS.Applications
         {
             this.api = api;
         }
-        
+
         [HttpGet]
         [Route("")]
         public async Task<IEnumerable<ApplicationDto>> Get()
@@ -27,15 +27,16 @@ namespace CMS.Applications
             var archive = await api.Archives.GetByIdAsync<ApplicationPost>(id);
             return archive.Posts.Select(Convert);
         }
-        
+
         private static ApplicationDto Convert(ApplicationPost p)
         {
             return new ApplicationDto
             {
-                Id = p.Id,
-                Created = p.Created,
+                Id = p.Id,				
+				Created = p.Created,
                 Updated = p.LastModified,
-                Type = p.Application.Type.Value,
+				UserId = (p.Application.UserId.Value != null) ? Guid.Parse(p.Application.UserId.Value) : Guid.Empty,
+				Type = p.Application.Type.Value,
                 Theme = p.Application.Theme.Value,
                 Description = p.Application.Description,
                 Title = p.Title,
@@ -45,7 +46,7 @@ namespace CMS.Applications
                 Url = p.Application.Url,
                 Logo = p.Application.Logo,
                 DatasetURIs = (p.Application.DatasetURIs?.Value != null) ? p.Application.DatasetURIs?.Value.ToList() : new List<string>()
-			};
+            };
         }
 
         [HttpPost]
@@ -57,22 +58,23 @@ namespace CMS.Applications
             post.Title = dto.Title;
             post.Application = new ApplicationRegion
             {
-                Description = dto.Description,
+				UserId = dto.UserId.ToString("D"),
+				Description = dto.Description,
                 Type = new SelectField<ApplicationTypes>
                 {
-                    Value = dto.Type    
+                    Value = dto.Type
                 },
-				Theme = new SelectField<ApplicationThemes>
-				{
-					Value = dto.Theme
-				},
+                Theme = new SelectField<ApplicationThemes>
+                {
+                    Value = dto.Theme
+                },
                 Url = dto.Url,
-				Logo = dto.Logo,
-				ContactName = dto.ContactName,
-				ContactSurname = dto.ContactSurname,
-				ContactEmail = dto.ContactEmail,
-				DatasetURIs = (dto.DatasetURIs != null) ? new MultiSelectField { Value = dto.DatasetURIs } : null
-			};
+                Logo = dto.Logo,
+                ContactName = dto.ContactName,
+                ContactSurname = dto.ContactSurname,
+                ContactEmail = dto.ContactEmail,
+                DatasetURIs = (dto.DatasetURIs != null) ? new MultiSelectField { Value = dto.DatasetURIs } : null
+            };
 
             post.Category = new Taxonomy
             {
@@ -82,19 +84,21 @@ namespace CMS.Applications
             };
             post.BlogId = archiveId;
             post.Published = DateTime.Now;
+            post.EnableComments = true;
 
             await api.Posts.SaveAsync(post);
             return Results.Ok();
         }
 
-		[HttpPut]
-		[Route("")]
-		public async Task<IResult> Update(ApplicationDto dto)
-		{
-			var post = await api.Posts.GetByIdAsync<ApplicationPost>(dto.Id);
-			post.Title = dto.Title;
+        [HttpPut]
+        [Route("")]
+        public async Task<IResult> Update(ApplicationDto dto)
+        {
+            var post = await api.Posts.GetByIdAsync<ApplicationPost>(dto.Id);
+            post.Title = dto.Title;
 
-            post.Application.Description = dto.Description;
+			post.Application.UserId = dto.UserId.ToString("D");
+			post.Application.Description = dto.Description;
             post.Application.Type.Value = dto.Type;
             post.Application.Theme.Value = dto.Theme;
             post.Application.Url = dto.Url;
@@ -103,12 +107,12 @@ namespace CMS.Applications
             post.Application.ContactSurname = dto.ContactSurname;
             post.Application.ContactEmail = dto.ContactEmail;
             post.Application.DatasetURIs = (dto.DatasetURIs != null) ? new MultiSelectField { Value = dto.DatasetURIs } : null;
-			
-			await api.Posts.SaveAsync(post);
-			return Results.Ok();
-		}
 
-		private async Task<Guid> GetArchiveGuidAsync()
+            await api.Posts.SaveAsync(post);
+            return Results.Ok();
+        }
+
+        private async Task<Guid> GetArchiveGuidAsync()
         {
             var page = await api.Pages.GetBySlugAsync(ApplicationsPage.WellKnownSlug);
             return page?.Id ?? (await CreatePage()).Id;
@@ -129,6 +133,6 @@ namespace CMS.Applications
         private async Task<Guid> GetSiteGuidAsync()
         {
             return (await api.Sites.GetDefaultAsync()).Id;
-        }
+        }        
     }
 }
