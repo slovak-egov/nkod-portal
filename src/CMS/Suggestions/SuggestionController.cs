@@ -82,7 +82,26 @@ namespace CMS.Suggestions
             return Results.Ok();
         }
 
-        private async Task<Guid> GetArchiveGuidAsync()
+		[HttpPut]
+		[Route("")]
+		public async Task<IResult> Update(SuggestionDto dto)
+		{
+			var post = await api.Posts.GetByIdAsync<SuggestionPost>(dto.Id);
+			post.Title = dto.Title;
+
+			post.Suggestion.Description = dto.Description;
+			post.Suggestion.UserId = dto.UserId.ToString("D");
+			post.Suggestion.UserOrgUri = dto.UserOrgUri;
+			post.Suggestion.OrgToUri = dto.OrgToUri;
+			post.Suggestion.DatasetUri = dto.DatasetUri;
+			post.Suggestion.Type.Value = dto.Type;
+			post.Suggestion.Status.Value = dto.Status;
+
+			await api.Posts.SaveAsync(post);
+			return Results.Ok();
+		}
+
+		private async Task<Guid> GetArchiveGuidAsync()
         {
             var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
             return page?.Id ?? (await CreatePage()).Id;

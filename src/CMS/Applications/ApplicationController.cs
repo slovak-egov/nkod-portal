@@ -87,7 +87,28 @@ namespace CMS.Applications
             return Results.Ok();
         }
 
-        private async Task<Guid> GetArchiveGuidAsync()
+		[HttpPut]
+		[Route("")]
+		public async Task<IResult> Update(ApplicationDto dto)
+		{
+			var post = await api.Posts.GetByIdAsync<ApplicationPost>(dto.Id);
+			post.Title = dto.Title;
+
+            post.Application.Description = dto.Description;
+            post.Application.Type.Value = dto.Type;
+            post.Application.Theme.Value = dto.Theme;
+            post.Application.Url = dto.Url;
+            post.Application.Logo = dto.Logo;
+            post.Application.ContactName = dto.ContactName;
+            post.Application.ContactSurname = dto.ContactSurname;
+            post.Application.ContactEmail = dto.ContactEmail;
+            post.Application.DatasetURIs = (dto.DatasetURIs != null) ? new MultiSelectField { Value = dto.DatasetURIs } : null;
+			
+			await api.Posts.SaveAsync(post);
+			return Results.Ok();
+		}
+
+		private async Task<Guid> GetArchiveGuidAsync()
         {
             var page = await api.Pages.GetBySlugAsync(ApplicationsPage.WellKnownSlug);
             return page?.Id ?? (await CreatePage()).Id;
