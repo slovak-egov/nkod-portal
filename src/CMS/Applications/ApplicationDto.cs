@@ -30,6 +30,8 @@ namespace CMS.Applications
 
 		public string Logo { get; set; }
 
+		public string LogoFileName { get; set; }
+
 		public IList<string> DatasetURIs { get; set; }
 
 		[Required]

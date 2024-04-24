@@ -1,4 +1,4 @@
-﻿using CMS.Applications;
+﻿using CMS.Comments;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Piranha;
@@ -28,17 +28,16 @@ namespace CMS.Suggestions
             return archive.Posts.Select(Convert);
         }*/
         
-		[HttpGet]
+		[HttpGet()]
 		[Route("")]
 		public async Task<IEnumerable<SuggestionDto>> GetAll(int? pageNumber, int? pageSize)
 		{
 			var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
 			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id, currentPage: pageNumber, pageSize: pageSize);
-
 			return archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created);
 		}
         /*
-		[HttpGet]
+		[HttpGet)]
 		[Route("")]
 		public async Task<IEnumerable<SuggestionDto>> GetByDataset(string datasetUri, int? pageNumber, int? pageSize)
 		{
@@ -46,17 +45,15 @@ namespace CMS.Suggestions
 			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id, currentPage: pageNumber, pageSize: pageSize);
 
 			return archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetUri == datasetUri).OrderByDescending(c => c.Created);
-		}*/        
-        /*
-		[HttpGet]
-		[Route("[id]")]
-		public async Task<SuggestionDto> GetByID(Guid id, int? pageNumber, int? pageSize)
+		} */     
+        
+		[HttpGet("{id}")]		
+		public async Task<SuggestionDto> GetByID(Guid id)
 		{
 			var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
-			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id, currentPage: pageNumber, pageSize: pageSize);
-
+			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id);
 			return archive.Posts.Where(p => p.Id == id).Select(p => Convert(p)).SingleOrDefault();
-		}*/
+		}
 
 		private static SuggestionDto Convert(SuggestionPost p)
         {
@@ -154,46 +151,5 @@ namespace CMS.Suggestions
         {
             return (await api.Sites.GetDefaultAsync()).Id;
         }
-
-		[HttpGet]
-		[Route("comments")]
-		public async Task<IEnumerable<CommentDto>> GetComments(Guid suggestionId, int? pageNumber, int? pageSize)
-		{
-            var res = await api.Posts.GetAllCommentsAsync(suggestionId, false, pageNumber, pageSize);
-			return res.Select(c => Convert(c)).OrderByDescending(c => c.Created);
-		}
-
-		private static CommentDto Convert(Comment c)
-		{
-			return new CommentDto
-			{				
-				Id = c.Id,
-				ContentId = c.ContentId,
-				UserId = Guid.Parse(c.UserId),
-				Author = c.Author,
-				Email = c.Email,
-				Body = c.Body,
-				Created = c.Created
-			};
-		}
-
-		[HttpPost]
-		[Route("comments")]
-		public async Task<IResult> AddComment(CommentDto dto)
-		{
-            var comment = new PageComment()
-            {
-                Id = dto.Id,
-                ContentId = dto.ContentId,
-                UserId = dto.UserId.ToString("D"),
-                Author = dto.Author,
-                Email = dto.Email,
-                Body = dto.Body,
-                Created = DateTime.Now
-            };
-
-			await api.Posts.SaveCommentAsync(comment.ContentId, comment);
-			return Results.Ok();
-		}
 	}
 }

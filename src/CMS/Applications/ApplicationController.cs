@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using CMS.Comments;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Piranha;
 using Piranha.Extend.Fields;
 using Piranha.Models;
-using System.Text.Json.Serialization;
 
 namespace CMS.Applications
 {
@@ -18,7 +18,7 @@ namespace CMS.Applications
         {
             this.api = api;
         }
-
+        /*
         [HttpGet]
         [Route("")]
         public async Task<IEnumerable<ApplicationDto>> Get()
@@ -26,9 +26,36 @@ namespace CMS.Applications
             var id = await GetArchiveGuidAsync();
             var archive = await api.Archives.GetByIdAsync<ApplicationPost>(id);
             return archive.Posts.Select(Convert);
-        }
+        }*/
 
-        private static ApplicationDto Convert(ApplicationPost p)
+		[HttpGet()]
+		[Route("")]
+		public async Task<IEnumerable<ApplicationDto>> GetAll(int? pageNumber, int? pageSize)
+		{
+			var page = await api.Pages.GetBySlugAsync(ApplicationsPage.WellKnownSlug);
+			var archive = await api.Archives.GetByIdAsync<ApplicationPost>(page.Id, currentPage: pageNumber, pageSize: pageSize);
+			return archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created);
+		}
+		/*
+		[HttpGet)]
+		[Route("")]
+		public async Task<IEnumerable<SuggestionDto>> GetByDataset(string datasetUri, int? pageNumber, int? pageSize)
+		{
+			var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
+			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id, currentPage: pageNumber, pageSize: pageSize);
+
+			return archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetUri == datasetUri).OrderByDescending(c => c.Created);
+		} */
+
+		[HttpGet("{id}")]
+		public async Task<ApplicationDto> GetByID(Guid id)
+		{
+			var page = await api.Pages.GetBySlugAsync(ApplicationsPage.WellKnownSlug);
+			var archive = await api.Archives.GetByIdAsync<ApplicationPost>(page.Id);
+			return archive.Posts.Where(p => p.Id == id).Select(p => Convert(p)).SingleOrDefault();
+		}
+
+		private static ApplicationDto Convert(ApplicationPost p)
         {
             return new ApplicationDto
             {
@@ -45,7 +72,8 @@ namespace CMS.Applications
                 ContactEmail = p.Application.ContactEmail,
                 Url = p.Application.Url,
                 Logo = p.Application.Logo,
-                DatasetURIs = (p.Application.DatasetURIs?.Value != null) ? p.Application.DatasetURIs?.Value.ToList() : new List<string>()
+				LogoFileName = p.Application.LogoFileName,
+				DatasetURIs = (p.Application.DatasetURIs?.Value != null) ? p.Application.DatasetURIs?.Value.ToList() : new List<string>()
             };
         }
 
@@ -70,6 +98,7 @@ namespace CMS.Applications
                 },
                 Url = dto.Url,
                 Logo = dto.Logo,
+                LogoFileName = dto.LogoFileName,
                 ContactName = dto.ContactName,
                 ContactSurname = dto.ContactSurname,
                 ContactEmail = dto.ContactEmail,
@@ -103,7 +132,8 @@ namespace CMS.Applications
             post.Application.Theme.Value = dto.Theme;
             post.Application.Url = dto.Url;
             post.Application.Logo = dto.Logo;
-            post.Application.ContactName = dto.ContactName;
+			post.Application.LogoFileName = dto.LogoFileName;
+			post.Application.ContactName = dto.ContactName;
             post.Application.ContactSurname = dto.ContactSurname;
             post.Application.ContactEmail = dto.ContactEmail;
             post.Application.DatasetURIs = (dto.DatasetURIs != null) ? new MultiSelectField { Value = dto.DatasetURIs } : null;
@@ -133,6 +163,6 @@ namespace CMS.Applications
         private async Task<Guid> GetSiteGuidAsync()
         {
             return (await api.Sites.GetDefaultAsync()).Id;
-        }        
-    }
+        }
+	}
 }

@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 
-namespace CMS.Suggestions
+namespace CMS.Comments
 {
     public class CommentDto
 	{
