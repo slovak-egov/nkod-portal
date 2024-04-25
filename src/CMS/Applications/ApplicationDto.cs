@@ -27,7 +27,7 @@ namespace CMS.Applications
  
 		[Url] 
         public string Url { get; set; }
-
+		
 		public string Logo { get; set; }
 
 		public string LogoFileName { get; set; }
@@ -47,5 +47,9 @@ namespace CMS.Applications
 		public DateTime Created { get; set; }
 
 		public DateTime Updated { get; set; }
+
+		public int CommentCount { get; set; }
+
+		public int LikeCount { get; set; }
 	}
 }

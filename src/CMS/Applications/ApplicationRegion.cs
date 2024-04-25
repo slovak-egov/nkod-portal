@@ -12,9 +12,10 @@ namespace CMS.Applications
 		[Field] public StringField Url { get; set; }
 		[Field] public StringField Logo { get; set; }
 		[Field] public StringField LogoFileName { get; set; }
-		[Field] public MultiSelectField DatasetURIs { get; set; }
+		[Field] public MultiSelectField<string> DatasetURIs { get; set; }
 		[Field] public StringField ContactName { get; set; }
         [Field] public StringField ContactSurname { get; set; }
         [Field] public StringField ContactEmail { get; set; }
+		[Field] public MultiSelectField<Guid> Likes { get; set; }
 	}
 }

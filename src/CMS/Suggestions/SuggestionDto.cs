@@ -38,5 +38,9 @@ namespace CMS.Suggestions
 		public DateTime Created { get; set; }
 
 		public DateTime Updated { get; set; }
+
+		public int CommentCount { get; set; }
+
+		public int LikeCount { get; set; }
 	}
 }

@@ -1,4 +1,6 @@
 ﻿using CMS.Comments;
+using CMS.Likes;
+using CMS.Suggestions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Piranha;
@@ -18,41 +20,25 @@ namespace CMS.Applications
         {
             this.api = api;
         }
-        /*
-        [HttpGet]
-        [Route("")]
-        public async Task<IEnumerable<ApplicationDto>> Get()
-        {
-            var id = await GetArchiveGuidAsync();
-            var archive = await api.Archives.GetByIdAsync<ApplicationPost>(id);
-            return archive.Posts.Select(Convert);
-        }*/
-
-		[HttpGet()]
+		
+		[HttpGet]
 		[Route("")]
-		public async Task<IEnumerable<ApplicationDto>> GetAll(int? pageNumber, int? pageSize)
+		public async Task<IEnumerable<ApplicationDto>> GetByDataset(string datasetUri, int? pageNumber, int? pageSize)
 		{
 			var page = await api.Pages.GetBySlugAsync(ApplicationsPage.WellKnownSlug);
 			var archive = await api.Archives.GetByIdAsync<ApplicationPost>(page.Id, currentPage: pageNumber, pageSize: pageSize);
-			return archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created);
-		}
-		/*
-		[HttpGet)]
-		[Route("")]
-		public async Task<IEnumerable<SuggestionDto>> GetByDataset(string datasetUri, int? pageNumber, int? pageSize)
-		{
-			var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
-			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id, currentPage: pageNumber, pageSize: pageSize);
-
-			return archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetUri == datasetUri).OrderByDescending(c => c.Created);
-		} */
+			
+            if(string.IsNullOrEmpty(datasetUri))
+				return archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created);
+            else
+                return archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetURIs.Contains(datasetUri)).OrderByDescending(c => c.Created);
+		} 
 
 		[HttpGet("{id}")]
 		public async Task<ApplicationDto> GetByID(Guid id)
 		{
-			var page = await api.Pages.GetBySlugAsync(ApplicationsPage.WellKnownSlug);
-			var archive = await api.Archives.GetByIdAsync<ApplicationPost>(page.Id);
-			return archive.Posts.Where(p => p.Id == id).Select(p => Convert(p)).SingleOrDefault();
+			var post = await api.Posts.GetByIdAsync<ApplicationPost>(id);
+            return Convert(post);
 		}
 
 		private static ApplicationDto Convert(ApplicationPost p)
@@ -62,6 +48,8 @@ namespace CMS.Applications
                 Id = p.Id,				
 				Created = p.Created,
                 Updated = p.LastModified,
+                CommentCount = p.CommentCount,
+				LikeCount = (p.Application.Likes?.Value != null) ? p.Application.Likes.Value.Count() : 0,
 				UserId = (p.Application.UserId.Value != null) ? Guid.Parse(p.Application.UserId.Value) : Guid.Empty,
 				Type = p.Application.Type.Value,
                 Theme = p.Application.Theme.Value,
@@ -102,8 +90,9 @@ namespace CMS.Applications
                 ContactName = dto.ContactName,
                 ContactSurname = dto.ContactSurname,
                 ContactEmail = dto.ContactEmail,
-                DatasetURIs = (dto.DatasetURIs != null) ? new MultiSelectField { Value = dto.DatasetURIs } : null
-            };
+                DatasetURIs = (dto.DatasetURIs != null) ? new MultiSelectField<string> { Value = dto.DatasetURIs } : null,
+				Likes = new MultiSelectField<Guid>()
+			};
 
             post.Category = new Taxonomy
             {
@@ -119,11 +108,10 @@ namespace CMS.Applications
             return Results.Ok();
         }
 
-        [HttpPut]
-        [Route("")]
-        public async Task<IResult> Update(ApplicationDto dto)
+        [HttpPut("{id}")]
+        public async Task<IResult> Update(Guid id, ApplicationDto dto)
         {
-            var post = await api.Posts.GetByIdAsync<ApplicationPost>(dto.Id);
+            var post = await api.Posts.GetByIdAsync<ApplicationPost>(id);
             post.Title = dto.Title;
 
 			post.Application.UserId = dto.UserId.ToString("D");
@@ -136,7 +124,7 @@ namespace CMS.Applications
 			post.Application.ContactName = dto.ContactName;
             post.Application.ContactSurname = dto.ContactSurname;
             post.Application.ContactEmail = dto.ContactEmail;
-            post.Application.DatasetURIs = (dto.DatasetURIs != null) ? new MultiSelectField { Value = dto.DatasetURIs } : null;
+            post.Application.DatasetURIs = (dto.DatasetURIs != null) ? new MultiSelectField<string> { Value = dto.DatasetURIs } : null;
 
             await api.Posts.SaveAsync(post);
             return Results.Ok();
@@ -164,5 +152,36 @@ namespace CMS.Applications
         {
             return (await api.Sites.GetDefaultAsync()).Id;
         }
+
+		[HttpPost]
+		[Route("likes")]
+		public async Task<IResult> AddLike(LikeDto dto)
+		{
+			var post = await api.Posts.GetByIdAsync<ApplicationPost>(dto.ContentId);
+
+			if (post.Application.Likes?.Value != null)
+			{
+				var likes = post.Application.Likes.Value.ToList();
+
+				if (likes.Contains(dto.UserId))
+				{
+					return Results.Problem("Attempt to add next like by same user!");
+				}
+				else
+				{
+					likes.Add(dto.UserId);
+					post.Application.Likes.Value = likes;
+				}
+			}
+			else
+			{
+				List<Guid> userIds = new List<Guid>();
+				userIds.Add(dto.UserId);
+				post.Application.Likes = new MultiSelectField<Guid> { Value = userIds };
+			}
+
+			await api.Posts.SaveAsync(post);
+			return Results.Ok();
+		}
 	}
 }

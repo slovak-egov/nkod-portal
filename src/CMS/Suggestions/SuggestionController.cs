@@ -1,4 +1,4 @@
-﻿using CMS.Comments;
+﻿using CMS.Likes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Piranha;
@@ -17,42 +17,26 @@ namespace CMS.Suggestions
         public SuggestionController(IApi api)
         {
             this.api = api;
-        }
-        /*
-        [HttpGet]
-        [Route("")]
-        public async Task<IEnumerable<SuggestionDto>> Get()
-        {
-            var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
-            var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id);
-            return archive.Posts.Select(Convert);
-        }*/
+        }       
         
-		[HttpGet()]
-		[Route("")]
-		public async Task<IEnumerable<SuggestionDto>> GetAll(int? pageNumber, int? pageSize)
-		{
-			var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
-			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id, currentPage: pageNumber, pageSize: pageSize);
-			return archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created);
-		}
-        /*
-		[HttpGet)]
+		[HttpGet]
 		[Route("")]
 		public async Task<IEnumerable<SuggestionDto>> GetByDataset(string datasetUri, int? pageNumber, int? pageSize)
 		{
 			var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
 			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id, currentPage: pageNumber, pageSize: pageSize);
 
-			return archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetUri == datasetUri).OrderByDescending(c => c.Created);
-		} */     
+			if (string.IsNullOrEmpty(datasetUri))
+				return archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created);
+            else
+                return archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetUri == datasetUri).OrderByDescending(c => c.Created);
+		}     
         
 		[HttpGet("{id}")]		
 		public async Task<SuggestionDto> GetByID(Guid id)
 		{
-			var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
-			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id);
-			return archive.Posts.Where(p => p.Id == id).Select(p => Convert(p)).SingleOrDefault();
+			var post = await api.Posts.GetByIdAsync<SuggestionPost>(id);
+			return Convert(post);
 		}
 
 		private static SuggestionDto Convert(SuggestionPost p)
@@ -62,6 +46,8 @@ namespace CMS.Suggestions
                 Id = p.Id,
 				Created = p.Created,
 				Updated = p.LastModified,
+                CommentCount = p.CommentCount,
+                LikeCount = (p.Suggestion.Likes?.Value != null) ? p.Suggestion.Likes.Value.Count() : 0,
 				Status = p.Suggestion.Status.Value,
                 OrgToUri = p.Suggestion.OrgToUri,
                 Type = p.Suggestion.Type.Value,
@@ -94,8 +80,9 @@ namespace CMS.Suggestions
                 Status = new SelectField<SuggestionStates>
                 {
                     Value = dto.Status
-                }
-            };
+                },
+                Likes = new MultiSelectField<Guid>()
+			};
 
             post.Category = new Taxonomy
             {
@@ -110,11 +97,10 @@ namespace CMS.Suggestions
             return Results.Ok();
         }
 
-		[HttpPut]
-		[Route("")]
-		public async Task<IResult> Update(SuggestionDto dto)
+		[HttpPut("{id}")]
+		public async Task<IResult> Update(Guid id, SuggestionDto dto)
 		{
-			var post = await api.Posts.GetByIdAsync<SuggestionPost>(dto.Id);
+			var post = await api.Posts.GetByIdAsync<SuggestionPost>(id);
 			post.Title = dto.Title;
 
 			post.Suggestion.Description = dto.Description;
@@ -151,5 +137,36 @@ namespace CMS.Suggestions
         {
             return (await api.Sites.GetDefaultAsync()).Id;
         }
+
+		[HttpPost]
+		[Route("likes")]
+		public async Task<IResult> AddLike(LikeDto dto)
+		{
+			var post = await api.Posts.GetByIdAsync<SuggestionPost>(dto.ContentId);
+
+            if (post.Suggestion.Likes?.Value != null)
+            {
+                var likes = post.Suggestion.Likes.Value.ToList();
+
+                if (likes.Contains(dto.UserId))
+                {
+                    return Results.Problem("Attempt to add next like by same user!");
+                }
+                else
+                {
+                    likes.Add(dto.UserId);
+                    post.Suggestion.Likes.Value = likes;
+                }
+            }
+            else 
+            {
+                List<Guid> userIds = new List<Guid>();
+                userIds.Add(dto.UserId);
+				post.Suggestion.Likes = new MultiSelectField<Guid> { Value = userIds };
+			}
+
+			await api.Posts.SaveAsync(post);
+			return Results.Ok();
+		}
 	}
 }
