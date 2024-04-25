@@ -13,10 +13,10 @@ namespace CMS.Comments
 
 		[Required]
 		public Guid UserId { get; set; }
-		
+		/*
 		[Required]
 		public string Author { get; set; }
-				
+		*/		
 		[Required]
 		[EmailAddress]
 		public string Email { get; set; }
@@ -25,5 +25,7 @@ namespace CMS.Comments
 		public string Body { get; set; }
 
 		public DateTime Created { get; set; }
+
+		public Guid ParentId { get; set; }
 	}
 }

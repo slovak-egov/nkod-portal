@@ -5,6 +5,7 @@ using Piranha;
 using Piranha.Extend.Fields;
 using Piranha.Models;
 using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace CMS.Comments
 {
@@ -22,9 +23,19 @@ namespace CMS.Comments
 
 		[HttpGet]
 		[Route("")]
-		public async Task<IEnumerable<CommentDto>> GetComments(Guid contentId, int? pageNumber, int? pageSize)
+		public async Task<IEnumerable<CommentDto>> GetComments(Guid? contentId, int? pageNumber, int? pageSize)
 		{
-			var res = await api.Posts.GetAllCommentsAsync(contentId, false, pageNumber, pageSize);
+			IEnumerable<Comment> res;
+
+			if (contentId != null)
+			{
+				res = await api.Posts.GetAllCommentsAsync(postId: contentId, onlyApproved: false, page: pageNumber, pageSize: pageSize);
+			}
+			else 
+			{
+				res = await api.Posts.GetAllCommentsAsync(onlyApproved: false, page: pageNumber, pageSize: pageSize);
+			}
+						
 			return res.Select(c => Convert(c)).OrderByDescending(c => c.Created);
 		}
 
@@ -40,11 +51,11 @@ namespace CMS.Comments
 			{
 				Id = c.Id,
 				ContentId = c.ContentId,
-				UserId = Guid.Parse(c.UserId),
-				Author = c.Author,
+				UserId = (!string.IsNullOrEmpty(c.UserId)) ? Guid.Parse(c.UserId) : Guid.Empty,
 				Email = c.Email,
 				Body = c.Body,
-				Created = c.Created
+				Created = c.Created,
+				ParentId = (!string.IsNullOrEmpty(c.Author)) ? Guid.Parse(c.Author) : Guid.Empty,
 			};
 		}
 
@@ -57,7 +68,7 @@ namespace CMS.Comments
 				Id = dto.Id,
 				ContentId = dto.ContentId,
 				UserId = dto.UserId.ToString("D"),
-				Author = dto.Author,
+				Author = dto.ParentId.ToString("D"),
 				Email = dto.Email,
 				Body = dto.Body,
 				Created = DateTime.Now

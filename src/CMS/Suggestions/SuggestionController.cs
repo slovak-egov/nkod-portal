@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Piranha;
 using Piranha.Extend.Fields;
 using Piranha.Models;
+using System.Linq;
 
 namespace CMS.Suggestions
 {
@@ -21,15 +22,42 @@ namespace CMS.Suggestions
         
 		[HttpGet]
 		[Route("")]
-		public async Task<IEnumerable<SuggestionDto>> GetByDataset(string datasetUri, int? pageNumber, int? pageSize)
+		public async Task<IEnumerable<SuggestionDto>> Get(string datasetUri, int? pageNumber, int? pageSize)
 		{
 			var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
-			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id, currentPage: pageNumber, pageSize: pageSize);
+			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id);
+			int pn = 0;
+            int ps = 100000;
 
-			if (string.IsNullOrEmpty(datasetUri))
-				return archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created);
+            if (string.IsNullOrEmpty(datasetUri))
+            {
+                if (pageNumber != null || pageSize != null)
+                {
+                    pn = (pageNumber != null) ? pageNumber.Value : pn;
+                    ps = (pageSize != null) ? pageSize.Value : ps;
+
+                    return archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created).Skip(pn * ps).Take(ps);
+                }
+                else 
+                {
+                    return archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created);
+
+				}
+            }
             else
-                return archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetUri == datasetUri).OrderByDescending(c => c.Created);
+            {
+                if (pageNumber != null || pageSize != null)
+                {
+                    pn = (pageNumber != null) ? pageNumber.Value : pn;
+                    ps = (pageSize != null) ? pageSize.Value : ps;
+
+                    return archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetUri == datasetUri).OrderByDescending(c => c.Created).Skip(pn * ps).Take(ps);
+                }
+                else
+                {
+                    return archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetUri == datasetUri).OrderByDescending(c => c.Created);
+                }
+            }
 		}     
         
 		[HttpGet("{id}")]		

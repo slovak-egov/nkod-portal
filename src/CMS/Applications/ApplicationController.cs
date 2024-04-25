@@ -26,12 +26,38 @@ namespace CMS.Applications
 		public async Task<IEnumerable<ApplicationDto>> GetByDataset(string datasetUri, int? pageNumber, int? pageSize)
 		{
 			var page = await api.Pages.GetBySlugAsync(ApplicationsPage.WellKnownSlug);
-			var archive = await api.Archives.GetByIdAsync<ApplicationPost>(page.Id, currentPage: pageNumber, pageSize: pageSize);
-			
-            if(string.IsNullOrEmpty(datasetUri))
-				return archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created);
+			var archive = await api.Archives.GetByIdAsync<ApplicationPost>(page.Id);
+			int pn = 0;
+			int ps = 100000;
+
+            if (string.IsNullOrEmpty(datasetUri))
+            {
+                if (pageNumber != null || pageSize != null)
+                {
+                    pn = (pageNumber != null) ? pageNumber.Value : pn;
+                    ps = (pageSize != null) ? pageSize.Value : ps;
+
+                    return archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created).Skip(pn * ps).Take(ps);
+				}
+                else 
+                {
+					return archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created);
+				}
+            }
             else
-                return archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetURIs.Contains(datasetUri)).OrderByDescending(c => c.Created);
+            {
+                if (pageNumber != null || pageSize != null)
+                {
+                    pn = (pageNumber != null) ? pageNumber.Value : pn;
+                    ps = (pageSize != null) ? pageSize.Value : ps;
+
+                    return archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetURIs.Contains(datasetUri)).OrderByDescending(c => c.Created).Skip(pn * ps).Take(ps);
+				}
+                else 
+                {
+					return archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetURIs.Contains(datasetUri)).OrderByDescending(c => c.Created);
+				}
+            }
 		} 
 
 		[HttpGet("{id}")]
@@ -165,7 +191,7 @@ namespace CMS.Applications
 
 				if (likes.Contains(dto.UserId))
 				{
-					return Results.Problem("Attempt to add next like by same user!");
+					return Results.Conflict("Attempt to add next like by same user!");
 				}
 				else
 				{
