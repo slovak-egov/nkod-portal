@@ -44,6 +44,16 @@ export default function Header() {
             title: t('metadataQuality'),
             link: '/kvalita-metadat',
             submenu: []
+        },
+        {
+            title: t('application'),
+            link: '/aplikacia',
+            submenu: []
+        },
+        {
+            title: t('suggestion'),
+            link: '/podnet',
+            submenu: []
         }
     ];
 
@@ -59,16 +69,6 @@ export default function Header() {
             {
                 title: t('localCatalogs'),
                 link: '/sprava/lokalne-katalogy',
-                submenu: []
-            },
-            {
-                title: t('application'),
-                link: '/sprava/aplikacia',
-                submenu: []
-            },
-            {
-                title: t('suggestion'),
-                link: '/podnet',
                 submenu: []
             }
         );

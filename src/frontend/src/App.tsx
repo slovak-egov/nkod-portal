@@ -1,50 +1,50 @@
-import Header from './components/Header';
-import {BrowserRouter, Route, Routes, useNavigate} from 'react-router-dom';
-import {Footer} from './components/Footer';
-import AddDataset from './pages/AddDataset';
-import DatasetList from './pages/DatasetList';
-import HomePage from './pages/HomePage';
-import DetailDataset from './pages/DetailDataset';
-import PublicPublisherList from './pages/PublicPublisherList';
-import PublicLocalCatalogList from './pages/PublicLocalCatalogList';
-import DetailLocalCatalog from './pages/DetailLocalCatalog';
-import PublicDatasetList from './pages/PublicDatasetList';
-import EditDataset from './pages/EditDataset';
-import DistributionList from './pages/DistributionList';
-import AddDistribution from './pages/AddDistribution';
-import CatalogList from './pages/CatalogList';
-import AddCatalog from './pages/AddCatalog';
-import EditCatalog from './pages/EditCatalog';
-import EditDistribution from './pages/EditDistribution';
-import Sparql from './pages/Sparql';
-import Quality from './pages/Quality';
-import Profile from './pages/Profile';
+import { AxiosResponse, RawAxiosRequestHeaders } from 'axios';
+import { useCallback, useContext, useEffect, useState } from 'react';
+import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { Language, LanguageOptionsContext, TokenContext, TokenResult, UserInfo, sendPost, supportedLanguages, useUserInfo } from './client';
-import React, { useEffect, useState, useContext, useCallback } from 'react';
-import PublisherList from './pages/PublisherList';
-import UserList from './pages/UserList';
-import EditUser from './pages/EditUser';
-import AddUser from './pages/AddUser';
-import Codelists from './pages/Codelists';
+import { CmsUser, CmsUserContext, getCmsUser } from './cms';
+import { Footer } from './components/Footer';
+import Header from './components/Header';
+import AddCatalog from './pages/AddCatalog';
+import AddDataset from './pages/AddDataset';
+import AddDistribution from './pages/AddDistribution';
 import AddPublisher from './pages/AddPublisher';
+import AddUser from './pages/AddUser';
+import ApplicationDetail from './pages/ApplicationDetail';
+import ApplicationList from './pages/ApplicationList';
+import CatalogList from './pages/CatalogList';
+import ChangeLicenses from './pages/ChangeLicenses';
+import Codelists from './pages/Codelists';
+import DatasetList from './pages/DatasetList';
+import DetailDataset from './pages/DetailDataset';
+import DetailLocalCatalog from './pages/DetailLocalCatalog';
+import DistributionList from './pages/DistributionList';
+import EditCatalog from './pages/EditCatalog';
+import EditDataset from './pages/EditDataset';
+import EditDistribution from './pages/EditDistribution';
+import EditPublisher from './pages/EditPublisher';
+import EditUser from './pages/EditUser';
+import HomePage from './pages/HomePage';
 import InfoPageInvalidDelegation from './pages/InfoPageInvalidDelegation';
 import InfoPageWaitingForApprove from './pages/InfoPageWaitingForApprove';
-import {AxiosResponse, RawAxiosRequestHeaders} from 'axios';
-import NotFound from './pages/NotFound';
 import Invitation from './pages/Invitation';
 import LoginInProgress from './pages/LoginInProgress';
-import EditPublisher from './pages/EditPublisher';
+import NotFound from './pages/NotFound';
+import Profile from './pages/Profile';
+import PublicDatasetList from './pages/PublicDatasetList';
+import PublicLocalCatalogList from './pages/PublicLocalCatalogList';
+import PublicPublisherList from './pages/PublicPublisherList';
+import PublisherList from './pages/PublisherList';
 import PublisherRegistration from './pages/PublisherRegistration';
-import ChangeLicenses from './pages/ChangeLicenses';
-import ODCommunityStartPage from "./pages/cms/ODCommunityStartPage";
-import UserPage from "./pages/cms/UserPage";
-import RegisterUser from "./pages/cms/RegisterUser";
-import Login from "./pages/cms/Login";
-import AddApplication from './pages/AddApplication';
-import AddSuggestion from './pages/AddSuggestion';
+import Quality from './pages/Quality';
+import Sparql from './pages/Sparql';
+import SuggestionDetail from './pages/SuggestionDetail';
 import SuggestionList from './pages/SuggestionList';
-import EditSuggestion from './pages/EditSuggestion';
-import {CmsUser, getCmsUser, CmsUserContext} from "./cms";
+import UserList from './pages/UserList';
+import Login from './pages/cms/Login';
+import ODCommunityStartPage from './pages/cms/ODCommunityStartPage';
+import RegisterUser from './pages/cms/RegisterUser';
+import UserPage from './pages/cms/UserPage';
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -151,22 +151,22 @@ function App(props: Props) {
             try {
                 if (process.env.REACT_APP_NO_AUTH) {
                     setCmsUser({
-                            id: 'id',
-                            userName: 'ODKomunity tester',
-                            normalizedUserName: undefined,
-                            email: undefined,
-                            normalizedEmail: undefined,
-                            emailConfirmed: false,
-                            passwordHash: undefined,
-                            securityStamp: undefined,
-                            phoneNumber: undefined,
-                            phoneNumberConfirmed: false,
-                            twoFactorEnabled: false,
-                            lockoutEnd: undefined,
-                            lockoutEnabled: false,
-                            accessFailedCount: 0,
-                            concurrencyStamp: undefined
-                        });
+                        id: 'id',
+                        userName: 'ODKomunity tester',
+                        normalizedUserName: undefined,
+                        email: undefined,
+                        normalizedEmail: undefined,
+                        emailConfirmed: false,
+                        passwordHash: undefined,
+                        securityStamp: undefined,
+                        phoneNumber: undefined,
+                        phoneNumberConfirmed: false,
+                        twoFactorEnabled: false,
+                        lockoutEnd: undefined,
+                        lockoutEnabled: false,
+                        accessFailedCount: 0,
+                        concurrencyStamp: undefined
+                    });
 
                     setUserInfo({
                         publisher: 'test',
@@ -193,6 +193,7 @@ function App(props: Props) {
                         email: 'test@test.tst',
                         role: 'Superadmin',
                         companyName: 'test',
+                        companyURI: 'https://data.gov.sk/id/FAKE',
                         publisherLegalForm: null
                     });
                 } else {
@@ -208,7 +209,6 @@ function App(props: Props) {
 
                     setUserInfo((await sendPost('user-info', {}, headers)).data);
                 }
-
             } catch (err) {
                 setUserInfo(null);
             } finally {
@@ -233,7 +233,8 @@ function App(props: Props) {
                 value={{
                     cmsUser: cmsUser,
                     setCmsUser: setCmsUser
-                }}>
+                }}
+            >
                 <LanguageOptionsContext.Provider
                     value={{
                         language: language,
@@ -257,8 +258,8 @@ function App(props: Props) {
                                         <Route path="/sparql" Component={Sparql} />
                                         <Route path="/kvalita-metadat" Component={Quality} />
 
-                                    <Route path="/pozvanka" Component={Invitation} />
-                                    <Route path="/saml/consume" Component={LoginInProgress} />
+                                        <Route path="/pozvanka" Component={Invitation} />
+                                        <Route path="/saml/consume" Component={LoginInProgress} />
 
                                         {userInfo ? (
                                             <>
@@ -267,9 +268,9 @@ function App(props: Props) {
                                             </>
                                         ) : null}
 
-                                    {userInfo?.publisher && userInfo.publisherView == null ? (
-                                        <Route path="/registracia" Component={PublisherRegistration} />
-                                    ) : null}
+                                        {userInfo?.publisher && userInfo.publisherView == null ? (
+                                            <Route path="/registracia" Component={PublisherRegistration} />
+                                        ) : null}
 
                                         {userInfo?.publisher && userInfo.publisherActive && userInfo.role ? (
                                             <>
@@ -285,7 +286,7 @@ function App(props: Props) {
                                                 <Route path="/sprava/lokalne-katalogy/pridat" Component={AddCatalog} />
                                                 <Route path="/sprava/lokalne-katalogy/upravit/:id" Component={EditCatalog} />
 
-                                            <Route path="/sprava/zmena-licencii" Component={ChangeLicenses} />
+                                                <Route path="/sprava/zmena-licencii" Component={ChangeLicenses} />
                                             </>
                                         ) : null}
 
@@ -297,21 +298,24 @@ function App(props: Props) {
                                                 <Route path="/sprava/pouzivatelia/pridat" Component={AddUser} />
                                                 <Route path="/sprava/pouzivatelia/upravit/:id" Component={EditUser} />
                                                 <Route path="/sprava/profil" Component={Profile} />
-                                                {/*<Route path="/sprava/aplikacia" Component={AddApplication} />*/}
                                             </>
                                         ) : null}
 
-                                        <Route path="/sprava/aplikacia" Component={AddApplication} />
+                                        <Route path="/aplikacia" Component={ApplicationList} />
+                                        <Route path="/aplikacia/:id/upravit" Component={ApplicationDetail} />
+                                        <Route path="/aplikacia/:id" element={<ApplicationDetail readonly />} />
+                                        <Route path="/aplikacia/pridat" Component={ApplicationDetail} />
                                         <Route path="/podnet" Component={SuggestionList} />
-                                        {/*<Route path="/podnet/:id" element={<DetailDataset />} />*/}
-                                        <Route path="/podnet/pridat" Component={AddSuggestion} />
-                                        <Route path="/podnet/upravit/:id" Component={EditSuggestion} />
+                                        <Route path="/podnet/:id/upravit" element={<SuggestionDetail />} />
+                                        <Route path="/podnet/:id/komentare" element={<SuggestionDetail scrollToComments />} />
+                                        <Route path="/podnet/:id" element={<SuggestionDetail readonly />} />
+                                        <Route path="/podnet/pridat" Component={SuggestionDetail} />
 
                                         {userInfo?.role === 'Superadmin' ? (
                                             <>
                                                 <Route path="/sprava/poskytovatelia" Component={PublisherList} />
-                                            <Route path="/sprava/poskytovatelia/pridat" Component={AddPublisher} />
-                                            <Route path="/sprava/poskytovatelia/upravit/:id" Component={EditPublisher} />
+                                                <Route path="/sprava/poskytovatelia/pridat" Component={AddPublisher} />
+                                                <Route path="/sprava/poskytovatelia/upravit/:id" Component={EditPublisher} />
                                                 <Route path="/sprava/ciselniky" Component={Codelists} />
                                             </>
                                         ) : null}

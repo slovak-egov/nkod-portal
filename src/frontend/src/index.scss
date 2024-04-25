@@ -129,7 +129,28 @@ body {
     display: none;
 }
 
-
 .nkod-autocomplete {
-    border: 2px solid #0b0c0c
+    border: 2px solid #0b0c0c;
+}
+
+.suggestion-subtitle {
+    color: $govuk-brand-colour;
+}
+
+.suggestion-select {
+    width: 100%;
+
+    &[disabled] > option {
+        color: black;
+    }
+}
+
+.like-button:hover,
+.comments-button:hover {
+    cursor: pointer;
+}
+
+.flex-end {
+    display: flex;
+    justify-content: flex-end;
 }

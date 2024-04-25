@@ -1,5 +1,4 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse, RawAxiosRequestHeaders } from 'axios';
-import { userInfo } from 'os';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -142,7 +141,8 @@ export type UserInfo = {
     lastName: string;
     email: string | null;
     role: string | null;
-    companyName: string | null;
+    companyName: string;
+    companyURI: string | null;
 };
 
 export type DatasetInput = {
@@ -501,80 +501,6 @@ export function useDatasets(initialQuery?: Partial<RequestQuery>) {
     }
 
     return useEntities<Dataset>('datasets/search', { orderBy: 'modified', ...defaultParams });
-}
-
-export function useSuggestions(initialQuery?: Partial<RequestQuery>) {
-    let defaultParams: Partial<RequestQuery> = { ...initialQuery };
-
-    const [searchParams] = useSearchParams();
-    if (searchParams.has('query')) {
-        defaultParams = {
-            ...defaultParams,
-            queryText: searchParams.get('query')!
-        };
-    }
-
-
-    const json: Suggestion[] = [
-        {
-            id: '1',
-            userID: '123e4567-e89b-12d3-a456-9AC7CBDCEE52',
-            userOrgURI: 'MIRRI',
-            orgToURI: 'Ministerstvo financií SR',
-            datasetURI: 'bc49b1a6-ef84-bd81-adfa-b252dbe6e4fd',
-            type: SuggestionType.SUGGESTION_FOR_PUBLISHED_DATASET,
-            title: 'Zverejňovanie CRZ ako opendata',
-            description: 'CRZ je centrálny register zmlúv, kde publikujú povinné osoby zmluvy podľa rôznych zákonov. Avšak samotné údaje CRZ nie sú prístupné ako otvorené údaje.',
-            status: SuggestionStatusCode.PROPOSAL_IN_PROGRESS,
-            suggestionStatus: SuggestionStatusCode.PROPOSAL_IN_PROGRESS,
-            likeCount: 32,
-            commentCount: 3,
-            createdDate: new Date(),
-            createdBy: 'Janko Hraško'
-        },
-        {
-            id: '2',
-            userID: '123e4567-e89b-12d3-a456-9AC7CBDCEE52',
-            userOrgURI: 'MIRRI',
-            orgToURI: 'Ministerstvo investícií SR',
-            datasetURI: 'bc49b1a6-ef84-bd81-adfa-b252dbe6e4fd',
-            type: SuggestionType.SUGGESTION_FOR_QUALITY_OF_METADATA,
-            title: 'Opendata finančnej správy nie sú zapísané v NKODE.',
-            description: 'Otvorené údaje finančnej správy nie sú skatalogizované v Centrálnom portáli otvorených údajov. Návštevník vyhľadávača nad Národným katalógom ich nenájde.',
-            status: SuggestionStatusCode.PROPOSAL_IN_PROGRESS,
-            suggestionStatus: SuggestionStatusCode.PROPOSAL_IN_PROGRESS,
-            likeCount: 31,
-            commentCount: 17,
-            createdDate: new Date(),
-            createdBy: 'Janko Hraško'
-        },
-        {
-            id: '3',
-            userID: '123e4567-e89b-12d3-a456-9AC7CBDCEE52',
-            userOrgURI: 'MIRRI',
-            orgToURI: 'Hlavné mesto Bratislava',
-            datasetURI: 'bc49b1a6-ef84-bd81-adfa-b252dbe6e4fd',
-            type: SuggestionType.SUGGESTION_FOR_QUALITY_OF_PUBLISHED_DATASET,
-            title: 'Opendata BA nie sú zapísané v NKODE.',
-            description: 'Otvorené údaje finančnej správy nie sú skatalogizované v Centrálnom portáli otvorených údajov. Návštevník vyhľadávača nad Národným katalógom ich nenájde.',
-            status: SuggestionStatusCode.PROPOSAL_IN_PROGRESS,
-            suggestionStatus: SuggestionStatusCode.PROPOSAL_IN_PROGRESS,
-            likeCount: 11,
-            commentCount: 8,
-            createdDate: new Date(),
-            createdBy: 'Janko Hraško'
-        }
-    ];
-
-    let [items, query, setQueryParameters, loading, error, refresh] = useEntities<Suggestion>('datasets/suggestions', { orderBy: 'relevance', ...defaultParams });
-
-    items = {
-        ...items,
-        items: json,
-        totalCount: json.length
-    } as Response<Suggestion>
-
-    return [items, query, setQueryParameters, false, error, refresh] as const;
 }
 
 export function useLocalCatalogs(initialQuery?: Partial<RequestQuery>) {
@@ -981,11 +907,6 @@ export function useDistributionFileUpload() {
 
 export function useCodelistFileUpload() {
     return useSingleFileUpload('codelists');
-}
-
-export function useAppRegistrationFileUpload() {
-    return useSingleFileUpload('logo');
-
 }
 
 export function useCodelistAdmin() {

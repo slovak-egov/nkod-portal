@@ -1,23 +1,21 @@
-import { HTMLAttributes } from "react";
+import classNames from 'classnames';
+import { HTMLAttributes } from 'react';
 
-type Props = 
-{
+type Props = {
     widthUnits: number;
     totalUnits: number;
-} & HTMLAttributes<HTMLDivElement>
+    flexEnd?: boolean;
+} & HTMLAttributes<HTMLDivElement>;
 
-export default function GridColumn(props: Props)
-{
+export default function GridColumn(props: Props) {
     let autoClassName = 'govuk-grid-column-';
 
-    const { widthUnits, totalUnits, className, ...attributes } = props;
-    
-    if (props.totalUnits <= 1 || props.widthUnits >= props.totalUnits)
-    {
+    const { widthUnits, totalUnits, className, flexEnd, ...attributes } = props;
+
+    if (props.totalUnits <= 1 || props.widthUnits >= props.totalUnits) {
         autoClassName += 'full';
     } else if (props.widthUnits < props.totalUnits) {
-        switch (props.widthUnits)
-        {
+        switch (props.widthUnits) {
             case 1:
                 autoClassName += 'one-';
                 break;
@@ -29,8 +27,7 @@ export default function GridColumn(props: Props)
                 break;
         }
 
-        switch (props.totalUnits)
-        {
+        switch (props.totalUnits) {
             case 2:
                 autoClassName += 'half';
                 break;
@@ -42,15 +39,16 @@ export default function GridColumn(props: Props)
                 break;
         }
 
-        if (props.widthUnits > 1)
-        {
+        if (props.widthUnits > 1) {
             autoClassName += 's';
         }
     }
 
     autoClassName += ' ';
 
-    return <div className={autoClassName + (className ? className : '')} {...attributes}>
-        {props.children}
-    </div>
+    return (
+        <div className={classNames(autoClassName, className, { 'flex-end': flexEnd })} {...attributes}>
+            {props.children}
+        </div>
+    );
 }
