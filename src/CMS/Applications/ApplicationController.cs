@@ -23,7 +23,7 @@ namespace CMS.Applications
 		
 		[HttpGet]
 		[Route("")]
-		public async Task<IEnumerable<ApplicationDto>> GetByDataset(string datasetUri, int? pageNumber, int? pageSize)
+		public async Task<GetApplicationsResponse> GetByDataset(string datasetUri, int? pageNumber, int? pageSize)
 		{
 			var page = await api.Pages.GetBySlugAsync(ApplicationsPage.WellKnownSlug);
 			var archive = await api.Archives.GetByIdAsync<ApplicationPost>(page.Id);
@@ -32,30 +32,66 @@ namespace CMS.Applications
 
             if (string.IsNullOrEmpty(datasetUri))
             {
-                if (pageNumber != null || pageSize != null)
+                var res = archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created);
+
+				if (pageNumber != null || pageSize != null)
                 {
                     pn = (pageNumber != null) ? pageNumber.Value : pn;
                     ps = (pageSize != null) ? pageSize.Value : ps;
 
-                    return archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created).Skip(pn * ps).Take(ps);
+					var totalItemCount = res.Count();
+					var paginationMetadata =
+						new PaginationMetadata()
+						{
+							TotalItemCount = totalItemCount,
+							CurrentPage = pn,
+							PageSize = ps
+						};
+
+					return new GetApplicationsResponse()
+					{
+						Items = res.Skip(pn * ps).Take(ps),
+						PaginationMetadata = paginationMetadata
+					};
 				}
                 else 
                 {
-					return archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created);
+					return new GetApplicationsResponse()
+					{
+						Items = res
+					};
 				}
             }
             else
             {
-                if (pageNumber != null || pageSize != null)
+                var res = archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetURIs.Contains(datasetUri)).OrderByDescending(c => c.Created);
+
+				if (pageNumber != null || pageSize != null)
                 {
                     pn = (pageNumber != null) ? pageNumber.Value : pn;
                     ps = (pageSize != null) ? pageSize.Value : ps;
 
-                    return archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetURIs.Contains(datasetUri)).OrderByDescending(c => c.Created).Skip(pn * ps).Take(ps);
+					var totalItemCount = res.Count();
+					var paginationMetadata =
+						new PaginationMetadata()
+						{
+							TotalItemCount = totalItemCount,
+							CurrentPage = pn,
+							PageSize = ps
+						};
+
+					return new GetApplicationsResponse()
+					{
+						Items = res.Skip(pn * ps).Take(ps),
+						PaginationMetadata = paginationMetadata
+					};
 				}
                 else 
                 {
-					return archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetURIs.Contains(datasetUri)).OrderByDescending(c => c.Created);
+					return new GetApplicationsResponse()
+					{
+						Items = res
+					};
 				}
             }
 		} 

@@ -5,6 +5,7 @@ using Piranha;
 using Piranha.Extend.Fields;
 using Piranha.Models;
 using System.Linq;
+using System.Text.Json.Serialization;
 
 namespace CMS.Suggestions
 {
@@ -22,7 +23,7 @@ namespace CMS.Suggestions
         
 		[HttpGet]
 		[Route("")]
-		public async Task<IEnumerable<SuggestionDto>> Get(string datasetUri, int? pageNumber, int? pageSize)
+		public async Task<GetSuggestionsResponse> Get(string datasetUri, int? pageNumber, int? pageSize)
 		{
 			var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
 			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id);
@@ -31,32 +32,70 @@ namespace CMS.Suggestions
 
             if (string.IsNullOrEmpty(datasetUri))
             {
-                if (pageNumber != null || pageSize != null)
+                var res = archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created);
+
+				if (pageNumber != null || pageSize != null)
                 {
                     pn = (pageNumber != null) ? pageNumber.Value : pn;
                     ps = (pageSize != null) ? pageSize.Value : ps;
 
-                    return archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created).Skip(pn * ps).Take(ps);
-                }
+					var totalItemCount = res.Count();
+                    var paginationMetadata =
+                        new PaginationMetadata()
+                        {
+                            TotalItemCount = totalItemCount,
+							CurrentPage = pn,
+							PageSize = ps
+                        };
+
+                    //service this.api.Content Response.Headers.Add("X-Pagination", JsonSerializer.Serialize(paginationMetadata));
+
+                    //return (res.Skip(pn * ps).Take(ps), paginationMetadata);
+                    return new GetSuggestionsResponse()
+                    {
+                        Items = res.Skip(pn * ps).Take(ps),
+                        PaginationMetadata = paginationMetadata
+                    };
+				}
                 else 
                 {
-                    return archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created);
-
+					return new GetSuggestionsResponse()
+					{
+						Items = res
+					};
 				}
             }
             else
             {
-                if (pageNumber != null || pageSize != null)
+                var res = archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetUri == datasetUri).OrderByDescending(c => c.Created);
+
+				if (pageNumber != null || pageSize != null)
                 {
                     pn = (pageNumber != null) ? pageNumber.Value : pn;
                     ps = (pageSize != null) ? pageSize.Value : ps;
 
-                    return archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetUri == datasetUri).OrderByDescending(c => c.Created).Skip(pn * ps).Take(ps);
-                }
+					var totalItemCount = res.Count();
+					var paginationMetadata =
+						new PaginationMetadata()
+						{
+							TotalItemCount = totalItemCount,
+							CurrentPage = pn,
+							PageSize = ps
+						};
+
+					return new GetSuggestionsResponse()
+					{
+						Items = res.Skip(pn * ps).Take(ps),
+						PaginationMetadata = paginationMetadata
+					};
+				}
                 else
                 {
-                    return archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetUri == datasetUri).OrderByDescending(c => c.Created);
-                }
+					return new GetSuggestionsResponse()
+					{
+						Items = res
+					};
+				}
             }
 		}     
         
