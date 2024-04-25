@@ -192,7 +192,14 @@ namespace CMS.Applications
             return Results.Ok();
         }
 
-        private async Task<Guid> GetArchiveGuidAsync()
+		[HttpDelete("{id}")]
+		public async Task<IResult> Delete(Guid id)
+		{
+			await api.Posts.DeleteAsync(id);
+			return Results.Ok();
+		}
+
+		private async Task<Guid> GetArchiveGuidAsync()
         {
             var page = await api.Pages.GetBySlugAsync(ApplicationsPage.WellKnownSlug);
             return page?.Id ?? (await CreatePage()).Id;

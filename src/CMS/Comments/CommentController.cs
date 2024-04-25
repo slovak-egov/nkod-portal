@@ -1,4 +1,5 @@
-﻿using CMS.Suggestions;
+﻿using CMS.Applications;
+using CMS.Suggestions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Piranha;
@@ -23,20 +24,43 @@ namespace CMS.Comments
 
 		[HttpGet]
 		[Route("")]
-		public async Task<IEnumerable<CommentDto>> GetComments(Guid? contentId, int? pageNumber, int? pageSize)
+		public async Task<GetApplicationsResponse> GetComments(Guid? contentId, int? pageNumber, int? pageSize)
 		{
 			IEnumerable<Comment> res;
+			int pn = 0;
+			int ps = 100000;
+			PaginationMetadata paginationMetadata = null;
 
 			if (contentId != null)
 			{
-				res = await api.Posts.GetAllCommentsAsync(postId: contentId, onlyApproved: false, page: pageNumber, pageSize: pageSize);
+				res = await api.Posts.GetAllCommentsAsync(postId: contentId, onlyApproved: false);
 			}
 			else 
 			{
-				res = await api.Posts.GetAllCommentsAsync(onlyApproved: false, page: pageNumber, pageSize: pageSize);
+				res = await api.Posts.GetAllCommentsAsync(onlyApproved: false);
 			}
-						
-			return res.Select(c => Convert(c)).OrderByDescending(c => c.Created);
+
+			if (pageNumber != null || pageSize != null)
+			{
+				pn = (pageNumber != null) ? pageNumber.Value : pn;
+				ps = (pageSize != null) ? pageSize.Value : ps;
+
+				var totalItemCount = res.Count();
+				paginationMetadata = new PaginationMetadata()
+				{
+					TotalItemCount = totalItemCount,
+					CurrentPage = pn,
+					PageSize = ps
+				};
+
+				res = res.Skip(pn * ps).Take(ps);
+			}
+
+			return new GetApplicationsResponse()
+			{
+				Items = res.Select(c => Convert(c)).OrderByDescending(c => c.Created),
+				PaginationMetadata = paginationMetadata
+			};
 		}
 
 		[HttpGet("{id}")]
@@ -75,6 +99,13 @@ namespace CMS.Comments
 			};
 
 			await api.Posts.SaveCommentAsync(comment.ContentId, comment);
+			return Results.Ok();
+		}
+
+		[HttpDelete("{id}")]
+		public async Task<IResult> Delete(Guid id)
+		{
+			await api.Posts.DeleteCommentAsync(id);
 			return Results.Ok();
 		}
 	}

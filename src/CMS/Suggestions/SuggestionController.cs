@@ -182,6 +182,13 @@ namespace CMS.Suggestions
 			return Results.Ok();
 		}
 
+		[HttpDelete("{id}")]
+		public async Task<IResult> Delete(Guid id)
+		{
+			await api.Posts.DeleteAsync(id);
+			return Results.Ok();
+		}
+
 		private async Task<Guid> GetArchiveGuidAsync()
         {
             var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
