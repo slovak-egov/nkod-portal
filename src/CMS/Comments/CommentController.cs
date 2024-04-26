@@ -40,15 +40,16 @@ namespace CMS.Comments
 				res = await api.Posts.GetAllCommentsAsync(onlyApproved: false);
 			}
 
+			res = res.OrderByDescending(c => c.Created);
+
 			if (pageNumber != null || pageSize != null)
 			{
 				pn = (pageNumber != null) ? pageNumber.Value : pn;
 				ps = (pageSize != null) ? pageSize.Value : ps;
 
-				var totalItemCount = res.Count();
 				paginationMetadata = new PaginationMetadata()
 				{
-					TotalItemCount = totalItemCount,
+					TotalItemCount = res.Count(),
 					CurrentPage = pn,
 					PageSize = ps
 				};
@@ -58,7 +59,7 @@ namespace CMS.Comments
 
 			return new GetApplicationsResponse()
 			{
-				Items = res.Select(c => Convert(c)).OrderByDescending(c => c.Created),
+				Items = res.Select(c => Convert(c)),
 				PaginationMetadata = paginationMetadata
 			};
 		}

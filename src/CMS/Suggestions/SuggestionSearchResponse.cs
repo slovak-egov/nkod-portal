@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace CMS.Suggestions
 {
-    public class GetSuggestionsResponse
+    public class SuggestionSearchResponse
 	{
 		public IEnumerable<SuggestionDto> Items { get; set; }
 

@@ -2,12 +2,12 @@
 using Piranha.AttributeBuilder;
 using Piranha.Models;
 
-namespace CMS
+namespace CMS.Datasets
 {
     [PageType(Title = "Dataset Page", UseBlocks = false, IsArchive = true)]
-    [PageTypeArchiveItem(typeof(SuggestionPost))]
+    [PageTypeArchiveItem(typeof(DatasetPost))]
     public class DatasetPage : Page<DatasetPage>
     {
-        public PostArchive<SuggestionPost> Archive { get; set; }
+		public static readonly string WellKnownSlug = "internal-datasets";
     }
 }

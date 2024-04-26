@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace CMS.Applications
 {
-    public class GetApplicationsResponse
+    public class ApplicationSearchResponse
 	{
 		public IEnumerable<ApplicationDto> Items { get; set; }
 

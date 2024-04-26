@@ -1,4 +1,5 @@
-﻿using CMS.Likes;
+﻿using CMS.Comments;
+using CMS.Likes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Piranha;
@@ -23,80 +24,42 @@ namespace CMS.Suggestions
         
 		[HttpGet]
 		[Route("")]
-		public async Task<GetSuggestionsResponse> Get(string datasetUri, int? pageNumber, int? pageSize)
+		public async Task<SuggestionSearchResponse> Get(string datasetUri, int? pageNumber, int? pageSize)
 		{
 			var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
 			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id);
 			int pn = 0;
             int ps = 100000;
+			PaginationMetadata paginationMetadata = null;
+            IEnumerable<SuggestionPost> res = archive.Posts;
 
-            if (string.IsNullOrEmpty(datasetUri))
+			if (!string.IsNullOrEmpty(datasetUri))
             {
-                var res = archive.Posts.Select(p => Convert(p)).OrderByDescending(c => c.Created);
+				res = res.Where(p => p.Suggestion.DatasetUri == datasetUri);
+			}
 
-				if (pageNumber != null || pageSize != null)
-                {
-                    pn = (pageNumber != null) ? pageNumber.Value : pn;
-                    ps = (pageSize != null) ? pageSize.Value : ps;
+            res = res.OrderByDescending(c => c.Created);
 
-					var totalItemCount = res.Count();
-                    var paginationMetadata =
-                        new PaginationMetadata()
-                        {
-                            TotalItemCount = totalItemCount,
-							CurrentPage = pn,
-							PageSize = ps
-                        };
+			if (pageNumber != null || pageSize != null)
+			{
+				pn = (pageNumber != null) ? pageNumber.Value : pn;
+				ps = (pageSize != null) ? pageSize.Value : ps;
+                				
+				paginationMetadata = new PaginationMetadata()
+				{
+					TotalItemCount = res.Count(),
+					CurrentPage = pn,
+					PageSize = ps
+				};
 
-                    //service this.api.Content Response.Headers.Add("X-Pagination", JsonSerializer.Serialize(paginationMetadata));
+				res = res.Skip(pn * ps).Take(ps);
+			}
 
-                    //return (res.Skip(pn * ps).Take(ps), paginationMetadata);
-                    return new GetSuggestionsResponse()
-                    {
-                        Items = res.Skip(pn * ps).Take(ps),
-                        PaginationMetadata = paginationMetadata
-                    };
-				}
-                else 
-                {
-					return new GetSuggestionsResponse()
-					{
-						Items = res
-					};
-				}
-            }
-            else
-            {
-                var res = archive.Posts.Select(p => Convert(p)).Where(p => p.DatasetUri == datasetUri).OrderByDescending(c => c.Created);
-
-				if (pageNumber != null || pageSize != null)
-                {
-                    pn = (pageNumber != null) ? pageNumber.Value : pn;
-                    ps = (pageSize != null) ? pageSize.Value : ps;
-
-					var totalItemCount = res.Count();
-					var paginationMetadata =
-						new PaginationMetadata()
-						{
-							TotalItemCount = totalItemCount,
-							CurrentPage = pn,
-							PageSize = ps
-						};
-
-					return new GetSuggestionsResponse()
-					{
-						Items = res.Skip(pn * ps).Take(ps),
-						PaginationMetadata = paginationMetadata
-					};
-				}
-                else
-                {
-					return new GetSuggestionsResponse()
-					{
-						Items = res
-					};
-				}
-            }
+			return new SuggestionSearchResponse()
+			{
+				Items = res.Select(p => Convert(p)),
+				PaginationMetadata = paginationMetadata
+			};
 		}     
         
 		[HttpGet("{id}")]		
@@ -126,7 +89,88 @@ namespace CMS.Suggestions
             };
         }
 
-        [HttpPost]
+		[HttpPost]
+		[Route("search")]
+		public async Task<SuggestionSearchResponse> Search(SuggestionSearchRequest filter)
+		{
+			var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
+			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id);
+			int pn = 0;
+			int ps = 100000;
+			PaginationMetadata paginationMetadata = null;
+			IEnumerable<SuggestionPost> res = archive.Posts;
+
+			if (!string.IsNullOrWhiteSpace(filter.SearchQuery))
+			{
+				var searchQuery = filter.SearchQuery.Trim();
+				res = res.Where(p => p.Title.Contains(searchQuery)
+					|| (p.Suggestion.Description != null && p.Suggestion.Description.Value != null && p.Suggestion.Description.Value.Contains(searchQuery)));
+			}
+
+			if (filter.OrgToUris != null && filter.OrgToUris.Count != 0)
+			{
+				res = res.Where(p => filter.OrgToUris.Contains(p.Suggestion.OrgToUri));
+			}
+
+			if (filter.Types != null && filter.Types.Count != 0)
+			{
+				res = res.Where(p => filter.Types.Contains(p.Suggestion.Type.Value));
+			}
+
+			if (filter.Statuses != null && filter.Statuses.Count != 0)
+			{
+				res = res.Where(p => filter.Statuses.Contains(p.Suggestion.Status.Value));
+			}
+
+			if (filter.OrderBy != null)
+			{
+				switch (filter.OrderBy)
+				{
+					case OrderByTypes.Created:
+						{
+							res = res.OrderBy(c => c.Created);
+							break;
+						};
+					case OrderByTypes.Updated:
+						{
+							res = res.OrderBy(c => c.Created);
+							break;
+						};
+					case OrderByTypes.Title:
+						{
+							res = res.OrderBy(c => c.Created);
+							break;
+						}
+				}
+			}
+			else
+			{
+				res = res.OrderByDescending(c => c.Created);
+			}			
+
+			if (filter.PageNumber != null || filter.PageSize != null)
+			{
+				pn = (filter.PageNumber != null) ? filter.PageNumber.Value : pn;
+				ps = (filter.PageSize != null) ? filter.PageSize.Value : ps;
+
+				paginationMetadata = new PaginationMetadata()
+				{
+					TotalItemCount = res.Count(),
+					CurrentPage = pn,
+					PageSize = ps
+				};
+
+				res = res.Skip(pn * ps).Take(ps);
+			}
+
+			return new SuggestionSearchResponse()
+			{
+				Items = res.Select(p => Convert(p)),
+				PaginationMetadata = paginationMetadata
+			};
+		}
+
+		[HttpPost]
         [Route("")]
         public async Task<IResult> Save(SuggestionDto dto)
         {
