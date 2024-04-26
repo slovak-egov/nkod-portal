@@ -3,19 +3,16 @@ using System.ComponentModel.DataAnnotations;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 
-namespace CMS.Suggestions
+namespace CMS.Applications
 {
-    public class SuggestionSearchRequest
+    public class ApplicationSearchRequest
 	{
 		public string SearchQuery { get; set; }
 
-		public string[] OrgToUris { get; set; }
+		public ApplicationTypes[] Types { get; set; }
 
-		public ContentTypes[] Types { get; set; }
+		public ApplicationThemes[] Themes { get; set; }
 
-		public SuggestionStates[] Statuses { get; set; }
-
-		[JsonConverter(typeof(JsonStringEnumConverter))]
 		public OrderByTypes? OrderBy { get; set; }
 
 		public int? PageNumber { get; set; }

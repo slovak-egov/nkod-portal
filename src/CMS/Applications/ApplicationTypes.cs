@@ -1,6 +1,9 @@
-﻿namespace CMS.Applications
+﻿using System.Text.Json.Serialization;
+
+namespace CMS.Applications
 {
-    public enum ApplicationTypes
+	[JsonConverter(typeof(JsonStringEnumConverter))]
+	public enum ApplicationTypes
     {		
 		MA,
         WA,

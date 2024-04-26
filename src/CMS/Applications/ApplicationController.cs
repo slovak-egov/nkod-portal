@@ -94,7 +94,83 @@ namespace CMS.Applications
             };
         }
 
-        [HttpPost]
+		[HttpPost]
+		[Route("search")]
+		public async Task<ApplicationSearchResponse> Search(ApplicationSearchRequest filter)
+		{
+			var page = await api.Pages.GetBySlugAsync(ApplicationsPage.WellKnownSlug);
+			var archive = await api.Archives.GetByIdAsync<ApplicationPost>(page.Id);
+			int pn = 0;
+			int ps = 100000;
+			PaginationMetadata paginationMetadata = null;
+			IEnumerable<ApplicationPost> res = archive.Posts;
+
+			if (!string.IsNullOrWhiteSpace(filter.SearchQuery))
+			{
+				var searchQuery = filter.SearchQuery.Trim();
+				res = res.Where(p => p.Title.Contains(searchQuery)
+					|| (p.Application.Description != null && p.Application.Description.Value != null && p.Application.Description.Value.Contains(searchQuery)));
+			}
+
+			if (filter.Types != null)
+			{
+				res = res.Where(p => filter.Types.Contains(p.Application.Type.Value));
+			}
+
+			if (filter.Themes != null)
+			{
+				res = res.Where(p => filter.Themes.Contains(p.Application.Theme.Value));
+			}
+
+			if (filter.OrderBy != null)
+			{
+				switch (filter.OrderBy)
+				{
+					case OrderByTypes.Created:
+						{
+							res = res.OrderBy(p => p.Created);
+							break;
+						};
+					case OrderByTypes.Updated:
+						{
+							res = res.OrderBy(p => p.LastModified);
+							break;
+						};
+					case OrderByTypes.Title:
+						{
+							res = res.OrderBy(p => p.Title);
+							break;
+						}
+				}
+			}
+			else
+			{
+				res = res.OrderByDescending(c => c.Created);
+			}
+
+			if (filter.PageNumber != null || filter.PageSize != null)
+			{
+				pn = (filter.PageNumber != null) ? filter.PageNumber.Value : pn;
+				ps = (filter.PageSize != null) ? filter.PageSize.Value : ps;
+
+				paginationMetadata = new PaginationMetadata()
+				{
+					TotalItemCount = res.Count(),
+					CurrentPage = pn,
+					PageSize = ps
+				};
+
+				res = res.Skip(pn * ps).Take(ps);
+			}
+
+			return new ApplicationSearchResponse()
+			{
+				Items = res.Select(p => Convert(p)),
+				PaginationMetadata = paginationMetadata
+			};
+		}
+
+		[HttpPost]
         [Route("")]
         public async Task<IResult> Save(ApplicationDto dto)
         {

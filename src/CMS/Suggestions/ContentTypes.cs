@@ -1,6 +1,9 @@
-﻿namespace CMS.Suggestions
+﻿using System.Text.Json.Serialization;
+
+namespace CMS.Suggestions
 {
-    public enum ContentTypes
+	[JsonConverter(typeof(JsonStringEnumConverter))]
+	public enum ContentTypes
     {
         PN,
         DQ,

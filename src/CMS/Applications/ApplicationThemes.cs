@@ -1,6 +1,9 @@
-﻿namespace CMS.Applications
+﻿using System.Text.Json.Serialization;
+
+namespace CMS.Applications
 {
-    public enum ApplicationThemes
+	[JsonConverter(typeof(JsonStringEnumConverter))]
+	public enum ApplicationThemes
 	{
         ED,
         HE,

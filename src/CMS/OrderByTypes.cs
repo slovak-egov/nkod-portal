@@ -1,10 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Runtime.InteropServices;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace CMS
 {
-    public enum OrderByTypes
+	[JsonConverter(typeof(JsonStringEnumConverter))]
+	public enum OrderByTypes
 	{
 		Created,
 		Updated,

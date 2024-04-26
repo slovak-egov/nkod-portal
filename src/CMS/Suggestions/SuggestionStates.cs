@@ -1,6 +1,9 @@
-﻿namespace CMS.Suggestions
+﻿using System.Text.Json.Serialization;
+
+namespace CMS.Suggestions
 {
-    public enum SuggestionStates
+	[JsonConverter(typeof(JsonStringEnumConverter))]
+	public enum SuggestionStates
     {
         C,
         P,

@@ -107,17 +107,17 @@ namespace CMS.Suggestions
 					|| (p.Suggestion.Description != null && p.Suggestion.Description.Value != null && p.Suggestion.Description.Value.Contains(searchQuery)));
 			}
 
-			if (filter.OrgToUris != null && filter.OrgToUris.Count != 0)
+			if (filter.OrgToUris != null)
 			{
-				res = res.Where(p => filter.OrgToUris.Contains(p.Suggestion.OrgToUri));
+				res = res.Where(p => filter.OrgToUris.ToList().Contains(p.Suggestion.OrgToUri));
 			}
 
-			if (filter.Types != null && filter.Types.Count != 0)
+			if (filter.Types != null)
 			{
 				res = res.Where(p => filter.Types.Contains(p.Suggestion.Type.Value));
 			}
 
-			if (filter.Statuses != null && filter.Statuses.Count != 0)
+			if (filter.Statuses != null)
 			{
 				res = res.Where(p => filter.Statuses.Contains(p.Suggestion.Status.Value));
 			}
@@ -128,17 +128,17 @@ namespace CMS.Suggestions
 				{
 					case OrderByTypes.Created:
 						{
-							res = res.OrderBy(c => c.Created);
+							res = res.OrderBy(p => p.Created);
 							break;
 						};
 					case OrderByTypes.Updated:
 						{
-							res = res.OrderBy(c => c.Created);
+							res = res.OrderBy(p => p.LastModified);
 							break;
 						};
 					case OrderByTypes.Title:
 						{
-							res = res.OrderBy(c => c.Created);
+							res = res.OrderBy(p => p.Title);
 							break;
 						}
 				}
