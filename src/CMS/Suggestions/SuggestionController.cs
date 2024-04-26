@@ -212,8 +212,8 @@ namespace CMS.Suggestions
 		public async Task<IResult> Update(Guid id, SuggestionDto dto)
 		{
 			var post = await api.Posts.GetByIdAsync<SuggestionPost>(id);
+			
 			post.Title = dto.Title;
-
 			post.Suggestion.Description = dto.Description;
 			post.Suggestion.UserId = dto.UserId.ToString("D");
 			post.Suggestion.UserOrgUri = dto.UserOrgUri;
