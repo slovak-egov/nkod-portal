@@ -104,6 +104,18 @@ namespace CMS.Comments
 		[HttpDelete("{id}")]
 		public async Task<IResult> Delete(Guid id)
 		{
+			Comment comment = await api.Posts.GetCommentByIdAsync(id);
+			IEnumerable<Comment> comments = await api.Posts.GetAllCommentsAsync(comment.ContentId);
+			comments = comments.Where(c => Guid.Parse(c.Author) == comment.Id);
+
+			if (comments.Count() >= 0)
+			{
+				foreach (Comment c in comments) 
+				{
+					await this.Delete(c.Id);
+				}
+			}
+
 			await api.Posts.DeleteCommentAsync(id);
 			return Results.Ok();
 		}
