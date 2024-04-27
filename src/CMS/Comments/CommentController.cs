@@ -90,8 +90,6 @@ namespace CMS.Comments
 		{
 			var comment = new PageComment()
 			{
-				Id = dto.Id,
-				ContentId = dto.ContentId,
 				UserId = dto.UserId.ToString("D"),
 				Author = dto.ParentId.ToString("D"),
 				Email = dto.Email,
@@ -99,7 +97,7 @@ namespace CMS.Comments
 				Created = DateTime.Now
 			};
 
-			await api.Posts.SaveCommentAsync(comment.ContentId, comment);
+			await api.Posts.SaveCommentAsync(dto.ContentId, comment);
 			return Results.Ok();
 		}
 

@@ -1,6 +1,10 @@
 {
     "common": {
-        "edit": "Editovať"
+        "edit": "Editovať",
+        "delete": "Odstrániť",
+        "user": "Používateľ",
+        "userOrgUri": "Organizácia používateľa",
+        "backToList": "Späť na zoznam"
     },
     "homePage": {
         "title": "Vitajte na stránke Národného katalógu otvorených dát",
@@ -84,7 +88,7 @@
         "headerTitle": "Aplikácie",
         "title": "Vyhľadávanie aplikácií používajúcich otvorené údaje"
     },
-    "comment": { "title": "Komentáre", "new": "Nový", "comment": "Komentár", "add": "Pridať" },
+    "comment": { "title": "Komentáre", "new": "Nový", "comment": "Komentár", "add": "Pridať", "reply": "Odpoveď" },
     "addSuggestion": {
         "headerTitle": "Nový podnet",
         "title": "Nový podnet",
@@ -95,11 +99,14 @@
         "addButton": "Uložiť",
         "fields": {
             "orgToUri": "Organizácii",
+            "orgToUriSingle": "Organizácia",
             "datasetUri": "Dataset",
             "type": "Typ podnetu",
             "title": "Názov podnetu",
             "description": "Popis podnetu",
-            "state": "Stav podnetu"
+            "status": "Stav podnetu",
+            "created": "Dátum vytvorenia",
+            "updated": "Dátum poslednej zmeny"
         }
     },
     "editSuggestion": {

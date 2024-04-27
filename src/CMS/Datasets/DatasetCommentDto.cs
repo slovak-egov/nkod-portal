@@ -2,27 +2,22 @@
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 
-namespace CMS.Comments
+namespace CMS.Datasets
 {
-    public class CommentDto
+    public class DatasetCommentDto
 	{
-		public Guid Id { get; set; }        
-
 		[Required]
-		public Guid ContentId { get; set; }
+		[Url]
+		public string DatasetUri { get; set; }
 
 		[Required]
 		public Guid UserId { get; set; }
-	
+		
 		[Required]
 		[EmailAddress]
 		public string Email { get; set; }
 
 		[Required]
 		public string Body { get; set; }
-
-		public DateTime Created { get; set; }
-
-		public Guid ParentId { get; set; }
 	}
 }

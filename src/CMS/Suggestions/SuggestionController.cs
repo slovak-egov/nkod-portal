@@ -128,12 +128,12 @@ namespace CMS.Suggestions
 				{
 					case OrderByTypes.Created:
 						{
-							res = res.OrderBy(p => p.Created);
+							res = res.OrderByDescending(p => p.Created);
 							break;
 						};
 					case OrderByTypes.Updated:
 						{
-							res = res.OrderBy(p => p.LastModified);
+							res = res.OrderByDescending(p => p.LastModified);
 							break;
 						};
 					case OrderByTypes.Title:

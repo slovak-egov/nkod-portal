@@ -69,12 +69,11 @@ namespace CMS.Datasets
             return new DatasetDto
 			{
                 Id = p.Id,
-				Title = p.Title,
 				Created = p.Created,
 				Updated = p.LastModified,
                 CommentCount = p.CommentCount,
                 LikeCount = (p.Dataset.Likes?.Value != null) ? p.Dataset.Likes.Value.Count() : 0,				
-                DatasetUri = p.Dataset.DatasetUri.Value
+                DatasetUri = p.Title
             };
         }
         
@@ -84,10 +83,9 @@ namespace CMS.Datasets
         {
             var archiveId = await GetArchiveGuidAsync();
             var post = await api.Posts.CreateAsync<DatasetPost>();
-			post.Title = dto.Title;
+			post.Title = dto.DatasetUri;
 			post.Dataset = new DatasetRegion
             {
-                DatasetUri = dto.DatasetUri,
                 Likes = new MultiSelectField<Guid>()
 			};
 
@@ -109,8 +107,7 @@ namespace CMS.Datasets
 		{
 			var post = await api.Posts.GetByIdAsync<DatasetPost>(id);
 
-			post.Title = dto.Title;
-			post.Dataset.DatasetUri = dto.DatasetUri;
+			post.Title = dto.DatasetUri;
 
 			await api.Posts.SaveAsync(post);
 			return Results.Ok();
@@ -148,11 +145,31 @@ namespace CMS.Datasets
 
 		[HttpPost]
 		[Route("likes")]
-		public async Task<IResult> AddLike(LikeDto dto)
+		public async Task<IResult> AddLike(DatasetLikeDto dto)
 		{
-			var post = await api.Posts.GetByIdAsync<DatasetPost>(dto.ContentId);
+			DatasetPost post = await api.Posts.GetByIdAsync<DatasetPost>(dto.ContentId);
+			IResult res = null;
 
-            if (post.Dataset.Likes?.Value != null)
+			if (post == null)
+			{
+				DatasetDto ds = new DatasetDto()
+				{
+					DatasetUri = dto.DatasetUri
+				};
+
+				res = await this.Save(ds);
+
+				if (res == null)
+				{
+					return res;
+				}
+
+				var page = await api.Pages.GetBySlugAsync(DatasetsPage.WellKnownSlug);
+				var archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
+				post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
+			}
+
+			if (post.Dataset.Likes?.Value != null)
             {
                 var likes = post.Dataset.Likes.Value.ToList();
 
@@ -174,6 +191,47 @@ namespace CMS.Datasets
 			}
 
 			await api.Posts.SaveAsync(post);
+			return Results.Ok();
+		}
+
+		[HttpPost]
+		[Route("comments")]
+		public async Task<IResult> AddComment(DatasetCommentDto dto)
+		{
+			var page = await api.Pages.GetBySlugAsync(DatasetsPage.WellKnownSlug);
+			var archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
+			DatasetPost post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
+			PageComment comment = null;
+			IResult res = null; 
+
+			if (post == null)
+			{ 
+				DatasetDto ds = new DatasetDto()
+				{
+					DatasetUri = dto.DatasetUri
+				};
+
+				res = await this.Save(ds);
+
+				if(res == null) 
+				{
+					return res;
+				}
+
+				archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
+				post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
+			}
+
+			comment = new PageComment()
+			{
+				UserId = dto.UserId.ToString("D"),
+				Author = Guid.Empty.ToString("D"),
+				Email = dto.Email,
+				Body = dto.Body,
+				Created = DateTime.Now
+			};
+
+			await api.Posts.SaveCommentAsync(post.Id, comment);
 			return Results.Ok();
 		}
 	}

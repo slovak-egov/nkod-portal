@@ -1,10 +1,10 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
-import { Dataset, useUserInfo } from './client';
+import { sortComments } from './helpers/helpers';
+import { useSearchParams } from 'react-router-dom';
+import { Dataset, useUserInfo, Response } from './client';
 
 const baseUrl = process.env.REACT_APP_CMS_API_URL ?? process.env.REACT_APP_API_URL + 'cms/';
-
-console.log('baseUrl: ', baseUrl);
 
 export type AutocompleteOption<T> = {
     value: T;
@@ -18,6 +18,17 @@ export type NewCmsUser = {
     email: string | undefined;
     password: string;
     passwordConfirm: string;
+};
+
+export type CmsCodelist = {
+    id: string;
+    label: string;
+    values: CmsCodelistValue[];
+};
+
+export type CmsCodelistValue = {
+    id: string;
+    label: string;
 };
 
 export type CmsUserModel = {
@@ -56,6 +67,24 @@ export enum ApplicationType {
     ANALYSIS = 'A'
 }
 
+export interface RequestCmsQuery {
+    searchQuery?: string;
+    orderBy?: string;
+    pageNumber: number;
+    pageSize: number;
+}
+
+export interface RequestCmsSuggestionsQuery extends RequestCmsQuery {
+    orgToUris?: string[] | null;
+    types?: SuggestionType[] | null;
+    statuses?: SuggestionStatusCode[] | null;
+}
+
+export interface RequestCmsApplicationsQuery extends RequestCmsQuery {
+    types?: ApplicationType[] | null;
+    themes?: ApplicationTheme[] | null;
+}
+
 export enum ApplicationTheme {
     EDUCATION = 'ED',
     HEALTH = 'HE',
@@ -82,14 +111,20 @@ export enum SuggestionStatusCode {
     RESOLVED = 'R'
 }
 
-export interface Comment {
-    id?: string;
+export interface IComment {
+    id: string;
     contentId: string;
     userId: string;
     author: string;
+    parentId: string;
     email: string;
     body: string;
     created: string;
+}
+
+export interface ICommentSorted extends IComment {
+    children: ICommentSorted[];
+    depth: number;
 }
 
 export interface CommentFormValues {
@@ -182,7 +217,7 @@ export interface Pageable<T> {
     };
 }
 
-export interface Application extends Audited, Likeable {
+export interface Application extends Audited, Likeable, Commentable {
     id: string;
     title: string;
     userId?: string;
@@ -191,10 +226,16 @@ export interface Application extends Audited, Likeable {
     theme: ApplicationTheme;
     url: string;
     logo: string;
+    logoFileName: string;
     datasetURIs: string[];
     contactName: string;
     contactSurname: string;
     contactEmail: string;
+}
+
+export interface SuggestionDetail extends Suggestion {
+    orgName?: string;
+    datasetName?: string;
 }
 
 export interface Suggestion extends SuggestionFormValues, Audited, Likeable, Commentable {
@@ -364,6 +405,10 @@ export async function sendGet(url: string) {
     return await axios.get(baseUrl + url);
 }
 
+export async function sendDelete(url: string) {
+    return await axios.delete(baseUrl + url);
+}
+
 export async function getCmsUser(): Promise<CmsUser | null> {
     let response = await axios.get<CmsUser>(baseUrl + 'user/info');
     return response.status === 200 ? response.data : null;
@@ -452,6 +497,119 @@ export function useCmsApplications() {
     return [items, loading, error, refresh] as const;
 }
 
+export function useCmsApplication(id?: string) {
+    const [application, setApplication] = useState<Application | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+
+    // const [publishers, loadingPublishers, errorPublishers, searchPublisher] = useSearchPublisher({
+    //     language: 'sk',
+    //     query: ''
+    // });
+
+    // const [datasets, loadingDatasetList, errorDatasetList, searchDataset] = useSearchDataset({
+    //     language: 'sk',
+    //     query: ''
+    // });
+
+    const refresh = useCallback(async () => {
+        setLoading(true);
+        if (id) {
+            try {
+                const response: AxiosResponse<Application> = await sendGet(`cms/applications/${id}`);
+                // const suggestionDetail: SuggestionDetail = { ...response.data } ?? null;
+
+                // const publisherItems = await searchPublisher('', { key: [suggestionDetail.orgToUri] }, 1);
+                // suggestionDetail.orgName = publisherItems?.[0]?.label;
+
+                // const datasetItems = await searchDataset('', { key: [suggestionDetail.datasetUri] }, 1);
+                // suggestionDetail.datasetName = datasetItems?.[0]?.label;
+
+                setApplication(response.data ?? null);
+            } catch (err) {
+                if (err instanceof Error) {
+                    setError(err);
+                }
+                setApplication(null);
+            } finally {
+                setLoading(false);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        refresh();
+    }, [refresh]);
+
+    return [application, loading, error, refresh] as const;
+}
+
+export function useCmsApplicationsSearch(initialQuery?: Partial<RequestCmsApplicationsQuery>) {
+    return useCmsEntities<Pageable<Application>>('applications/search', { orderBy: 'modified', ...initialQuery });
+}
+
+export function useCmsSuggestionsSearch(initialQuery?: Partial<RequestCmsSuggestionsQuery>) {
+    return useCmsEntities<Pageable<Suggestion>>('suggestions/search', { orderBy: 'modified', ...initialQuery });
+}
+
+export function useCmsEntities<T>(url: string, initialQuery?: any) {
+    const [searchParams] = useSearchParams();
+
+    let defaultParams: RequestCmsQuery = {
+        pageSize: 10,
+        pageNumber: 0,
+        searchQuery: '',
+        orderBy: 'name'
+    };
+
+    if (searchParams.has('query')) {
+        defaultParams = {
+            ...defaultParams,
+            searchQuery: searchParams.get('query')!
+        };
+    }
+
+    const [query, setQuery] = useState<RequestCmsQuery>({
+        ...defaultParams,
+        ...initialQuery
+    });
+    const [items, setItems] = useState<T | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    // const headers = useDefaultHeaders();
+
+    const refresh = useCallback(async () => {
+        setLoading(true);
+        if (error !== null) {
+            setError(null);
+        }
+        try {
+            const response: AxiosResponse<T> = await sendPost(url, query);
+            setItems(response.data);
+            setLoading(false);
+        } catch (err) {
+            if (axios.isCancel(err)) {
+                return;
+            }
+            if (err instanceof Error) {
+                setError(err);
+            }
+            setItems(null);
+            setLoading(false);
+        }
+    }, [query, url]);
+
+    useEffect(() => {
+        refresh();
+    }, [refresh]);
+
+    const setQueryParameters = useCallback((query: Partial<RequestCmsQuery>) => {
+        setQuery((q) => ({ ...q, ...query }));
+    }, []);
+
+    return [items, query, setQueryParameters, loading, error, refresh] as const;
+}
+
 export function useCmsLike() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
@@ -485,14 +643,14 @@ export function useCmsLike() {
 export function useCmsComments(contentId: string) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
-    const [comments, setComments] = useState<Comment[]>([]);
+    const [comments, setComments] = useState<ICommentSorted[]>([]);
 
     const load = useCallback(async (contentId: string) => {
         setLoading(true);
         try {
-            const response: AxiosResponse<Comment[]> = await sendGet(`cms/comments?contentId=${contentId}`);
+            const response: AxiosResponse<Pageable<ICommentSorted>> = await sendGet(`cms/comments?contentId=${contentId}`);
             if (response.status === 200) {
-                setComments(response.data?.sort((a, b) => Number(a.created) - Number(b.created)));
+                setComments(sortComments(response.data?.items));
             }
             setLoading(false);
             return;
@@ -511,6 +669,53 @@ export function useCmsComments(contentId: string) {
     }, [load, contentId]);
 
     return [comments, loading, error, load] as const;
+}
+
+export function useCmsSuggestion(id?: string) {
+    const [suggestion, setSuggestion] = useState<SuggestionDetail | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+
+    const [publishers, loadingPublishers, errorPublishers, searchPublisher] = useSearchPublisher({
+        language: 'sk',
+        query: ''
+    });
+
+    const [datasets, loadingDatasetList, errorDatasetList, searchDataset] = useSearchDataset({
+        language: 'sk',
+        query: ''
+    });
+
+    const refresh = useCallback(async () => {
+        setLoading(true);
+        if (id) {
+            try {
+                const response: AxiosResponse<Suggestion> = await sendGet(`cms/suggestions/${id}`);
+                const suggestionDetail: SuggestionDetail = { ...response.data } ?? null;
+
+                const publisherItems = await searchPublisher('', { key: [suggestionDetail.orgToUri] }, 1);
+                suggestionDetail.orgName = publisherItems?.[0]?.label;
+
+                const datasetItems = await searchDataset('', { key: [suggestionDetail.datasetUri] }, 1);
+                suggestionDetail.datasetName = datasetItems?.[0]?.label;
+
+                setSuggestion(suggestionDetail ?? null);
+            } catch (err) {
+                if (err instanceof Error) {
+                    setError(err);
+                }
+                setSuggestion(null);
+            } finally {
+                setLoading(false);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        refresh();
+    }, [refresh]);
+
+    return [suggestion, loading, error, refresh] as const;
 }
 
 export function useCmsSuggestions() {

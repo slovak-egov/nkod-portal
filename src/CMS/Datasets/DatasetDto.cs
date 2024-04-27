@@ -9,9 +9,6 @@ namespace CMS.Datasets
 		public Guid Id { get; set; }
 
 		[Required]
-		public string Title { get; set; }
-
-		[Required]
 		[Url]
 		public string DatasetUri { get; set; }
 

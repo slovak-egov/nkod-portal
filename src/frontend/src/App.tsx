@@ -10,7 +10,6 @@ import AddDataset from './pages/AddDataset';
 import AddDistribution from './pages/AddDistribution';
 import AddPublisher from './pages/AddPublisher';
 import AddUser from './pages/AddUser';
-import ApplicationDetail from './pages/ApplicationDetail';
 import ApplicationList from './pages/ApplicationList';
 import CatalogList from './pages/CatalogList';
 import ChangeLicenses from './pages/ChangeLicenses';
@@ -39,12 +38,15 @@ import PublisherRegistration from './pages/PublisherRegistration';
 import Quality from './pages/Quality';
 import Sparql from './pages/Sparql';
 import SuggestionDetail from './pages/SuggestionDetail';
+import SuggestionForm from './pages/SuggestionForm';
 import SuggestionList from './pages/SuggestionList';
 import UserList from './pages/UserList';
 import Login from './pages/cms/Login';
 import ODCommunityStartPage from './pages/cms/ODCommunityStartPage';
 import RegisterUser from './pages/cms/RegisterUser';
 import UserPage from './pages/cms/UserPage';
+import ApplicationDetail from './pages/ApplicationDetail';
+import ApplicationForm from './pages/ApplicationForm';
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -302,14 +304,13 @@ function App(props: Props) {
                                         ) : null}
 
                                         <Route path="/aplikacia" Component={ApplicationList} />
-                                        <Route path="/aplikacia/:id/upravit" Component={ApplicationDetail} />
-                                        <Route path="/aplikacia/:id" element={<ApplicationDetail readonly />} />
-                                        <Route path="/aplikacia/pridat" Component={ApplicationDetail} />
+                                        <Route path="/aplikacia/:id/upravit" Component={ApplicationForm} />
+                                        <Route path="/aplikacia/:id" element={<ApplicationDetail />} />
+                                        <Route path="/aplikacia/pridat" Component={ApplicationForm} />
                                         <Route path="/podnet" Component={SuggestionList} />
-                                        <Route path="/podnet/:id/upravit" element={<SuggestionDetail />} />
-                                        <Route path="/podnet/:id/komentare" element={<SuggestionDetail scrollToComments />} />
-                                        <Route path="/podnet/:id" element={<SuggestionDetail readonly />} />
-                                        <Route path="/podnet/pridat" Component={SuggestionDetail} />
+                                        <Route path="/podnet/:id/upravit" element={<SuggestionForm />} />
+                                        <Route path="/podnet/:id" element={<SuggestionDetail />} />
+                                        <Route path="/podnet/pridat" Component={SuggestionForm} />
 
                                         {userInfo?.role === 'Superadmin' ? (
                                             <>

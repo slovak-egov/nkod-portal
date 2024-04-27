@@ -1,8 +1,9 @@
 import { AxiosResponse } from 'axios';
 import React, { useCallback, useEffect, useState } from 'react';
 import { FieldValues, Path, UseFormReturn } from 'react-hook-form';
-import { sendGet } from '../cms';
+import { IComment, ICommentSorted, sendGet } from '../cms';
 import Loading from '../components/Loading';
+import ErrorAlert from '../components/ErrorAlert';
 
 interface IUseLoadData<TForm extends FieldValues> {
     form: UseFormReturn<TForm>;
@@ -19,6 +20,12 @@ interface IQueryGuardProps<T> {
     ErrorElement?: React.ReactNode;
     children: ((data: Exclude<T, undefined>) => JSX.Element) | JSX.Element;
 }
+
+export const ROOT_ID = '00000000-0000-0000-0000-000000000000';
+export const MAX_COOMENT_DEPTH_MARGIN_LEFT = 10;
+// TODO: translate
+export const DATE_FORMAT = 'DD.MM.YYYY HH:mm:ss';
+export const DATE_FORMAT_NO_SECONDS = 'DD.MM.YYYY HH:mm';
 
 export const useLoadData = <TForm extends FieldValues, TData>(props: IUseLoadData<TForm>) => {
     const { transform, form, disabled, url } = props;
@@ -111,7 +118,8 @@ export function dataUrlToBlob(dataUrl: string): Blob | null {
 export const QueryGuard = <T extends unknown>(props: IQueryGuardProps<T>) => {
     const { loading, error, data, ErrorElement, children, isNew = false } = props;
     if (error && ErrorElement) {
-        return <>ErrorElement</>;
+        const err = new Error('Pri načítavaní údajov došlo k chybe.');
+        return <ErrorAlert error={err} />;
     }
     if (isNew && typeof children !== 'function') {
         return children;
@@ -123,4 +131,42 @@ export const QueryGuard = <T extends unknown>(props: IQueryGuardProps<T>) => {
         return <Loading />;
     }
     return null;
+};
+
+export const sortComments = (comments: IComment[]) => {
+    // Create a dictionary to store comments by parentId
+    const commentsDict: any = {};
+    comments?.forEach((comment: IComment) => {
+        if (!commentsDict[comment.parentId]) {
+            commentsDict[comment.parentId] = [];
+        }
+        commentsDict[comment.parentId].push(comment);
+    });
+
+    // Recursive function to sort comments and add depth
+    function sortRecursive(parentId: string, depth: number) {
+        const children = commentsDict[parentId] || [];
+        // Sort children by 'created' timestamp in descending order
+        children.sort((a: IComment, b: IComment) => new Date(b.created).getTime() - new Date(a.created).getTime());
+        children.forEach((child: ICommentSorted) => {
+            child.depth = depth;
+            child.children = sortRecursive(child.id, depth + 1);
+        });
+        return children;
+    }
+
+    const roots = commentsDict[ROOT_ID] || [];
+    roots.sort((a: IComment, b: IComment) => new Date(b.created).getTime() - new Date(a.created).getTime());
+    roots.forEach((root: ICommentSorted) => {
+        root.depth = 0;
+        root.children = sortRecursive(root.id, 1);
+    });
+
+    const sortedComments = roots.reduce((acc: any, root: any) => {
+        acc.push(root);
+        acc.push(...root.children);
+        return acc;
+    }, []);
+
+    return sortedComments.filter((comment: ICommentSorted) => comment.depth === 0);
 };

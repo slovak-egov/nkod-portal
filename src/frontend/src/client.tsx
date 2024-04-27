@@ -3,7 +3,6 @@ import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { useSearchParams } from 'react-router-dom';
-import { Suggestion, SuggestionStatusCode, SuggestionType } from './cms';
 
 const baseUrl = process.env.REACT_APP_API_URL;
 
