@@ -2,6 +2,7 @@
 using CMS.Likes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Piranha;
 using Piranha.Extend.Fields;
 using Piranha.Models;
@@ -154,7 +155,6 @@ namespace CMS.Datasets
 		public async Task<IResult> AddLike(DatasetLikeDto dto)
 		{
 			DatasetPost post = null;
-			IResult res = null;
 
 			if (dto.ContentId == null && string.IsNullOrWhiteSpace(dto.DatasetUri))
 			{
@@ -166,6 +166,8 @@ namespace CMS.Datasets
 				var page = await api.Pages.GetBySlugAsync(DatasetsPage.WellKnownSlug);
 				var archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
 				post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
+				IResult res = null;
+				Ok<Guid> resOK;
 
 				if (post == null)
 				{
@@ -175,14 +177,22 @@ namespace CMS.Datasets
 					};
 
 					res = await this.Save(ds);
+					resOK = res as Ok<Guid>;
 
-					if (res == null)
+					if (resOK == null)
 					{
 						return res;
 					}
 
-					archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
-					post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
+					if (resOK.Value != Guid.Empty)
+					{
+						post = await api.Posts.GetByIdAsync<DatasetPost>(resOK.Value);
+					}
+					else
+					{
+						archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
+						post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
+					}
 				}
 			}
 			else
@@ -228,7 +238,8 @@ namespace CMS.Datasets
 			var archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
 			DatasetPost post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
 			PageComment comment = null;
-			IResult res = null; 
+			IResult res = null;
+			Ok<Guid> resOK;
 
 			if (post == null)
 			{ 
@@ -238,15 +249,23 @@ namespace CMS.Datasets
 				};
 
 				res = await this.Save(ds);
+				resOK = res as Ok<Guid>;
 
-				if(res == null) 
+				if (resOK == null) 
 				{
 					return res;
 				}
 
-				archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
-				post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
-			}
+				if (resOK.Value != Guid.Empty)
+				{
+					post = await api.Posts.GetByIdAsync<DatasetPost>(resOK.Value);
+				}
+				else
+				{
+					archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
+					post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
+				}
+            }
 
 			comment = new PageComment()
 			{
