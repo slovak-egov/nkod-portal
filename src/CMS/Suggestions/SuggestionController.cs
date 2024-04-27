@@ -205,7 +205,7 @@ namespace CMS.Suggestions
             post.Published = DateTime.Now;
 
             await api.Posts.SaveAsync(post);
-            return Results.Ok();
+            return Results.Ok<Guid>(post.Id);
         }
 
 		[HttpPut("{id}")]

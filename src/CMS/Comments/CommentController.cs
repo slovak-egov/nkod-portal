@@ -98,7 +98,7 @@ namespace CMS.Comments
 			};
 
 			await api.Posts.SaveCommentAsync(dto.ContentId, comment);
-			return Results.Ok();
+			return Results.Ok<Guid>(comment.Id);
 		}
 
 		[HttpDelete("{id}")]

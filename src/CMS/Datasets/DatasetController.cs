@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Piranha;
 using Piranha.Extend.Fields;
 using Piranha.Models;
+using SixLabors.ImageSharp.Formats.Gif;
 using System.Linq;
 using System.Text.Json.Serialization;
 
@@ -24,7 +25,7 @@ namespace CMS.Datasets
         
 		[HttpGet]
 		[Route("")]
-		public async Task<DatasetSearchResponse> Get(int? pageNumber, int? pageSize)
+		public async Task<DatasetSearchResponse> Get(string datasetUri, int? pageNumber, int? pageSize)
 		{
 			var page = await api.Pages.GetBySlugAsync(DatasetsPage.WellKnownSlug);
 			var archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
@@ -33,7 +34,12 @@ namespace CMS.Datasets
 			PaginationMetadata paginationMetadata = null;
             IEnumerable<DatasetPost> res = archive.Posts;
 
-            res = res.OrderByDescending(c => c.Created);
+			if (!string.IsNullOrEmpty(datasetUri))
+			{
+				res = res.Where(p => p.Title == datasetUri);
+			}
+
+			res = res.OrderByDescending(c => c.Created);
 
 			if (pageNumber != null || pageSize != null)
 			{
@@ -99,8 +105,8 @@ namespace CMS.Datasets
             post.Published = DateTime.Now;
 
             await api.Posts.SaveAsync(post);
-            return Results.Ok();
-        }
+			return Results.Ok<Guid>(post.Id);
+		}
 
 		[HttpPut("{id}")]
 		public async Task<IResult> Update(Guid id, DatasetDto dto)
@@ -147,28 +153,48 @@ namespace CMS.Datasets
 		[Route("likes")]
 		public async Task<IResult> AddLike(DatasetLikeDto dto)
 		{
-			DatasetPost post = await api.Posts.GetByIdAsync<DatasetPost>(dto.ContentId);
+			DatasetPost post = null;
 			IResult res = null;
 
-			if (post == null)
+			if (dto.ContentId == null && string.IsNullOrWhiteSpace(dto.DatasetUri))
 			{
-				DatasetDto ds = new DatasetDto()
-				{
-					DatasetUri = dto.DatasetUri
-				};
+				return Results.Problem("ContentId or DatasetUri must be set!");
+			}
 
-				res = await this.Save(ds);
-
-				if (res == null)
-				{
-					return res;
-				}
-
+			if (dto.ContentId == null)
+			{
 				var page = await api.Pages.GetBySlugAsync(DatasetsPage.WellKnownSlug);
 				var archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
 				post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
-			}
 
+				if (post == null)
+				{
+					DatasetDto ds = new DatasetDto()
+					{
+						DatasetUri = dto.DatasetUri
+					};
+
+					res = await this.Save(ds);
+
+					if (res == null)
+					{
+						return res;
+					}
+
+					archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
+					post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
+				}
+			}
+			else
+			{
+				post = await api.Posts.GetByIdAsync<DatasetPost>(dto.ContentId.Value);
+
+				if (post == null)
+				{
+					return Results.Problem("Dataset with this ContentId not exists!");
+				}
+			}
+						
 			if (post.Dataset.Likes?.Value != null)
             {
                 var likes = post.Dataset.Likes.Value.ToList();
@@ -232,7 +258,7 @@ namespace CMS.Datasets
 			};
 
 			await api.Posts.SaveCommentAsync(post.Id, comment);
-			return Results.Ok();
+			return Results.Ok<Guid>(comment.Id);
 		}
 	}
 }

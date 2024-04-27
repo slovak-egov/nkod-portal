@@ -9,7 +9,7 @@ namespace CMS.Datasets
 		[Url]
 		public string DatasetUri { get; set; }
 
-		public Guid ContentId { get; set; }
+		public Guid? ContentId { get; set; }
 
 		[Required]
 		public Guid UserId { get; set; }		
