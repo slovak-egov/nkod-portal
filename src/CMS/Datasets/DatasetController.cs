@@ -227,7 +227,7 @@ namespace CMS.Datasets
 			}
 
 			await api.Posts.SaveAsync(post);
-			return Results.Ok();
+			return Results.Ok<Guid>(post.Id);
 		}
 
 		[HttpPost]
@@ -277,7 +277,7 @@ namespace CMS.Datasets
 			};
 
 			await api.Posts.SaveCommentAsync(post.Id, comment);
-			return Results.Ok<Guid>(comment.Id);
+			return Results.Ok<Guid>(post.Id);
 		}
 	}
 }
