@@ -62,7 +62,7 @@ namespace WebApi.Test
             dataset.Publisher = new Uri(publisher);
             dataset.SetKeywords(new Dictionary<string, List<string>> { { "sk", keywordsSk?.ToList() ?? new List<string>() }, { "en", keywordsEn?.ToList() ?? new List<string>() } });
 
-            FileMetadata metadata = dataset.UpdateMetadata(true);
+            FileMetadata metadata = dataset.UpdateMetadata(true, null);
             if (parent is not null)
             {
                 metadata = metadata with { ParentFile = parent };
@@ -188,7 +188,7 @@ namespace WebApi.Test
             dataset.Issued = new DateTimeOffset(2023, 8, 16, 0, 0, 0, TimeSpan.Zero);
             dataset.Modified = new DateTimeOffset(2023, 8, 16, 0, 0, 0, TimeSpan.Zero);
 
-            FileMetadata metadata = dataset.UpdateMetadata(true);
+            FileMetadata metadata = dataset.UpdateMetadata(true, null);
             FileState datasetState = new FileState(metadata, dataset.ToString());
             CreateFile(datasetState);
 

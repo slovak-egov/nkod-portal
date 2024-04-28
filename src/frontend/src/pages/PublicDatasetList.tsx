@@ -22,7 +22,8 @@ const codelistsKeys = [
     'http://publications.europa.eu/resource/authority/frequency',
     'keywords',
     knownCodelists.distribution.license,
-    knownCodelists.distribution.personalDataContainmentType
+    knownCodelists.distribution.personalDataContainmentType,
+    knownCodelists.publisher.legalForm
 ];
 
 export default function PublicDatasetList() {

@@ -258,7 +258,7 @@ namespace NkodSk.Abstractions
             return null;
         }
 
-        public FileMetadata UpdateMetadata(bool isPublic, FileMetadata? metadata = null, DateTimeOffset? effectiveDate = null)
+        public FileMetadata UpdateMetadata(bool isPublic, FoafAgent? publisher, FileMetadata? metadata = null, DateTimeOffset? effectiveDate = null)
         {
             Guid id = metadata?.Id ?? createdId ?? Guid.NewGuid();
             DateTimeOffset now = effectiveDate ?? DateTimeOffset.UtcNow;
@@ -287,6 +287,11 @@ namespace NkodSk.Abstractions
             else
             {
                 values.Remove("Harvested");
+            }
+
+            if (publisher?.LegalForm is not null)
+            {
+                values[FoafAgent.LegalFormCodelist] = new string[] { publisher.LegalForm.ToString() };
             }
 
             foreach ((string language, List<string> texts) in Keywords)

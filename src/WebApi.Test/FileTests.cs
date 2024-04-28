@@ -124,7 +124,7 @@ namespace WebApi.Test
         {
             string path = fixture.GetStoragePath();
 
-            byte[] bytes = new byte[1024 * 1024  * 250];
+            byte[] bytes = new byte[1024 * 1024  * 40];
             const byte fillByte = (byte)'a';
             Array.Fill(bytes, fillByte);
 

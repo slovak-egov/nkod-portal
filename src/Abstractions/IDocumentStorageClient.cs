@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using VDS.RDF;
@@ -30,6 +32,74 @@ namespace NkodSk.Abstractions
 
         Task<long?> GetSize(Guid id);
 
+        async Task UpdatePublisherDatasets(string publisherId, bool updateDatasetModifiedDate)
+        {
+            FileState? publisherState = await GetPublisherFileState(publisherId).ConfigureAwait(false);
+            if (publisherState?.Content is null)
+            {
+                return;
+            }
+
+            FoafAgent? publisher = FoafAgent.Parse(publisherState.Content);
+            if (publisher is null)
+            {
+                return;
+            }
+
+            FileStorageQuery query = new FileStorageQuery
+            {
+                OnlyTypes = new List<FileType> { FileType.DatasetRegistration },
+                OnlyPublishers = new List<string> { publisherId },
+            };
+            FileStorageResponse response = await GetFileStates(query).ConfigureAwait(false);
+            foreach (FileState datasetState in response.Files)
+            {
+                await UpdateDatasetMetadata(datasetState, publisher, updateDatasetModifiedDate).ConfigureAwait(false);
+            }
+        }
+
+        
+        private async Task UpdateDatasetMetadata(FileState datasetState, FoafAgent publisher, bool updateDatasetModifiedDate)
+        {
+            DcatDataset? dataset = datasetState.Content is not null ? DcatDataset.Parse(datasetState.Content) : null;
+
+            if (dataset?.Publisher is not null)
+            {
+                if (updateDatasetModifiedDate)
+                {
+                    dataset.Modified = DateTime.UtcNow;
+                }
+                FileMetadata datasetMetadata = datasetState.Metadata;
+
+                FileStorageQuery query = new FileStorageQuery
+                {
+                    ParentFile = datasetMetadata.Id,
+                    OnlyTypes = new List<FileType> { FileType.DistributionRegistration },
+                };
+                FileStorageResponse response = await GetFileStates(query).ConfigureAwait(false);
+
+                datasetMetadata = dataset.UpdateMetadata(response.Files.Count > 0, publisher, datasetMetadata);
+                datasetMetadata = DcatDistribution.ClearDatasetMetadata(datasetMetadata);
+
+                dataset.RemoveAllDistributions();
+
+                foreach (FileState state in response.Files)
+                {
+                    if (state.Content is not null)
+                    {
+                        DcatDistribution? distribution = DcatDistribution.Parse(state.Content);
+                        if (distribution is not null)
+                        {
+                            datasetMetadata = distribution.UpdateDatasetMetadata(datasetMetadata);
+                            distribution.IncludeInDataset(dataset);
+                        }
+                    }
+                }
+
+                await InsertFile(dataset.ToString(), true, datasetMetadata).ConfigureAwait(false);
+            }              
+        }
+
         async Task UpdateDatasetMetadata(Guid datasetId, bool updateDatasetModifiedDate)
         {
             FileState? datasetState = await GetFileState(datasetId).ConfigureAwait(false);
@@ -37,40 +107,21 @@ namespace NkodSk.Abstractions
             {
                 DcatDataset? dataset = DcatDataset.Parse(datasetState.Content);
 
-                if (dataset is not null)
+                if (dataset?.Publisher is not null)
                 {
-                    if (updateDatasetModifiedDate)
+                    FileState? publisherState = await GetPublisherFileState(dataset.Publisher.ToString()).ConfigureAwait(false);
+                    if (publisherState?.Content is null)
                     {
-                        dataset.Modified = DateTime.UtcNow;
-                    }
-                    FileMetadata datasetMetadata = datasetState.Metadata;
-
-                    FileStorageQuery query = new FileStorageQuery
-                    {
-                        ParentFile = datasetId,
-                        OnlyTypes = new List<FileType> { FileType.DistributionRegistration },
-                    };
-                    FileStorageResponse response = await GetFileStates(query).ConfigureAwait(false);
-
-                    datasetMetadata = dataset.UpdateMetadata(response.Files.Count > 0, datasetMetadata);
-                    datasetMetadata = DcatDistribution.ClearDatasetMetadata(datasetMetadata);
-
-                    dataset.RemoveAllDistributions();
-
-                    foreach (FileState state in response.Files)
-                    {
-                        if (state.Content is not null)
-                        {
-                            DcatDistribution? distribution = DcatDistribution.Parse(state.Content);
-                            if (distribution is not null)
-                            {
-                                datasetMetadata = distribution.UpdateDatasetMetadata(datasetMetadata);
-                                distribution.IncludeInDataset(dataset);
-                            }
-                        }
+                        return;
                     }
 
-                    await InsertFile(dataset.ToString(), true, datasetMetadata).ConfigureAwait(false);
+                    FoafAgent? publisher = FoafAgent.Parse(publisherState.Content);
+                    if (publisher is null)
+                    {
+                        return;
+                    }
+
+                    await UpdateDatasetMetadata(datasetState, publisher, updateDatasetModifiedDate).ConfigureAwait(false);
                 }
             }
         }
@@ -135,6 +186,18 @@ namespace NkodSk.Abstractions
             }
 
             return true;
+        }
+
+        public async Task<FileState?> GetPublisherFileState(string publisherId)
+        {
+            FileStorageQuery storageQuery = new FileStorageQuery
+            {
+                OnlyTypes = new List<FileType> { FileType.PublisherRegistration },
+                OnlyPublishers = new List<string> { publisherId },
+                MaxResults = 1
+            };
+            FileStorageResponse response = await GetFileStates(storageQuery).ConfigureAwait(false);
+            return response.Files.Count > 0 ? response.Files[0] : null;
         }
     }
 }

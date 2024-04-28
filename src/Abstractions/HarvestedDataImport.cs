@@ -28,7 +28,7 @@ namespace NkodSk.Abstractions
 
         public async Task Import()
         { 
-            async Task UpdateChildren<T>(FileType type, FileMetadata parentMetadata, Uri? localCatalogUri, bool removeChildren, Func<string, T?> parser, Func<Task<List<T>>> fetcher, Func<T, FileMetadata?, FileMetadata> metadataCreator, Func<Task> savedCallback, Func<FileMetadata, T, Task> innerUpdate) where T : RdfObject
+            async Task UpdateChildren<T>(FoafAgent publisher, FileType type, FileMetadata parentMetadata, Uri? localCatalogUri, bool removeChildren, Func<string, T?> parser, Func<Task<List<T>>> fetcher, Func<T, FileMetadata?, FileMetadata> metadataCreator, Func<Task> savedCallback, Func<FileMetadata, T, Task> innerUpdate) where T : RdfObject
             {
                 logger("Loading existing children from storage");
 
@@ -165,7 +165,7 @@ namespace NkodSk.Abstractions
                                     if (!parentDataset.IsSerie)
                                     {
                                         parentDataset.IsSerie = true;
-                                        await documentStorageClient.InsertFile(parentDataset.ToString(), true, parentDataset.UpdateMetadata(true, parentState.Metadata));
+                                        await documentStorageClient.InsertFile(parentDataset.ToString(), true, parentDataset.UpdateMetadata(true, publisher, parentState.Metadata));
                                     }
                                 }
 
@@ -177,7 +177,7 @@ namespace NkodSk.Abstractions
                                     {
                                         childDataset.IsPartOf = parentUri;
                                         childDataset.IsPartOfInternalId = parentState.Metadata.Id.ToString();
-                                        await documentStorageClient.InsertFile(childDataset.ToString(), true, childDataset.UpdateMetadata(true, childState.Metadata));
+                                        await documentStorageClient.InsertFile(childDataset.ToString(), true, childDataset.UpdateMetadata(true, publisher, childState.Metadata));
                                     }
                                 }
                             }
@@ -215,9 +215,30 @@ namespace NkodSk.Abstractions
             {
                 logger("Loading catalog: " + state.Metadata.Id);
 
+                if (state.Metadata.Publisher is null)
+                {
+                    logger("Catalog without publisher");
+                    continue;
+                }
+
                 try
                 {
                     logger($"Acquiring token for harvester (publisher {state.Metadata.Publisher})");
+
+                    FileState? publisherState = await documentStorageClient.GetPublisherFileState(state.Metadata.Publisher);
+                    if (publisherState?.Content is null)
+                    {
+                        logger("Publisher state not found");
+                        continue;
+                    }
+
+                    FoafAgent? publisher = FoafAgent.Parse(publisherState.Content);
+
+                    if (publisher is null)
+                    {
+                        logger("Publisher not found");
+                        continue;
+                    }
 
                     await loginProvider(state.Metadata.Publisher);
 
@@ -227,6 +248,7 @@ namespace NkodSk.Abstractions
                     logger($"Catalog uri: {catalog?.Uri}");
 
                     await UpdateChildren(
+                        publisher,
                         FileType.DatasetRegistration,
                         state.Metadata,
                         catalog?.Uri,
@@ -235,7 +257,7 @@ namespace NkodSk.Abstractions
                         () => catalog?.Uri is not null ? sparqlClient.GetDatasets(catalog.Uri, true) : Task.FromResult(new List<DcatDataset>()),
                         (d, m) =>
                         {
-                            m = d.UpdateMetadata(true, m);
+                            m = d.UpdateMetadata(true, publisher, m);
                             Dictionary<string, string[]> additionalValues = m.AdditionalValues ?? new Dictionary<string, string[]>();
                             if (catalog is not null)
                             {
@@ -248,6 +270,7 @@ namespace NkodSk.Abstractions
                         async (datasetMetadata, dataset) =>
                         {
                             await UpdateChildren(
+                                publisher,
                                 FileType.DistributionRegistration,
                                 datasetMetadata,
                                 catalog?.Uri,

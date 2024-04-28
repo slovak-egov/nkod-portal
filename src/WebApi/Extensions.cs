@@ -82,17 +82,5 @@ namespace WebApi
         }
 
         public static Uri? AsUri(this string? value) => !string.IsNullOrEmpty(value) ? new Uri(value, UriKind.Absolute) : null;
-
-        public static async Task<FileState?> GetPublisherFileState(this IDocumentStorageClient documentStorageClient, string publisherId)
-        {
-            FileStorageQuery storageQuery = new FileStorageQuery
-            {
-                OnlyTypes = new List<FileType> { FileType.PublisherRegistration },
-                OnlyPublishers = new List<string> { publisherId },
-                MaxResults = 1
-            };
-            FileStorageResponse response = await documentStorageClient.GetFileStates(storageQuery).ConfigureAwait(false);
-            return response.Files.Count > 0 ? response.Files[0] : null;
-        }
     }
 }

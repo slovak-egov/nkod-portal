@@ -206,5 +206,29 @@ namespace WebApi.Test
             Assert.Equal(input.Email, agent.EmailAddress);
             Assert.Equal(input.Phone, agent.Phone);
         }
+
+        [Fact]
+        public async Task DatasetLegalFormShouldBeUpdated()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreatePublisherCodelists();
+            fixture.CreatePublisher("Test", PublisherId, isPublic: true);
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            RegistrationInput input = CreateInput();
+            input.LegalForm = "https://data.gov.sk/def/legal-form-type/321";
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/profile", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            FileState? state = storage.GetFileState(datasetId, accessPolicy);
+            Assert.NotNull(state);
+            Assert.Equal(new[] { "https://data.gov.sk/def/legal-form-type/321" }, state.Metadata.AdditionalValues?[FoafAgent.LegalFormCodelist] ?? Array.Empty<string>());
+        }
     }
 }

@@ -424,7 +424,7 @@ namespace WebApi.Test
             FileState state = storage.GetFileState(id1, accessPolicy)!;
             DcatDataset dataset = DcatDataset.Parse(state.Content!)!;
             dataset.Themes = new[] { new Uri("http://publications.europa.eu/resource/dataset/data-theme/1") };
-            FileMetadata metadata = dataset.UpdateMetadata(true, state.Metadata);
+            FileMetadata metadata = dataset.UpdateMetadata(true, null, state.Metadata);
             storage.InsertFile(dataset.ToString(), metadata, true, accessPolicy);
 
             void AssertFacets(List<Facet>? facets)
@@ -824,7 +824,7 @@ namespace WebApi.Test
             });
 
 
-            FileMetadata metadata = dataset.UpdateMetadata(true);
+            FileMetadata metadata = dataset.UpdateMetadata(true, null);
             FileState state = new FileState(metadata, dataset.ToString());
             fixture.CreateFile(state);
             Guid id = metadata.Id;
@@ -957,7 +957,7 @@ namespace WebApi.Test
 
             using Storage storage = new Storage(path);
 
-            FileMetadata metadata = dataset.UpdateMetadata(true);
+            FileMetadata metadata = dataset.UpdateMetadata(true, null);
             storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
@@ -986,7 +986,7 @@ namespace WebApi.Test
 
             using Storage storage = new Storage(path);
 
-            FileMetadata metadata = dataset.UpdateMetadata(true);
+            FileMetadata metadata = dataset.UpdateMetadata(true, null);
             storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
@@ -1041,7 +1041,7 @@ namespace WebApi.Test
 
             using Storage storage = new Storage(path);
 
-            FileMetadata metadata = dataset.UpdateMetadata(true);
+            FileMetadata metadata = dataset.UpdateMetadata(true, null);
             storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
@@ -1065,7 +1065,7 @@ namespace WebApi.Test
 
             using Storage storage = new Storage(path);
 
-            FileMetadata metadata = dataset.UpdateMetadata(true);
+            FileMetadata metadata = dataset.UpdateMetadata(true, null);
             storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
@@ -1090,7 +1090,7 @@ namespace WebApi.Test
 
             using Storage storage = new Storage(path);
 
-            FileMetadata metadata = dataset.UpdateMetadata(true);
+            FileMetadata metadata = dataset.UpdateMetadata(true, null);
             storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
@@ -1114,7 +1114,7 @@ namespace WebApi.Test
 
             using Storage storage = new Storage(path);
 
-            FileMetadata metadata = dataset.UpdateMetadata(true);
+            FileMetadata metadata = dataset.UpdateMetadata(true, null);
             storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);

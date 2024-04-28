@@ -833,14 +833,14 @@ namespace Frontend.Test
             DcatDataset parentDataset = DcatDataset.Parse(parentState.Content!)!;
             parentDataset.IsSerie = true;
             parentDataset.Modified = new DateTimeOffset(2023, 8, 10, 0, 0, 0, TimeSpan.Zero);
-            storage.InsertFile(parentDataset.ToString(), parentDataset.UpdateMetadata(true, parentState.Metadata), true, accessPolicy);
+            storage.InsertFile(parentDataset.ToString(), parentDataset.UpdateMetadata(true, null, parentState.Metadata), true, accessPolicy);
 
             FileState partState = storage.GetFileState(childId, accessPolicy)!;
             DcatDataset partDataset = DcatDataset.Parse(partState.Content!)!;
             partDataset.IsPartOf = parentDataset.Uri;
             partDataset.IsPartOfInternalId = parentState.Metadata.Id.ToString();
             partDataset.Modified = new DateTimeOffset(2023, 8, 11, 0, 0, 0, TimeSpan.Zero);
-            storage.InsertFile(partDataset.ToString(), partDataset.UpdateMetadata(true, partState.Metadata), true, accessPolicy);
+            storage.InsertFile(partDataset.ToString(), partDataset.UpdateMetadata(true, null, partState.Metadata), true, accessPolicy);
 
             using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
             await Page.Login(f, PublisherId, "Publisher");
@@ -890,7 +890,7 @@ namespace Frontend.Test
             FileState state = storage.GetFileState(datasetId, accessPolicy)!;
             DcatDataset dataset = DcatDataset.Parse(state.Content!)!;
             dataset.IsSerie = true;
-            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, state.Metadata), true, accessPolicy);
+            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, null, state.Metadata), true, accessPolicy);
 
             using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
             await Page.Login(f, PublisherId, "Publisher");
