@@ -407,7 +407,7 @@ foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Datase
 
     content = catalog.ToString();
 
-    FileMetadata metadata = catalog.UpdateMetadata(catalog.Distributions.Any(), null, new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero));
+    FileMetadata metadata = catalog.UpdateMetadata(catalog.Distributions.Any(), null, null, new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero));
 
     if (catalog.Issued.HasValue)
     {
@@ -449,7 +449,7 @@ foreach ((Guid childId, Uri parentUri) in datasetPartOf)
         FileState state = storage.GetFileState(childMetadata.Id, accessPolicy)!;
         DcatDataset child = DcatDataset.Parse(state.Content!)!;
         child.IsPartOfInternalId = parentMetadata.Id.ToString();
-        childMetadata = child.UpdateMetadata(true, state.Metadata, new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        childMetadata = child.UpdateMetadata(true, null, state.Metadata, new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero));
         storage.InsertFile(child.ToString(), childMetadata, true, accessPolicy);
         datasetMetadatas[childId] = childMetadata;
 
@@ -458,7 +458,7 @@ foreach ((Guid childId, Uri parentUri) in datasetPartOf)
         if (!parent.IsSerie)
         {
             parent.IsSerie = true;
-            parentMetadata = parent.UpdateMetadata(true, parentState.Metadata, new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero));
+            parentMetadata = parent.UpdateMetadata(true, null, parentState.Metadata, new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero));
             storage.InsertFile(parent.ToString(), parentMetadata, true, accessPolicy);
             datasetMetadatas[parentMetadata.Id] = parentMetadata;
         }
@@ -469,7 +469,6 @@ foreach ((Guid childId, Uri parentUri) in datasetPartOf)
     }
 }
 
-string filesDir = @"F:\Backup\DataGov2\files";
 StringBuffer notFoundBuilder = new StringBuffer();
 
 foreach (string path in Directory.EnumerateFiles(Path.Combine(sourceDir, "Distribution")))

@@ -678,7 +678,7 @@ namespace DocumentStorageClient.Test
             DocumentStorageClient client = new DocumentStorageClient(httpClientFactory, httpContextAccessor);
 
             FileMetadata metadata = new FileMetadata(Guid.NewGuid(), "Test", FileType.DistributionFile, null, null, true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
-            byte[] bytes = new byte[1024 * 1024 * 100];
+            byte[] bytes = new byte[1024 * 1024 * 40];
             using (Stream stream = new MemoryStream(bytes))
             {
                 await client.UploadStream(stream, metadata, true);

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace ImportRegistrations.Test
 {
@@ -34,6 +35,16 @@ namespace ImportRegistrations.Test
             string filePath = Path.Combine(folder, state.Metadata.Id.ToString("N") + (isPublic ? ".ttl" : string.Empty));
             File.WriteAllText(filePath, state.Content);
             UpdateMetadata(state.Metadata);
+        }
+
+        public Guid CreatePublisher(string publisher)
+        {
+            FoafAgent agent = FoafAgent.Create(new Uri(publisher));
+            agent.SetNames(new Dictionary<string, string> { { "sk", "Test" } });
+            FileMetadata metadata = agent.UpdateMetadata();
+            metadata = metadata with { IsPublic = true };
+            CreateFile(new FileState(metadata, agent.ToString()));
+            return metadata.Id;
         }
 
         public (Uri, Guid) CreateLocalCatalog(string name, string publisher, string? nameEn = null, string? description = null, string? descriptionEn = null)

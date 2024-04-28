@@ -139,6 +139,7 @@ namespace ImportRegistrations.Test
             string path = fixture.GetStoragePath();
 
             string publisherId = "http://data.gob.sk/test";
+            fixture.CreatePublisher(publisherId);
             (Uri catalogUri, Guid catalogId) = fixture.CreateLocalCatalog("Test", publisherId);
             using Storage storage = new Storage(path);
             TestSparqlClient sparqlClient = new TestSparqlClient();
@@ -170,6 +171,7 @@ namespace ImportRegistrations.Test
             string path = fixture.GetStoragePath();
 
             string publisherId = "http://data.gob.sk/test";
+            fixture.CreatePublisher(publisherId);
             (Uri catalogUri, Guid catalogId) = fixture.CreateLocalCatalog("Test", publisherId);
             using Storage storage = new Storage(path);
             TestSparqlClient sparqlClient = new TestSparqlClient();
@@ -202,6 +204,7 @@ namespace ImportRegistrations.Test
             string path = fixture.GetStoragePath();
 
             string publisherId = "http://data.gob.sk/test";
+            fixture.CreatePublisher(publisherId);
             (Uri catalogUri, Guid catalogId) = fixture.CreateLocalCatalog("Test", publisherId);
             using Storage storage = new Storage(path);
             TestSparqlClient sparqlClient = new TestSparqlClient();
@@ -238,6 +241,7 @@ namespace ImportRegistrations.Test
             string path = fixture.GetStoragePath();
 
             string publisherId = "http://data.gob.sk/test";
+            fixture.CreatePublisher(publisherId);
             (Uri catalogUri, Guid catalogId) = fixture.CreateLocalCatalog("Test", publisherId);
             using Storage storage = new Storage(path);
             TestSparqlClient sparqlClient = new TestSparqlClient();
@@ -275,6 +279,7 @@ namespace ImportRegistrations.Test
             string path = fixture.GetStoragePath();
 
             string publisherId = "http://data.gob.sk/test";
+            fixture.CreatePublisher(publisherId);
             (Uri catalogUri, Guid _) = fixture.CreateLocalCatalog("Test", publisherId);
             using Storage storage = new Storage(path);
             TestSparqlClient sparqlClient = new TestSparqlClient();

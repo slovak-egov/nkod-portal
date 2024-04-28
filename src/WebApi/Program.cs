@@ -774,7 +774,13 @@ app.MapPost("/datasets", [Authorize] async ([FromBody] DatasetInput? dataset, [F
     }
 
     FileState? publisherState = await client.GetPublisherFileState(publisherId).ConfigureAwait(false);
-    if (publisherState is null || !publisherState.Metadata.IsPublic)
+    if (publisherState?.Content is null || !publisherState.Metadata.IsPublic)
+    {
+        return Results.Forbid();
+    }
+
+    FoafAgent? publisherAgent = FoafAgent.Parse(publisherState.Content);
+    if (publisherAgent is null)
     {
         return Results.Forbid();
     }
@@ -795,7 +801,7 @@ app.MapPost("/datasets", [Authorize] async ([FromBody] DatasetInput? dataset, [F
 
                 DcatDataset datasetRdf = DcatDataset.Create();
                 dataset.MapToRdf(publisher, datasetRdf);
-                FileMetadata metadata = datasetRdf.UpdateMetadata(dataset.IsSerie);
+                FileMetadata metadata = datasetRdf.UpdateMetadata(dataset.IsSerie, publisherAgent);
                 metadata = await datasetRdf.UpdateReferenceToParent(parentDataset, metadata, client);
                 await client.InsertFile(datasetRdf.ToString(), false, metadata).ConfigureAwait(false);
                 result.Id = metadata.Id.ToString();
@@ -832,7 +838,13 @@ app.MapPut("/datasets", [Authorize] async ([FromBody] DatasetInput? dataset, [Fr
         }
 
         FileState? publisherState = await client.GetPublisherFileState(publisherId).ConfigureAwait(false);
-        if (publisherState is null || !publisherState.Metadata.IsPublic)
+        if (publisherState?.Content is null || !publisherState.Metadata.IsPublic)
+        {
+            return Results.Forbid();
+        }
+
+        FoafAgent? publisherAgent = FoafAgent.Parse(publisherState.Content);
+        if (publisherAgent is null)
         {
             return Results.Forbid();
         }
@@ -874,7 +886,7 @@ app.MapPut("/datasets", [Authorize] async ([FromBody] DatasetInput? dataset, [Fr
 
                                 datasetRdf.Modified = DateTimeOffset.UtcNow;
                                 dataset.MapToRdf(publisher, datasetRdf);
-                                FileMetadata metadata = datasetRdf.UpdateMetadata(hasDistributions || dataset.IsSerie, state.Metadata);
+                                FileMetadata metadata = datasetRdf.UpdateMetadata(hasDistributions || dataset.IsSerie, publisherAgent, state.Metadata);
                                 metadata = await datasetRdf.UpdateReferenceToParent(parentDataset, metadata, client);
                                 await client.InsertFile(datasetRdf.ToString(), true, metadata).ConfigureAwait(false);
                                 result.Id = metadata.Id.ToString();
@@ -1556,6 +1568,8 @@ app.MapPost("/publishers", [Authorize] async ([FromBody] AdminPublisherInput? in
                             FileMetadata metadata = agent.UpdateMetadata();
                             metadata = metadata with { IsPublic = input.IsEnabled };
                             await client.InsertFile(agent.ToString(), false, metadata).ConfigureAwait(false);
+                            await client.UpdatePublisherDatasets(input.Uri.ToString(), false).ConfigureAwait(false);
+
                             result.Id = metadata.Id.ToString();
                             result.Success = true;
                         }
@@ -1634,6 +1648,8 @@ app.MapPut("/publishers", [Authorize] async ([FromBody] AdminPublisherInput inpu
                                     FileMetadata metadata = agent.UpdateMetadata(state.Metadata);
                                     metadata = metadata with { IsPublic = input.IsEnabled };
                                     await client.InsertFile(agent.ToString(), true, metadata).ConfigureAwait(false);
+                                    await client.UpdatePublisherDatasets(agent.Uri.ToString(), false).ConfigureAwait(false);
+
                                     result.Id = metadata.Id.ToString();
                                     result.Success = true;
                                 }
@@ -2083,6 +2099,8 @@ app.MapPut("/profile", [Authorize] async ([FromServices] IDocumentStorageClient 
                         input.MapToRdf(publisherRdf);
                         FileMetadata metadata = publisherRdf.UpdateMetadata(state.Metadata);
                         await documentStorageClient.InsertFile(publisherRdf.ToString(), true, metadata).ConfigureAwait(false);
+                        await documentStorageClient.UpdatePublisherDatasets(publisherId, false).ConfigureAwait(false);
+
                         result.Id = metadata.Id.ToString();
                         result.Success = true;
                     }

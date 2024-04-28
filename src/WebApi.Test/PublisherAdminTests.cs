@@ -151,7 +151,7 @@ namespace WebApi.Test
                 Email = "test@example.com",
                 Phone = "+421 123 456 789",
                 LegalForm = "https://data.gov.sk/def/legal-form-type/331",
-                Uri = "https://data.gov.sk/id/legal-subject/12345678",
+                Uri = PublisherId,
             };
 
             return input;
@@ -420,6 +420,52 @@ namespace WebApi.Test
             Assert.True(result.Success);
             Assert.True(result.Errors is null || result.Errors.Count == 0);
             ValidateValues(storage, result.Id, input);
+        }
+
+        [Fact]
+        public async Task DatasetLegalFormShouldBeUpdatedOnCreate()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreatePublisherCodelists();
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("Superadmin"));
+            AdminPublisherInput input = CreateInput();
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/publishers", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            FileState? state = storage.GetFileState(datasetId, accessPolicy);
+            Assert.NotNull(state);
+            Assert.Equal(new[] { "https://data.gov.sk/def/legal-form-type/331" }, state.Metadata.AdditionalValues?[FoafAgent.LegalFormCodelist] ?? Array.Empty<string>());
+        }
+
+        [Fact]
+        public async Task DatasetLegalFormShouldBeUpdatedOnModify()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreatePublisherCodelists();
+            Guid id = fixture.CreatePublisher("Test", PublisherId, isPublic: true);
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("Superadmin"));
+            AdminPublisherInput input = CreateInput();
+            input.Id = id.ToString();
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/publishers", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            FileState? state = storage.GetFileState(datasetId, accessPolicy);
+            Assert.NotNull(state);
+            Assert.Equal(new[] { "https://data.gov.sk/def/legal-form-type/331" }, state.Metadata.AdditionalValues?[FoafAgent.LegalFormCodelist] ?? Array.Empty<string>());
         }
     }
 }

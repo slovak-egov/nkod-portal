@@ -74,7 +74,7 @@ namespace Frontend.Test
             Assert.IsNotNull(state);
             DcatDataset dataset = DcatDataset.Parse(state.Content!)!;
             action(dataset);
-            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(state.Metadata.IsPublic, state.Metadata), true, new AllAccessFilePolicy());
+            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(state.Metadata.IsPublic, null, state.Metadata), true, new AllAccessFilePolicy());
         }
 
         [TestMethod]

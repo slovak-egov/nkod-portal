@@ -16,14 +16,17 @@ namespace DocumentStorageApi
 
         public void Initialize(ITelemetry telemetry)
         {
-            if (telemetry is RequestTelemetry requestTelemetry)
+            if (telemetry is RequestTelemetry requestTelemetry && requestTelemetry.Properties is not null)
             {
-                HttpContext? context = httpContextAccessor.HttpContext;
-                if (context is not null) 
+                HttpContext? context = httpContextAccessor?.HttpContext;
+                if (context?.User is not null) 
                 {
                     foreach (Claim claim in context.User.Claims)
                     {
-                        requestTelemetry.Properties[$"Claim_{claim.Type}"] = claim.Value;
+                        if (claim is not null)
+                        {
+                            requestTelemetry.Properties[$"Claim_{claim.Type}"] = claim.Value;
+                        }
                     }
                 }
             }

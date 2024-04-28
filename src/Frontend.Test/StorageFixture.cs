@@ -50,7 +50,7 @@ namespace Frontend.Test
 
         public Guid CreateDataset(DcatDataset dataset)
         {
-            FileMetadata metadata = dataset.UpdateMetadata(true);
+            FileMetadata metadata = dataset.UpdateMetadata(true, null);
             CreateFile(new FileState(metadata, dataset.ToString()));
             return metadata.Id;
         }

@@ -153,14 +153,17 @@ namespace DocumentStorageClient
         public async Task UploadStream(Stream source, FileMetadata metadata, bool enableOverwrite)
         {
             HttpClient client = CreateClient();
+            using StreamContent streamContent = new StreamContent(source);
             using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, $"files/stream");
-            request.Content = new MultipartFormDataContent
+            using MultipartFormDataContent requestContent = new MultipartFormDataContent
             {
                 { new StringContent(JsonConvert.SerializeObject(metadata)), "metadata" },
-                { new StreamContent(source), "file", "source" },
+                { streamContent, "file", "source" },
                 { new StringContent(enableOverwrite.ToString()), "enableOverwrite" }
             };
+            request.Content = requestContent;
             using HttpResponseMessage response = await client.SendAsync(request).ConfigureAwait(false);
+            string c = await response.Content.ReadAsStringAsync();
             response.EnsureSuccessStatusCode();
         }
 

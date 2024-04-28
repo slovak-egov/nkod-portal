@@ -782,7 +782,7 @@ namespace WebApi.Test
 
             DcatDataset dataset = DcatDataset.Parse(storage.GetFileState(datasetId, accessPolicy)!.Content!)!;
             dataset.IsHarvested = true;
-            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, storage.GetFileState(datasetId, accessPolicy)!.Metadata), true, accessPolicy);
+            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, null, storage.GetFileState(datasetId, accessPolicy)!.Metadata), true, accessPolicy);
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
