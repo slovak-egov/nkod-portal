@@ -217,7 +217,7 @@ export default function SearchResults(props: Props) {
                                         renderOption={(e) => e.name}
                                         getValue={(e) => e.value}
                                         selectedValue={props.query.orderBy ?? props.orderOptions[0].value}
-                                        onChange={(o) => props.setQueryParameters({ orderBy: o })}
+                                        onChange={(o) => props.setQueryParameters({ orderBy: o, page: 1 })}
                                     />
                                 )}
                             />
@@ -237,7 +237,8 @@ export default function SearchResults(props: Props) {
                                                 filters: {
                                                     ...props.query.filters,
                                                     [codelistId]: v
-                                                }
+                                                },
+                                                page: 1
                                             })
                                         }
                                     />
@@ -253,7 +254,8 @@ export default function SearchResults(props: Props) {
                                                 filters: {
                                                     ...props.query.filters,
                                                     [codelistId]: v
-                                                }
+                                                },
+                                                page: 1
                                             })
                                         }
                                     />
@@ -272,7 +274,8 @@ export default function SearchResults(props: Props) {
                                                     filters: {
                                                         ...props.query.filters,
                                                         [codelistId]: v
-                                                    }
+                                                    },
+                                                    page: 1
                                                 })
                                             }
                                         />
@@ -323,7 +326,7 @@ export default function SearchResults(props: Props) {
                                             renderOption={(e) => e.name}
                                             getValue={(e) => e.value}
                                             selectedValue={props.query.orderBy ?? props.orderOptions[0].value}
-                                            onChange={(o) => props.setQueryParameters({ orderBy: o })}
+                                            onChange={(o) => props.setQueryParameters({ orderBy: o, page: 1 })}
                                         />
                                     )}
                                 />
@@ -449,7 +452,7 @@ export default function SearchResults(props: Props) {
                                     ) : null}
 
                                     <div className="idsk-search-results__page-number govuk-grid-column-full">
-                                        <span data-lines="Strana $value1 z $value2">
+                                        <span data-lines="Strana $value1 z $value2" data-testid="sr-current-page">
                                             {t('page')} {props.query.page} z {totalPages}
                                         </span>
                                     </div>

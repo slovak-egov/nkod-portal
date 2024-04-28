@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using NkodSk.Abstractions;
@@ -68,6 +69,11 @@ namespace WebApi.Test
         {
             builder.ConfigureServices(services =>
             {
+                foreach (ServiceDescriptor sd in services.Where(s => s.ImplementationInstance?.GetType() == typeof(ImportHarvestedHostedService)).ToList())
+                {
+                    services.Remove(sd);
+                }
+
                 services.AddSingleton(storage);
                 services.AddSingleton<IDocumentStorageClient, TestDocumentStorageClient>();
                 services.AddSingleton<ILanguagesSource, DefaultLanguagesSource>();

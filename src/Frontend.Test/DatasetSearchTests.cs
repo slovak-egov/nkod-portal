@@ -283,6 +283,60 @@ namespace Frontend.Test
         }
 
         [TestMethod]
+        public async Task ChangeInQueryShouldResetPage()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreatePublisher(PublisherId, true);
+            for (int i = 0; i <= 10; i++)
+            {
+                CreateDatasetAndDistribution(fixture, $"Test {i}", true);
+            }
+
+            using Storage storage = new Storage(path);
+
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            f.CreateDefaultClient();
+
+            await Page.OpenDatasetSearch();
+
+            async Task AssertFirstPage()
+            {
+                StringAssert.Contains("Strana 1 z 2", await (await Page.GetTestElement("sr-current-page"))!.TextContentAsync());
+            }
+
+            async Task GoToSecondPage()
+            {
+                await Page.RunAndWaitForDatasetSearch(async () =>
+                {
+                    await (await Page.GetTestElement("sr-next-page"))!.ClickAsync();
+                });
+            }
+
+            await GoToSecondPage();
+            await Page.RunAndWaitForDatasetSearch(async () =>
+            {
+                IElementHandle? filter = await Page.GetTestElement("sr-filter-publishers");
+                Assert.IsNotNull(filter);
+
+                IReadOnlyList<IElementHandle> checkBoxes = await filter.QuerySelectorAllAsync("input[type='checkbox']");
+                await checkBoxes[0].CheckAsync();
+            });
+            await AssertFirstPage();
+
+            await GoToSecondPage();
+            await Page.RunAndWaitForDatasetSearch(async () =>
+            {
+                IElementHandle? filter = await Page.GetTestElement("sr-filter-publishers");
+                Assert.IsNotNull(filter);
+
+                IReadOnlyList<IElementHandle> checkBoxes = await filter.QuerySelectorAllAsync("input[type='checkbox']");
+                await checkBoxes[0].UncheckAsync();
+            });
+            await AssertFirstPage();
+        }
+
+        [TestMethod]
         public async Task LinkShouldOpenDetail()
         {
             string path = fixture.GetStoragePath();

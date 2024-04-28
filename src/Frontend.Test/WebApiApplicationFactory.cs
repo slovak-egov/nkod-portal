@@ -25,6 +25,8 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using WebApi;
 
 namespace Frontend.Test
 {
@@ -113,6 +115,11 @@ namespace Frontend.Test
 
             builder.ConfigureServices(services =>
             {
+                foreach (ServiceDescriptor sd in services.Where(s => s.ImplementationInstance?.GetType() == typeof(ImportHarvestedHostedService)).ToList())
+                {
+                    services.Remove(sd);
+                }
+
                 services.AddSingleton(storage);
                 services.AddSingleton<IDocumentStorageClient, TestDocumentStorageClient>();
                 services.AddTransient<IFileStorageAccessPolicy, DefaultFileAccessPolicy>();
