@@ -11,15 +11,16 @@ import { schema, schemaConfig } from './schemas/CommentSchema';
 import { ROOT_ID } from '../helpers/helpers';
 
 type Props = {
-    contentId: string;
+    contentId?: string;
     parentId?: string;
-    refresh: () => void;
+    datasetUri?: string;
+    refresh: (newContentId?: string) => void;
 };
 
 export default function CommentForm(props: Props) {
     const { t } = useTranslation();
     const [userInfo] = useUserInfo();
-    const { contentId, refresh, parentId } = props;
+    const { contentId, refresh, parentId, datasetUri } = props;
     const yupSchema = buildYup(schema, schemaConfig);
 
     const form = useForm<CommentFormValues>({
@@ -37,17 +38,33 @@ export default function CommentForm(props: Props) {
     } = form;
 
     const onSubmit: SubmitHandler<CommentFormValues> = async (data) => {
-        const request = {
-            contentId,
-            parentId: parentId ?? ROOT_ID,
-            userId: userInfo?.id || '0b33ece7-bbff-4ae6-8355-206cb5b1aa87',
-            email: userInfo?.email || 'test@email.sk',
-            body: data.body
-        };
-        const result = await sendPost<any>(`cms/comments`, request);
-        if (result.status === 200) {
-            refresh();
-            reset();
+        let result;
+        if (!contentId && datasetUri) {
+            const request = {
+                datasetUri,
+                userId: userInfo?.id || '0b33ece7-bbff-4ae6-8355-206cb5b1aa87',
+                email: userInfo?.email || 'test@email.sk',
+                body: data.body
+            };
+            result = await sendPost<any>(`cms/datasets/comments`, request);
+            if (result?.status === 200) {
+                // post datasets/comments returns new CmsDataset, which will be used for
+                refresh(result.data);
+                reset();
+            }
+        } else {
+            const request = {
+                contentId,
+                parentId: parentId ?? ROOT_ID,
+                userId: userInfo?.id || '0b33ece7-bbff-4ae6-8355-206cb5b1aa87',
+                email: userInfo?.email || 'test@email.sk',
+                body: data.body
+            };
+            result = await sendPost<any>(`cms/comments`, request);
+            if (result?.status === 200) {
+                refresh();
+                reset();
+            }
         }
     };
 

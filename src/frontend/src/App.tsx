@@ -10,6 +10,8 @@ import AddDataset from './pages/AddDataset';
 import AddDistribution from './pages/AddDistribution';
 import AddPublisher from './pages/AddPublisher';
 import AddUser from './pages/AddUser';
+import ApplicationDetail from './pages/ApplicationDetail';
+import ApplicationForm from './pages/ApplicationForm';
 import ApplicationList from './pages/ApplicationList';
 import CatalogList from './pages/CatalogList';
 import ChangeLicenses from './pages/ChangeLicenses';
@@ -45,8 +47,6 @@ import Login from './pages/cms/Login';
 import ODCommunityStartPage from './pages/cms/ODCommunityStartPage';
 import RegisterUser from './pages/cms/RegisterUser';
 import UserPage from './pages/cms/UserPage';
-import ApplicationDetail from './pages/ApplicationDetail';
-import ApplicationForm from './pages/ApplicationForm';
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -252,6 +252,7 @@ function App(props: Props) {
                                     <Routes>
                                         <Route path="/" Component={HomePage} />
 
+                                        <Route path="/datasety/:id/komentare" element={<DetailDataset scrollToComments />} />
                                         <Route path="/datasety/:id" element={<DetailDataset />} />
                                         <Route path="/datasety" element={<PublicDatasetList />} />
                                         <Route path="/poskytovatelia" element={<PublicPublisherList />} />
@@ -305,10 +306,12 @@ function App(props: Props) {
 
                                         <Route path="/aplikacia" Component={ApplicationList} />
                                         <Route path="/aplikacia/:id/upravit" Component={ApplicationForm} />
+                                        <Route path="/aplikacia/:id/komentare" element={<ApplicationDetail scrollToComments />} />
                                         <Route path="/aplikacia/:id" element={<ApplicationDetail />} />
                                         <Route path="/aplikacia/pridat" Component={ApplicationForm} />
                                         <Route path="/podnet" Component={SuggestionList} />
                                         <Route path="/podnet/:id/upravit" element={<SuggestionForm />} />
+                                        <Route path="/podnet/:id/komentare" element={<SuggestionDetail scrollToComments />} />
                                         <Route path="/podnet/:id" element={<SuggestionDetail />} />
                                         <Route path="/podnet/pridat" Component={SuggestionForm} />
 

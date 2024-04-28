@@ -17,6 +17,7 @@ import {
     useSearchDataset,
     useSearchPublisher
 } from '../cms';
+import { suggestionStatusList, suggestionTypeCodeList } from '../codelist/SuggestionCodelist';
 import BaseInput from '../components/BaseInput';
 import Breadcrumbs from '../components/Breadcrumbs';
 import Button from '../components/Button';
@@ -28,11 +29,10 @@ import PageHeader from '../components/PageHeader';
 import ReactSelectElement from '../components/ReactSelectElement';
 import SelectElementItems from '../components/SelectElementItems';
 import TextArea from '../components/TextArea';
-import { QueryGuard, useLoadData } from '../helpers/helpers';
+import { QueryGuard, schemaConfig, useLoadData } from '../helpers/helpers';
 import CommentSection from './CommentSection';
-import { schema, schemaConfig } from './schemas/SuggestionSchema';
-import { suggestionStatusList, suggestionTypeCodeList } from '../codelist/SuggestionCodelist';
 import SuccessPage from './SuccessPage';
+import { schema } from './schemas/SuggestionSchema';
 
 export default function SuggestionForm() {
     const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
@@ -42,7 +42,7 @@ export default function SuggestionForm() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { t } = useTranslation();
-    const yupSchema = buildYup(schema, schemaConfig);
+    const yupSchema = buildYup(schema, schemaConfig(schema.required));
 
     useDocumentTitle(t('addApplicationPage.headerTitle'));
 
@@ -183,9 +183,11 @@ export default function SuggestionForm() {
                                         <h2 className="govuk-heading-m govuk-!-margin-bottom-6 suggestion-subtitle">{t('addSuggestion.subtitle')}</h2>
 
                                         <Controller
+                                            rules={{ required: '' }}
                                             render={({ field: { onChange, value } }) => (
                                                 <FormElementGroup
                                                     label={t('addSuggestion.fields.orgToUri')}
+                                                    errorMessage={errors.orgToUri?.message as string}
                                                     element={(id) => (
                                                         <ReactSelectElement
                                                             id={id}
@@ -241,9 +243,11 @@ export default function SuggestionForm() {
 
                                         {watch('type') !== SuggestionType.SUGGESTION_FOR_PUBLISHED_DATASET && (
                                             <Controller
+                                                rules={{ required: '' }}
                                                 render={({ field }) => (
                                                     <FormElementGroup
                                                         label={t('addSuggestion.fields.datasetUri')}
+                                                        errorMessage={errors.datasetUri?.message as string}
                                                         element={(id) => (
                                                             <ReactSelectElement
                                                                 id={id}
@@ -267,11 +271,13 @@ export default function SuggestionForm() {
                                         <FormElementGroup
                                             label={t('addSuggestion.fields.title')}
                                             element={(id) => <BaseInput id={id} {...register('title')} />}
+                                            errorMessage={errors.title?.message}
                                         />
 
                                         <FormElementGroup
                                             label={t('addSuggestion.fields.description')}
                                             element={(id) => <TextArea id={id} rows={6} {...register('description')} />}
+                                            errorMessage={errors.description?.message}
                                         />
 
                                         {id && (

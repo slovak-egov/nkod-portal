@@ -1,8 +1,8 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
-import { sortComments } from './helpers/helpers';
 import { useSearchParams } from 'react-router-dom';
-import { Dataset, useUserInfo, Response } from './client';
+import { Dataset, useUserInfo } from './client';
+import { sortComments } from './helpers/helpers';
 
 const baseUrl = process.env.REACT_APP_CMS_API_URL ?? process.env.REACT_APP_API_URL + 'cms/';
 
@@ -238,6 +238,13 @@ export interface SuggestionDetail extends Suggestion {
     datasetName?: string;
 }
 
+export interface CmsDataset extends Likeable, Commentable {
+    id: string;
+    datasetUri: string;
+    created: string;
+    updated: string;
+}
+
 export interface Suggestion extends SuggestionFormValues, Audited, Likeable, Commentable {
     id: string;
     suggestionStatus: string;
@@ -320,15 +327,11 @@ export function useEntityAdd<T>(url: string, initialValue: T) {
     const [genericError, setGenericError] = useState<Error | null>(null);
     const [saving, setSaving] = useState(false);
 
-    console.log('url: ', url);
-    console.log('initialValue: ', initialValue);
-
     const save = useCallback(async () => {
         setSaving(true);
         setGenericError(null);
         try {
             const response: AxiosResponse<any> = await sendPost(url, entity);
-            console.log('response: ', response);
             return { success: true, data: response };
         } catch (err) {
             if (err instanceof AxiosError) {
@@ -349,8 +352,6 @@ export function useEntityAdd<T>(url: string, initialValue: T) {
 
     const setEntityProperties = useCallback(
         (properties: Partial<T>) => {
-            console.log('setEntityProperties');
-            console.log('properties: ', properties);
             setEntity({ ...entity, ...properties });
         },
         [entity, setEntity]
@@ -470,15 +471,16 @@ export function useCmsPublisherLists({
     return [publishers, loading, error] as const;
 }
 
-export function useCmsApplications() {
+export function useCmsApplications(autoload: boolean = true, datasetUri?: string) {
     const [items, setItems] = useState<Application[] | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
-    const refresh = useCallback(async () => {
+    const refresh = useCallback(async (datasetUri?: string) => {
         setLoading(true);
+        setItems([]);
         try {
-            const response: AxiosResponse<Pageable<Application>> = await sendGet('cms/applications');
+            const response: AxiosResponse<Pageable<Application>> = await sendGet(`cms/applications${datasetUri ? `?datasetUri=${datasetUri}` : ''}`);
             setItems(response.data?.items?.sort(sortByUpdatedCreated) ?? []);
         } catch (err) {
             if (err instanceof Error) {
@@ -491,8 +493,10 @@ export function useCmsApplications() {
     }, []);
 
     useEffect(() => {
-        refresh();
-    }, [refresh]);
+        if (autoload) {
+            refresh(datasetUri);
+        }
+    }, [refresh, datasetUri, autoload]);
 
     return [items, loading, error, refresh] as const;
 }
@@ -502,28 +506,11 @@ export function useCmsApplication(id?: string) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
-    // const [publishers, loadingPublishers, errorPublishers, searchPublisher] = useSearchPublisher({
-    //     language: 'sk',
-    //     query: ''
-    // });
-
-    // const [datasets, loadingDatasetList, errorDatasetList, searchDataset] = useSearchDataset({
-    //     language: 'sk',
-    //     query: ''
-    // });
-
     const refresh = useCallback(async () => {
         setLoading(true);
         if (id) {
             try {
                 const response: AxiosResponse<Application> = await sendGet(`cms/applications/${id}`);
-                // const suggestionDetail: SuggestionDetail = { ...response.data } ?? null;
-
-                // const publisherItems = await searchPublisher('', { key: [suggestionDetail.orgToUri] }, 1);
-                // suggestionDetail.orgName = publisherItems?.[0]?.label;
-
-                // const datasetItems = await searchDataset('', { key: [suggestionDetail.datasetUri] }, 1);
-                // suggestionDetail.datasetName = datasetItems?.[0]?.label;
 
                 setApplication(response.data ?? null);
             } catch (err) {
@@ -616,13 +603,22 @@ export function useCmsLike() {
     const [userInfo] = useUserInfo();
 
     const like = useCallback(
-        async (url: string, id: string) => {
+        async (url: string, contentId?: string, datasetUri?: string) => {
             setLoading(true);
             try {
-                const response: AxiosResponse<Suggestion[]> = await sendPost(url, {
-                    contentId: id,
-                    userId: userInfo?.id || '0b33ece7-bbff-4ae6-8355-206cb5b1aa87'
-                });
+                let response: AxiosResponse<Suggestion[]>;
+                if (!contentId && datasetUri) {
+                    response = await sendPost(url, {
+                        datasetUri,
+                        userId: userInfo?.id || '0b33ece7-bbff-4ae6-8355-206cb5b1aa87'
+                    });
+                } else {
+                    response = await sendPost(url, {
+                        contentId,
+                        datasetUri,
+                        userId: userInfo?.id || '0b33ece7-bbff-4ae6-8355-206cb5b1aa87'
+                    });
+                }
                 setLoading(false);
                 return response.status === 200;
             } catch (err) {
@@ -640,27 +636,29 @@ export function useCmsLike() {
     return [loading, error, like] as const;
 }
 
-export function useCmsComments(contentId: string) {
+export function useCmsComments(contentId?: string) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
     const [comments, setComments] = useState<ICommentSorted[]>([]);
 
-    const load = useCallback(async (contentId: string) => {
-        setLoading(true);
-        try {
-            const response: AxiosResponse<Pageable<ICommentSorted>> = await sendGet(`cms/comments?contentId=${contentId}`);
-            if (response.status === 200) {
-                setComments(sortComments(response.data?.items));
+    const load = useCallback(async (contentId?: string) => {
+        if (contentId) {
+            setLoading(true);
+            try {
+                const response: AxiosResponse<Pageable<ICommentSorted>> = await sendGet(`cms/comments?contentId=${contentId}`);
+                if (response.status === 200) {
+                    setComments(sortComments(response.data?.items));
+                }
+                setLoading(false);
+                return;
+            } catch (err) {
+                setLoading(false);
+                if (err instanceof Error) {
+                    setError(err);
+                    console.error('Load comments error', err.message);
+                }
+                return false;
             }
-            setLoading(false);
-            return;
-        } catch (err) {
-            setLoading(false);
-            if (err instanceof Error) {
-                setError(err);
-                console.error('Load comments error', err.message);
-            }
-            return false;
         }
     }, []);
 
@@ -718,15 +716,46 @@ export function useCmsSuggestion(id?: string) {
     return [suggestion, loading, error, refresh] as const;
 }
 
-export function useCmsSuggestions() {
+export function useCmsDatasets(autoload: boolean = true, datasetUri?: string) {
+    const [datasets, setDatasets] = useState<CmsDataset[] | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+
+    const refresh = useCallback(async (datasetUri?: string) => {
+        setDatasets([]);
+        setLoading(true);
+        try {
+            const response: AxiosResponse<Pageable<CmsDataset>> = await sendGet(`cms/datasets${datasetUri ? `?datasetUri=${datasetUri}` : ''}`);
+            setDatasets(response.data?.items ?? []);
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err);
+            }
+            setDatasets(null);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (autoload) {
+            refresh(datasetUri);
+        }
+    }, [refresh, datasetUri, autoload]);
+
+    return [datasets, loading, error, refresh] as const;
+}
+
+export function useCmsSuggestions(autoload: boolean = true, datasetUri?: string) {
     const [items, setItems] = useState<Suggestion[] | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
-    const refresh = useCallback(async () => {
+    const refresh = useCallback(async (datasetUri?: string) => {
+        setItems([]);
         setLoading(true);
         try {
-            const response: AxiosResponse<Pageable<Suggestion>> = await sendGet('cms/suggestions');
+            const response: AxiosResponse<Pageable<Suggestion>> = await sendGet(`cms/suggestions${datasetUri ? `?datasetUri=${datasetUri}` : ''}`);
             setItems(response.data?.items.sort(sortByUpdatedCreated) ?? []);
         } catch (err) {
             if (err instanceof Error) {
@@ -739,8 +768,10 @@ export function useCmsSuggestions() {
     }, []);
 
     useEffect(() => {
-        refresh();
-    }, [refresh]);
+        if (autoload) {
+            refresh(datasetUri);
+        }
+    }, [refresh, datasetUri, autoload]);
 
     return [items, loading, error, refresh] as const;
 }

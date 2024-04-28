@@ -8,6 +8,9 @@ import { knownCodelists, OrderOption, useDatasets, useDocumentTitle } from '../c
 import SearchResults from '../components/SearchResults';
 import { useTranslation } from 'react-i18next';
 import multiIcon from '../icons/multi.png';
+import LikeButton from '../components/LikeButton';
+import CommentButton from '../components/CommentButton';
+import { useCmsDatasets } from '../cms';
 
 const codelistsKeys = [
     'publishers',
@@ -21,11 +24,16 @@ const codelistsKeys = [
 ];
 
 export default function PublicDatasetList() {
-    console.log('PublicDatasetList');
     const [datasets, query, setQueryParameters, loading, error] = useDatasets({
         requiredFacets: codelistsKeys,
         orderBy: 'relevance'
     });
+
+    const [datasetsCms] = useCmsDatasets();
+    const cmsCounts = (datasetUri: string) => {
+        const found = datasetsCms?.find((d) => d.datasetUri === datasetUri);
+        return { likeCount: found?.likeCount ?? 0, commentCount: found?.commentCount ?? 0, cmsDatasetId: found?.id };
+    };
     const { t } = useTranslation();
     useDocumentTitle(t('search'));
 
@@ -51,55 +59,73 @@ export default function PublicDatasetList() {
                     filters={codelistsKeys}
                     facets={datasets?.facets ?? []}
                 >
-                    {datasets?.items.map((c, i) => (
-                        <Fragment key={c.id}>
-                            <GridRow data-testid="sr-result">
-                                <GridColumn widthUnits={1} totalUnits={1}>
-                                    <Link to={'/datasety/' + c.id} className="idsk-card-title govuk-link">
-                                        {c.name}
-                                        {c.isSerie ? (
-                                            <img src={multiIcon} alt={t('dataSerie')} style={{ marginLeft: '5px', width: 'auto', height: '20px' }} />
-                                        ) : null}
-                                    </Link>
-                                </GridColumn>
-                                {c.description ? (
-                                    <GridColumn widthUnits={1} totalUnits={1} data-testid="sr-result-description">
-                                        <div
-                                            style={{
-                                                WebkitLineClamp: 3,
-                                                WebkitBoxOrient: 'vertical',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                display: '-webkit-box'
-                                            }}
-                                        >
-                                            {c.description}
-                                        </div>
+                    {datasets?.items.map((c, i) => {
+                        const { likeCount, commentCount, cmsDatasetId } = cmsCounts(c.key);
+                        return (
+                            <Fragment key={c.id}>
+                                <GridRow data-testid="sr-result">
+                                    <GridColumn widthUnits={1} totalUnits={1}>
+                                        <GridRow>
+                                            <GridColumn widthUnits={1} totalUnits={2}>
+                                                <Link to={'/datasety/' + c.id} className="idsk-card-title govuk-link">
+                                                    {c.name}
+                                                    {c.isSerie ? (
+                                                        <img
+                                                            src={multiIcon}
+                                                            alt={t('dataSerie')}
+                                                            style={{ marginLeft: '5px', width: 'auto', height: '20px' }}
+                                                        />
+                                                    ) : null}
+                                                </Link>
+                                            </GridColumn>
+                                            <GridColumn widthUnits={1} totalUnits={2} flexEnd>
+                                                <LikeButton count={likeCount} contentId={cmsDatasetId} datasetUri={c.key} url={`cms/datasets/likes`} />
+                                                <Link to={`/datasety/${c.id}/komentare`} className="no-link">
+                                                    <CommentButton count={commentCount} />
+                                                </Link>
+                                            </GridColumn>
+                                        </GridRow>
                                     </GridColumn>
-                                ) : null}
-                                <GridColumn widthUnits={1} totalUnits={2}>
-                                    {c.distributions.map((distribution) => {
-                                        if (distribution.downloadUrl && distribution.formatValue) {
-                                            return (
-                                                <Fragment key={distribution.id}>
-                                                    <a href={distribution.downloadUrl} className="govuk-link">
-                                                        {distribution.formatValue.label}
-                                                    </a>{' '}
-                                                </Fragment>
-                                            );
-                                        }
-                                        return null;
-                                    })}
-                                </GridColumn>
-                                {c.publisher ? (
-                                    <GridColumn widthUnits={1} totalUnits={2} data-testid="sr-result-publisher">
-                                        <span style={{ color: '#777', fontStyle: 'italic' }}>{c.publisher.name}</span>
+
+                                    {c.description ? (
+                                        <GridColumn widthUnits={1} totalUnits={1} data-testid="sr-result-description">
+                                            <div
+                                                style={{
+                                                    WebkitLineClamp: 3,
+                                                    WebkitBoxOrient: 'vertical',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    display: '-webkit-box'
+                                                }}
+                                            >
+                                                {c.description}
+                                            </div>
+                                        </GridColumn>
+                                    ) : null}
+                                    <GridColumn widthUnits={1} totalUnits={2}>
+                                        {c.distributions.map((distribution) => {
+                                            if (distribution.downloadUrl && distribution.formatValue) {
+                                                return (
+                                                    <Fragment key={distribution.id}>
+                                                        <a href={distribution.downloadUrl} className="govuk-link">
+                                                            {distribution.formatValue.label}
+                                                        </a>{' '}
+                                                    </Fragment>
+                                                );
+                                            }
+                                            return null;
+                                        })}
                                     </GridColumn>
-                                ) : null}
-                            </GridRow>
-                            {i < datasets.items.length - 1 ? <hr className="idsk-search-results__card__separator" /> : null}
-                        </Fragment>
-                    ))}
+                                    {c.publisher ? (
+                                        <GridColumn widthUnits={1} totalUnits={2} data-testid="sr-result-publisher">
+                                            <span style={{ color: '#777', fontStyle: 'italic' }}>{c.publisher.name}</span>
+                                        </GridColumn>
+                                    ) : null}
+                                </GridRow>
+                                {i < datasets.items.length - 1 ? <hr className="idsk-search-results__card__separator" /> : null}
+                            </Fragment>
+                        );
+                    })}
                 </SearchResults>
             </MainContent>
         </>

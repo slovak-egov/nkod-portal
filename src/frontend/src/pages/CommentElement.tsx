@@ -1,7 +1,7 @@
 import moment from 'moment';
 import { Fragment, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ICommentSorted } from '../cms';
+import { ICommentSorted, sendDelete } from '../cms';
 import Button from '../components/Button';
 import GridColumn from '../components/GridColumn';
 import GridRow from '../components/GridRow';
@@ -9,7 +9,7 @@ import { MAX_COOMENT_DEPTH_MARGIN_LEFT } from '../helpers/helpers';
 import CommentForm from './CommentForm';
 
 type Props = {
-    contentId: string;
+    contentId?: string;
     comment: ICommentSorted;
     refresh: () => void;
 };
@@ -28,9 +28,7 @@ export default function CommentElement(props: Props) {
                         <GridRow>
                             <GridColumn widthUnits={3} totalUnits={4}>
                                 <p className="govuk-body-m">
-                                    <u>
-                                        ({comment.email}) {comment.body}
-                                    </u>
+                                    (<b>{comment.email}</b>) {comment.body}
                                 </p>
                             </GridColumn>
                             <GridColumn widthUnits={1} totalUnits={4} flexEnd>
@@ -46,6 +44,19 @@ export default function CommentElement(props: Props) {
                                             onClick={() => setShowReplyForm(!showReplyForm)}
                                         >
                                             {t('comment.reply')}
+                                        </Button>
+                                        <Button
+                                            className="govuk-!-margin-bottom-# govuk-!-margin-left-4"
+                                            buttonType="warning"
+                                            title={t('common.delete')}
+                                            onClick={async () => {
+                                                const result = await sendDelete(`cms/comments/${comment.id}`);
+                                                if (result?.status === 200) {
+                                                    refresh();
+                                                }
+                                            }}
+                                        >
+                                            {t('common.delete')}
                                         </Button>
                                     </GridColumn>
                                 </GridRow>

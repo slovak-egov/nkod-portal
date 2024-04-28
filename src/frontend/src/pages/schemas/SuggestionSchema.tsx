@@ -80,14 +80,3 @@ export const schema = {
     },
     required: ['userId', 'orgToUri', 'type', 'title', 'description', 'status']
 };
-
-export const schemaConfig = {
-    errMessages: {
-        userOrgURI: {
-            required: 'Organizácia je povinná'
-        },
-        type: {
-            required: 'Typ podnetu je povinný'
-        }
-    }
-};

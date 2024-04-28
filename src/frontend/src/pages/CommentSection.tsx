@@ -10,15 +10,17 @@ import CommentElement from './CommentElement';
 import CommentForm from './CommentForm';
 
 type Props = {
-    contentId: string;
+    contentId?: string;
+    datasetUri?: string;
 };
 
 export default function CommentSection(props: Props) {
     const { t } = useTranslation();
-    const { contentId } = props;
+    const { contentId, datasetUri } = props;
+    const [currentContentId, setCurrentContentId] = useState<string | undefined>(contentId);
     const [showNewCommentForm, setShowNewCommentForm] = useState<boolean>(false);
 
-    const [comments, loading, error, load] = useCmsComments(contentId);
+    const [comments, loading, error, load] = useCmsComments(currentContentId);
 
     return (
         <>
@@ -39,18 +41,22 @@ export default function CommentSection(props: Props) {
                         </GridRow>
                         {showNewCommentForm && (
                             <CommentForm
-                                contentId={contentId}
-                                refresh={() => {
-                                    load(contentId);
+                                contentId={currentContentId}
+                                datasetUri={datasetUri}
+                                refresh={(newContentId) => {
+                                    if (newContentId) {
+                                        setCurrentContentId(newContentId);
+                                    }
+                                    load(newContentId ?? currentContentId);
                                     setShowNewCommentForm(false);
                                 }}
                             />
                         )}
                     </GridColumn>
                     <GridColumn widthUnits={1} totalUnits={1}>
-                        <SimpleList loading={loading} error={error} totalCount={comments?.length ?? 0}>
+                        <SimpleList loading={loading} error={error}>
                             {comments?.map((comment: ICommentSorted, i: number) => (
-                                <CommentElement key={`root-${i}`} contentId={contentId} comment={comment} refresh={() => load(contentId)} />
+                                <CommentElement key={`root-${i}`} contentId={currentContentId} comment={comment} refresh={() => load(currentContentId)} />
                             ))}
                         </SimpleList>
                     </GridColumn>

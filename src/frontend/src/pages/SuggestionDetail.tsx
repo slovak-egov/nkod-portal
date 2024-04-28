@@ -12,12 +12,23 @@ import PageHeader from '../components/PageHeader';
 import { DATE_FORMAT_NO_SECONDS } from '../helpers/helpers';
 import CommentSection from './CommentSection';
 import DetailItemElement from './DetailItemElement';
+import { useRef } from 'react';
 
-export default function SuggestionDetail() {
+type Props = {
+    scrollToComments?: boolean;
+};
+
+export default function SuggestionDetail(props: Props) {
+    const commentSectionRef = useRef(null);
     const { id } = useParams();
+    const { scrollToComments } = props;
     const [suggestion, loading] = useCmsSuggestion(id);
     const { t } = useTranslation();
     useDocumentTitle(suggestion?.title ?? '');
+
+    if (!loading && scrollToComments) {
+        setTimeout(() => (commentSectionRef.current as any)?.scrollIntoView(), 500);
+    }
 
     return (
         <>
@@ -82,7 +93,15 @@ export default function SuggestionDetail() {
                     </>
                 )
             )}
-            {id && <CommentSection contentId={id} />}
+            {id && (
+                <div ref={commentSectionRef}>
+                    <CommentSection contentId={id} />
+                </div>
+            )}
         </>
     );
 }
+
+SuggestionDetail.defaultProps = {
+    scrollToComments: false
+};

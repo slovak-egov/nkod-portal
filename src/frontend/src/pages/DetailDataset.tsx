@@ -9,14 +9,25 @@ import ErrorAlert from '../components/ErrorAlert';
 import { useDataset, useDatasets, useDocumentTitle } from '../client';
 import { useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import DistributionRow from '../components/DistributionRow';
 import NotFound from './NotFound';
 import Pagination from '../components/Pagination';
+import { Application, Suggestion, useCmsApplications, useCmsDatasets, useCmsSuggestions } from '../cms';
+import ApplicationListItem from './ApplicationListItem';
+import SimpleList from '../components/SimpleList';
+import SuggestionListItem from './SuggestionListItem';
+import CommentSection from './CommentSection';
 
-export default function DetailDataset() {
+type Props = {
+    scrollToComments?: boolean;
+};
+
+export default function DetailDataset(props: Props) {
+    const commentSectionRef = useRef(null);
     const [dataset, loading, error] = useDataset();
     const { id } = useParams();
+    const { scrollToComments } = props;
     const [datasetsAsSibling, datasetsAsSiblingQuery, setDatasetsAsSiblingQuery, loadingDatasetsAsSibling] = useDatasets({
         page: 0,
         pageSize: 25,
@@ -27,8 +38,26 @@ export default function DetailDataset() {
         pageSize: 25,
         orderBy: 'created'
     });
+
+    const [applications, loadingApplications, errorApplications, loadApps] = useCmsApplications(false, dataset?.key);
+    const [suggestions, loadingSuggestions, errorSuggestions, loadSuggestions] = useCmsSuggestions(false, dataset?.key);
+
+    const [cmsDataset, loadingCmsDatasets, errorCmsDatasets, loadCmsDatasets] = useCmsDatasets(false, dataset?.key);
+
+    useEffect(() => {
+        if (dataset?.key) {
+            loadApps(dataset.key);
+            loadSuggestions(dataset.key);
+            loadCmsDatasets(dataset.key);
+        }
+    }, [dataset, loadApps, loadCmsDatasets, loadSuggestions]);
+
     const { t } = useTranslation();
     useDocumentTitle(dataset?.name ?? '');
+
+    if (!loading && scrollToComments) {
+        setTimeout(() => (commentSectionRef.current as any)?.scrollIntoView(), 500);
+    }
 
     useEffect(() => {
         if (id) {
@@ -289,6 +318,35 @@ export default function DetailDataset() {
                                     </GridColumn>
                                 </GridRow>
                             ) : null}
+                            {applications && applications?.length > 0 && (
+                                <GridRow>
+                                    <GridColumn widthUnits={1} totalUnits={1} data-testid="applications">
+                                        <h2 className="govuk-heading-m suggestion-subtitle">{t('applicationList.headerTitle')}</h2>
+                                        <SimpleList loading={loadingApplications} error={errorApplications}>
+                                            {applications?.map((app: Application, i: number) => (
+                                                <ApplicationListItem key={i} app={app} isLast={i === applications?.length - 1} edit={false} />
+                                            ))}
+                                        </SimpleList>
+                                    </GridColumn>
+                                </GridRow>
+                            )}
+                            {suggestions && suggestions?.length > 0 && (
+                                <GridRow>
+                                    <GridColumn widthUnits={1} totalUnits={1} data-testid="suggestions">
+                                        <h2 className="govuk-heading-m suggestion-subtitle">{t('suggestionList.headerTitle')}</h2>
+                                        <SimpleList loading={loadingSuggestions} error={errorSuggestions}>
+                                            {suggestions?.map((suggestion: Suggestion, i: number) => (
+                                                <SuggestionListItem key={i} suggestion={suggestion} isLast={i === suggestions?.length - 1} edit={false} />
+                                            ))}
+                                        </SimpleList>
+                                    </GridColumn>
+                                </GridRow>
+                            )}
+                            {dataset?.key && (
+                                <div ref={commentSectionRef}>
+                                    <CommentSection contentId={cmsDataset?.[0]?.id} datasetUri={dataset.key} />
+                                </div>
+                            )}
                         </div>
                     </MainContent>
                 </>

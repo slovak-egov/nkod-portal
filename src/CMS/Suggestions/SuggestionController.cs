@@ -140,6 +140,11 @@ namespace CMS.Suggestions
 						{
 							res = res.OrderBy(p => p.Title);
 							break;
+						};
+					case OrderByTypes.Popularity:
+						{
+							res = res.OrderByDescending(p => (p.Suggestion != null && p.Suggestion.Likes != null && p.Suggestion.Likes.Value != null) ? p.Suggestion.Likes.Value.Count() : 0);
+							break;
 						}
 				}
 			}

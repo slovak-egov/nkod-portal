@@ -4,11 +4,12 @@ import { useCmsLike } from '../cms';
 type Props = {
     count: number;
     url: string;
-    contentId: string;
+    contentId?: string;
+    datasetUri?: string;
 } & HTMLAttributes<HTMLDivElement>;
 
 export default function LikeButton(props: Props) {
-    const { count, url, contentId } = props;
+    const { count, url, contentId, datasetUri } = props;
     const [likeLoading, likeError, like] = useCmsLike();
     const [likeCount, setLikeCount] = useState(count);
 
@@ -16,7 +17,7 @@ export default function LikeButton(props: Props) {
         <div
             className="like-button"
             onClick={async () => {
-                const success = await like(url, contentId);
+                const success = await like(url, contentId, datasetUri);
                 if (success) {
                     setLikeCount(likeCount + 1);
                 }
@@ -51,5 +52,8 @@ export default function LikeButton(props: Props) {
 }
 
 LikeButton.defaultProps = {
-    count: 0
+    count: 0,
+    url: null,
+    contentId: null,
+    dataset: null
 };

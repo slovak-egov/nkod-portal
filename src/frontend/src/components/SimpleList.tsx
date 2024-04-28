@@ -7,7 +7,6 @@ import Loading from './Loading';
 export type Props = {
     loading: boolean;
     error: Error | null;
-    totalCount: number;
 } & PropsWithChildren;
 
 export default function SimpleList(props: Props) {
@@ -21,13 +20,15 @@ export default function SimpleList(props: Props) {
                         <div>Error: {props.error.message}</div>
                     ) : (
                         <>
-                            <GridColumn widthUnits={1} totalUnits={1}>
-                                <div className="idsk-search-results__content__all">
-                                    <div className="idsk-search-results__card ">
-                                        <div className="idsk-card idsk-card-basic-variant nkod-search-result-card">{props.children}</div>
+                            <GridRow>
+                                <GridColumn widthUnits={1} totalUnits={1}>
+                                    <div className="idsk-search-results__content__all">
+                                        <div className="idsk-search-results__card ">
+                                            <div className="idsk-card idsk-card-basic-variant nkod-search-result-card">{props.children}</div>
+                                        </div>
                                     </div>
-                                </div>
-                            </GridColumn>
+                                </GridColumn>
+                            </GridRow>
                         </>
                     )}
                 </GridColumn>

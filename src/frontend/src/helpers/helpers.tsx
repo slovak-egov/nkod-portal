@@ -170,3 +170,11 @@ export const sortComments = (comments: IComment[]) => {
 
     return sortedComments.filter((comment: ICommentSorted) => comment.depth === 0);
 };
+
+export const schemaConfig = (required: string[]) => {
+    const errMessages: { errMessages: { [key: string]: {} } } = {
+        errMessages: {}
+    };
+    required?.forEach((r) => (errMessages.errMessages[r] = { required: 'Povinná' }));
+    return errMessages;
+};

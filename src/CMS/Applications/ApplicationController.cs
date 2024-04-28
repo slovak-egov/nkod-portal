@@ -140,6 +140,11 @@ namespace CMS.Applications
 						{
 							res = res.OrderBy(p => p.Title);
 							break;
+						};
+					case OrderByTypes.Popularity:
+						{
+							res = res.OrderByDescending(p => (p.Application != null && p.Application.Likes != null && p.Application.Likes.Value != null) ? p.Application.Likes.Value.Count() : 0);
+							break;
 						}
 				}
 			}

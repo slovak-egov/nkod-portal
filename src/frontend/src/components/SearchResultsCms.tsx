@@ -1,4 +1,4 @@
-import { PropsWithChildren } from 'react';
+import { PropsWithChildren, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RequestCmsQuery, useCmsPublisherLists } from '../cms';
 import { suggestionStatusList, suggestionTypeCodeList } from '../codelist/SuggestionCodelist';
@@ -33,6 +33,7 @@ export type Props<T> = {
     loading: boolean;
     error: Error | null;
     totalCount: number;
+    customHeading?: ReactNode;
 } & PropsWithChildren;
 
 function PublisherFilter(props: { selectedValues: string[]; onChange: (values: string[]) => void }) {
@@ -104,6 +105,8 @@ export default function SearchResultsCms<T extends RequestCmsQuery>(props: Props
             <div className="idsk-search-results__title">
                 <PageHeader>{props.header}</PageHeader>
             </div>
+
+            {props.customHeading}
 
             <div className="idsk-search-results__filter-header-panel govuk-grid-column-full idsk-search-results--invisible idsk-search-results--visible__mobile--inline">
                 <div className="govuk-heading-xl idsk-search-results--half-width">

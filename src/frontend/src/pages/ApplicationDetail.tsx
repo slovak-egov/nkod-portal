@@ -12,12 +12,23 @@ import PageHeader from '../components/PageHeader';
 import { DATE_FORMAT_NO_SECONDS } from '../helpers/helpers';
 import CommentSection from './CommentSection';
 import DetailItemElement from './DetailItemElement';
+import { useRef } from 'react';
 
-export default function ApplicationDetail() {
+type Props = {
+    scrollToComments?: boolean;
+};
+
+export default function ApplicationDetail(props: Props) {
+    const commentSectionRef = useRef(null);
     const { id } = useParams();
+    const { scrollToComments } = props;
     const [application, loading] = useCmsApplication(id);
     const { t } = useTranslation();
     useDocumentTitle(application?.title ?? '');
+
+    if (!loading && scrollToComments) {
+        setTimeout(() => (commentSectionRef.current as any)?.scrollIntoView(), 500);
+    }
 
     return (
         <>
@@ -49,14 +60,16 @@ export default function ApplicationDetail() {
                                         labelKey="addApplicationPage.fields.applicationTheme"
                                     />
 
-                                    <DetailItemElement
-                                        value={
-                                            <a href={application.url} className="govuk-link">
-                                                {application.url}
-                                            </a>
-                                        }
-                                        labelKey="addApplicationPage.fields.applicationUrl"
-                                    />
+                                    {application.url && (
+                                        <DetailItemElement
+                                            value={
+                                                <a href={application.url} className="govuk-link">
+                                                    {application.url}
+                                                </a>
+                                            }
+                                            labelKey="addApplicationPage.fields.applicationUrl"
+                                        />
+                                    )}
 
                                     {application?.datasetURIs?.length && (
                                         <DetailItemElement
@@ -100,7 +113,15 @@ export default function ApplicationDetail() {
                     </>
                 )
             )}
-            {id && <CommentSection contentId={id} />}
+            {id && (
+                <div ref={commentSectionRef}>
+                    <CommentSection contentId={id} />
+                </div>
+            )}
         </>
     );
 }
+
+ApplicationDetail.defaultProps = {
+    scrollToComments: false
+};

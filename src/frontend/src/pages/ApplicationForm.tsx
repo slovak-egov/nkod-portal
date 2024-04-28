@@ -20,10 +20,10 @@ import MainContent from '../components/MainContent';
 import PageHeader from '../components/PageHeader';
 import SelectElementItems from '../components/SelectElementItems';
 import TextArea from '../components/TextArea';
-import { QueryGuard, dataUrlToFileList, getBase64, useLoadData } from '../helpers/helpers';
+import { QueryGuard, dataUrlToFileList, getBase64, schemaConfig, useLoadData } from '../helpers/helpers';
 import CommentSection from './CommentSection';
 import SuccessPage from './SuccessPage';
-import { schema, schemaConfig } from './schemas/ApplicationSchema';
+import { schema } from './schemas/ApplicationSchema';
 
 export default function ApplicationForm() {
     // const [profile, setProfile] = useState<ProfileOptions | null>(null);
@@ -38,7 +38,7 @@ export default function ApplicationForm() {
     const navigate = useNavigate();
     const { id } = useParams();
     useDocumentTitle(t('addApplicationPage.headerTitle'));
-    const yupSchema = buildYup(schema, schemaConfig);
+    const yupSchema = buildYup(schema, schemaConfig(schema.required));
 
     const form = useForm<AppRegistrationFormValues>({
         resolver: yupResolver(yupSchema),
@@ -161,10 +161,12 @@ export default function ApplicationForm() {
 
                                         <FormElementGroup
                                             label={t('addApplicationPage.fields.applicationName')}
+                                            errorMessage={errors.title?.message}
                                             element={(id) => <BaseInput id={id} disabled={saving} {...register('title')} />}
                                         />
                                         <FormElementGroup
                                             label={t('addApplicationPage.fields.applicationDescription')}
+                                            errorMessage={errors.description?.message}
                                             element={(id) => <TextArea id={id} disabled={saving} {...register('description')} />}
                                         />
 
@@ -172,6 +174,7 @@ export default function ApplicationForm() {
                                             render={({ field }) => (
                                                 <FormElementGroup
                                                     label={t('addApplicationPage.fields.applicationType')}
+                                                    errorMessage={errors.type?.message}
                                                     element={(id) => (
                                                         <SelectElementItems<CodelistValue>
                                                             id={id}
@@ -193,6 +196,7 @@ export default function ApplicationForm() {
                                             render={({ field }) => (
                                                 <FormElementGroup
                                                     label={t('addApplicationPage.fields.applicationTheme')}
+                                                    errorMessage={errors.theme?.message}
                                                     element={(id) => (
                                                         <SelectElementItems<CodelistValue>
                                                             id={id}
@@ -294,14 +298,17 @@ export default function ApplicationForm() {
 
                                         <FormElementGroup
                                             label={t('addApplicationPage.fields.contactFirstName')}
+                                            errorMessage={errors.contactName?.message}
                                             element={(id) => <BaseInput id={id} disabled={saving} {...register('contactName')} />}
                                         />
                                         <FormElementGroup
                                             label={t('addApplicationPage.fields.contactLastName')}
+                                            errorMessage={errors.contactSurname?.message}
                                             element={(id) => <BaseInput id={id} disabled={saving} {...register('contactSurname')} />}
                                         />
                                         <FormElementGroup
                                             label={t('addApplicationPage.fields.contactEmail')}
+                                            errorMessage={errors.contactEmail?.message}
                                             element={(id) => <BaseInput id={id} type="email" disabled={saving} {...register('contactEmail')} />}
                                         />
 

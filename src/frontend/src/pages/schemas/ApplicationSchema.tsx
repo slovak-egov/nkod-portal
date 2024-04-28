@@ -119,16 +119,5 @@ export const schema = {
             format: 'email'
         }
     },
-    required: ['name', 'description', 'type', 'theme', 'contactName', 'contactSurname', 'contactEmail']
-};
-
-export const schemaConfig = {
-    errMessages: {
-        theme: {
-            required: 'Téma aplikácie je povinná'
-        },
-        type: {
-            required: 'Typ aplikácie je povinný'
-        }
-    }
+    required: ['title', 'description', 'type', 'theme', 'contactName', 'contactSurname', 'contactEmail']
 };

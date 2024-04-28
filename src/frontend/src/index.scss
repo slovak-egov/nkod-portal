@@ -145,12 +145,16 @@ body {
     }
 }
 
-.like-button:hover,
-.comments-button:hover {
+.like-button:hover {
     cursor: pointer;
 }
 
 .flex-end {
     display: flex;
     justify-content: flex-end;
+}
+
+.no-link {
+    text-decoration: none;
+    color: black;
 }
