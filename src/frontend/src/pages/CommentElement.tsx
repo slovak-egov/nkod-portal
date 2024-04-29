@@ -1,6 +1,7 @@
 import moment from 'moment';
 import { Fragment, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDefaultHeaders, useUserInfo } from '../client';
 import { sendDelete } from '../cms';
 import Button from '../components/Button';
 import GridColumn from '../components/GridColumn';
@@ -17,6 +18,8 @@ type Props = {
 
 export default function CommentElement(props: Props) {
     const { t } = useTranslation();
+    const [userInfo] = useUserInfo();
+    const headers = useDefaultHeaders();
     const { comment, refresh, contentId } = props;
     const [showReplyForm, setShowReplyForm] = useState<boolean>(false);
     const marginLeft = `${(comment.depth < MAX_COOMENT_DEPTH_MARGIN_LEFT ? comment.depth : MAX_COOMENT_DEPTH_MARGIN_LEFT) * 45}px`;
@@ -37,29 +40,31 @@ export default function CommentElement(props: Props) {
                                     <GridColumn widthUnits={1} totalUnits={1} flexEnd>
                                         {comment.created && <p className="govuk-body-s">{moment(comment.created).format('DD.MM.YYYY HH:mm:ss')}</p>}
                                     </GridColumn>
-                                    <GridColumn widthUnits={1} totalUnits={1} flexEnd>
-                                        <Button
-                                            className="govuk-!-margin-bottom-#"
-                                            buttonType="secondary"
-                                            title={t('comment.reply')}
-                                            onClick={() => setShowReplyForm(!showReplyForm)}
-                                        >
-                                            {t('comment.reply')}
-                                        </Button>
-                                        <Button
-                                            className="govuk-!-margin-bottom-# govuk-!-margin-left-4"
-                                            buttonType="warning"
-                                            title={t('common.delete')}
-                                            onClick={async () => {
-                                                const result = await sendDelete(`cms/comments/${comment.id}`);
-                                                if (result?.status === 200) {
-                                                    refresh();
-                                                }
-                                            }}
-                                        >
-                                            {t('common.delete')}
-                                        </Button>
-                                    </GridColumn>
+                                    {userInfo && (
+                                        <GridColumn widthUnits={1} totalUnits={1} flexEnd>
+                                            <Button
+                                                className="govuk-!-margin-bottom-#"
+                                                buttonType="secondary"
+                                                title={t('comment.reply')}
+                                                onClick={() => setShowReplyForm(!showReplyForm)}
+                                            >
+                                                {t('comment.reply')}
+                                            </Button>
+                                            <Button
+                                                className="govuk-!-margin-bottom-# govuk-!-margin-left-4"
+                                                buttonType="warning"
+                                                title={t('common.delete')}
+                                                onClick={async () => {
+                                                    const result = await sendDelete(`cms/comments/${comment.id}`, headers);
+                                                    if (result?.status === 200) {
+                                                        refresh();
+                                                    }
+                                                }}
+                                            >
+                                                {t('common.delete')}
+                                            </Button>
+                                        </GridColumn>
+                                    )}
                                 </GridRow>
                             </GridColumn>
                         </GridRow>

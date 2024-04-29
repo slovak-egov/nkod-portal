@@ -6,7 +6,8 @@ namespace CMS.Suggestions
     public class SuggestionRegion
     {
         [Field] public StringField UserId { get; set; }
-        [Field] public StringField UserOrgUri { get; set; }
+		[Field] public StringField UserEmail { get; set; }
+		[Field] public StringField UserOrgUri { get; set; }
         [Field] public StringField OrgToUri { get; set; }
         [Field] public StringField DatasetUri { get; set; }
         [Field] public TextField Description { get; set; }

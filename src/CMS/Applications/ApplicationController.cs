@@ -81,6 +81,7 @@ namespace CMS.Applications
                 CommentCount = p.CommentCount,
 				LikeCount = (p.Application.Likes?.Value != null) ? p.Application.Likes.Value.Count() : 0,
 				UserId = (p.Application.UserId.Value != null) ? Guid.Parse(p.Application.UserId.Value) : Guid.Empty,
+				UserEmail = p.Application.UserEmail,
 				Type = p.Application.Type.Value,
                 Theme = p.Application.Theme.Value,
                 Description = p.Application.Description,
@@ -186,6 +187,7 @@ namespace CMS.Applications
             post.Application = new ApplicationRegion
             {
 				UserId = dto.UserId.ToString("D"),
+				UserEmail = dto.UserEmail,
 				Description = dto.Description,
                 Type = new SelectField<ApplicationTypes>
                 {
@@ -226,6 +228,7 @@ namespace CMS.Applications
             post.Title = dto.Title;
 
 			post.Application.UserId = dto.UserId.ToString("D");
+			post.Application.UserEmail = dto.UserEmail;
 			post.Application.Description = dto.Description;
             post.Application.Type.Value = dto.Type;
             post.Application.Theme.Value = dto.Theme;

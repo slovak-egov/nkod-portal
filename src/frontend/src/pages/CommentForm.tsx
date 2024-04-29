@@ -2,7 +2,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { buildYup } from 'schema-to-yup';
-import { useUserInfo } from '../client';
+import { useDefaultHeaders, useUserInfo } from '../client';
 import { sendPost } from '../cms';
 import Button from '../components/Button';
 import FormElementGroup from '../components/FormElementGroup';
@@ -21,6 +21,7 @@ type Props = {
 export default function CommentForm(props: Props) {
     const { t } = useTranslation();
     const [userInfo] = useUserInfo();
+    const headers = useDefaultHeaders();
     const { contentId, refresh, parentId, datasetUri } = props;
     const yupSchema = buildYup(schema, useSchemaConfig(schema.required));
 
@@ -43,11 +44,11 @@ export default function CommentForm(props: Props) {
         if (!contentId && datasetUri) {
             const request = {
                 datasetUri,
-                userId: userInfo?.id || '0b33ece7-bbff-4ae6-8355-206cb5b1aa87',
+                userId: userInfo?.id,
                 email: userInfo?.email || 'test@email.sk',
                 body: data.body
             };
-            result = await sendPost<any>(`cms/datasets/comments`, request);
+            result = await sendPost<any>(`cms/datasets/comments`, request, headers);
             if (result?.status === 200) {
                 // post datasets/comments returns new CmsDataset, which will be used for
                 refresh(result.data);
@@ -57,11 +58,11 @@ export default function CommentForm(props: Props) {
             const request = {
                 contentId,
                 parentId: parentId ?? ROOT_ID,
-                userId: userInfo?.id || '0b33ece7-bbff-4ae6-8355-206cb5b1aa87',
+                userId: userInfo?.id,
                 email: userInfo?.email || 'test@email.sk',
                 body: data.body
             };
-            result = await sendPost<any>(`cms/comments`, request);
+            result = await sendPost<any>(`cms/comments`, request, headers);
             if (result?.status === 200) {
                 refresh();
                 reset();

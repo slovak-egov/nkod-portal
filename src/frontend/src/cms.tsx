@@ -1,7 +1,7 @@
-import axios, { AxiosError, AxiosResponse } from 'axios';
+import axios, { AxiosError, AxiosResponse, RawAxiosRequestHeaders } from 'axios';
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useUserInfo } from './client';
+import { useDefaultHeaders, useUserInfo } from './client';
 import { AutocompleteOption } from './components/ReactSelectElement';
 import { sortComments } from './helpers/helpers';
 import {
@@ -89,24 +89,24 @@ export function useEntityAddWithoutInput(url: string) {
     return [genericError, saving, save] as const;
 }
 
-export async function sendPost<TInput>(url: string, input: TInput) {
-    return await axios.post(baseUrl + url, input);
+export async function sendPost<TInput>(url: string, input: TInput, headers?: RawAxiosRequestHeaders) {
+    return await axios.post(baseUrl + url, input, { headers });
 }
 
-export async function sendPut<TInput>(url: string, input: TInput) {
-    return await axios.put(baseUrl + url, input);
+export async function sendPut<TInput>(url: string, input: TInput, headers?: RawAxiosRequestHeaders) {
+    return await axios.put(baseUrl + url, input, { headers });
 }
 
-export async function sendPostWithoutInput(url: string) {
-    return await axios.post(baseUrl + url);
+export async function sendPostWithoutInput(url: string, headers?: RawAxiosRequestHeaders) {
+    return await axios.post(baseUrl + url, null, { headers });
 }
 
-export async function sendGet(url: string) {
-    return await axios.get(baseUrl + url);
+export async function sendGet(url: string, headers?: RawAxiosRequestHeaders) {
+    return await axios.get(baseUrl + url, { headers });
 }
 
-export async function sendDelete(url: string) {
-    return await axios.delete(baseUrl + url);
+export async function sendDelete(url: string, headers?: RawAxiosRequestHeaders) {
+    return await axios.delete(baseUrl + url, { headers });
 }
 
 export function useCmsPublisherLists({
@@ -253,7 +253,6 @@ export function useCmsEntities<T>(url: string, initialQuery?: any) {
     const [items, setItems] = useState<T | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
-    // const headers = useDefaultHeaders();
 
     const refresh = useCallback(async () => {
         setLoading(true);
@@ -291,6 +290,7 @@ export function useCmsLike() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
     const [userInfo] = useUserInfo();
+    const headers = useDefaultHeaders();
 
     const like = useCallback(
         async (url: string, contentId?: string, datasetUri?: string) => {
@@ -298,16 +298,24 @@ export function useCmsLike() {
             try {
                 let response: AxiosResponse<Suggestion[]>;
                 if (!contentId && datasetUri) {
-                    response = await sendPost(url, {
-                        datasetUri,
-                        userId: userInfo?.id || '0b33ece7-bbff-4ae6-8355-206cb5b1aa87'
-                    });
+                    response = await sendPost(
+                        url,
+                        {
+                            datasetUri,
+                            userId: userInfo?.id
+                        },
+                        headers
+                    );
                 } else {
-                    response = await sendPost(url, {
-                        contentId,
-                        datasetUri,
-                        userId: userInfo?.id || '0b33ece7-bbff-4ae6-8355-206cb5b1aa87'
-                    });
+                    response = await sendPost(
+                        url,
+                        {
+                            contentId,
+                            datasetUri,
+                            userId: userInfo?.id
+                        },
+                        headers
+                    );
                 }
                 setLoading(false);
                 return response.status === 200;
@@ -320,7 +328,7 @@ export function useCmsLike() {
                 return false;
             }
         },
-        [userInfo?.id]
+        [userInfo?.id, headers]
     );
 
     return [loading, error, like] as const;

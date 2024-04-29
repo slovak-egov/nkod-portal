@@ -113,13 +113,6 @@ export default function Header() {
         });
     }
 
-    // const login = async () => {
-    //     const url = await doLogin(headers);
-    //     if (url) {
-    //         window.location.href = url;
-    //     }
-    // };
-
     const logout = async () => {
         const url = await doLogout(headers);
         tokenContext?.setToken(null);

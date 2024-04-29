@@ -9,6 +9,7 @@ import { QueryGuard } from '../helpers/helpers';
 import { ICommentSorted } from '../interface/cms.interface';
 import CommentElement from './CommentElement';
 import CommentForm from './CommentForm';
+import { useUserInfo } from '../client';
 
 type Props = {
     contentId?: string;
@@ -18,6 +19,7 @@ type Props = {
 export default function CommentSection(props: Props) {
     const { t } = useTranslation();
     const { contentId, datasetUri } = props;
+    const [userInfo] = useUserInfo();
     const [currentContentId, setCurrentContentId] = useState<string | undefined>(contentId);
     const [showNewCommentForm, setShowNewCommentForm] = useState<boolean>(false);
 
@@ -33,7 +35,7 @@ export default function CommentSection(props: Props) {
                                 <h2 className="govuk-heading-m govuk-!-margin-bottom-6 suggestion-subtitle">{t('comment.title')}</h2>
                             </GridColumn>
                             <GridColumn widthUnits={1} totalUnits={2} flexEnd>
-                                {!showNewCommentForm && (
+                                {!showNewCommentForm && userInfo?.id && (
                                     <Button buttonType="primary" title={t('comment.new')} onClick={() => setShowNewCommentForm(true)}>
                                         {t('comment.new')}
                                     </Button>

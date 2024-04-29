@@ -11,6 +11,11 @@ export type OrderOption = {
     value: string;
 };
 
+export enum LoginMethod {
+    EGOV = '',
+    GOOGLE = 'google'
+}
+
 export type TokenContextType = {
     token: TokenResult | null;
     setToken: (token: TokenResult | null) => void;
@@ -601,8 +606,12 @@ export function useUserLogin() {
                 }
                 return { success: true, data: response };
             } catch (err) {
-                if (err instanceof Error) {
-                    setError(err);
+                if (err instanceof AxiosError) {
+                    if (err.response?.status === 403) {
+                        setError(new Error('Nesprávne meno alebo heslo'));
+                    } else {
+                        setError(err);
+                    }
                 }
                 return { success: false };
             } finally {
@@ -835,15 +844,16 @@ export function useEntityAdd<T>(url: string, initialValue: T) {
     return [entity, setEntityProperties, errors, saving, save] as const;
 }
 
-export async function sendGet(url: string, headers: RawAxiosRequestHeaders) {
+export async function sendGet(url: string, headers: RawAxiosRequestHeaders, params?: {}) {
     return await axios.get(baseUrl + url, {
-        headers: headers
+        headers,
+        params
     });
 }
 
 export async function sendPost<TInput>(url: string, input: TInput, headers: RawAxiosRequestHeaders, abortController: AbortController | null = null) {
     const options: AxiosRequestConfig<TInput> = {
-        headers: headers
+        headers
     };
     if (abortController !== null) {
         options['signal'] = abortController.signal;
@@ -853,7 +863,7 @@ export async function sendPost<TInput>(url: string, input: TInput, headers: RawA
 
 export async function sendPut<TInput>(url: string, input: TInput, headers: RawAxiosRequestHeaders) {
     return await axios.put(baseUrl + url, input, {
-        headers: headers
+        headers
     });
 }
 
@@ -1116,9 +1126,14 @@ export function useCodelistAdmin() {
     return [items, loading, error, refresh] as const;
 }
 
-export async function doLogin(headers: RawAxiosRequestHeaders) {
+export async function doLogin(headers: RawAxiosRequestHeaders, method?: LoginMethod) {
     type DelegationAuthorizationResult = { redirectUrl: string };
-    const response: AxiosResponse<DelegationAuthorizationResult> = await sendGet('saml/login', headers);
+    const params: { [key: string]: string } = {};
+    if (method) {
+        params['method'] = method;
+    }
+
+    const response: AxiosResponse<DelegationAuthorizationResult> = await sendGet('saml/login', headers, params);
     return response.data.redirectUrl;
 }
 
@@ -1126,6 +1141,13 @@ export async function doLogout(headers: RawAxiosRequestHeaders) {
     type DelegationAuthorizationResult = { redirectUrl: string };
     const response: AxiosResponse<DelegationAuthorizationResult> = await sendGet('saml/logout', headers);
     return response.data.redirectUrl;
+}
+
+export async function loginWithRedirect(headers: RawAxiosRequestHeaders, method?: LoginMethod) {
+    const url = await doLogin(headers, method);
+    if (url) {
+        window.location.href = url;
+    }
 }
 
 export function useUserAdd(initialValue: NewUser) {

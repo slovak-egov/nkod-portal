@@ -10,7 +10,9 @@
     },
     "validation": {
         "required": "Povinné",
-        "min": "Príliš krátke"
+        "min": "Príliš krátke",
+        "email": "Email nie je zadaný v správnom formáte",
+        "url": "Url nie je zadaná v správnom formáte"
     },
     "header": {
         "login": "Prihlásiť sa",

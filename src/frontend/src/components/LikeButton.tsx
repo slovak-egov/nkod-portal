@@ -1,4 +1,6 @@
+import classNames from 'classnames';
 import { HTMLAttributes, useState } from 'react';
+import { useUserInfo } from '../client';
 import { useCmsLike } from '../cms';
 
 type Props = {
@@ -10,16 +12,19 @@ type Props = {
 
 export default function LikeButton(props: Props) {
     const { count, url, contentId, datasetUri } = props;
+    const [userInfo] = useUserInfo();
     const [likeLoading, likeError, like] = useCmsLike();
     const [likeCount, setLikeCount] = useState(count);
 
     return (
         <div
-            className="like-button"
+            className={classNames({ 'like-button': userInfo?.id }, 'govuk-!-padding-left-3')}
             onClick={async () => {
-                const success = await like(url, contentId, datasetUri);
-                if (success) {
-                    setLikeCount(likeCount + 1);
+                if (userInfo?.id) {
+                    const success = await like(url, contentId, datasetUri);
+                    if (success) {
+                        setLikeCount(likeCount + 1);
+                    }
                 }
             }}
         >

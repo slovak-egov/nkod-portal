@@ -7,6 +7,7 @@ import GridColumn from '../components/GridColumn';
 import GridRow from '../components/GridRow';
 import LikeButton from '../components/LikeButton';
 import { Suggestion } from '../interface/cms.interface';
+import { useUserInfo } from '../client';
 
 type Props = {
     suggestion: Suggestion;
@@ -17,6 +18,7 @@ type Props = {
 
 const SuggestionListItem = (props: Props) => {
     const { t } = useTranslation();
+    const [userInfo] = useUserInfo();
     const { suggestion, isLast, publisher, edit } = props;
 
     return (
@@ -30,8 +32,8 @@ const SuggestionListItem = (props: Props) => {
                             </Link>
                         </GridColumn>
                         <GridColumn widthUnits={1} totalUnits={2} flexEnd>
-                            {edit && (
-                                <Link to={`/podnet/${suggestion.id}/upravit`} className="idsk-card-title govuk-link govuk-!-padding-right-3">
+                            {edit && userInfo?.id && (
+                                <Link to={`/podnet/${suggestion.id}/upravit`} className="idsk-card-title govuk-link">
                                     {t('common.edit')}
                                 </Link>
                             )}

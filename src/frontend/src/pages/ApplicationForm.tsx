@@ -1,4 +1,4 @@
-import { useCallback, useContext, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Controller, SubmitHandler, useFieldArray, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
@@ -6,7 +6,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import classNames from 'classnames';
 import { useNavigate, useParams } from 'react-router';
 import { buildYup } from 'schema-to-yup';
-import { CodelistValue, TokenContext, useDocumentTitle, useUserInfo } from '../client';
+import { CodelistValue, useDefaultHeaders, useDocumentTitle, useUserInfo } from '../client';
 import { sendDelete, sendPost, sendPut } from '../cms';
 import { applicationThemeCodeList, applicationTypeCodeList } from '../codelist/ApplicationCodelist';
 import BaseInput from '../components/BaseInput';
@@ -27,12 +27,9 @@ import SuccessErrorPage from './SuccessErrorPage';
 import { schema } from './schemas/ApplicationSchema';
 
 export default function ApplicationForm() {
-    // const [profile, setProfile] = useState<ProfileOptions | null>(null);
-    // const [saveResult, setSaveResult] = useState<SaveResult | null>(null);
-    // const headers = useDefaultHeaders();
     const [userInfo] = useUserInfo();
+    const headers = useDefaultHeaders();
     const commentsRef = useRef(null);
-    const tokenContext = useContext(TokenContext);
     const [saving, setSaving] = useState<boolean>();
     const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
     const { t } = useTranslation();
@@ -44,7 +41,7 @@ export default function ApplicationForm() {
     const form = useForm<AppRegistrationFormValues>({
         resolver: yupResolver(yupSchema),
         defaultValues: {
-            userId: userInfo?.id || '0b33ece7-bbff-4ae6-8355-206cb5b2ae87',
+            userId: userInfo?.id,
             datasetURIsForm: [{ value: '' }],
             type: ApplicationType.MOBILE_APPLICATION,
             theme: ApplicationTheme.EDUCATION,
@@ -77,7 +74,7 @@ export default function ApplicationForm() {
     });
 
     const deleteApplication = useCallback(async () => {
-        const result = await sendDelete(`cms/applications/${id}`);
+        const result = await sendDelete(`cms/applications/${id}`, headers);
         if (result?.status === 200) {
             navigate('/aplikacia');
         }
@@ -100,9 +97,9 @@ export default function ApplicationForm() {
 
                 let result = null;
                 if (id) {
-                    result = await sendPut<any>(`cms/applications/${id}`, request);
+                    result = await sendPut<any>(`cms/applications/${id}`, request, headers);
                 } else {
-                    result = await sendPost<any>(`cms/applications`, request);
+                    result = await sendPost<any>(`cms/applications`, request, headers);
                 }
                 if (result?.status === 200) {
                     setSaveSuccess(true);

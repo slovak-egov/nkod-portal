@@ -7,6 +7,7 @@ import GridColumn from '../components/GridColumn';
 import GridRow from '../components/GridRow';
 import LikeButton from '../components/LikeButton';
 import { Application } from '../interface/cms.interface';
+import { useUserInfo } from '../client';
 
 type Props = {
     app: Application;
@@ -16,6 +17,7 @@ type Props = {
 
 const ApplicationListItem = (props: Props) => {
     const { t } = useTranslation();
+    const [userInfo] = useUserInfo();
     const { app, isLast, edit } = props;
 
     return (
@@ -29,8 +31,8 @@ const ApplicationListItem = (props: Props) => {
                             </Link>
                         </GridColumn>
                         <GridColumn widthUnits={1} totalUnits={2} flexEnd>
-                            {edit && (
-                                <Link to={`/aplikacia/${app.id}/upravit`} className="idsk-card-title govuk-link govuk-!-padding-right-3">
+                            {edit && userInfo?.id && (
+                                <Link to={`/aplikacia/${app.id}/upravit`} className="idsk-card-title govuk-link">
                                     {t('common.edit')}
                                 </Link>
                             )}

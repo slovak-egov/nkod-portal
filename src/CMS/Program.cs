@@ -21,8 +21,8 @@ builder.AddPiranha(options =>
 
     var connectionString = builder.Configuration.GetConnectionString("piranha");
     options.UseEF<SQLiteDb>(db => db.UseSqlite(connectionString));
-
-    options.Services.AddAuthentication("Bearer")	
+		
+	options.Services.AddAuthentication("Bearer")	
 	.AddJwtBearer(options =>
 	{
 		options.TokenValidationParameters = new()
@@ -121,7 +121,6 @@ app.UsePiranha(options =>
 });
 
 app.UseSwagger();
-
 
 app.UseSwaggerUI(options =>
 {

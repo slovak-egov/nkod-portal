@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { OrderOption, useDocumentTitle } from '../client';
+import { OrderOption, useDocumentTitle, useUserInfo } from '../client';
 import { useCmsApplicationsSearch } from '../cms';
 import Breadcrumbs from '../components/Breadcrumbs';
 import Button from '../components/Button';
@@ -13,6 +13,7 @@ import ApplicationListItem from './ApplicationListItem';
 
 const ApplicationList = () => {
     const { t } = useTranslation();
+    const [userInfo] = useUserInfo();
     const navigate = useNavigate();
     useDocumentTitle(t('applicationList.headerTitle'));
 
@@ -35,11 +36,13 @@ const ApplicationList = () => {
                     header={t('applicationList.title')}
                     query={query}
                     customHeading={
-                        <GridRow data-testid="sr-add-new-row">
-                            <GridColumn widthUnits={1} totalUnits={1} data-testid="sr-add-new" flexEnd>
-                                <Button onClick={() => navigate('/aplikacia/pridat')}>{t('addApplicationPage.new')}</Button>
-                            </GridColumn>
-                        </GridRow>
+                        userInfo?.id && (
+                            <GridRow data-testid="sr-add-new-row">
+                                <GridColumn widthUnits={1} totalUnits={1} data-testid="sr-add-new" flexEnd>
+                                    <Button onClick={() => navigate('/aplikacia/pridat')}>{t('addApplicationPage.new')}</Button>
+                                </GridColumn>
+                            </GridRow>
+                        )
                     }
                     setQueryParameters={setQueryParameters}
                     loading={loading}

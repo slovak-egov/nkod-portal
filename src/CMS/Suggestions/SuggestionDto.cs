@@ -11,6 +11,10 @@ namespace CMS.Suggestions
         [Required]
 		public Guid UserId { get; set; }
 
+		[Required]
+		[EmailAddress]
+		public string UserEmail { get; set; }
+
 		[Url]
 		public string UserOrgUri { get; set; }
 

@@ -178,6 +178,14 @@ export const useSchemaConfig = (required: string[]) => {
     const errMessages: { errMessages: { [key: string]: {} } } = {
         errMessages: {}
     };
-    required?.forEach((r) => (errMessages.errMessages[r] = { required: t('validation.required'), min: t('validation.min') }));
+    required?.forEach(
+        (r) =>
+            (errMessages.errMessages[r] = {
+                required: t('validation.required'),
+                min: t('validation.min'),
+                email: t('validation.email'),
+                url: t('validation.url')
+            })
+    );
     return errMessages;
 };

@@ -84,6 +84,7 @@ namespace CMS.Suggestions
                 Type = p.Suggestion.Type.Value,
                 Description = p.Suggestion.Description,
                 UserId = Guid.Parse(p.Suggestion.UserId.Value),
+				UserEmail = p.Suggestion.UserEmail,
                 UserOrgUri = p.Suggestion.UserOrgUri,
                 DatasetUri = p.Suggestion.DatasetUri.Value,
                 Title = p.Title
@@ -187,6 +188,7 @@ namespace CMS.Suggestions
             {
                 Description = dto.Description,
                 UserId = dto.UserId.ToString("D"),
+				UserEmail = dto.UserEmail,
                 UserOrgUri = dto.UserOrgUri,
                 OrgToUri = dto.OrgToUri,
                 DatasetUri = dto.DatasetUri,
@@ -222,6 +224,7 @@ namespace CMS.Suggestions
 			post.Title = dto.Title;
 			post.Suggestion.Description = dto.Description;
 			post.Suggestion.UserId = dto.UserId.ToString("D");
+			post.Suggestion.UserEmail = dto.UserEmail;
 			post.Suggestion.UserOrgUri = dto.UserOrgUri;
 			post.Suggestion.OrgToUri = dto.OrgToUri;
 			post.Suggestion.DatasetUri = dto.DatasetUri;

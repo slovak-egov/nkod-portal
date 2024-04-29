@@ -26,8 +26,8 @@ import { schema } from './schemas/SuggestionSchema';
 
 export default function SuggestionForm() {
     const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
-    const headers = useDefaultHeaders();
     const [userInfo] = useUserInfo();
+    const headers = useDefaultHeaders();
     const datasetSelectRef = useRef(null);
     const { id } = useParams();
     const navigate = useNavigate();
@@ -48,7 +48,7 @@ export default function SuggestionForm() {
     const form = useForm<SuggestionFormValues>({
         resolver: yupResolver(yupSchema),
         defaultValues: {
-            userId: userInfo?.id || '0b33ece7-bbff-4ae6-8355-206cb5b2ae87',
+            userId: userInfo?.id,
             orgToUri: userInfo?.companyURI,
             status: SuggestionStatusCode.CREATED,
             type: SuggestionType.SUGGESTION_FOR_PUBLISHED_DATASET
@@ -90,7 +90,7 @@ export default function SuggestionForm() {
     });
 
     const deleteSuggestion = useCallback(async () => {
-        const result = await sendDelete(`cms/suggestions/${id}`);
+        const result = await sendDelete(`cms/suggestions/${id}`, headers);
         if (result?.status === 200) {
             navigate('/podnet');
         }
@@ -99,9 +99,9 @@ export default function SuggestionForm() {
     const onSubmit: SubmitHandler<SuggestionFormValues> = async (data) => {
         let result = null;
         if (id) {
-            result = await sendPut<any>(`cms/suggestions/${id}`, data);
+            result = await sendPut<any>(`cms/suggestions/${id}`, data, headers);
         } else {
-            result = await sendPost<any>(`cms/suggestions`, data);
+            result = await sendPost<any>(`cms/suggestions`, data, headers);
         }
 
         if (result?.status === 200) {

@@ -12,6 +12,10 @@ namespace CMS.Applications
 		public Guid UserId { get; set; }
 
 		[Required]
+		[EmailAddress]
+		public string UserEmail { get; set; }
+
+		[Required]
 		public string Title { get; set; }
 
 		[Required]

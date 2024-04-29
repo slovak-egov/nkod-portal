@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { OrderOption, useDocumentTitle } from '../client';
+import { OrderOption, useDocumentTitle, useUserInfo } from '../client';
 import { useCmsSuggestionsSearch, useSearchPublisher } from '../cms';
 import Breadcrumbs from '../components/Breadcrumbs';
 import Button from '../components/Button';
@@ -14,6 +14,7 @@ import SuggestionListItem from './SuggestionListItem';
 const SuggestionList = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const [userInfo] = useUserInfo();
     const [publishers] = useSearchPublisher({
         pageSize: -1,
         language: 'sk',
@@ -40,11 +41,13 @@ const SuggestionList = () => {
                     header={t('suggestionList.title')}
                     query={query}
                     customHeading={
-                        <GridRow data-testid="sr-add-new-row">
-                            <GridColumn widthUnits={1} totalUnits={1} data-testid="sr-add-new" flexEnd>
-                                <Button onClick={() => navigate('/podnet/pridat')}>{t('addSuggestion.headerTitle')}</Button>
-                            </GridColumn>
-                        </GridRow>
+                        userInfo?.id && (
+                            <GridRow data-testid="sr-add-new-row">
+                                <GridColumn widthUnits={1} totalUnits={1} data-testid="sr-add-new" flexEnd>
+                                    <Button onClick={() => navigate('/podnet/pridat')}>{t('addSuggestion.headerTitle')}</Button>
+                                </GridColumn>
+                            </GridRow>
+                        )
                     }
                     setQueryParameters={setQueryParameters}
                     loading={loading}

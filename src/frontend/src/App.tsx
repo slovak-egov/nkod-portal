@@ -247,15 +247,15 @@ function App(props: Props) {
                                     ) : null}
 
                                     <Route path="/aplikacia" Component={ApplicationList} />
-                                    <Route path="/aplikacia/:id/upravit" Component={ApplicationForm} />
+                                    {userInfo?.id && <Route path="/aplikacia/:id/upravit" Component={ApplicationForm} />}
                                     <Route path="/aplikacia/:id/komentare" element={<ApplicationDetail scrollToComments />} />
                                     <Route path="/aplikacia/:id" element={<ApplicationDetail />} />
-                                    <Route path="/aplikacia/pridat" Component={ApplicationForm} />
+                                    {userInfo?.id && <Route path="/aplikacia/pridat" Component={ApplicationForm} />}
                                     <Route path="/podnet" Component={SuggestionList} />
-                                    <Route path="/podnet/:id/upravit" element={<SuggestionForm />} />
+                                    {userInfo?.id && <Route path="/podnet/:id/upravit" element={<SuggestionForm />} />}
                                     <Route path="/podnet/:id/komentare" element={<SuggestionDetail scrollToComments />} />
                                     <Route path="/podnet/:id" element={<SuggestionDetail />} />
-                                    <Route path="/podnet/pridat" Component={SuggestionForm} />
+                                    {userInfo?.id && <Route path="/podnet/pridat" Component={SuggestionForm} />}
 
                                     {userInfo?.role === 'Superadmin' ? (
                                         <>
