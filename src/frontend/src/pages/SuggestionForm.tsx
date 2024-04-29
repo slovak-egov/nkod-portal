@@ -5,18 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import { buildYup } from 'schema-to-yup';
 import { CodelistValue, useDefaultHeaders, useDocumentTitle, useUserInfo } from '../client';
-import {
-    AutocompleteOption,
-    Suggestion,
-    SuggestionFormValues,
-    SuggestionStatusCode,
-    SuggestionType,
-    sendDelete,
-    sendPost,
-    sendPut,
-    useSearchDataset,
-    useSearchPublisher
-} from '../cms';
+import { sendDelete, sendPost, sendPut, useSearchDataset, useSearchPublisher } from '../cms';
 import { suggestionStatusList, suggestionTypeCodeList } from '../codelist/SuggestionCodelist';
 import BaseInput from '../components/BaseInput';
 import Breadcrumbs from '../components/Breadcrumbs';
@@ -26,12 +15,13 @@ import GridColumn from '../components/GridColumn';
 import GridRow from '../components/GridRow';
 import MainContent from '../components/MainContent';
 import PageHeader from '../components/PageHeader';
-import ReactSelectElement from '../components/ReactSelectElement';
+import ReactSelectElement, { AutocompleteOption } from '../components/ReactSelectElement';
 import SelectElementItems from '../components/SelectElementItems';
 import TextArea from '../components/TextArea';
-import { QueryGuard, schemaConfig, useLoadData } from '../helpers/helpers';
+import { QueryGuard, useLoadData, useSchemaConfig } from '../helpers/helpers';
+import { Suggestion, SuggestionFormValues, SuggestionStatusCode, SuggestionType } from '../interface/cms.interface';
 import CommentSection from './CommentSection';
-import SuccessPage from './SuccessPage';
+import SuccessErrorPage from './SuccessErrorPage';
 import { schema } from './schemas/SuggestionSchema';
 
 export default function SuggestionForm() {
@@ -42,7 +32,7 @@ export default function SuggestionForm() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { t } = useTranslation();
-    const yupSchema = buildYup(schema, schemaConfig(schema.required));
+    const yupSchema = buildYup(schema, useSchemaConfig(schema.required));
 
     useDocumentTitle(t('addApplicationPage.headerTitle'));
 
@@ -148,7 +138,7 @@ export default function SuggestionForm() {
                 ]}
             />
             {saveSuccess ? (
-                <SuccessPage
+                <SuccessErrorPage
                     msg={id ? t('suggestionEditSuccessful') : t('suggestionAddSuccessful')}
                     backButtonLabel={t('common.backToList')}
                     backButtonClick={() => navigate('/podnet')}
@@ -168,15 +158,6 @@ export default function SuggestionForm() {
                                             </GridColumn>
                                             <GridColumn widthUnits={1} totalUnits={3} className="govuk-body-m govuk-!-font-weight-bold">
                                                 {userInfo?.firstName} {userInfo?.lastName}
-                                            </GridColumn>
-                                        </GridRow>
-
-                                        <GridRow className="govuk-!-margin-bottom-6">
-                                            <GridColumn widthUnits={1} totalUnits={3} className="govuk-body-m">
-                                                {t('addSuggestion.organizationTitle')}
-                                            </GridColumn>
-                                            <GridColumn widthUnits={1} totalUnits={3} className="govuk-body-m govuk-!-font-weight-bold">
-                                                {userInfo?.companyName}
                                             </GridColumn>
                                         </GridRow>
 

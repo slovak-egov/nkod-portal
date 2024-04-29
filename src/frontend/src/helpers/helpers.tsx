@@ -1,9 +1,11 @@
 import { AxiosResponse } from 'axios';
 import React, { useCallback, useEffect, useState } from 'react';
 import { FieldValues, Path, UseFormReturn } from 'react-hook-form';
-import { IComment, ICommentSorted, sendGet } from '../cms';
-import Loading from '../components/Loading';
+import { useTranslation } from 'react-i18next';
+import { sendGet } from '../cms';
 import ErrorAlert from '../components/ErrorAlert';
+import Loading from '../components/Loading';
+import { IComment, ICommentSorted } from '../interface/cms.interface';
 
 interface IUseLoadData<TForm extends FieldValues> {
     form: UseFormReturn<TForm>;
@@ -171,10 +173,11 @@ export const sortComments = (comments: IComment[]) => {
     return sortedComments.filter((comment: ICommentSorted) => comment.depth === 0);
 };
 
-export const schemaConfig = (required: string[]) => {
+export const useSchemaConfig = (required: string[]) => {
+    const { t } = useTranslation();
     const errMessages: { errMessages: { [key: string]: {} } } = {
         errMessages: {}
     };
-    required?.forEach((r) => (errMessages.errMessages[r] = { required: 'Povinná' }));
+    required?.forEach((r) => (errMessages.errMessages[r] = { required: t('validation.required'), min: t('validation.min') }));
     return errMessages;
 };

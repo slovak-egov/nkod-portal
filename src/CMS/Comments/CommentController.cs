@@ -13,6 +13,7 @@ namespace CMS.Comments
 	[Route("comments")]
 	[ApiController]
 	[AllowAnonymous]
+	[Authorize(AuthenticationSchemes = "Bearer", Policy = "MustBeAuthenticated")]
 	public class CommentController
 	{
 		private readonly IApi api;

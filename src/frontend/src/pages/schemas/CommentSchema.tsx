@@ -9,11 +9,3 @@ export const schema = {
     },
     required: ['body']
 };
-
-export const schemaConfig = {
-    errMessages: {
-        msg: {
-            required: 'Správa komentára je povinná'
-        }
-    }
-};

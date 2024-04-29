@@ -1,12 +1,12 @@
 import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Suggestion } from '../cms';
 import { suggestionStatusList } from '../codelist/SuggestionCodelist';
 import CommentButton from '../components/CommentButton';
 import GridColumn from '../components/GridColumn';
 import GridRow from '../components/GridRow';
 import LikeButton from '../components/LikeButton';
+import { Suggestion } from '../interface/cms.interface';
 
 type Props = {
     suggestion: Suggestion;

@@ -1,5 +1,5 @@
 import { CodelistValue } from '../client';
-import { SuggestionType, SuggestionStatusCode } from '../cms';
+import { SuggestionStatusCode, SuggestionType } from '../interface/cms.interface';
 
 export const suggestionTypeCodeList: CodelistValue[] = [
     {

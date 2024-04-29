@@ -13,7 +13,8 @@ namespace CMS.Suggestions
     [Route("suggestions")]
     [ApiController]
     [AllowAnonymous]
-    public class SuggestionController
+	[Authorize(AuthenticationSchemes = "Bearer", Policy = "MustBeAuthenticated")]
+	public class SuggestionController
     {
         private readonly IApi api;
 

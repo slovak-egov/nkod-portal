@@ -7,7 +7,7 @@ import classNames from 'classnames';
 import { useNavigate, useParams } from 'react-router';
 import { buildYup } from 'schema-to-yup';
 import { CodelistValue, TokenContext, useDocumentTitle, useUserInfo } from '../client';
-import { AppRegistrationFormValues, Application, ApplicationTheme, ApplicationType, sendDelete, sendPost, sendPut } from '../cms';
+import { sendDelete, sendPost, sendPut } from '../cms';
 import { applicationThemeCodeList, applicationTypeCodeList } from '../codelist/ApplicationCodelist';
 import BaseInput from '../components/BaseInput';
 import Breadcrumbs from '../components/Breadcrumbs';
@@ -20,9 +20,10 @@ import MainContent from '../components/MainContent';
 import PageHeader from '../components/PageHeader';
 import SelectElementItems from '../components/SelectElementItems';
 import TextArea from '../components/TextArea';
-import { QueryGuard, dataUrlToFileList, getBase64, schemaConfig, useLoadData } from '../helpers/helpers';
+import { QueryGuard, dataUrlToFileList, getBase64, useLoadData, useSchemaConfig } from '../helpers/helpers';
+import { AppRegistrationFormValues, Application, ApplicationTheme, ApplicationType } from '../interface/cms.interface';
 import CommentSection from './CommentSection';
-import SuccessPage from './SuccessPage';
+import SuccessErrorPage from './SuccessErrorPage';
 import { schema } from './schemas/ApplicationSchema';
 
 export default function ApplicationForm() {
@@ -38,7 +39,7 @@ export default function ApplicationForm() {
     const navigate = useNavigate();
     const { id } = useParams();
     useDocumentTitle(t('addApplicationPage.headerTitle'));
-    const yupSchema = buildYup(schema, schemaConfig(schema.required));
+    const yupSchema = buildYup(schema, useSchemaConfig(schema.required));
 
     const form = useForm<AppRegistrationFormValues>({
         resolver: yupResolver(yupSchema),
@@ -142,7 +143,7 @@ export default function ApplicationForm() {
             />
 
             {saveSuccess ? (
-                <SuccessPage
+                <SuccessErrorPage
                     msg={id ? t('applicationEditSuccessful') : t('applicationAddSuccessful')}
                     backButtonLabel={t('common.backToList')}
                     backButtonClick={() => navigate('/aplikacia')}

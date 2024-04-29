@@ -15,7 +15,8 @@ namespace CMS.Datasets
     [Route("datasets")]
     [ApiController]
     [AllowAnonymous]
-    public class DatasetController
+	[Authorize(AuthenticationSchemes = "Bearer", Policy = "MustBeAuthenticated")]
+	public class DatasetController
 	{
         private readonly IApi api;
 

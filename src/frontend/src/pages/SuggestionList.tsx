@@ -1,13 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { OrderOption, useDocumentTitle } from '../client';
-import { RequestCmsSuggestionsQuery, useCmsSuggestionsSearch, useSearchPublisher } from '../cms';
+import { useCmsSuggestionsSearch, useSearchPublisher } from '../cms';
 import Breadcrumbs from '../components/Breadcrumbs';
 import Button from '../components/Button';
 import GridColumn from '../components/GridColumn';
 import GridRow from '../components/GridRow';
 import MainContent from '../components/MainContent';
 import SearchResultsCms from '../components/SearchResultsCms';
+import { RequestCmsSuggestionsQuery } from '../interface/cms.interface';
 import SuggestionListItem from './SuggestionListItem';
 
 const SuggestionList = () => {

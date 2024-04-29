@@ -1,12 +1,12 @@
 import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Application } from '../cms';
 import { applicationTypeCodeList } from '../codelist/ApplicationCodelist';
 import CommentButton from '../components/CommentButton';
 import GridColumn from '../components/GridColumn';
 import GridRow from '../components/GridRow';
 import LikeButton from '../components/LikeButton';
+import { Application } from '../interface/cms.interface';
 
 type Props = {
     app: Application;

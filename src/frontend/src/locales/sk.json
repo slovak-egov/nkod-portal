@@ -4,7 +4,19 @@
         "delete": "Odstrániť",
         "user": "Používateľ",
         "userOrgUri": "Organizácia používateľa",
-        "backToList": "Späť na zoznam"
+        "backToList": "Späť na zoznam",
+        "backToMain": "Späť na hlavnú stránku",
+        "password": "Heslo"
+    },
+    "validation": {
+        "required": "Povinné",
+        "min": "Príliš krátke"
+    },
+    "header": {
+        "login": "Prihlásiť sa",
+        "register": "Registrovať sa",
+        "registration": "Registrácia",
+        "registrationConfirmation": "Potvrdenie registrácie"
     },
     "homePage": {
         "title": "Vitajte na stránke Národného katalógu otvorených dát",
@@ -39,16 +51,24 @@
         "problemLink": "Nemôžete sa prihlásiť?",
         "registerLink": "Zaregistrovať sa"
     },
+    "forgottenPasswordPage": {
+        "title": "Zabudnuté heslo",
+        "recovery": "Obnoviť",
+        "activation": {
+            "newPassword": "Nové heslo"
+        }
+    },
     "registerPage": {
-        "title": "Registrácia člena open data komunity",
-        "registerButton": "Registrovať sa",
+        "title": "Registrácia člena opendata komunity",
+        "registerButton": "Zaregistrovať sa",
         "cancelButton": "Zrušiť",
         "fields": {
             "firstName": "Meno",
             "lastName": "Priezvisko",
             "email": "Login / E-mailová adresa",
             "password": "Heslo",
-            "passwordConfirm": "Opakovať heslo"
+            "passwordConfirm": "Opakovať heslo",
+            "passwordMatchError": "Heslá musia byť rovnaké"
         },
         "loginLink": "Máte už účet? Prihláste sa"
     },
@@ -113,7 +133,6 @@
         "headerTitle": "Upraviť podnet",
         "title": "Podnet: {{name}}",
         "userTitle": "Používateľ {{name}}",
-        "organizationTitle": "v organizácii {{name}}",
         "subtitle": "dáva vo veci zverejňovania otvorených údajov podnet",
         "addButton": "Uložiť",
         "commentButton": "Komentáre",
@@ -352,7 +371,11 @@
     "userName": "Login / E-mailová adresa",
     "password": "Heslo",
     "passwordConfirm": "Opakovať heslo",
+    "activationError": "Počas aktivácie používateľa nastala chyba",
+    "activationSuccessful": "Aktivácia používateľa prebehla úspešne",
     "registrationSuccessful": "Registrácia prebehla úspešne",
+    "forgottenPasswordSuccessful": "Žiadosť o obnovu hesla bola úspešne odoslaná",
+    "forgottenPasswordActivationSuccessful": "Heslo bolo úspešne zmenené",
     "applicationAddSuccessful": "Registrácia aplikácie prebehla úspešne",
     "applicationEditSuccessful": "Editácia aplikácie prebehla úspešne",
     "suggestionAddSuccessful": "Ďakujeme za váš podnet. Tím portálu ho v krátkom čase pridelí konkrétnemu poskytovateľovi, podnet vtedy zmení svoj stav na \"v riešení\".",

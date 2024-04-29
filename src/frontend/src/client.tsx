@@ -317,6 +317,35 @@ type User = {
     invitationExpiresAt: string | null;
 };
 
+export type UserActivation = {
+    id: string | null;
+    token: string | null;
+};
+
+export type UserForgottenPasswordForm = {
+    email: string;
+};
+
+export type UserForgottenPasswordActivationForm = {
+    id: string | null;
+    token: string | null;
+    password: string;
+    passwordConfirm: string;
+};
+
+export type UserLoginForm = {
+    email: string;
+    password: string;
+};
+
+export type UserRegistrationForm = {
+    email: string;
+    password: string;
+    passwordConfirm: string;
+    firstName: string;
+    lastName: string;
+};
+
 type CodelistAdminView = {
     id: string;
     label: string;
@@ -555,6 +584,151 @@ export function useUsers() {
     }, []);
 
     return [items, query, setQueryParameters, loading, error, refresh] as const;
+}
+
+export function useUserLogin() {
+    const [logging, setLogging] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const headers = useDefaultHeaders();
+
+    const login = useCallback(
+        async (request: UserLoginForm) => {
+            setLogging(true);
+            try {
+                const response: AxiosResponse<TokenResult> = await sendPost('users/login', request, headers);
+                if (!response?.data?.token) {
+                    throw new Error('Login error');
+                }
+                return { success: true, data: response };
+            } catch (err) {
+                if (err instanceof Error) {
+                    setError(err);
+                }
+                return { success: false };
+            } finally {
+                setLogging(false);
+            }
+        },
+        [headers]
+    );
+
+    return [logging, error, login] as const;
+}
+
+export function useUserForgottenPassword() {
+    const [sending, setSending] = useState(false);
+    const [success, setSuccess] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const headers = useDefaultHeaders();
+
+    const sendEmail = useCallback(
+        async (request: UserForgottenPasswordForm) => {
+            setSending(true);
+            try {
+                const response: AxiosResponse<SaveResult> = await sendPost('users/recovery', request, headers);
+                setSuccess(response.data?.success);
+                if (!response?.data?.success) {
+                    // TODO: Dynamicky zobrazovať chyby z BE
+                    throw new Error(response.data.errors?.email);
+                }
+            } catch (err) {
+                if (err instanceof Error) {
+                    setError(err);
+                }
+            } finally {
+                setSending(false);
+            }
+        },
+        [headers]
+    );
+
+    return [success, sending, error, sendEmail] as const;
+}
+
+export function useUserForgottenActivationPassword() {
+    const [sending, setSending] = useState(false);
+    const [success, setSuccess] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const headers = useDefaultHeaders();
+
+    const changePassword = useCallback(
+        async (request: UserForgottenPasswordActivationForm) => {
+            setSending(true);
+            try {
+                const response: AxiosResponse<SaveResult> = await sendPost('users/recovery-activation', request, headers);
+                setSuccess(response.data?.success);
+                if (!response?.data?.success) {
+                    // TODO: Dynamicky zobrazovať chyby z BE
+                    throw new Error(response.data.errors?.token);
+                }
+            } catch (err) {
+                if (err instanceof Error) {
+                    setError(err);
+                }
+            } finally {
+                setSending(false);
+            }
+        },
+        [headers]
+    );
+
+    return [success, sending, error, changePassword] as const;
+}
+
+export function useUserRegister() {
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const headers = useDefaultHeaders();
+
+    const register = useCallback(
+        async (request: UserRegistrationForm) => {
+            setSaving(true);
+            try {
+                const response: AxiosResponse<SaveResult> = await sendPost('users/register', request, headers);
+                if (!response?.data?.success) {
+                    // TODO: Dynamicky zobrazovať chyby z BE
+                    throw new Error(response.data.errors?.password);
+                }
+                return { success: true, data: response };
+            } catch (err) {
+                if (err instanceof Error) {
+                    setError(err);
+                }
+                return { success: false };
+            } finally {
+                setSaving(false);
+            }
+        },
+        [headers]
+    );
+
+    return [saving, error, register] as const;
+}
+
+export function useUserActivate() {
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const headers = useDefaultHeaders();
+
+    const activate = useCallback(
+        async (request: UserActivation) => {
+            setSaving(true);
+            try {
+                const response: AxiosResponse<SaveResult> = await sendPost('users/activation', request, headers);
+                if (!response?.data?.success) {
+                    throw new Error(response.data.errors.token);
+                }
+            } catch (err) {
+                if (err instanceof Error) {
+                    setError(err);
+                }
+            } finally {
+                setSaving(false);
+            }
+        },
+        [headers]
+    );
+    return [saving, error, activate] as const;
 }
 
 export function useCodelists(keys: string[]) {

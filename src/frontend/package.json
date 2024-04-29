@@ -34,12 +34,13 @@
         "react-select": "5.8.0",
         "schema-to-yup": "1.12.18",
         "typescript": "4.9.5",
-        "web-vitals": "2.1.4"
+        "web-vitals": "2.1.4",
+        "yup": "1.4.0"
     },
     "scripts": {
         "start": "react-scripts start",
-        "start:localk8s": "cross-env REACT_APP_API_URL=http://demo.nkod/ REACT_APP_NO_AUTH=true REACT_APP_CMS_API_URL=http://localhost:5000/ npm run start",
-        "start:cms": "cross-env REACT_APP_API_URL=https://wpnkod.informo.sk/ REACT_APP_NO_AUTH=true REACT_APP_CMS_API_URL=http://localhost:5000/ npm run start",
+        "start:localk8s": "cross-env REACT_APP_API_URL=http://demo.nkod/ REACT_APP_CMS_API_URL=http://localhost:5000/ npm run start",
+        "start:cms": "cross-env REACT_APP_API_URL=https://wpnkod.informo.sk/ REACT_APP_CMS_API_URL=http://localhost:5000/ npm run start",
         "build": "react-scripts build",
         "build:localk8s": "cross-env REACT_APP_API_URL=http://demo.nkod/ npm run build",
         "test": "react-scripts test",

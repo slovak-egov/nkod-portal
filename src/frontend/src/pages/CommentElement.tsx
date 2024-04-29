@@ -1,11 +1,12 @@
 import moment from 'moment';
 import { Fragment, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ICommentSorted, sendDelete } from '../cms';
+import { sendDelete } from '../cms';
 import Button from '../components/Button';
 import GridColumn from '../components/GridColumn';
 import GridRow from '../components/GridRow';
 import { MAX_COOMENT_DEPTH_MARGIN_LEFT } from '../helpers/helpers';
+import { ICommentSorted } from '../interface/cms.interface';
 import CommentForm from './CommentForm';
 
 type Props = {

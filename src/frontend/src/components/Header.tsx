@@ -1,9 +1,9 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { LanguageOptionsContext, doLogin, doLogout, supportedLanguages, useDefaultHeaders, useUserInfo } from '../client';
-import Button from './Button';
-import IdSkModule from './IdSkModule';
 import { useContext, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link, useNavigate } from 'react-router-dom';
+import { LanguageOptionsContext, TokenContext, doLogout, supportedLanguages, useDefaultHeaders, useUserInfo } from '../client';
+import Button from './Button';
+import IdSkModule from './IdSkModule';
 
 type MenuItem = {
     title: string;
@@ -12,6 +12,7 @@ type MenuItem = {
 };
 
 export default function Header() {
+    const tokenContext = useContext(TokenContext);
     const [userInfo, userInfoLoading] = useUserInfo();
     const headers = useDefaultHeaders();
 
@@ -112,15 +113,16 @@ export default function Header() {
         });
     }
 
-    const login = async () => {
-        const url = await doLogin(headers);
-        if (url) {
-            window.location.href = url;
-        }
-    };
+    // const login = async () => {
+    //     const url = await doLogin(headers);
+    //     if (url) {
+    //         window.location.href = url;
+    //     }
+    // };
 
     const logout = async () => {
         const url = await doLogout(headers);
+        tokenContext?.setToken(null);
         if (url) {
             window.location.href = url;
         }
@@ -219,8 +221,15 @@ export default function Header() {
                                                     <div
                                                         className={'idsk-header-web__main--login ' + (userInfo ? 'idsk-header-web__main--login--loggedIn' : '')}
                                                     >
-                                                        <Button className="idsk-header-web__main--login-loginbtn" onClick={login}>
-                                                            {t('login')}
+                                                        <Button className="idsk-header-web__main--login-loginbtn" onClick={() => navigate('/prihlasenie')}>
+                                                            {t('header.login')}
+                                                        </Button>
+                                                        <Button
+                                                            className="idsk-header-web__main--login-loginbtn"
+                                                            buttonType="secondary"
+                                                            onClick={() => navigate('/registracia')}
+                                                        >
+                                                            {t('header.register')}
                                                         </Button>
                                                         <div className="idsk-header-web__main--login-action">
                                                             <div className="idsk-header-web__main--login-action-text">

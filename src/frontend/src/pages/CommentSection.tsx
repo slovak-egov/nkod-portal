@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ICommentSorted, useCmsComments } from '../cms';
+import { useCmsComments } from '../cms';
 import Button from '../components/Button';
 import GridColumn from '../components/GridColumn';
 import GridRow from '../components/GridRow';
 import SimpleList from '../components/SimpleList';
 import { QueryGuard } from '../helpers/helpers';
+import { ICommentSorted } from '../interface/cms.interface';
 import CommentElement from './CommentElement';
 import CommentForm from './CommentForm';
 

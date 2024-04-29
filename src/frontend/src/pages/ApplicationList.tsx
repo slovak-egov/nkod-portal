@@ -1,13 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { OrderOption, useDocumentTitle } from '../client';
-import { Application, RequestCmsApplicationsQuery, useCmsApplicationsSearch } from '../cms';
+import { useCmsApplicationsSearch } from '../cms';
 import Breadcrumbs from '../components/Breadcrumbs';
 import Button from '../components/Button';
 import GridColumn from '../components/GridColumn';
 import GridRow from '../components/GridRow';
 import MainContent from '../components/MainContent';
 import SearchResultsCms from '../components/SearchResultsCms';
+import { Application, RequestCmsApplicationsQuery } from '../interface/cms.interface';
 import ApplicationListItem from './ApplicationListItem';
 
 const ApplicationList = () => {

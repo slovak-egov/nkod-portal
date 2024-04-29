@@ -12,7 +12,8 @@ namespace CMS.Applications
     [Route("applications")]
     [ApiController]
     [AllowAnonymous]
-    public class ApplicationController
+	[Authorize(AuthenticationSchemes = "Bearer", Policy = "MustBeAuthenticated")]
+	public class ApplicationController
     {
         private readonly IApi api;
 

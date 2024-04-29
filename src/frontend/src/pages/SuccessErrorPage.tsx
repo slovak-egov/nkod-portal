@@ -3,16 +3,17 @@ import Alert from '../components/Alert';
 import Button from '../components/Button';
 
 type Props = {
+    isSuccess: boolean;
     msg: ReactNode;
     backButtonLabel: string;
     backButtonClick: () => void;
 };
 
-export default function SuccessPage(props: Props) {
-    const { msg, backButtonLabel, backButtonClick } = props;
+export default function SuccessErrorPage(props: Props) {
+    const { msg, backButtonLabel, backButtonClick, isSuccess } = props;
     return (
         <>
-            <Alert type={'info'}>
+            <Alert type={isSuccess ? 'info' : 'warning'}>
                 <div className="govuk-!-padding-4">
                     <span className="govuk-heading-m govuk-!-font-weight-bold">{msg}</span>
                     <div>
@@ -25,3 +26,7 @@ export default function SuccessPage(props: Props) {
         </>
     );
 }
+
+SuccessErrorPage.defaultProps = {
+    isSuccess: true
+};

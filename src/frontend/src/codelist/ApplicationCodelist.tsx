@@ -1,5 +1,5 @@
 import { CodelistValue } from '../client';
-import { ApplicationType, ApplicationTheme } from '../cms';
+import { ApplicationTheme, ApplicationType } from '../interface/cms.interface';
 
 export const applicationTypeCodeList: CodelistValue[] = [
     {

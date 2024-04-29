@@ -1,8 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { OptionsOrGroups } from 'react-select';
 import Select from 'react-select/async';
-import { AutocompleteOption } from '../cms';
 import { forwardRef } from 'react';
+
+export type AutocompleteOption<T> = {
+    value: T;
+    label: string;
+};
 
 type Props<T> = {
     id: string;

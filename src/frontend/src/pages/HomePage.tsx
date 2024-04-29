@@ -1,15 +1,13 @@
 import { useState } from 'react';
 
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDocumentTitle, usePublishers } from '../client';
 import HomePagePublisher from './HomePagePublisher';
-import { useTranslation } from 'react-i18next';
-import { useCmsUser } from '../cms';
 
 export default function HomePage() {
     const [query, setQuery] = useState('');
     const navigate = useNavigate();
-    const cmsUser = useCmsUser();
 
     useDocumentTitle('');
 

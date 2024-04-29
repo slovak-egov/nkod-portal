@@ -44,8 +44,6 @@ export default function GridColumn(props: Props) {
         }
     }
 
-    autoClassName += ' ';
-
     return (
         <div className={classNames(autoClassName, className, { 'flex-end': flexEnd })} {...attributes}>
             {props.children}
