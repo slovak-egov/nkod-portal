@@ -2,7 +2,8 @@ import { Dataset } from '../client';
 
 export type AppRegistrationFormValues = {
     title: string;
-    userId?: string;
+    userId: string;
+    userEmail: string;
     description: string;
     type: ApplicationType;
     theme: ApplicationTheme;
@@ -88,7 +89,8 @@ export interface CommentFormValues {
 }
 
 export interface SuggestionFormValues {
-    userId?: string;
+    userId: string;
+    userEmail: string;
     userOrgUri?: string | null;
     orgToUri?: any;
     type: string;
@@ -176,7 +178,8 @@ export interface Pageable<T> {
 export interface Application extends Audited, Likeable, Commentable {
     id: string;
     title: string;
-    userId?: string;
+    userId: string;
+    userEmail: string;
     description: string;
     type: ApplicationType;
     theme: ApplicationTheme;

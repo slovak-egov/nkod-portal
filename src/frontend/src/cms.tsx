@@ -1,16 +1,13 @@
-import axios, { AxiosError, AxiosResponse, RawAxiosRequestHeaders } from 'axios';
+import axios, { AxiosResponse, RawAxiosRequestHeaders } from 'axios';
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useDefaultHeaders, useUserInfo } from './client';
-import { AutocompleteOption } from './components/ReactSelectElement';
+import { useDefaultHeaders, useSearchDataset, useSearchPublisher, useUserInfo } from './client';
 import { sortComments } from './helpers/helpers';
 import {
     Application,
     Audited,
     CmsDataset,
-    DatasetList,
     ICommentSorted,
-    OrganizationList,
     Pageable,
     RequestCmsApplicationsQuery,
     RequestCmsQuery,
@@ -19,146 +16,26 @@ import {
     SuggestionDetail
 } from './interface/cms.interface';
 
-const baseUrl = process.env.REACT_APP_CMS_API_URL ?? process.env.REACT_APP_API_URL + 'cms/';
+const cmsUrl = process.env.REACT_APP_CMS_API_URL;
 
-export function useEntityAdd<T>(url: string, initialValue: T) {
-    const [entity, setEntity] = useState<T>(initialValue);
-    const [genericError, setGenericError] = useState<Error | null>(null);
-    const [saving, setSaving] = useState(false);
-
-    const save = useCallback(async () => {
-        setSaving(true);
-        setGenericError(null);
-        try {
-            const response: AxiosResponse<any> = await sendPost(url, entity);
-            return { success: true, data: response };
-        } catch (err) {
-            if (err instanceof AxiosError) {
-                if (err.response?.data?.status?.type === 'danger') {
-                    setGenericError({
-                        name: err.response.data.status.body?.replace(/(<([^>]+)>)/gi, '') ?? 'Error',
-                        message: ''
-                    });
-                }
-            } else if (err instanceof Error) {
-                setGenericError(err);
-            }
-        } finally {
-            setSaving(false);
-        }
-        return null;
-    }, [entity, url]);
-
-    const setEntityProperties = useCallback(
-        (properties: Partial<T>) => {
-            setEntity({ ...entity, ...properties });
-        },
-        [entity, setEntity]
-    );
-
-    return [entity, setEntityProperties, genericError, saving, save] as const;
+export async function sendCmsPost<TInput>(url: string, input: TInput, headers?: RawAxiosRequestHeaders) {
+    return await axios.post(cmsUrl + url, input, { headers });
 }
 
-export function useEntityAddWithoutInput(url: string) {
-    const [genericError, setGenericError] = useState<Error | null>(null);
-    const [saving, setSaving] = useState(false);
-
-    const save = useCallback(async () => {
-        setSaving(true);
-        setGenericError(null);
-        try {
-            const response: AxiosResponse<any> = await sendPostWithoutInput(url);
-            return { success: true, data: response };
-        } catch (err) {
-            if (err instanceof AxiosError) {
-                if (err.response?.data?.status?.type === 'danger') {
-                    setGenericError({
-                        name: err.response.data.status.body?.replace(/(<([^>]+)>)/gi, '') ?? 'Error',
-                        message: ''
-                    });
-                }
-            } else if (err instanceof Error) {
-                setGenericError(err);
-            }
-        } finally {
-            setSaving(false);
-        }
-        return null;
-    }, [url]);
-
-    return [genericError, saving, save] as const;
+export async function sendCmsPut<TInput>(url: string, input: TInput, headers?: RawAxiosRequestHeaders) {
+    return await axios.put(cmsUrl + url, input, { headers });
 }
 
-export async function sendPost<TInput>(url: string, input: TInput, headers?: RawAxiosRequestHeaders) {
-    return await axios.post(baseUrl + url, input, { headers });
+export async function sendCmsPostWithoutInput(url: string, headers?: RawAxiosRequestHeaders) {
+    return await axios.post(cmsUrl + url, null, { headers });
 }
 
-export async function sendPut<TInput>(url: string, input: TInput, headers?: RawAxiosRequestHeaders) {
-    return await axios.put(baseUrl + url, input, { headers });
+export async function sendCmsGet(url: string, headers?: RawAxiosRequestHeaders) {
+    return await axios.get(cmsUrl + url, { headers });
 }
 
-export async function sendPostWithoutInput(url: string, headers?: RawAxiosRequestHeaders) {
-    return await axios.post(baseUrl + url, null, { headers });
-}
-
-export async function sendGet(url: string, headers?: RawAxiosRequestHeaders) {
-    return await axios.get(baseUrl + url, { headers });
-}
-
-export async function sendDelete(url: string, headers?: RawAxiosRequestHeaders) {
-    return await axios.delete(baseUrl + url, { headers });
-}
-
-export function useCmsPublisherLists({
-    language,
-    page = 1,
-    pageSize = 10000,
-    orderBy = 'name'
-}: {
-    language: string;
-    page?: number;
-    pageSize?: number;
-    orderBy?: string;
-}) {
-    const [publishers, setPublishers] = useState<AutocompleteOption<any>[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-
-    useEffect(() => {
-        async function load() {
-            setLoading(true);
-            setError(null);
-            setPublishers([]);
-            try {
-                const response = await axios.post<OrganizationList>('https://wpnkod.informo.sk/publishers/search', {
-                    language: language,
-                    page: page,
-                    pageSize: pageSize,
-                    orderBy: orderBy
-                });
-                if (response.data.items.length > 0) {
-                    setPublishers(
-                        response.data.items
-                            .map((item) => ({
-                                value: item,
-                                label: item.nameAll.sk
-                            }))
-                            .sort((a, b) => a.label.localeCompare(b.label))
-                    );
-                }
-            } catch (err) {
-                if (err instanceof Error) {
-                    setError(err);
-                }
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        load();
-    }, [language, page, pageSize, orderBy]);
-
-    return [publishers, loading, error] as const;
+export async function sendCmsDelete(url: string, headers?: RawAxiosRequestHeaders) {
+    return await axios.delete(cmsUrl + url, { headers });
 }
 
 export function useCmsApplications(autoload: boolean = true, datasetUri?: string) {
@@ -170,7 +47,7 @@ export function useCmsApplications(autoload: boolean = true, datasetUri?: string
         setLoading(true);
         setItems([]);
         try {
-            const response: AxiosResponse<Pageable<Application>> = await sendGet(`cms/applications${datasetUri ? `?datasetUri=${datasetUri}` : ''}`);
+            const response: AxiosResponse<Pageable<Application>> = await sendCmsGet(`applications${datasetUri ? `?datasetUri=${datasetUri}` : ''}`);
             setItems(response.data?.items?.sort(sortByUpdatedCreated) ?? []);
         } catch (err) {
             if (err instanceof Error) {
@@ -200,7 +77,7 @@ export function useCmsApplication(id?: string) {
         setLoading(true);
         if (id) {
             try {
-                const response: AxiosResponse<Application> = await sendGet(`cms/applications/${id}`);
+                const response: AxiosResponse<Application> = await sendCmsGet(`applications/${id}`);
 
                 setApplication(response.data ?? null);
             } catch (err) {
@@ -260,7 +137,7 @@ export function useCmsEntities<T>(url: string, initialQuery?: any) {
             setError(null);
         }
         try {
-            const response: AxiosResponse<T> = await sendPost(url, query);
+            const response: AxiosResponse<T> = await sendCmsPost(url, query);
             setItems(response.data);
             setLoading(false);
         } catch (err) {
@@ -298,7 +175,7 @@ export function useCmsLike() {
             try {
                 let response: AxiosResponse<Suggestion[]>;
                 if (!contentId && datasetUri) {
-                    response = await sendPost(
+                    response = await sendCmsPost(
                         url,
                         {
                             datasetUri,
@@ -307,7 +184,7 @@ export function useCmsLike() {
                         headers
                     );
                 } else {
-                    response = await sendPost(
+                    response = await sendCmsPost(
                         url,
                         {
                             contentId,
@@ -343,7 +220,7 @@ export function useCmsComments(contentId?: string) {
         if (contentId) {
             setLoading(true);
             try {
-                const response: AxiosResponse<Pageable<ICommentSorted>> = await sendGet(`cms/comments?contentId=${contentId}`);
+                const response: AxiosResponse<Pageable<ICommentSorted>> = await sendCmsGet(`comments?contentId=${contentId}`);
                 if (response.status === 200) {
                     setComments(sortComments(response.data?.items));
                 }
@@ -386,7 +263,7 @@ export function useCmsSuggestion(id?: string) {
         setLoading(true);
         if (id) {
             try {
-                const response: AxiosResponse<Suggestion> = await sendGet(`cms/suggestions/${id}`);
+                const response: AxiosResponse<Suggestion> = await sendCmsGet(`suggestions/${id}`);
                 const suggestionDetail: SuggestionDetail = { ...response.data } ?? null;
 
                 const publisherItems = await searchPublisher('', { key: [suggestionDetail.orgToUri] }, 1);
@@ -423,7 +300,7 @@ export function useCmsDatasets(autoload: boolean = true, datasetUri?: string) {
         setDatasets([]);
         setLoading(true);
         try {
-            const response: AxiosResponse<Pageable<CmsDataset>> = await sendGet(`cms/datasets${datasetUri ? `?datasetUri=${datasetUri}` : ''}`);
+            const response: AxiosResponse<Pageable<CmsDataset>> = await sendCmsGet(`datasets${datasetUri ? `?datasetUri=${datasetUri}` : ''}`);
             setDatasets(response.data?.items ?? []);
         } catch (err) {
             if (err instanceof Error) {
@@ -453,7 +330,7 @@ export function useCmsSuggestions(autoload: boolean = true, datasetUri?: string)
         setItems([]);
         setLoading(true);
         try {
-            const response: AxiosResponse<Pageable<Suggestion>> = await sendGet(`cms/suggestions${datasetUri ? `?datasetUri=${datasetUri}` : ''}`);
+            const response: AxiosResponse<Pageable<Suggestion>> = await sendCmsGet(`suggestions${datasetUri ? `?datasetUri=${datasetUri}` : ''}`);
             setItems(response.data?.items.sort(sortByUpdatedCreated) ?? []);
         } catch (err) {
             if (err instanceof Error) {
@@ -482,151 +359,4 @@ const sortByUpdatedCreated = (a: Audited, b: Audited) => {
     const bCreated = new Date(b.created).getTime();
 
     return bUpdated - aUpdated || aCreated - bCreated;
-};
-
-export const useCmsSearchPublisherLists = ({
-    language,
-    page = 1,
-    pageSize = 50,
-    orderBy = 'name',
-    queryText
-}: {
-    language: 'sk' | 'en';
-    page?: number;
-    pageSize?: number;
-    orderBy?: string;
-    queryText: string;
-}) => {
-    const [publishers, setPublishers] = useState<AutocompleteOption<string>[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-
-    const load = async (query: string) => {
-        setLoading(true);
-        setError(null);
-        setPublishers([]);
-        try {
-            const response = await axios.post<OrganizationList>('https://wpnkod.informo.sk/publishers/search', {
-                language: language,
-                page: page,
-                pageSize: pageSize,
-                orderBy: orderBy,
-                queryText: queryText
-            });
-            if (response.data.items.length > 0) {
-                setPublishers(
-                    response.data.items
-                        .map((item) => ({
-                            value: item.id,
-                            label: item.nameAll.sk
-                        }))
-                        .sort((a, b) => a.label.localeCompare(b.label))
-                );
-            } else {
-                setPublishers([]);
-            }
-        } catch (err) {
-            if (err instanceof Error) {
-                setError(err);
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        load(queryText);
-    }, [language, page, pageSize, orderBy, queryText]);
-
-    return [publishers, loading, error] as const;
-};
-
-export const useSearchPublisher = ({ language, query }: { language: string; query: string; filters?: any; pageSize?: number }) => {
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-    const [publishers, setPublishers] = useState<AutocompleteOption<string>[]>([]);
-
-    const load = async (query: string, filters?: any, pageSize = 50) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await axios.post<OrganizationList>('https://wpnkod.informo.sk/publishers/search', {
-                language: language,
-                page: 1,
-                filters,
-                pageSize,
-                orderBy: 'name',
-                queryText: query
-            });
-            let data: AutocompleteOption<any>[] = [];
-            if (response.data.items.length > 0) {
-                data = response.data.items
-                    .map((item) => ({
-                        value: item.key,
-                        label: item.nameAll.sk
-                    }))
-                    .sort((a, b) => a.label.localeCompare(b.label));
-            }
-            setPublishers(data);
-            return data as AutocompleteOption<string>[];
-        } catch (err) {
-            if (err instanceof Error) {
-                setError(err);
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        load(query);
-    }, [query]);
-
-    return [publishers, loading, error, load] as const;
-};
-
-export const useSearchDataset = ({ language, query, filters }: { language: string; query: string; filters?: any; pageSize?: number }) => {
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-    const [datasets, setDatasets] = useState<AutocompleteOption<string>[]>([]);
-
-    const load = async (query: string, filters?: any, pageSize = 50) => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await axios.post<DatasetList>('https://wpnkod.informo.sk/datasets/search', {
-                language,
-                page: 1,
-                filters,
-                pageSize,
-                orderBy: 'name',
-                queryText: query
-            });
-            let data: AutocompleteOption<string>[] = [];
-            if (response.data.items.length > 0) {
-                data = response.data.items
-                    .map((item) => ({
-                        value: item.key,
-                        label: item.name ?? ''
-                    }))
-                    .sort((a, b) => a.label.localeCompare(b.label));
-            }
-            setDatasets(data);
-            return data as AutocompleteOption<string>[];
-        } catch (err) {
-            if (err instanceof Error) {
-                setError(err);
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (filters) {
-            load(query);
-        }
-    }, [query]);
-
-    return [datasets, loading, error, load] as const;
 };

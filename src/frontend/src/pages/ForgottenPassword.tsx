@@ -5,6 +5,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { buildYup } from 'schema-to-yup';
 import { UserForgottenPasswordForm, useUserForgottenPassword } from '../client';
+import Alert from '../components/Alert';
 import BaseInput from '../components/BaseInput';
 import Breadcrumbs from '../components/Breadcrumbs';
 import Button from '../components/Button';
@@ -23,7 +24,7 @@ export default function ForgottenPassword() {
     const { t } = useTranslation();
 
     const yupSchema = buildYup(schema, useSchemaConfig(schema.required));
-    const [success, sending, error, sendEmail] = useUserForgottenPassword();
+    const [success, sending, errorsPassword, sendEmail] = useUserForgottenPassword();
 
     const form = useForm<UserForgottenPasswordForm>({
         resolver: yupResolver(yupSchema)
@@ -46,13 +47,8 @@ export default function ForgottenPassword() {
     return (
         <>
             <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title: t('forgottenPasswordPage.title') }]} />
-            {success || error ? (
-                <SuccessErrorPage
-                    isSuccess={success}
-                    msg={error?.message ?? t('forgottenPasswordSuccessful')}
-                    backButtonLabel={t('common.backToMain')}
-                    backButtonClick={() => navigate('/')}
-                />
+            {success ? (
+                <SuccessErrorPage msg={t('forgottenPasswordSuccessful')} backButtonLabel={t('common.backToMain')} backButtonClick={() => navigate('/')} />
             ) : (
                 <MainContent>
                     <PageHeader>{t('forgottenPasswordPage.title')}</PageHeader>
@@ -68,6 +64,16 @@ export default function ForgottenPassword() {
                                         />
                                     </GridColumn>
                                 </GridRow>
+
+                                {errorsPassword && errorsPassword?.length > 0 && (
+                                    <Alert type="warning">
+                                        {errorsPassword?.map((err, idx) => (
+                                            <p className="govuk-!-padding-left-3" key={idx}>
+                                                {err.message}
+                                            </p>
+                                        ))}
+                                    </Alert>
+                                )}
 
                                 <GridRow>
                                     <GridColumn widthUnits={1} totalUnits={2}>

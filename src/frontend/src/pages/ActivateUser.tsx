@@ -11,7 +11,7 @@ export default function ActivateUser() {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const [searchParams] = useSearchParams();
-    const [activatingUser, error, activate] = useUserActivate();
+    const [activatingUser, errors, activate] = useUserActivate();
 
     useEffect(() => {
         activate({
@@ -27,8 +27,8 @@ export default function ActivateUser() {
                 <Loading />
             ) : (
                 <SuccessErrorPage
-                    msg={error?.message ?? t('activationSuccessful')}
-                    isSuccess={!error}
+                    msg={errors?.length ? errors?.map((err, idx) => <p key={idx}>{err.message}</p>) : t('activationSuccessful')}
+                    isSuccess={!errors}
                     backButtonLabel={t('common.backToMain')}
                     backButtonClick={() => navigate('/')}
                 />

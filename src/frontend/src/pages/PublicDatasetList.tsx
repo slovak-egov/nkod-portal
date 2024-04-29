@@ -79,7 +79,7 @@ export default function PublicDatasetList() {
                                                 </Link>
                                             </GridColumn>
                                             <GridColumn widthUnits={1} totalUnits={2} flexEnd>
-                                                <LikeButton count={likeCount} contentId={cmsDatasetId} datasetUri={c.key} url={`cms/datasets/likes`} />
+                                                <LikeButton count={likeCount} contentId={cmsDatasetId} datasetUri={c.key} url={`datasets/likes`} />
                                                 <Link to={`/datasety/${c.id}/komentare`} className="no-link">
                                                     <CommentButton count={commentCount} />
                                                 </Link>

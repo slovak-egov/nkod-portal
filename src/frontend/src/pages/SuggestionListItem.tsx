@@ -37,7 +37,7 @@ const SuggestionListItem = (props: Props) => {
                                     {t('common.edit')}
                                 </Link>
                             )}
-                            <LikeButton count={suggestion.likeCount} contentId={suggestion.id} url={`cms/suggestions/likes`} />
+                            <LikeButton count={suggestion.likeCount} contentId={suggestion.id} url={`suggestions/likes`} />
                             <Link to={`/podnet/${suggestion.id}/komentare`} className="no-link">
                                 <CommentButton count={suggestion.commentCount} />
                             </Link>

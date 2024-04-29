@@ -74,9 +74,7 @@ export default function SuggestionDetail(props: Props) {
                                         labelKey="addSuggestion.fields.status"
                                     />
 
-                                    <DetailItemElement value={suggestion.userId} labelKey="common.user" />
-
-                                    {suggestion.userOrgUri && <DetailItemElement value={suggestion.userOrgUri} labelKey="common.userOrgUri" />}
+                                    <DetailItemElement value={suggestion.userEmail ?? suggestion.userId} labelKey="common.author" />
 
                                     <DetailItemElement
                                         value={moment(suggestion.created).format(DATE_FORMAT_NO_SECONDS)}

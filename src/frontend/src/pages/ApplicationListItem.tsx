@@ -36,7 +36,7 @@ const ApplicationListItem = (props: Props) => {
                                     {t('common.edit')}
                                 </Link>
                             )}
-                            <LikeButton count={app.likeCount} contentId={app.id} url={`cms/applications/likes`} />
+                            <LikeButton count={app.likeCount} contentId={app.id} url={`applications/likes`} />
                             <Link to={`/aplikacia/${app.id}/komentare`} className="no-link">
                                 <CommentButton count={app.commentCount} />
                             </Link>

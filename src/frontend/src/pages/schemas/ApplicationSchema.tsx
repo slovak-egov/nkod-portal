@@ -3,6 +3,10 @@ export const schema = {
     title: 'JSON schema for application',
     type: 'object',
     properties: {
+        userId: {
+            type: 'string',
+            format: 'uuid'
+        },
         title: {
             type: 'string'
         },
@@ -117,7 +121,11 @@ export const schema = {
         contactEmail: {
             type: 'string',
             format: 'email'
+        },
+        userEmail: {
+            type: 'string',
+            format: 'email'
         }
     },
-    required: ['title', 'description', 'type', 'theme', 'contactName', 'contactSurname', 'contactEmail']
+    required: ['title', 'description', 'type', 'theme', 'contactName', 'contactSurname', 'contactEmail', 'userEmail']
 };

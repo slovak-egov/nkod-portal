@@ -4,8 +4,8 @@ import { Controller, SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import { buildYup } from 'schema-to-yup';
-import { CodelistValue, useDefaultHeaders, useDocumentTitle, useUserInfo } from '../client';
-import { sendDelete, sendPost, sendPut, useSearchDataset, useSearchPublisher } from '../cms';
+import { CodelistValue, useDefaultHeaders, useDocumentTitle, useUserInfo, useSearchDataset, useSearchPublisher } from '../client';
+import { sendCmsDelete, sendCmsPost, sendCmsPut } from '../cms';
 import { suggestionStatusList, suggestionTypeCodeList } from '../codelist/SuggestionCodelist';
 import BaseInput from '../components/BaseInput';
 import Breadcrumbs from '../components/Breadcrumbs';
@@ -49,7 +49,8 @@ export default function SuggestionForm() {
         resolver: yupResolver(yupSchema),
         defaultValues: {
             userId: userInfo?.id,
-            orgToUri: userInfo?.companyURI,
+            userEmail: userInfo?.email,
+            orgToUri: userInfo?.publisher ?? null,
             status: SuggestionStatusCode.CREATED,
             type: SuggestionType.SUGGESTION_FOR_PUBLISHED_DATASET
         }
@@ -67,7 +68,7 @@ export default function SuggestionForm() {
     const loadFormData = useLoadData<any, Suggestion>({
         disabled: !id,
         form,
-        url: `cms/suggestions/${id}`,
+        url: `suggestions/${id}`,
         transform: async (data: Suggestion) => {
             const pubItems = await searchPublisher('', { key: [data.orgToUri] }, 1);
             const datasetItems = await searchDataset('', { publishers: [data.orgToUri] }, 9999);
@@ -82,6 +83,7 @@ export default function SuggestionForm() {
 
             const formData = {
                 ...data,
+                userEmail: data.userEmail ?? userInfo?.email,
                 orgToUri,
                 datasetUri
             };
@@ -90,7 +92,7 @@ export default function SuggestionForm() {
     });
 
     const deleteSuggestion = useCallback(async () => {
-        const result = await sendDelete(`cms/suggestions/${id}`, headers);
+        const result = await sendCmsDelete(`suggestions/${id}`, headers);
         if (result?.status === 200) {
             navigate('/podnet');
         }
@@ -99,9 +101,9 @@ export default function SuggestionForm() {
     const onSubmit: SubmitHandler<SuggestionFormValues> = async (data) => {
         let result = null;
         if (id) {
-            result = await sendPut<any>(`cms/suggestions/${id}`, data, headers);
+            result = await sendCmsPut<any>(`suggestions/${id}`, data, headers);
         } else {
-            result = await sendPost<any>(`cms/suggestions`, data, headers);
+            result = await sendCmsPost<any>(`suggestions`, data, headers);
         }
 
         if (result?.status === 200) {
@@ -147,7 +149,6 @@ export default function SuggestionForm() {
                 <>
                     <QueryGuard {...loadFormData} isNew={!id}>
                         <MainContent>
-                            {/* {watch() && JSON.stringify(form.getValues())} */}
                             <PageHeader>{t(`addSuggestion.title${id ? 'Edit' : ''}`)}</PageHeader>
                             <GridRow>
                                 <GridColumn widthUnits={2} totalUnits={3}>

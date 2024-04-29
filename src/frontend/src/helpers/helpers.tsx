@@ -2,7 +2,7 @@ import { AxiosResponse } from 'axios';
 import React, { useCallback, useEffect, useState } from 'react';
 import { FieldValues, Path, UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { sendGet } from '../cms';
+import { sendCmsGet } from '../cms';
 import ErrorAlert from '../components/ErrorAlert';
 import Loading from '../components/Loading';
 import { IComment, ICommentSorted } from '../interface/cms.interface';
@@ -25,7 +25,6 @@ interface IQueryGuardProps<T> {
 
 export const ROOT_ID = '00000000-0000-0000-0000-000000000000';
 export const MAX_COOMENT_DEPTH_MARGIN_LEFT = 10;
-// TODO: translate
 export const DATE_FORMAT = 'DD.MM.YYYY HH:mm:ss';
 export const DATE_FORMAT_NO_SECONDS = 'DD.MM.YYYY HH:mm';
 
@@ -39,7 +38,7 @@ export const useLoadData = <TForm extends FieldValues, TData>(props: IUseLoadDat
         if (!disabled) {
             setLoading(true);
             try {
-                const response: AxiosResponse<TData> = await sendGet(url);
+                const response: AxiosResponse<TData> = await sendCmsGet(url);
                 if (response) {
                     const oneEntry = response.data;
                     if (response.data) {
@@ -118,11 +117,8 @@ export function dataUrlToBlob(dataUrl: string): Blob | null {
 }
 
 export const QueryGuard = <T extends unknown>(props: IQueryGuardProps<T>) => {
-    const { loading, error, data, ErrorElement, children, isNew = false } = props;
-    if (error && ErrorElement) {
-        const err = new Error('Pri načítavaní údajov došlo k chybe.');
-        return <ErrorAlert error={err} />;
-    }
+    const { loading, data, children, isNew = false } = props;
+
     if (isNew && typeof children !== 'function') {
         return children;
     }

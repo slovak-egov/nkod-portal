@@ -6,7 +6,8 @@
         "userOrgUri": "Organizácia používateľa",
         "backToList": "Späť na zoznam",
         "backToMain": "Späť na hlavnú stránku",
-        "password": "Heslo"
+        "password": "Heslo",
+        "author": "Autor"
     },
     "validation": {
         "required": "Povinné",
@@ -39,7 +40,9 @@
     "loginPage": {
         "title": "Prihlásenie do systému",
         "subtitle": "Používateľ",
+        "failed": "Počas prihlasovania nastala chyba",
         "loginButton": "Prihlásiť sa",
+        "incorrectLoginOrPassword": "Nesprávne meno alebo heslo",
         "cancelButton": "Zrušiť",
         "socialLogin": {
             "title": "Alebo pokračovať na:",

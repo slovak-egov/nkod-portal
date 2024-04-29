@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useEffect, useState } from 'react';
+import { ReactNode, useCallback, useState } from 'react';
 
 import Checkbox from './Checkbox';
 import IdSkModule from './IdSkModule';
@@ -11,7 +11,7 @@ type Props<T> = {
     getValue: (item: T) => string;
     selectedItems: T[];
     onSelectionChange: (items: T[]) => void;
-    dataTestId: string;
+    dataTestId?: string;
 };
 
 export default function SearchFilterWithQuery<T>(props: Props<T>) {

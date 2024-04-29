@@ -3,7 +3,7 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { buildYup } from 'schema-to-yup';
 import { useDefaultHeaders, useUserInfo } from '../client';
-import { sendPost } from '../cms';
+import { sendCmsPost } from '../cms';
 import Button from '../components/Button';
 import FormElementGroup from '../components/FormElementGroup';
 import TextArea from '../components/TextArea';
@@ -45,10 +45,10 @@ export default function CommentForm(props: Props) {
             const request = {
                 datasetUri,
                 userId: userInfo?.id,
-                email: userInfo?.email || 'test@email.sk',
+                email: userInfo?.email,
                 body: data.body
             };
-            result = await sendPost<any>(`cms/datasets/comments`, request, headers);
+            result = await sendCmsPost<any>(`datasets/comments`, request, headers);
             if (result?.status === 200) {
                 // post datasets/comments returns new CmsDataset, which will be used for
                 refresh(result.data);
@@ -59,10 +59,10 @@ export default function CommentForm(props: Props) {
                 contentId,
                 parentId: parentId ?? ROOT_ID,
                 userId: userInfo?.id,
-                email: userInfo?.email || 'test@email.sk',
+                email: userInfo?.email,
                 body: data.body
             };
-            result = await sendPost<any>(`cms/comments`, request, headers);
+            result = await sendCmsPost<any>(`comments`, request, headers);
             if (result?.status === 200) {
                 refresh();
                 reset();

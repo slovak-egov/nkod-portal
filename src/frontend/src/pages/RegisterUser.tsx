@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { buildYup } from 'schema-to-yup';
 import { ref, string } from 'yup';
 import { LoginMethod, UserRegistrationForm, useUserRegister } from '../client';
+import Alert from '../components/Alert';
 import BaseInput from '../components/BaseInput';
 import Breadcrumbs from '../components/Breadcrumbs';
 import Button from '../components/Button';
@@ -25,7 +26,7 @@ export default function RegisterUser() {
     const { t } = useTranslation();
     const yupSchema = buildYup(schema, useSchemaConfig(schema.required));
     const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
-    const [savingUser, errorSaving, saveUser] = useUserRegister();
+    const [savingUser, errorsSaving, saveUser] = useUserRegister();
 
     const extendedSchema = yupSchema.shape({
         passwordConfirm: string()
@@ -57,13 +58,8 @@ export default function RegisterUser() {
     return (
         <>
             <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title: t('header.registration') }]} />
-            {saveSuccess || errorSaving ? (
-                <SuccessErrorPage
-                    isSuccess={!errorSaving}
-                    msg={errorSaving?.message ?? t('registrationSuccessful')}
-                    backButtonLabel={t('common.backToMain')}
-                    backButtonClick={() => navigate('/')}
-                />
+            {saveSuccess ? (
+                <SuccessErrorPage msg={t('registrationSuccessful')} backButtonLabel={t('common.backToMain')} backButtonClick={() => navigate('/')} />
             ) : (
                 <MainContent>
                     <PageHeader>{t('registerPage.title')}</PageHeader>
@@ -131,6 +127,16 @@ export default function RegisterUser() {
                                         </Button>
                                     </GridColumn>
                                 </GridRow>
+
+                                {errorsSaving && errorsSaving?.length > 0 && (
+                                    <Alert type="warning">
+                                        {errorsSaving?.map((err, idx) => (
+                                            <p className="govuk-!-padding-left-3" key={idx}>
+                                                {err.message}
+                                            </p>
+                                        ))}
+                                    </Alert>
+                                )}
 
                                 <h2 className="govuk-heading-m">{t('loginPage.socialLogin.title')}</h2>
 

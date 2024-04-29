@@ -7,7 +7,7 @@ import classNames from 'classnames';
 import { useNavigate, useParams } from 'react-router';
 import { buildYup } from 'schema-to-yup';
 import { CodelistValue, useDefaultHeaders, useDocumentTitle, useUserInfo } from '../client';
-import { sendDelete, sendPost, sendPut } from '../cms';
+import { sendCmsDelete, sendCmsPost, sendCmsPut } from '../cms';
 import { applicationThemeCodeList, applicationTypeCodeList } from '../codelist/ApplicationCodelist';
 import BaseInput from '../components/BaseInput';
 import Breadcrumbs from '../components/Breadcrumbs';
@@ -42,10 +42,14 @@ export default function ApplicationForm() {
         resolver: yupResolver(yupSchema),
         defaultValues: {
             userId: userInfo?.id,
+            userEmail: userInfo?.email,
             datasetURIsForm: [{ value: '' }],
             type: ApplicationType.MOBILE_APPLICATION,
             theme: ApplicationTheme.EDUCATION,
-            url: null
+            url: null,
+            contactName: userInfo?.firstName,
+            contactSurname: userInfo?.lastName,
+            contactEmail: userInfo?.email
         }
     });
 
@@ -62,7 +66,7 @@ export default function ApplicationForm() {
     const loadFormData = useLoadData<any, Application>({
         disabled: !id,
         form,
-        url: `cms/applications/${id}`,
+        url: `applications/${id}`,
         transform: (data: Application) => {
             const formData = {
                 ...data,
@@ -74,7 +78,7 @@ export default function ApplicationForm() {
     });
 
     const deleteApplication = useCallback(async () => {
-        const result = await sendDelete(`cms/applications/${id}`, headers);
+        const result = await sendCmsDelete(`applications/${id}`, headers);
         if (result?.status === 200) {
             navigate('/aplikacia');
         }
@@ -90,6 +94,7 @@ export default function ApplicationForm() {
                     ...rest,
                     id,
                     logo,
+                    userEmail: userInfo?.email,
                     logoFileName: data.logoFiles?.length ? data.logoFiles[0]?.name : null,
                     url: data.url ? data.url : null,
                     datasetURIs: data.datasetURIsForm?.map((dataset) => dataset.value) ?? []
@@ -97,9 +102,9 @@ export default function ApplicationForm() {
 
                 let result = null;
                 if (id) {
-                    result = await sendPut<any>(`cms/applications/${id}`, request, headers);
+                    result = await sendCmsPut<any>(`applications/${id}`, request, headers);
                 } else {
-                    result = await sendPost<any>(`cms/applications`, request, headers);
+                    result = await sendCmsPost<any>(`applications`, request, headers);
                 }
                 if (result?.status === 200) {
                     setSaveSuccess(true);
@@ -109,12 +114,12 @@ export default function ApplicationForm() {
             if (data.logoFiles?.length) {
                 await getBase64((data.logoFiles as FileList)?.[0])
                     .then((base64) => save(base64 as string))
-                    .catch((err) => console.error('logo error: ', err));
+                    .catch((err) => console.error('Logo error: ', err));
             } else {
                 save();
             }
         } catch (error) {
-            console.error('error: ', error);
+            console.error('Saving error: ', error);
         } finally {
             setSaving(false);
         }

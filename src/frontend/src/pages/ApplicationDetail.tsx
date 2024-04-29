@@ -1,4 +1,5 @@
 import moment from 'moment';
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { useDocumentTitle } from '../client';
@@ -12,7 +13,6 @@ import PageHeader from '../components/PageHeader';
 import { DATE_FORMAT_NO_SECONDS } from '../helpers/helpers';
 import CommentSection from './CommentSection';
 import DetailItemElement from './DetailItemElement';
-import { useRef } from 'react';
 
 type Props = {
     scrollToComments?: boolean;
@@ -71,10 +71,10 @@ export default function ApplicationDetail(props: Props) {
                                         />
                                     )}
 
-                                    {application?.datasetURIs?.length && (
+                                    {application?.datasetURIs?.filter(Boolean).length > 0 && (
                                         <DetailItemElement
-                                            value={application?.datasetURIs?.map((d) => (
-                                                <p className="govuk-!-margin-0">
+                                            value={application?.datasetURIs?.map((d, idx) => (
+                                                <p className="govuk-!-margin-0" key={idx}>
                                                     <a href={d} className="govuk-link">
                                                         {d}
                                                     </a>
@@ -96,7 +96,7 @@ export default function ApplicationDetail(props: Props) {
                                         labelKey="addApplicationPage.contactSubTitle"
                                     />
 
-                                    <DetailItemElement value={application.userId} labelKey="common.user" />
+                                    <DetailItemElement value={application.userEmail ?? application.userId} labelKey="common.author" />
 
                                     <DetailItemElement
                                         value={moment(application.created).format(DATE_FORMAT_NO_SECONDS)}

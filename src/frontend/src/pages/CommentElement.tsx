@@ -2,11 +2,11 @@ import moment from 'moment';
 import { Fragment, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDefaultHeaders, useUserInfo } from '../client';
-import { sendDelete } from '../cms';
+import { sendCmsDelete } from '../cms';
 import Button from '../components/Button';
 import GridColumn from '../components/GridColumn';
 import GridRow from '../components/GridRow';
-import { MAX_COOMENT_DEPTH_MARGIN_LEFT } from '../helpers/helpers';
+import { DATE_FORMAT, MAX_COOMENT_DEPTH_MARGIN_LEFT } from '../helpers/helpers';
 import { ICommentSorted } from '../interface/cms.interface';
 import CommentForm from './CommentForm';
 
@@ -38,7 +38,7 @@ export default function CommentElement(props: Props) {
                             <GridColumn widthUnits={1} totalUnits={4} flexEnd>
                                 <GridRow>
                                     <GridColumn widthUnits={1} totalUnits={1} flexEnd>
-                                        {comment.created && <p className="govuk-body-s">{moment(comment.created).format('DD.MM.YYYY HH:mm:ss')}</p>}
+                                        {comment.created && <p className="govuk-body-s">{moment(comment.created).format(DATE_FORMAT)}</p>}
                                     </GridColumn>
                                     {userInfo && (
                                         <GridColumn widthUnits={1} totalUnits={1} flexEnd>
@@ -55,7 +55,7 @@ export default function CommentElement(props: Props) {
                                                 buttonType="warning"
                                                 title={t('common.delete')}
                                                 onClick={async () => {
-                                                    const result = await sendDelete(`cms/comments/${comment.id}`, headers);
+                                                    const result = await sendCmsDelete(`comments/${comment.id}`, headers);
                                                     if (result?.status === 200) {
                                                         refresh();
                                                     }

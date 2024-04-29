@@ -3,6 +3,7 @@ import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { useSearchParams } from 'react-router-dom';
+import { AutocompleteOption } from './components/ReactSelectElement';
 
 const baseUrl = process.env.REACT_APP_API_URL;
 
@@ -143,10 +144,9 @@ export type UserInfo = {
     id: string;
     firstName: string;
     lastName: string;
-    email: string | null;
+    email: string;
     role: string | null;
     companyName: string;
-    companyURI: string | null;
 };
 
 export type DatasetInput = {
@@ -595,6 +595,7 @@ export function useUserLogin() {
     const [logging, setLogging] = useState(false);
     const [error, setError] = useState<Error | null>(null);
     const headers = useDefaultHeaders();
+    const { t } = useTranslation();
 
     const login = useCallback(
         async (request: UserLoginForm) => {
@@ -602,13 +603,13 @@ export function useUserLogin() {
             try {
                 const response: AxiosResponse<TokenResult> = await sendPost('users/login', request, headers);
                 if (!response?.data?.token) {
-                    throw new Error('Login error');
+                    throw new Error(t('loginPage.failed'));
                 }
-                return { success: true, data: response };
+                return { success: Boolean(response?.data?.token), data: response };
             } catch (err) {
                 if (err instanceof AxiosError) {
                     if (err.response?.status === 403) {
-                        setError(new Error('Nesprávne meno alebo heslo'));
+                        setError(new Error(t('loginPage.incorrectLoginOrPassword')));
                     } else {
                         setError(err);
                     }
@@ -627,7 +628,7 @@ export function useUserLogin() {
 export function useUserForgottenPassword() {
     const [sending, setSending] = useState(false);
     const [success, setSuccess] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
+    const [errors, setErrors] = useState<Error[] | null>(null);
     const headers = useDefaultHeaders();
 
     const sendEmail = useCallback(
@@ -637,12 +638,11 @@ export function useUserForgottenPassword() {
                 const response: AxiosResponse<SaveResult> = await sendPost('users/recovery', request, headers);
                 setSuccess(response.data?.success);
                 if (!response?.data?.success) {
-                    // TODO: Dynamicky zobrazovať chyby z BE
-                    throw new Error(response.data.errors?.email);
+                    setErrors(concatErrors(response.data.errors));
                 }
             } catch (err) {
                 if (err instanceof Error) {
-                    setError(err);
+                    setErrors([err]);
                 }
             } finally {
                 setSending(false);
@@ -651,13 +651,13 @@ export function useUserForgottenPassword() {
         [headers]
     );
 
-    return [success, sending, error, sendEmail] as const;
+    return [success, sending, errors, sendEmail] as const;
 }
 
 export function useUserForgottenActivationPassword() {
     const [sending, setSending] = useState(false);
     const [success, setSuccess] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
+    const [errors, setErrors] = useState<Error[] | null>(null);
     const headers = useDefaultHeaders();
 
     const changePassword = useCallback(
@@ -667,12 +667,11 @@ export function useUserForgottenActivationPassword() {
                 const response: AxiosResponse<SaveResult> = await sendPost('users/recovery-activation', request, headers);
                 setSuccess(response.data?.success);
                 if (!response?.data?.success) {
-                    // TODO: Dynamicky zobrazovať chyby z BE
-                    throw new Error(response.data.errors?.token);
+                    setErrors(concatErrors(response.data.errors));
                 }
             } catch (err) {
                 if (err instanceof Error) {
-                    setError(err);
+                    setErrors([err]);
                 }
             } finally {
                 setSending(false);
@@ -681,12 +680,12 @@ export function useUserForgottenActivationPassword() {
         [headers]
     );
 
-    return [success, sending, error, changePassword] as const;
+    return [success, sending, errors, changePassword] as const;
 }
 
 export function useUserRegister() {
     const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
+    const [errors, setErrors] = useState<Error[] | null>(null);
     const headers = useDefaultHeaders();
 
     const register = useCallback(
@@ -695,13 +694,12 @@ export function useUserRegister() {
             try {
                 const response: AxiosResponse<SaveResult> = await sendPost('users/register', request, headers);
                 if (!response?.data?.success) {
-                    // TODO: Dynamicky zobrazovať chyby z BE
-                    throw new Error(response.data.errors?.password);
+                    setErrors(concatErrors(response.data.errors));
                 }
-                return { success: true, data: response };
+                return { success: response?.data?.success, data: response };
             } catch (err) {
                 if (err instanceof Error) {
-                    setError(err);
+                    setErrors([err]);
                 }
                 return { success: false };
             } finally {
@@ -711,12 +709,12 @@ export function useUserRegister() {
         [headers]
     );
 
-    return [saving, error, register] as const;
+    return [saving, errors, register] as const;
 }
 
 export function useUserActivate() {
     const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
+    const [errors, setErrors] = useState<Error[] | null>(null);
     const headers = useDefaultHeaders();
 
     const activate = useCallback(
@@ -725,11 +723,11 @@ export function useUserActivate() {
             try {
                 const response: AxiosResponse<SaveResult> = await sendPost('users/activation', request, headers);
                 if (!response?.data?.success) {
-                    throw new Error(response.data.errors.token);
+                    setErrors(concatErrors(response.data.errors));
                 }
             } catch (err) {
                 if (err instanceof Error) {
-                    setError(err);
+                    setErrors([err]);
                 }
             } finally {
                 setSaving(false);
@@ -737,7 +735,7 @@ export function useUserActivate() {
         },
         [headers]
     );
-    return [saving, error, activate] as const;
+    return [saving, errors, activate] as const;
 }
 
 export function useCodelists(keys: string[]) {
@@ -1255,4 +1253,165 @@ export function useEndpointUrl() {
     }, []);
 
     return endpointUrl;
+}
+
+export const useSearchPublisher = ({ language, query }: { language: string; query: string; filters?: any; pageSize?: number }) => {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const [publishers, setPublishers] = useState<AutocompleteOption<string>[]>([]);
+    const headers = useDefaultHeaders();
+
+    const load = async (query: string, filters?: any, pageSize = 50) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await sendPost(
+                'publishers/search',
+                {
+                    language: language,
+                    page: 1,
+                    filters,
+                    pageSize,
+                    orderBy: 'name',
+                    queryText: query
+                },
+                headers
+            );
+            let data: AutocompleteOption<string>[] = [];
+            if (response.data.items.length > 0) {
+                data = response.data.items
+                    .map((item: Publisher) => ({
+                        value: item.key,
+                        label: item?.nameAll?.sk
+                    }))
+                    .sort((a: AutocompleteOption<string>, b: AutocompleteOption<string>) => a.label.localeCompare(b.label));
+            }
+            setPublishers(data);
+            return data as AutocompleteOption<string>[];
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        load(query);
+    }, [query]);
+
+    return [publishers, loading, error, load] as const;
+};
+
+export const useSearchDataset = ({ language, query, filters }: { language: string; query: string; filters?: any; pageSize?: number }) => {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const [datasets, setDatasets] = useState<AutocompleteOption<string>[]>([]);
+    const headers = useDefaultHeaders();
+
+    const load = async (query: string, filters?: any, pageSize = 50) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await sendPost(
+                'datasets/search',
+                {
+                    language,
+                    page: 1,
+                    filters,
+                    pageSize,
+                    orderBy: 'name',
+                    queryText: query
+                },
+                headers
+            );
+            let data: AutocompleteOption<string>[] = [];
+            if (response.data.items.length > 0) {
+                data = response.data.items
+                    .map((item: Dataset) => ({
+                        value: item.key,
+                        label: item.name ?? ''
+                    }))
+                    .sort((a: AutocompleteOption<string>, b: AutocompleteOption<string>) => a.label.localeCompare(b.label));
+            }
+            setDatasets(data);
+            return data as AutocompleteOption<string>[];
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (filters) {
+            load(query);
+        }
+    }, [query]);
+
+    return [datasets, loading, error, load] as const;
+};
+
+export function usePublisherLists({
+    language,
+    page = 1,
+    pageSize = 10000,
+    orderBy = 'name'
+}: {
+    language: string;
+    page?: number;
+    pageSize?: number;
+    orderBy?: string;
+}) {
+    const [publishers, setPublishers] = useState<AutocompleteOption<any>[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const headers = useDefaultHeaders();
+
+    useEffect(() => {
+        async function load() {
+            setLoading(true);
+            setError(null);
+            setPublishers([]);
+            try {
+                const response = await sendPost(
+                    'publishers/search',
+                    {
+                        language: language,
+                        page: page,
+                        pageSize: pageSize,
+                        orderBy: orderBy
+                    },
+                    headers
+                );
+                if (response.data.items.length > 0) {
+                    setPublishers(
+                        response.data.items
+                            .map((item: Publisher) => ({
+                                value: item,
+                                label: item?.nameAll?.sk
+                            }))
+                            .sort((a: AutocompleteOption<Publisher>, b: AutocompleteOption<Publisher>) => a.label.localeCompare(b.label))
+                    );
+                }
+            } catch (err) {
+                if (err instanceof Error) {
+                    setError(err);
+                }
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        load();
+    }, [language, page, pageSize, orderBy]);
+
+    return [publishers, loading, error] as const;
+}
+
+function concatErrors(errors: { [id: string]: string }) {
+    return Object.keys(errors)?.map((errorKey) => new Error(errors[errorKey]));
 }

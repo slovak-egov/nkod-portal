@@ -1,6 +1,6 @@
 import { PropsWithChildren, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useCmsPublisherLists } from '../cms';
+import { usePublisherLists } from '../client';
 import { applicationThemeCodeList, applicationTypeCodeList } from '../codelist/ApplicationCodelist';
 import { suggestionStatusList, suggestionTypeCodeList } from '../codelist/SuggestionCodelist';
 import { RequestCmsQuery } from '../interface/cms.interface';
@@ -38,7 +38,7 @@ export type Props<T> = {
 } & PropsWithChildren;
 
 function PublisherFilter(props: { selectedValues: string[]; onChange: (values: string[]) => void }) {
-    const [publishers] = useCmsPublisherLists({ language: 'sk' });
+    const [publishers] = usePublisherLists({ language: 'sk' });
     const { t } = useTranslation();
 
     if (publishers && publishers.length > 0) {
@@ -50,7 +50,6 @@ function PublisherFilter(props: { selectedValues: string[]; onChange: (values: s
                 <SearchFilterWithQuery<FilterValue>
                     key="publishers"
                     title={t('publishers')}
-                    dataTestId="sr-filter-publishers"
                     searchElementTitle={t('publishers')}
                     items={options}
                     getLabel={(e) => e.label}
@@ -64,9 +63,9 @@ function PublisherFilter(props: { selectedValues: string[]; onChange: (values: s
     return <></>;
 }
 
-function GenericFilter(props: { values: any[]; key: string; titleKey: string; selectedValues: string[]; onChange: (values: string[]) => void }) {
+function GenericFilter(props: { values: any[]; titleKey: string; selectedValues: string[]; onChange: (values: string[]) => void }) {
     const { t } = useTranslation();
-    const { values, key, titleKey, selectedValues, onChange } = props;
+    const { values, titleKey, selectedValues, onChange } = props;
 
     if (values && values.length > 0) {
         const options: FilterValue[] = [];
@@ -75,9 +74,7 @@ function GenericFilter(props: { values: any[]; key: string; titleKey: string; se
         if (options.length > 0) {
             return (
                 <SearchFilterWithQuery<FilterValue>
-                    key={key}
                     title={t(titleKey)}
-                    dataTestId={`sr-filter-${key}`}
                     searchElementTitle={t(titleKey)}
                     items={options}
                     getLabel={(e) => e.label}
@@ -151,7 +148,7 @@ export default function SearchResultsCms<T extends RequestCmsQuery>(props: Props
                         </div>
                     ) : null}
 
-                    {props.filters.map((codelistId) => {
+                    {props.filters.map((codelistId, idx) => {
                         const query = props.query as any;
                         switch (codelistId) {
                             case 'publishers':

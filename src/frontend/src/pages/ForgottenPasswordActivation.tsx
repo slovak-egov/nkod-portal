@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router';
 
 import { yupResolver } from '@hookform/resolvers/yup';
 import { SubmitHandler, useForm } from 'react-hook-form';
+import { useSearchParams } from 'react-router-dom';
 import { buildYup } from 'schema-to-yup';
+import { ref, string } from 'yup';
 import { UserForgottenPasswordActivationForm, useUserForgottenActivationPassword } from '../client';
+import Alert from '../components/Alert';
 import BaseInput from '../components/BaseInput';
 import Breadcrumbs from '../components/Breadcrumbs';
 import Button from '../components/Button';
@@ -16,15 +19,13 @@ import PageHeader from '../components/PageHeader';
 import { useSchemaConfig } from '../helpers/helpers';
 import SuccessErrorPage from './SuccessErrorPage';
 import { schema } from './schemas/ForgottenPasswordActivationSchema';
-import { ref, string } from 'yup';
-import { useSearchParams } from 'react-router-dom';
 
 export default function ForgottenPasswordActivation() {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const [searchParams] = useSearchParams();
     const yupSchema = buildYup(schema, useSchemaConfig(schema.required));
-    const [success, sending, error, changePassword] = useUserForgottenActivationPassword();
+    const [success, sending, errorsActivation, changePassword] = useUserForgottenActivationPassword();
 
     const extendedSchema = yupSchema.shape({
         passwordConfirm: string()
@@ -57,10 +58,9 @@ export default function ForgottenPasswordActivation() {
     return (
         <>
             <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title: t('forgottenPasswordPage.activation.newPassword') }]} />
-            {success || error ? (
+            {success ? (
                 <SuccessErrorPage
-                    isSuccess={success}
-                    msg={error?.message ?? t('forgottenPasswordActivationSuccessful')}
+                    msg={t('forgottenPasswordActivationSuccessful')}
                     backButtonLabel={t('common.backToMain')}
                     backButtonClick={() => navigate('/')}
                 />
@@ -88,6 +88,16 @@ export default function ForgottenPasswordActivation() {
                                         />
                                     </GridColumn>
                                 </GridRow>
+
+                                {errorsActivation && errorsActivation?.length > 0 && (
+                                    <Alert type="warning">
+                                        {errorsActivation?.map((err, idx) => (
+                                            <p className="govuk-!-padding-left-3" key={idx}>
+                                                {err.message}
+                                            </p>
+                                        ))}
+                                    </Alert>
+                                )}
 
                                 <GridRow>
                                     <GridColumn widthUnits={1} totalUnits={2}>
