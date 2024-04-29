@@ -230,6 +230,7 @@ namespace CMS.Suggestions
 			post.Suggestion.DatasetUri = dto.DatasetUri;
 			post.Suggestion.Type.Value = dto.Type;
 			post.Suggestion.Status.Value = dto.Status;
+			post.LastModified = DateTime.Now;
 
 			await api.Posts.SaveAsync(post);
 			return Results.Ok();

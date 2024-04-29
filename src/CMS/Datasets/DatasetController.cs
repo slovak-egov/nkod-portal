@@ -116,6 +116,7 @@ namespace CMS.Datasets
 			var post = await api.Posts.GetByIdAsync<DatasetPost>(id);
 
 			post.Title = dto.DatasetUri;
+			post.LastModified = DateTime.Now;
 
 			await api.Posts.SaveAsync(post);
 			return Results.Ok();

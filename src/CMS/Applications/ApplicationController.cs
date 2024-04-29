@@ -239,8 +239,9 @@ namespace CMS.Applications
             post.Application.ContactSurname = dto.ContactSurname;
             post.Application.ContactEmail = dto.ContactEmail;
             post.Application.DatasetURIs = (dto.DatasetURIs != null) ? new MultiSelectField<string> { Value = dto.DatasetURIs } : null;
+			post.LastModified = DateTime.Now;
 
-            await api.Posts.SaveAsync(post);
+			await api.Posts.SaveAsync(post);
             return Results.Ok();
         }
 
