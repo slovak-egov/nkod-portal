@@ -70,11 +70,11 @@ namespace IAM
         {
             string externalId = $"{authScheme}:{id}";
 
-            UserRecord? user = await Users.FirstOrDefaultAsync(u => u.ExternalId == id);
+            UserRecord? user = await Users.FirstOrDefaultAsync(u => u.ExternalId == externalId);
 
             if (user is null)
             {
-                if (user is null && !string.IsNullOrEmpty(firstName) && !string.IsNullOrEmpty(lastName) && !string.IsNullOrEmpty(email))
+                if (!string.IsNullOrEmpty(firstName) && !string.IsNullOrEmpty(lastName) && !string.IsNullOrEmpty(email))
                 {
                     if (!await Users.AnyAsync(u => u.Email == email))
                     {

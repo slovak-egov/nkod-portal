@@ -1245,6 +1245,8 @@ app.MapGet("/signin-google", async ([FromServices] ApplicationDbContext context,
 
                         if (userInfo is not null)
                         {
+                            logger.LogInformation(JsonConvert.SerializeObject(userInfo));
+
                             string? email = userInfo.Email;
                             string? id = userInfo.Id;
                             string? firstName = userInfo.GivenName;
