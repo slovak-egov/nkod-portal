@@ -37,7 +37,7 @@ builder.AddPiranha(options =>
 		};
 	});
 
-    builder.Services.AddAuthorization(options => 
+	options.Services.AddAuthorization(options => 
 	{
 		options.AddPolicy("MustBeAuthenticated", policy =>
 		{
@@ -118,6 +118,9 @@ app.UsePiranha(options =>
         .AllowAnyHeader()
         .SetIsOriginAllowed(_ => app.Environment.IsDevelopment())
         .AllowCredentials());
+
+	app.UseAuthentication();
+	app.UseAuthorization();
 });
 
 app.UseSwagger();
@@ -128,8 +131,7 @@ app.UseSwaggerUI(options =>
     options.RoutePrefix = string.Empty;
 });
 
-app.UseAuthentication();
-
-app.UseAuthorization();
+//app.UseAuthentication();
+//app.UseAuthorization();
 
 app.Run();

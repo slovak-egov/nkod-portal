@@ -3,6 +3,7 @@ using CMS.Likes;
 using CMS.Suggestions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using Piranha;
 using Piranha.Extend.Fields;
 using Piranha.Models;
@@ -13,11 +14,11 @@ namespace CMS.Applications
     [ApiController]
     [AllowAnonymous]
 	[Authorize(AuthenticationSchemes = "Bearer", Policy = "MustBeAuthenticated")]
-	public class ApplicationController
+	public class ApplicationController : ControllerBase
     {
         private readonly IApi api;
 
-        public ApplicationController(IApi api)
+		public ApplicationController(IApi api)
         {
             this.api = api;
         }
@@ -26,8 +27,9 @@ namespace CMS.Applications
 		[Route("")]
 		public async Task<ApplicationSearchResponse> Get(string datasetUri, int? pageNumber, int? pageSize)
 		{
-			var page = await api.Pages.GetBySlugAsync(ApplicationsPage.WellKnownSlug);
-			var archive = await api.Archives.GetByIdAsync<ApplicationPost>(page.Id);
+			var pageId = await GetArchiveGuidAsync();
+			var archive = await api.Archives.GetByIdAsync<ApplicationPost>(pageId);
+
 			int pn = 0;
 			int ps = 100000;
 			PaginationMetadata paginationMetadata = null;
@@ -100,8 +102,8 @@ namespace CMS.Applications
 		[Route("search")]
 		public async Task<ApplicationSearchResponse> Search(ApplicationSearchRequest filter)
 		{
-			var page = await api.Pages.GetBySlugAsync(ApplicationsPage.WellKnownSlug);
-			var archive = await api.Archives.GetByIdAsync<ApplicationPost>(page.Id);
+			var pageId = await GetArchiveGuidAsync();
+			var archive = await api.Archives.GetByIdAsync<ApplicationPost>(pageId);
 			int pn = 0;
 			int ps = 100000;
 			PaginationMetadata paginationMetadata = null;

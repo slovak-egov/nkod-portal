@@ -14,7 +14,7 @@ namespace CMS.Comments
 	[ApiController]
 	[AllowAnonymous]
 	[Authorize(AuthenticationSchemes = "Bearer", Policy = "MustBeAuthenticated")]
-	public class CommentController
+	public class CommentController : ControllerBase
 	{
 		private readonly IApi api;
 

@@ -14,8 +14,8 @@ namespace CMS.Suggestions
     [ApiController]
     [AllowAnonymous]
 	[Authorize(AuthenticationSchemes = "Bearer", Policy = "MustBeAuthenticated")]
-	public class SuggestionController
-    {
+	public class SuggestionController : ControllerBase
+	{
         private readonly IApi api;
 
         public SuggestionController(IApi api)
@@ -27,8 +27,8 @@ namespace CMS.Suggestions
 		[Route("")]
 		public async Task<SuggestionSearchResponse> Get(string datasetUri, int? pageNumber, int? pageSize)
 		{
-			var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
-			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id);
+			var pageId = await GetArchiveGuidAsync();
+			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(pageId);
 			int pn = 0;
             int ps = 100000;
 			PaginationMetadata paginationMetadata = null;
@@ -95,8 +95,8 @@ namespace CMS.Suggestions
 		[Route("search")]
 		public async Task<SuggestionSearchResponse> Search(SuggestionSearchRequest filter)
 		{
-			var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
-			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(page.Id);
+			var pageId = await GetArchiveGuidAsync();
+			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(pageId);
 			int pn = 0;
 			int ps = 100000;
 			PaginationMetadata paginationMetadata = null;

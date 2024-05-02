@@ -9,6 +9,7 @@ using Piranha.Models;
 using SixLabors.ImageSharp.Formats.Gif;
 using System.Linq;
 using System.Text.Json.Serialization;
+using CMS.Applications;
 
 namespace CMS.Datasets
 {
@@ -16,7 +17,7 @@ namespace CMS.Datasets
     [ApiController]
     [AllowAnonymous]
 	[Authorize(AuthenticationSchemes = "Bearer", Policy = "MustBeAuthenticated")]
-	public class DatasetController
+	public class DatasetController : ControllerBase
 	{
         private readonly IApi api;
 
@@ -29,8 +30,8 @@ namespace CMS.Datasets
 		[Route("")]
 		public async Task<DatasetSearchResponse> Get(string datasetUri, int? pageNumber, int? pageSize)
 		{
-			var page = await api.Pages.GetBySlugAsync(DatasetsPage.WellKnownSlug);
-			var archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
+			var pageId = await GetArchiveGuidAsync();			
+			var archive = await api.Archives.GetByIdAsync<DatasetPost>(pageId);
 			int pn = 0;
             int ps = 100000;
 			PaginationMetadata paginationMetadata = null;
@@ -165,8 +166,8 @@ namespace CMS.Datasets
 
 			if (dto.ContentId == null)
 			{
-				var page = await api.Pages.GetBySlugAsync(DatasetsPage.WellKnownSlug);
-				var archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
+				var pageId = await GetArchiveGuidAsync();
+				var archive = await api.Archives.GetByIdAsync<DatasetPost>(pageId);
 				post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
 				IResult res = null;
 				Ok<Guid> resOK;
@@ -192,7 +193,7 @@ namespace CMS.Datasets
 					}
 					else
 					{
-						archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
+						archive = await api.Archives.GetByIdAsync<DatasetPost>(pageId);
 						post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
 					}
 				}
@@ -236,8 +237,8 @@ namespace CMS.Datasets
 		[Route("comments")]
 		public async Task<IResult> AddComment(DatasetCommentDto dto)
 		{
-			var page = await api.Pages.GetBySlugAsync(DatasetsPage.WellKnownSlug);
-			var archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
+			var pageId = await GetArchiveGuidAsync();
+			var archive = await api.Archives.GetByIdAsync<DatasetPost>(pageId);
 			DatasetPost post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
 			PageComment comment = null;
 			IResult res = null;
@@ -264,7 +265,7 @@ namespace CMS.Datasets
 				}
 				else
 				{
-					archive = await api.Archives.GetByIdAsync<DatasetPost>(page.Id);
+					archive = await api.Archives.GetByIdAsync<DatasetPost>(pageId);
 					post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
 				}
             }
