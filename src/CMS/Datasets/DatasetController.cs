@@ -155,7 +155,7 @@ namespace CMS.Datasets
 
 		[HttpPost]
 		[Route("likes")]
-		public async Task<IResult> AddLike(DatasetLikeDto dto)
+		public async Task<IResult> AddRemoveLike(DatasetLikeDto dto)
 		{
 			DatasetPost post = null;
 
@@ -214,14 +214,15 @@ namespace CMS.Datasets
 
                 if (likes.Contains(dto.UserId))
                 {
-                    return Results.Problem("Attempt to add next like by same user!");
+					likes.Remove(dto.UserId);
                 }
                 else
                 {
                     likes.Add(dto.UserId);
-                    post.Dataset.Likes.Value = likes;
                 }
-            }
+
+				post.Dataset.Likes.Value = likes;
+			}
             else 
             {
                 List<Guid> userIds = new List<Guid>();
@@ -230,7 +231,7 @@ namespace CMS.Datasets
 			}
 
 			await api.Posts.SaveAsync(post);
-			return Results.Ok<Guid>(post.Id);
+			return Results.Ok<DatasetDto>(Convert(post));
 		}
 
 		[HttpPost]

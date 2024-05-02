@@ -1,4 +1,5 @@
 ﻿using CMS.Comments;
+using CMS.Datasets;
 using CMS.Likes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -268,7 +269,7 @@ namespace CMS.Suggestions
 
 		[HttpPost]
 		[Route("likes")]
-		public async Task<IResult> AddLike(LikeDto dto)
+		public async Task<IResult> AddRemoveLike(LikeDto dto)
 		{
 			var post = await api.Posts.GetByIdAsync<SuggestionPost>(dto.ContentId);
 
@@ -276,16 +277,17 @@ namespace CMS.Suggestions
             {
                 var likes = post.Suggestion.Likes.Value.ToList();
 
-                if (likes.Contains(dto.UserId))
-                {
-                    return Results.Problem("Attempt to add next like by same user!");
-                }
-                else
-                {
-                    likes.Add(dto.UserId);
-                    post.Suggestion.Likes.Value = likes;
-                }
-            }
+				if (likes.Contains(dto.UserId))
+				{
+					likes.Remove(dto.UserId);
+				}
+				else
+				{
+					likes.Add(dto.UserId);
+				}
+
+				post.Suggestion.Likes.Value = likes;
+			}
             else 
             {
                 List<Guid> userIds = new List<Guid>();
@@ -294,7 +296,7 @@ namespace CMS.Suggestions
 			}
 
 			await api.Posts.SaveAsync(post);
-			return Results.Ok();
+			return Results.Ok<SuggestionDto>(Convert(post));
 		}
 	}
 }

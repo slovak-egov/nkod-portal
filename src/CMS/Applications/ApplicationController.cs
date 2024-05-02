@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Piranha;
 using Piranha.Extend.Fields;
 using Piranha.Models;
+using CMS.Datasets;
 
 namespace CMS.Applications
 {
@@ -279,7 +280,7 @@ namespace CMS.Applications
 
 		[HttpPost]
 		[Route("likes")]
-		public async Task<IResult> AddLike(LikeDto dto)
+		public async Task<IResult> AddRemoveLike(LikeDto dto)
 		{
 			var post = await api.Posts.GetByIdAsync<ApplicationPost>(dto.ContentId);
 
@@ -289,13 +290,14 @@ namespace CMS.Applications
 
 				if (likes.Contains(dto.UserId))
 				{
-					return Results.Conflict("Attempt to add next like by same user!");
+					likes.Remove(dto.UserId);
 				}
 				else
 				{
 					likes.Add(dto.UserId);
-					post.Application.Likes.Value = likes;
 				}
+
+				post.Application.Likes.Value = likes;
 			}
 			else
 			{
@@ -305,7 +307,7 @@ namespace CMS.Applications
 			}
 
 			await api.Posts.SaveAsync(post);
-			return Results.Ok();
+			return Results.Ok<ApplicationDto>(Convert(post));
 		}
 	}
 }

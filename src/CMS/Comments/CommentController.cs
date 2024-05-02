@@ -1,4 +1,5 @@
 ﻿using CMS.Applications;
+using CMS.Datasets;
 using CMS.Suggestions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -100,6 +101,17 @@ namespace CMS.Comments
 
 			await api.Posts.SaveCommentAsync(dto.ContentId, comment);
 			return Results.Ok<Guid>(comment.Id);
+		}
+
+		[HttpPut("{id}")]
+		public async Task<IResult> Update(Guid id, CommentDto dto)
+		{
+			Comment comment = await api.Posts.GetCommentByIdAsync(id);
+
+			comment.Body = dto.Body;
+
+			await api.Posts.SaveCommentAsync(dto.ContentId, comment);
+			return Results.Ok();
 		}
 
 		[HttpDelete("{id}")]
