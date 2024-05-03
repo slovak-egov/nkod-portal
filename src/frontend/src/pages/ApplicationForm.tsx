@@ -6,7 +6,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import classNames from 'classnames';
 import { useNavigate, useParams } from 'react-router';
 import { buildYup } from 'schema-to-yup';
-import { CodelistValue, useDefaultHeaders, useDocumentTitle, useUserInfo } from '../client';
+import { CodelistValue, useDefaultHeaders, useDocumentTitle, useUserInfo, useUserPermissions } from '../client';
 import { sendCmsDelete, sendCmsPost, sendCmsPut } from '../cms';
 import { applicationThemeCodeList, applicationTypeCodeList } from '../codelist/ApplicationCodelist';
 import BaseInput from '../components/BaseInput';
@@ -31,7 +31,9 @@ export default function ApplicationForm() {
     const headers = useDefaultHeaders();
     const commentsRef = useRef(null);
     const [saving, setSaving] = useState<boolean>();
+    const [editable, setEditable] = useState<boolean>(false);
     const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+    const { isSuperAdmin, isMine } = useUserPermissions();
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { id } = useParams();
@@ -73,6 +75,9 @@ export default function ApplicationForm() {
                 logoFiles: data.logo ? dataUrlToFileList([data.logo], [data.logoFileName]) : null,
                 datasetURIsForm: data.datasetURIs?.length > 0 ? data.datasetURIs?.map((dataset) => ({ value: dataset })) : [{ value: '' }]
             };
+
+            //All users can edit their own suggestions while in created state
+            setEditable(isSuperAdmin || isMine(data.userId));
             return formData;
         }
     });
@@ -165,12 +170,12 @@ export default function ApplicationForm() {
                                         <FormElementGroup
                                             label={t('addApplicationPage.fields.applicationName')}
                                             errorMessage={errors.title?.message}
-                                            element={(id) => <BaseInput id={id} disabled={saving} {...register('title')} />}
+                                            element={(id) => <BaseInput id={id} disabled={saving || !editable} {...register('title')} />}
                                         />
                                         <FormElementGroup
                                             label={t('addApplicationPage.fields.applicationDescription')}
                                             errorMessage={errors.description?.message}
-                                            element={(id) => <TextArea id={id} disabled={saving} {...register('description')} />}
+                                            element={(id) => <TextArea id={id} disabled={saving || !editable} {...register('description')} />}
                                         />
 
                                         <Controller
@@ -181,7 +186,7 @@ export default function ApplicationForm() {
                                                     element={(id) => (
                                                         <SelectElementItems<CodelistValue>
                                                             id={id}
-                                                            disabled={saving}
+                                                            disabled={saving || !editable}
                                                             options={applicationTypeCodeList}
                                                             selectedValue={field.value}
                                                             onChange={field.onChange}
@@ -203,7 +208,7 @@ export default function ApplicationForm() {
                                                     element={(id) => (
                                                         <SelectElementItems<CodelistValue>
                                                             id={id}
-                                                            disabled={saving}
+                                                            disabled={saving || !editable}
                                                             options={applicationThemeCodeList}
                                                             selectedValue={field.value}
                                                             onChange={field.onChange}
@@ -219,7 +224,9 @@ export default function ApplicationForm() {
 
                                         <FormElementGroup
                                             label={t('addApplicationPage.fields.applicationUrl')}
-                                            element={(id) => <BaseInput id={id} disabled={saving} {...register('url')} placeholder="https://..." />}
+                                            element={(id) => (
+                                                <BaseInput id={id} disabled={saving || !editable} {...register('url')} placeholder="https://..." />
+                                            )}
                                         />
 
                                         {watch('logo') && (
@@ -243,7 +250,7 @@ export default function ApplicationForm() {
 
                                         <FormElementGroup
                                             label={t(`addApplicationPage.fields.applicationLogo${getValues('logoFiles') ? 'Change' : ''}`)}
-                                            element={(id) => <FileUpload id={id} disabled={saving} {...register('logoFiles')} />}
+                                            element={(id) => <FileUpload id={id} disabled={saving || !editable} {...register('logoFiles')} />}
                                         />
 
                                         {fields.map((field, index) => {
@@ -255,7 +262,11 @@ export default function ApplicationForm() {
                                                         <>
                                                             <GridRow>
                                                                 <GridColumn widthUnits={3} totalUnits={4}>
-                                                                    <BaseInput id={id} disabled={saving} {...register(`datasetURIsForm.${index}.value`)} />
+                                                                    <BaseInput
+                                                                        id={id}
+                                                                        disabled={saving || !editable}
+                                                                        {...register(`datasetURIsForm.${index}.value`)}
+                                                                    />
                                                                 </GridColumn>
                                                                 <GridColumn widthUnits={1} totalUnits={4}>
                                                                     {fields.length > 1 && (
@@ -302,26 +313,28 @@ export default function ApplicationForm() {
                                         <FormElementGroup
                                             label={t('addApplicationPage.fields.contactFirstName')}
                                             errorMessage={errors.contactName?.message}
-                                            element={(id) => <BaseInput id={id} disabled={saving} {...register('contactName')} />}
+                                            element={(id) => <BaseInput id={id} disabled={saving || !editable} {...register('contactName')} />}
                                         />
                                         <FormElementGroup
                                             label={t('addApplicationPage.fields.contactLastName')}
                                             errorMessage={errors.contactSurname?.message}
-                                            element={(id) => <BaseInput id={id} disabled={saving} {...register('contactSurname')} />}
+                                            element={(id) => <BaseInput id={id} disabled={saving || !editable} {...register('contactSurname')} />}
                                         />
                                         <FormElementGroup
                                             label={t('addApplicationPage.fields.contactEmail')}
                                             errorMessage={errors.contactEmail?.message}
-                                            element={(id) => <BaseInput id={id} type="email" disabled={saving} {...register('contactEmail')} />}
+                                            element={(id) => <BaseInput id={id} type="email" disabled={saving || !editable} {...register('contactEmail')} />}
                                         />
 
                                         <GridRow>
-                                            <GridColumn widthUnits={1} totalUnits={2}>
-                                                <Button disabled={saving} type={'submit'}>
-                                                    {t('addApplicationPage.saveButton')}
-                                                </Button>
-                                            </GridColumn>
-                                            {id && (
+                                            {editable && (
+                                                <GridColumn widthUnits={1} totalUnits={2}>
+                                                    <Button disabled={saving} type={'submit'}>
+                                                        {t('addApplicationPage.saveButton')}
+                                                    </Button>
+                                                </GridColumn>
+                                            )}
+                                            {editable && (
                                                 <GridColumn widthUnits={1} totalUnits={2} flexEnd>
                                                     <Button buttonType="warning" type={'button'} onClick={deleteApplication}>
                                                         {t('common.delete')}

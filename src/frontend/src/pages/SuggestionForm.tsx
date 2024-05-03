@@ -4,7 +4,7 @@ import { Controller, SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import { buildYup } from 'schema-to-yup';
-import { CodelistValue, useDefaultHeaders, useDocumentTitle, useUserInfo, useSearchDataset, useSearchPublisher } from '../client';
+import { CodelistValue, useDefaultHeaders, useDocumentTitle, useSearchDataset, useSearchPublisher, useUserInfo, useUserPermissions } from '../client';
 import { sendCmsDelete, sendCmsPost, sendCmsPut } from '../cms';
 import { suggestionStatusList, suggestionTypeCodeList } from '../codelist/SuggestionCodelist';
 import BaseInput from '../components/BaseInput';
@@ -25,11 +25,14 @@ import SuccessErrorPage from './SuccessErrorPage';
 import { schema } from './schemas/SuggestionSchema';
 
 export default function SuggestionForm() {
+    const { id } = useParams();
     const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+    const [editable, setEditable] = useState<boolean>(!Boolean(id));
+    const [changeStatusEnabled, setChangeStatusEnabled] = useState<boolean>(false);
     const [userInfo] = useUserInfo();
     const headers = useDefaultHeaders();
+    const { isSuperAdmin, isMine, isPublisher, isMineOrg } = useUserPermissions();
     const datasetSelectRef = useRef(null);
-    const { id } = useParams();
     const navigate = useNavigate();
     const { t } = useTranslation();
     const yupSchema = buildYup(schema, useSchemaConfig(schema.required));
@@ -87,6 +90,12 @@ export default function SuggestionForm() {
                 orgToUri,
                 datasetUri
             };
+
+            //All users can edit their own suggestions while in created state
+            setEditable(isSuperAdmin || (isMine(data.userId) && data.status === SuggestionStatusCode.CREATED));
+
+            //Publisher can change status only if it belongs to his publisher
+            setChangeStatusEnabled(isSuperAdmin || (isPublisher && isMineOrg(data.orgToUri)));
             return formData;
         }
     });
@@ -174,6 +183,7 @@ export default function SuggestionForm() {
                                                         <ReactSelectElement
                                                             id={id}
                                                             isLoading={loadingPublisherList}
+                                                            disabled={!editable}
                                                             loadOptions={loadOrganizationOptions}
                                                             value={publisherList.find((x) => x.value === value)}
                                                             getOptionLabel={(x: any) => {
@@ -205,6 +215,7 @@ export default function SuggestionForm() {
                                                             id={id}
                                                             className={'suggestion-select'}
                                                             options={suggestionTypeCodeList}
+                                                            disabled={!editable}
                                                             selectedValue={field.value}
                                                             onChange={(newOption) => {
                                                                 field.onChange(newOption);
@@ -234,7 +245,7 @@ export default function SuggestionForm() {
                                                             <ReactSelectElement
                                                                 id={id}
                                                                 ref={datasetSelectRef}
-                                                                disabled={!watch('orgToUri')}
+                                                                disabled={!watch('orgToUri') || !editable}
                                                                 isLoading={loadingDatasetList}
                                                                 loadOptions={loadDatasetOptions}
                                                                 value={datasetList.find((x) => x.value === field.value)}
@@ -252,13 +263,13 @@ export default function SuggestionForm() {
 
                                         <FormElementGroup
                                             label={t('addSuggestion.fields.title')}
-                                            element={(id) => <BaseInput id={id} {...register('title')} />}
+                                            element={(id) => <BaseInput id={id} readOnly={!editable} {...register('title')} />}
                                             errorMessage={errors.title?.message}
                                         />
 
                                         <FormElementGroup
                                             label={t('addSuggestion.fields.description')}
-                                            element={(id) => <TextArea id={id} rows={6} {...register('description')} />}
+                                            element={(id) => <TextArea id={id} rows={6} readOnly={!editable} {...register('description')} />}
                                             errorMessage={errors.description?.message}
                                         />
 
@@ -272,6 +283,7 @@ export default function SuggestionForm() {
                                                                 id={id}
                                                                 className={'suggestion-select'}
                                                                 options={suggestionStatusList}
+                                                                disabled={!changeStatusEnabled}
                                                                 selectedValue={field.value}
                                                                 onChange={field.onChange}
                                                                 renderOption={(v) => v.label}
@@ -284,12 +296,13 @@ export default function SuggestionForm() {
                                                 control={control}
                                             />
                                         )}
-
                                         <GridRow>
-                                            <GridColumn widthUnits={1} totalUnits={2}>
-                                                <Button type={'submit'}>{t('addSuggestion.addButton')}</Button>
-                                            </GridColumn>
-                                            {id && (
+                                            {(editable || changeStatusEnabled) && (
+                                                <GridColumn widthUnits={1} totalUnits={2}>
+                                                    <Button type={'submit'}>{t('addSuggestion.addButton')}</Button>
+                                                </GridColumn>
+                                            )}
+                                            {editable && id && (
                                                 <GridColumn widthUnits={1} totalUnits={2} flexEnd>
                                                     <Button buttonType="warning" type={'button'} onClick={deleteSuggestion}>
                                                         {t('common.delete')}

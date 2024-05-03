@@ -325,7 +325,7 @@ export default function DetailDataset(props: Props) {
                                         <h2 className="govuk-heading-m suggestion-subtitle">{t('applicationList.headerTitle')}</h2>
                                         <SimpleList loading={loadingApplications} error={errorApplications}>
                                             {applications?.map((app: Application, i: number) => (
-                                                <ApplicationListItem key={i} app={app} isLast={i === applications?.length - 1} edit={false} />
+                                                <ApplicationListItem key={i} app={app} isLast={i === applications?.length - 1} editable={false} />
                                             ))}
                                         </SimpleList>
                                     </GridColumn>
@@ -337,13 +337,13 @@ export default function DetailDataset(props: Props) {
                                         <h2 className="govuk-heading-m suggestion-subtitle">{t('suggestionList.headerTitle')}</h2>
                                         <SimpleList loading={loadingSuggestions} error={errorSuggestions}>
                                             {suggestions?.map((suggestion: Suggestion, i: number) => (
-                                                <SuggestionListItem key={i} suggestion={suggestion} isLast={i === suggestions?.length - 1} edit={false} />
+                                                <SuggestionListItem key={i} suggestion={suggestion} isLast={i === suggestions?.length - 1} editable={false} />
                                             ))}
                                         </SimpleList>
                                     </GridColumn>
                                 </GridRow>
                             )}
-                            {dataset?.key && (
+                            {cmsDataset && cmsDataset?.length > 0 && (
                                 <div ref={commentSectionRef}>
                                     <CommentSection contentId={cmsDataset?.[0]?.id} datasetUri={dataset.key} />
                                 </div>

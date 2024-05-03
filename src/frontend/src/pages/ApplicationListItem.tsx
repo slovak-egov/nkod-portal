@@ -1,24 +1,26 @@
 import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { useUserPermissions } from '../client';
 import { applicationTypeCodeList } from '../codelist/ApplicationCodelist';
 import CommentButton from '../components/CommentButton';
 import GridColumn from '../components/GridColumn';
 import GridRow from '../components/GridRow';
 import LikeButton from '../components/LikeButton';
 import { Application } from '../interface/cms.interface';
-import { useUserInfo } from '../client';
 
 type Props = {
     app: Application;
     isLast: boolean;
-    edit?: boolean;
+    editable?: boolean;
 };
 
 const ApplicationListItem = (props: Props) => {
     const { t } = useTranslation();
-    const [userInfo] = useUserInfo();
-    const { app, isLast, edit } = props;
+    const { isLogged, isSuperAdmin, isMine } = useUserPermissions();
+    const { app, isLast, editable } = props;
+
+    const showEdit = editable && (isSuperAdmin || (isLogged && isMine(app.userId)));
 
     return (
         <Fragment key={app.id}>
@@ -31,7 +33,7 @@ const ApplicationListItem = (props: Props) => {
                             </Link>
                         </GridColumn>
                         <GridColumn widthUnits={1} totalUnits={2} flexEnd>
-                            {edit && userInfo?.id && (
+                            {showEdit && (
                                 <Link to={`/aplikacia/${app.id}/upravit`} className="idsk-card-title govuk-link">
                                     {t('common.edit')}
                                 </Link>
@@ -74,5 +76,5 @@ const ApplicationListItem = (props: Props) => {
 export default ApplicationListItem;
 
 ApplicationListItem.defaultProps = {
-    edit: true
+    editable: true
 };

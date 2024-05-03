@@ -113,7 +113,7 @@
         "headerTitle": "Aplikácie",
         "title": "Vyhľadávanie aplikácií používajúcich otvorené údaje"
     },
-    "comment": { "title": "Komentáre", "new": "Nový", "comment": "Komentár", "add": "Pridať", "reply": "Odpoveď" },
+    "comment": { "title": "Komentáre", "new": "Nový", "comment": "Komentár", "add": "Pridať", "reply": "Odpoveď", "edit": "Upraviť" },
     "addSuggestion": {
         "headerTitle": "Nový podnet",
         "title": "Nový podnet",

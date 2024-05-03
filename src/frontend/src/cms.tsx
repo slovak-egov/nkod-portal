@@ -8,6 +8,7 @@ import {
     Audited,
     CmsDataset,
     ICommentSorted,
+    Likeable,
     Pageable,
     RequestCmsApplicationsQuery,
     RequestCmsQuery,
@@ -173,7 +174,7 @@ export function useCmsLike() {
         async (url: string, contentId?: string, datasetUri?: string) => {
             setLoading(true);
             try {
-                let response: AxiosResponse<Suggestion[]>;
+                let response: AxiosResponse<Likeable>;
                 if (!contentId && datasetUri) {
                     response = await sendCmsPost(
                         url,
@@ -195,14 +196,14 @@ export function useCmsLike() {
                     );
                 }
                 setLoading(false);
-                return response.status === 200;
+                return { success: response.status === 200, newLikeCount: response.data?.likeCount };
             } catch (err) {
                 setLoading(false);
                 if (err instanceof Error) {
                     setError(err);
                     console.error('Like error', err.message);
                 }
-                return false;
+                return { success: false };
             }
         },
         [userInfo?.id, headers]

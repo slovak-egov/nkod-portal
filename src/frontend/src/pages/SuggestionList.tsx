@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { OrderOption, useDocumentTitle, useUserInfo, useSearchPublisher } from '../client';
+import { OrderOption, useDocumentTitle, useSearchPublisher, useUserPermissions } from '../client';
 import { useCmsSuggestionsSearch } from '../cms';
 import Breadcrumbs from '../components/Breadcrumbs';
 import Button from '../components/Button';
@@ -14,7 +14,7 @@ import SuggestionListItem from './SuggestionListItem';
 const SuggestionList = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const [userInfo] = useUserInfo();
+    const { isLogged } = useUserPermissions();
     const [publishers] = useSearchPublisher({
         pageSize: -1,
         language: 'sk',
@@ -41,7 +41,7 @@ const SuggestionList = () => {
                     header={t('suggestionList.title')}
                     query={query}
                     customHeading={
-                        userInfo?.id && (
+                        isLogged && (
                             <GridRow data-testid="sr-add-new-row">
                                 <GridColumn widthUnits={1} totalUnits={1} data-testid="sr-add-new" flexEnd>
                                     <Button onClick={() => navigate('/podnet/pridat')}>{t('addSuggestion.headerTitle')}</Button>

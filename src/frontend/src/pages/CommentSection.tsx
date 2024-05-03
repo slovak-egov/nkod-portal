@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useUserPermissions } from '../client';
 import { useCmsComments } from '../cms';
 import Button from '../components/Button';
 import GridColumn from '../components/GridColumn';
@@ -9,7 +10,6 @@ import { QueryGuard } from '../helpers/helpers';
 import { ICommentSorted } from '../interface/cms.interface';
 import CommentElement from './CommentElement';
 import CommentForm from './CommentForm';
-import { useUserInfo } from '../client';
 
 type Props = {
     contentId?: string;
@@ -19,7 +19,7 @@ type Props = {
 export default function CommentSection(props: Props) {
     const { t } = useTranslation();
     const { contentId, datasetUri } = props;
-    const [userInfo] = useUserInfo();
+    const { isLogged } = useUserPermissions();
     const [currentContentId, setCurrentContentId] = useState<string | undefined>(contentId);
     const [showNewCommentForm, setShowNewCommentForm] = useState<boolean>(false);
 
@@ -35,7 +35,7 @@ export default function CommentSection(props: Props) {
                                 <h2 className="govuk-heading-m govuk-!-margin-bottom-6 suggestion-subtitle">{t('comment.title')}</h2>
                             </GridColumn>
                             <GridColumn widthUnits={1} totalUnits={2} flexEnd>
-                                {!showNewCommentForm && userInfo?.id && (
+                                {!showNewCommentForm && isLogged && (
                                     <Button buttonType="primary" title={t('comment.new')} onClick={() => setShowNewCommentForm(true)}>
                                         {t('comment.new')}
                                     </Button>

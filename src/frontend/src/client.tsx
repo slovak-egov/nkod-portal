@@ -993,6 +993,27 @@ export function useDefaultHeaders() {
     return ctx?.defaultHeaders ?? {};
 }
 
+export function useUserPermissions() {
+    const [userInfo] = useUserInfo();
+    const userRole = userInfo?.role?.toUpperCase();
+
+    const isLogged = Boolean(userInfo?.id);
+    const isSuperAdmin = userRole === 'SUPERADMIN';
+    const isCommunityUser = userRole === 'COMMUNITYUSER';
+    const isPublisher = ['PUBLISHER', 'PUBLISHERADMIN'].includes(userRole ?? '');
+    const isMine = (objectUserId: string) => userInfo?.id === objectUserId;
+    const isMineOrg = (objectOrgId: string) => userInfo?.publisher === objectOrgId;
+
+    return {
+        isSuperAdmin,
+        isCommunityUser,
+        isPublisher,
+        isLogged,
+        isMine,
+        isMineOrg
+    };
+}
+
 export function extractLanguageErrors(errors: { [id: string]: string }, key: string) {
     const filtered: { [id: string]: string } = {};
     for (const [k, v] of Object.entries(errors)) {

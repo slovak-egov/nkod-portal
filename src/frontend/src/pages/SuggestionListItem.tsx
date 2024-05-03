@@ -1,25 +1,31 @@
 import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { useUserPermissions } from '../client';
 import { suggestionStatusList } from '../codelist/SuggestionCodelist';
 import CommentButton from '../components/CommentButton';
 import GridColumn from '../components/GridColumn';
 import GridRow from '../components/GridRow';
 import LikeButton from '../components/LikeButton';
-import { Suggestion } from '../interface/cms.interface';
-import { useUserInfo } from '../client';
+import { Suggestion, SuggestionStatusCode } from '../interface/cms.interface';
 
 type Props = {
     suggestion: Suggestion;
     publisher?: any;
     isLast: boolean;
-    edit?: boolean;
+    editable?: boolean;
 };
 
 const SuggestionListItem = (props: Props) => {
     const { t } = useTranslation();
-    const [userInfo] = useUserInfo();
-    const { suggestion, isLast, publisher, edit } = props;
+    const { isCommunityUser, isSuperAdmin, isMine, isPublisher, isMineOrg } = useUserPermissions();
+    const { suggestion, isLast, publisher, editable } = props;
+
+    const showEdit =
+        editable &&
+        (isSuperAdmin ||
+            ((isCommunityUser || isPublisher) && isMine(suggestion.userId) && suggestion.status === SuggestionStatusCode.CREATED) ||
+            (isPublisher && isMineOrg(suggestion.orgToUri)));
 
     return (
         <Fragment key={suggestion.id}>
@@ -32,7 +38,7 @@ const SuggestionListItem = (props: Props) => {
                             </Link>
                         </GridColumn>
                         <GridColumn widthUnits={1} totalUnits={2} flexEnd>
-                            {edit && userInfo?.id && (
+                            {showEdit && (
                                 <Link to={`/podnet/${suggestion.id}/upravit`} className="idsk-card-title govuk-link">
                                     {t('common.edit')}
                                 </Link>
@@ -84,5 +90,5 @@ const SuggestionListItem = (props: Props) => {
 export default SuggestionListItem;
 
 SuggestionListItem.defaultProps = {
-    edit: true
+    editable: true
 };
