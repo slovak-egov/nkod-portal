@@ -271,6 +271,8 @@ export type Distribution = {
     title: string | null;
     titleAll: LanguageDependentTexts | null;
     isHarvested: boolean;
+    downloadStatus: boolean | null;
+    licenseStatus: boolean;
 };
 
 export type LocalCatalog = {

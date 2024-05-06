@@ -15,6 +15,7 @@ import Loading from '../components/Loading';
 import ErrorAlert from '../components/ErrorAlert';
 import { useTranslation } from 'react-i18next';
 import AlertPublisher from '../components/AlertPublisher';
+import DataWarningIcon from '../components/DataWarningIcon';
 
 export default function DistributionList() {
     const { datasetId } = useParams();
@@ -74,6 +75,7 @@ export default function DistributionList() {
                                                 <a href={d.downloadUrl} className="govuk-link">
                                                     <span style={{ display: 'block' }}>{d.title ?? d.formatValue?.label ?? d.id}</span>
                                                     {d.title && d.formatValue ? <span style={{ display: 'block' }}>{d.formatValue.label}</span> : null}
+                                                    <DataWarningIcon distribution={d} />
                                                 </a>
                                             ) : (
                                                 <span></span>

@@ -1,4 +1,5 @@
-﻿using NkodSk.Abstractions;
+﻿using Microsoft.AspNetCore.Mvc;
+using NkodSk.Abstractions;
 
 namespace WebApi
 {
@@ -40,6 +41,10 @@ namespace WebApi
 
         public bool IsHarvested { get; set; }
 
+        public bool LicenseStatus { get; set; }
+
+        public bool? DownloadStatus { get; set; }
+
         private static Uri? TranslateToHttps(Uri? uri)
         {
             if (uri is not null && uri.Scheme == "http")
@@ -52,7 +57,7 @@ namespace WebApi
             return uri;
         }
 
-        public static async Task<DistributionView> MapFromRdf(Guid id, Guid? datasetId, DcatDistribution distributionRdf, ICodelistProviderClient codelistProviderClient, string language, bool fetchAllLanguages)
+        public static async Task<DistributionView> MapFromRdf(Guid id, Guid? datasetId, DcatDistribution distributionRdf, ICodelistProviderClient codelistProviderClient, string language, bool fetchAllLanguages, DownloadDataQualityService qualityService)
         {
             LegTermsOfUse? legTermsOfUse = distributionRdf.TermsOfUse;
 
@@ -72,6 +77,14 @@ namespace WebApi
                 AccessService = distributionRdf.AccessService,
                 IsHarvested = distributionRdf.IsHarvested
             };
+
+            view.LicenseStatus = legTermsOfUse is not null
+                && legTermsOfUse.AuthorsWorkType is not null
+                && legTermsOfUse.OriginalDatabaseType is not null
+                && legTermsOfUse.DatabaseProtectedBySpecialRightsType is not null
+                && legTermsOfUse.PersonalDataContainmentType is not null;
+
+            view.DownloadStatus = distributionRdf.DownloadUrl is not null ? qualityService.IsDownloadQualityGood(distributionRdf.DownloadUrl) : null;
 
             if (fetchAllLanguages)
             {

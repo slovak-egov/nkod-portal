@@ -13,6 +13,8 @@ namespace TestBase
 
         private readonly Dictionary<Uri, List<DcatDistribution>> allDistributions = new Dictionary<Uri, List<DcatDistribution>>();
 
+        private readonly Dictionary<Uri, bool> quality = new Dictionary<Uri, bool>();
+
         public Task<List<DcatDataset>> GetDatasets(Uri catalogId, bool _)
         {
             allDatasets.TryGetValue(catalogId, out List<DcatDataset>? datasets);
@@ -51,6 +53,23 @@ namespace TestBase
         {
             allDatasets.Clear();
             allDistributions.Clear();
+        }
+
+        public Task<Dictionary<Uri, bool>> GetDownloadQuality()
+        {
+            return Task.FromResult(quality);
+        }
+
+        public void SetQuality(Uri distributionId, bool? isGood)
+        {
+            if (isGood.HasValue)
+            {
+                quality[distributionId] = isGood.Value;
+            }
+            else
+            {
+                quality.Remove(distributionId);
+            }
         }
     }
 }

@@ -210,5 +210,27 @@ namespace NkodSk.Abstractions
             }
             return distributions;
         }
+
+        public async Task<Dictionary<Uri, bool>> GetDownloadQuality()
+        {
+            string content = await GetContent(@"SELECT ?distribution ?value
+                                                WHERE {
+                                                  ?measurment a <http://www.w3.org/ns/dqv#QualityMeasurement>;
+                                                  <http://www.w3.org/ns/dqv#isMeasurementOf> <https://data.gov.sk/def/observation/data-quality/metrics/metrikaDostupnostiDownloadURL>;
+                                                  <http://schema.org/object> ?distribution;
+                                                  <http://www.w3.org/ns/dqv#value> ?value.
+                                                }", false);
+            Dictionary<Uri, bool> quality = new Dictionary<Uri, bool>();
+            foreach (JToken token in JObject.Parse(content)?["results"]?["bindings"] ?? Enumerable.Empty<JToken>())
+            {
+                string? key = token["item"]?["distribution"]?.ToString();
+                bool? value = token["item"]?["value"]?.Value<bool>() ?? false;
+                if (value.HasValue && Uri.TryCreate(key, UriKind.Absolute, out Uri? uri))
+                {
+                    quality[uri] = value.Value;
+                }
+            }
+            return quality;
+        }
     }
 }

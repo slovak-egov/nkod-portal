@@ -201,6 +201,20 @@ builder.WebHost.ConfigureKestrel(options =>
 ImportHarvestedHostedService importHarvestedHostedService = new ImportHarvestedHostedService(documentStorageUrl, iamClientUrl, builder.Configuration["HarvesterAuthToken"] ?? string.Empty, builder.Configuration["PrivateSparqlEndpoint"] ?? string.Empty);
 builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService>(importHarvestedHostedService));
 
+builder.Services.AddSingleton(sp =>
+{
+    HttpClientHandler httpClientHandler = new HttpClientHandler
+    {
+        SslProtocols = System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12
+    };
+    HttpClient httpClient = new HttpClient(httpClientHandler);
+    httpClient.BaseAddress = new Uri(builder.Configuration["PrivateSparqlEndpoint"] ?? string.Empty);
+
+    SparqlClient sparqlClient = new SparqlClient(httpClient);
+    return new DownloadDataQualityService(sparqlClient, sp.GetRequiredService<TelemetryClient>());
+});
+
+
 var app = builder.Build();
 
 app.UseAuthentication();
@@ -214,16 +228,15 @@ app.UseStaticFiles(new StaticFileOptions
     DefaultContentType = "text/plain"
 });
 
-
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
-        options.RoutePrefix = string.Empty;
-    });
-    app.UseCors("LocalhostOrigin");
+    //app.UseSwagger();
+    //app.UseSwaggerUI(options =>
+    //{
+    //    options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
+    //    options.RoutePrefix = string.Empty;
+    //});
+    //app.UseCors("LocalhostOrigin");
 }
 else
 {
@@ -453,7 +466,7 @@ app.MapPost("/publishers/search", async ([FromBody] PublisherQuery query, [FromS
     }
 }).Produces<AbstractResponse<PublisherView>>();
 
-app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient, [FromServices] DownloadDataQualityService qualityServiuce) =>
 {
     try
     {
@@ -499,7 +512,7 @@ app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServi
                         DcatDistribution? distributionRdf = dependedState.Content is not null ? DcatDistribution.Parse(dependedState.Content) : null;
                         if (distributionRdf is not null)
                         {
-                            DistributionView distributionView = await DistributionView.MapFromRdf(dependedState.Metadata.Id, fileState.Metadata.Id, distributionRdf, codelistProviderClient, language, isAuthenticated);
+                            DistributionView distributionView = await DistributionView.MapFromRdf(dependedState.Metadata.Id, fileState.Metadata.Id, distributionRdf, codelistProviderClient, language, isAuthenticated, qualityServiuce);
                             datasetView.Distributions.Add(distributionView);
                         }
                     }
@@ -541,7 +554,7 @@ app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServi
     }
 }).Produces<AbstractResponse<DatasetView>>();
 
-app.MapPost("/distributions/search", async ([FromBody] DatasetQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/distributions/search", async ([FromBody] DatasetQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient, [FromServices] DownloadDataQualityService qualityServiuce) =>
 {
     try
     {
@@ -564,7 +577,7 @@ app.MapPost("/distributions/search", async ([FromBody] DatasetQuery query, [From
             DcatDistribution? distributionRdf = fileState.Content is not null ? DcatDistribution.Parse(fileState.Content) : null;
             if (distributionRdf is not null)
             {
-                DistributionView view = await DistributionView.MapFromRdf(fileState.Metadata.Id, fileState.Metadata.ParentFile, distributionRdf, codelistProviderClient, language, isAuthenticated).ConfigureAwait(false);
+                DistributionView view = await DistributionView.MapFromRdf(fileState.Metadata.Id, fileState.Metadata.ParentFile, distributionRdf, codelistProviderClient, language, isAuthenticated, qualityServiuce).ConfigureAwait(false);
 
                 response.Items.Add(view);
             }

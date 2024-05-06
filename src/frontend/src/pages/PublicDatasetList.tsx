@@ -8,6 +8,7 @@ import { knownCodelists, OrderOption, useDatasets, useDocumentTitle } from '../c
 import SearchResults from '../components/SearchResults';
 import { useTranslation } from 'react-i18next';
 import multiIcon from '../icons/multi.png';
+import DataWarningIcon from '../components/DataWarningIcon';
 import LikeButton from '../components/LikeButton';
 import CommentButton from '../components/CommentButton';
 import { useCmsDatasets } from '../cms';
@@ -77,6 +78,7 @@ export default function PublicDatasetList() {
                                                             style={{ marginLeft: '5px', width: 'auto', height: '20px' }}
                                                         />
                                                     ) : null}
+                                                    <DataWarningIcon dataset={c} />
                                                 </Link>
                                             </GridColumn>
                                             <GridColumn widthUnits={1} totalUnits={4} flexEnd>

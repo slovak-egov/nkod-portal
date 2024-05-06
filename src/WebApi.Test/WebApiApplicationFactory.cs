@@ -69,7 +69,7 @@ namespace WebApi.Test
         {
             builder.ConfigureServices(services =>
             {
-                foreach (ServiceDescriptor sd in services.Where(s => s.ImplementationInstance?.GetType() == typeof(ImportHarvestedHostedService)).ToList())
+                foreach (ServiceDescriptor sd in services.Where(s => s.ImplementationInstance?.GetType() == typeof(ImportHarvestedHostedService) || s.ImplementationInstance?.GetType() == typeof(DownloadDataQualityService)).ToList())
                 {
                     services.Remove(sd);
                 }
@@ -81,6 +81,8 @@ namespace WebApi.Test
                 services.AddTransient<IFileStorageAccessPolicy, DefaultFileAccessPolicy>();
                 services.AddTransient(s => testIdentityAccessManagementClient ??= new TestIdentityAccessManagementClient(s.GetRequiredService<IHttpContextValueAccessor>(), this));
                 services.AddTransient<IIdentityAccessManagementClient>(s => s.GetRequiredService<TestIdentityAccessManagementClient>());
+                services.AddSingleton<ISparqlClient, TestSparqlClient>();
+                services.AddSingleton<DownloadDataQualityService>();
 
                 services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
                 {
