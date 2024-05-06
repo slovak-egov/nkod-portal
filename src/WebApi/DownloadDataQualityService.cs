@@ -44,7 +44,11 @@ namespace WebApi
             {
                 return null;
             }
-            return status.TryGetValue(distributionId, out bool isGood) && isGood;
+            if (status.TryGetValue(distributionId, out bool isGood))
+            {
+                return isGood;
+            }
+            return null;
         }
     }
 }
