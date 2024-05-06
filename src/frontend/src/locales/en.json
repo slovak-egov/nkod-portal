@@ -141,6 +141,8 @@
     "endpoint": "Endpoint URL",
     "endpointDescription": "Endpoint description",
     "applicableLegislations": "Applicable legislations",
+    "licenseWarning": "Dataset/distribution does not have usage license set",
+    "downloadWarning": "Download file is not available",
     "localCatalogState": "Status of the local cataloque",
     "catalogName": "Cataloque name",
     "catalogHomePage": "Cataloque homepage",

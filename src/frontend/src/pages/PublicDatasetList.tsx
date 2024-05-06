@@ -8,6 +8,7 @@ import { knownCodelists, useDatasets, useDocumentTitle } from '../client';
 import SearchResults from '../components/SearchResults';
 import { useTranslation } from 'react-i18next';
 import multiIcon from '../icons/multi.png';
+import DataWarningIcon from '../components/DataWarningIcon';
 
 type OrderOption = {
     name: string;
@@ -65,6 +66,7 @@ export default function PublicDatasetList() {
                                         {c.isSerie ? (
                                             <img src={multiIcon} alt={t('dataSerie')} style={{ marginLeft: '5px', width: 'auto', height: '20px' }} />
                                         ) : null}
+                                        <DataWarningIcon dataset={c} />
                                     </Link>
                                 </GridColumn>
                                 {c.description ? (

@@ -1,4 +1,5 @@
-﻿using NkodSk.Abstractions;
+﻿using Microsoft.AspNetCore.Mvc;
+using NkodSk.Abstractions;
 using System.Security.Policy;
 
 namespace WebApi
@@ -53,6 +54,10 @@ namespace WebApi
 
         public Uri[] ApplicableLegislations { get; set; } = Array.Empty<Uri>();
 
+        public bool? DownloadStatus { get; set; }
+
+        public bool LicenseStatus { get; set; }
+
         private static Uri? TranslateToHttps(Uri? uri)
         {
             if (uri is not null && uri.Scheme == "http")
@@ -65,7 +70,7 @@ namespace WebApi
             return uri;
         }
 
-        public static async Task<DistributionView> MapFromRdf(Guid id, Guid? datasetId, DcatDistribution distributionRdf, ICodelistProviderClient codelistProviderClient, string language, bool fetchAllLanguages)
+        public static async Task<DistributionView> MapFromRdf(Guid id, Guid? datasetId, DcatDistribution distributionRdf, ICodelistProviderClient codelistProviderClient, string language, bool fetchAllLanguages, DownloadDataQualityService qualityService)
         {
             LegTermsOfUse? legTermsOfUse = distributionRdf.TermsOfUse;
 
@@ -91,6 +96,14 @@ namespace WebApi
                 ApplicableLegislations = dataService?.ApplicableLegislations.ToArray() ?? Array.Empty<Uri>(),
                 IsDataService = dataService is not null
             };
+
+            view.LicenseStatus = legTermsOfUse is not null
+                && legTermsOfUse.AuthorsWorkType is not null
+                && legTermsOfUse.OriginalDatabaseType is not null
+                && legTermsOfUse.DatabaseProtectedBySpecialRightsType is not null
+                && legTermsOfUse.PersonalDataContainmentType is not null;
+
+            view.DownloadStatus = qualityService.IsDownloadQualityGood(distributionRdf.Uri);
 
             if (fetchAllLanguages)
             {

@@ -11,5 +11,7 @@ namespace NkodSk.Abstractions
         Task<List<DcatDataset>> GetDatasets(Uri catalogId, bool trace = false);
 
         Task<List<DcatDistribution>> GetDistributions(Uri datasetId, bool trace = false);
+
+        Task<Dictionary<Uri, bool>> GetDownloadQuality();
     }
 }

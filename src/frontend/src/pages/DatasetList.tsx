@@ -20,6 +20,7 @@ import Alert from '../components/Alert';
 import { Link } from 'react-router-dom';
 import FormElementGroup from '../components/FormElementGroup';
 import BaseInput from '../components/BaseInput';
+import DataWarningIcon from '../components/DataWarningIcon';
 
 export default function DatasetList() {
     const [datasets, query, setQueryParameters, loading, error, refresh] = useDatasets({ pageSize: 20, page: 0 });
@@ -94,7 +95,10 @@ export default function DatasetList() {
                                     <TableBody>
                                         {datasets.items.map((d) => (
                                             <TableRow key={d.id}>
-                                                <TableCell>{d.name}</TableCell>
+                                                <TableCell>
+                                                    {d.name}
+                                                    <DataWarningIcon dataset={d} />
+                                                </TableCell>
                                                 <TableCell>{d.isPublic ? t('published') : t('notPublished')}</TableCell>
                                                 <TableCell>
                                                     <div>

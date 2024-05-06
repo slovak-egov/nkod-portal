@@ -141,6 +141,8 @@
     "endpoint": "Prístupový bod",
     "endpointDescription": "Popis prístupového bodu",
     "applicableLegislations": "Právny predpis",
+    "licenseWarning": "Podmienky použitia datasetu/distribúcie nie sú vyplnené",
+    "downloadWarning": "Súbor na stiahnutie nie je dostupný",
     "localCatalogState": "Stav lokálneho katalógu",
     "catalogName": "Názov katalógu",
     "catalogHomePage": "Domáca stránka katalógu",

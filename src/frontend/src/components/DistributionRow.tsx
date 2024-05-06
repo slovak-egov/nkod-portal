@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { CodelistValue, Dataset, Distribution } from '../client';
 import FileIcon from './FileIcon';
 import { useState } from 'react';
+import DataWarningIcon from './DataWarningIcon';
 
 type Props = {
     distribution: Distribution;
@@ -32,6 +33,7 @@ export default function DistributionRow(props: Props) {
                     ) : (
                         <>{distribution.title && distribution.title.trim().length > 0 ? distribution.title : dataset.name}</>
                     )}
+                    <DataWarningIcon distribution={distribution} />
                 </span>
                 <span className="govuk-accordion__icon" aria-hidden="true" style={{ cursor: 'pointer' }} onClick={() => setExpanded(!expanded)}></span>
             </span>
@@ -130,7 +132,8 @@ export default function DistributionRow(props: Props) {
                 {distribution.applicableLegislations.length > 0 ? (
                     <>
                         <p className="govuk-body">
-                            {t('applicableLegislations')}: {distribution.applicableLegislations.map((l) => <ReferenceLink value={{id: l, label: l}}></ReferenceLink>).join(' ')}
+                            {t('applicableLegislations')}:{' '}
+                            {distribution.applicableLegislations.map((l) => <ReferenceLink value={{ id: l, label: l }}></ReferenceLink>).join(' ')}
                         </p>
                     </>
                 ) : null}

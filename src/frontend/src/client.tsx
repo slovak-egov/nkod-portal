@@ -270,6 +270,8 @@ export type Distribution = {
     documentation: string | null;
     applicableLegislations: string[];
     isDataService: boolean;
+    downloadStatus: boolean | null;
+    licenseStatus: boolean;
 };
 
 export type LocalCatalog = {
