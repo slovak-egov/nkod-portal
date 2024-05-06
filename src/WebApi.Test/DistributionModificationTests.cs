@@ -62,6 +62,42 @@ namespace WebApi.Test
             return input;
         }
 
+        private DistributionInput CreateDataServiceInput(Guid datasetId, bool withOptionalProperties = false)
+        {
+            DistributionInput input = new DistributionInput
+            {
+                DatasetId = datasetId.ToString(),
+                AuthorsWorkType = "https://data.gov.sk/def/ontology/law/authorsWorkType/1",
+                OriginalDatabaseType = "https://data.gov.sk/def/ontology/law/originalDatabaseType/1",
+                DatabaseProtectedBySpecialRightsType = "https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1",
+                PersonalDataContainmentType = "https://data.gov.sk/def/ontology/law/personalDataContainmentType/1",
+                AuthorName = "AuthorName",
+                OriginalDatabaseAuthorName = "OriginalDatabaseAuthorName",
+                Format = "http://publications.europa.eu/resource/dataset/file-type/1",
+                MediaType = "http://www.iana.org/assignments/media-types/text/csv",
+                EndpointUrl = "http://data.gov.sk/download",
+                IsDataService = true,
+                Title = new Dictionary<string, string>
+                {
+                    { "sk", "TitleSk" },
+                    { "en", "TitleEn" },
+                },
+                Description = new Dictionary<string, string>
+                {
+                    { "sk", "DescriptionSk" },
+                    { "en", "DescritpionEn" },
+                },
+                ApplicableLegislations = new List<string>
+                {
+                    "https://data.gov.sk/id/eli/sk/zz/2019/95",
+                    "https://data.gov.sk/id/eli/sk/zz/2007/39/20220101",
+                },
+                Documentation = "http://data.gov.sk/specification",
+            };
+
+            return input;
+        }
+
         private void ValidateValues(Storage storage, string? id, DistributionInput input, Guid datasetId, string publisher)
         {
             Assert.NotNull(id);
@@ -92,6 +128,11 @@ namespace WebApi.Test
             Assert.Equal(input.CompressFormat, distribution.CompressFormat?.ToString());
             Assert.Equal(input.PackageFormat, distribution.PackageFormat?.ToString());
             Extensions.AssertTextsEqual(input.Title, distribution.Title);
+
+            Extensions.AssertTextsEqual(input.Description, distribution.DataService?.Description);
+            Assert.Equal(input.EndpointUrl, distribution.DataService?.EndpointUrl?.ToString());
+            Assert.Equal(input.ApplicableLegislations, distribution.DataService?.ApplicableLegislations.Select(v => v.ToString()));
+            Assert.Equal(input.Documentation, distribution.DataService?.Documentation?.ToString());
 
             ValidateDatasetModifyChange(storage, datasetId);
         }
@@ -834,6 +875,57 @@ namespace WebApi.Test
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             using HttpResponseMessage response = await client.DeleteAsync($"/distributions?id={HttpUtility.UrlEncode(distributions[0].ToString())}");
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task DataServiceShouldBeAdded()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, Guid publisherId, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateDataServiceInput(datasetId);
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            string content = await response.Content.ReadAsStringAsync();
+            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrEmpty(result.Id));
+            Assert.True(result.Success);
+            Assert.True(result.Errors is null || result.Errors.Count == 0);
+            ValidateValues(storage, result.Id, input, datasetId, PublisherId);
+        }
+
+        [Fact]
+        public async Task DataServiceShouldBeModified()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, Guid publisherId, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateDataServiceInput(datasetId);
+            input.Id = distributions[0].ToString();
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            string content = await response.Content.ReadAsStringAsync();
+            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrEmpty(result.Id));
+            Assert.True(result.Success);
+            Assert.True(result.Errors is null || result.Errors.Count == 0);
+            ValidateValues(storage, result.Id, input, datasetId, PublisherId);
         }
     }
 }

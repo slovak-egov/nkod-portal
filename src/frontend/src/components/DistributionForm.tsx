@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import FormElementGroup from './FormElementGroup';
 import MultiRadio from './MultiRadio';
 import { CodelistValue, DistributionInput, extractLanguageErrors, knownCodelists, useCodelists, useDistributionFileUpload } from '../client';
@@ -10,6 +10,8 @@ import Loading from './Loading';
 import ErrorAlert from './ErrorAlert';
 import { useTranslation } from 'react-i18next';
 import MultiLanguageFormGroup from './MultiLanguageFormGroup';
+import MultiTextBox from './MultiTextBox';
+import TextArea from './TextArea';
 
 type Props = {
     distribution: DistributionInput;
@@ -30,27 +32,40 @@ type UploadSetting = {
     id: string;
     enableUpload: boolean;
     enableUrl: boolean;
+    enableDataService: boolean;
 };
 
 export function DistributionForm(props: Props) {
     const { t } = useTranslation();
-    const uploadSettings: UploadSetting[] = [
-        {
-            name: t('fileIsAvailableOnAddress'),
-            id: 'url',
-            enableUpload: false,
-            enableUrl: true
-        },
-        {
-            name: t('uploadFileToNkod'),
-            id: 'upload',
-            enableUpload: true,
-            enableUrl: false
-        }
-    ];
+    const uploadSettings: UploadSetting[] = useMemo(
+        () => [
+            {
+                name: t('fileIsAvailableOnAddress'),
+                id: 'url',
+                enableUpload: false,
+                enableUrl: true,
+                enableDataService: false
+            },
+            {
+                name: t('uploadFileToNkod'),
+                id: 'upload',
+                enableUpload: true,
+                enableUrl: false,
+                enableDataService: false
+            },
+            {
+                name: t('fileIsAvailableThroughDataService'),
+                id: 'data-service',
+                enableUpload: false,
+                enableUrl: false,
+                enableDataService: true
+            }
+        ],
+        [t]
+    );
 
     const [codelists, loadingCodelists, errorCodelists] = useCodelists(requiredCodelists);
-    const [uploadSetting, setUploadSetting] = useState<UploadSetting>(uploadSettings[0]);
+    const [uploadSetting, setUploadSettingState] = useState<UploadSetting>(uploadSettings[0]);
     const [uploading, upload, uploadError] = useDistributionFileUpload();
 
     const { distribution, setDistribution, errors } = props;
@@ -70,9 +85,31 @@ export function DistributionForm(props: Props) {
         }
     }, [formatCodelist, mediaTypeCodelist, distribution, setDistribution]);
 
+    useEffect(() => {
+        if (distribution.isDataService && !uploadSetting.enableDataService) {
+            setUploadSettingState(uploadSettings[2]);
+        }
+    }, [distribution, uploadSetting, uploadSettings, setUploadSettingState]);
+
     const loading = loadingCodelists;
     const error = errorCodelists;
     const saving = props.saving;
+
+    const distributionTitle = (
+        <MultiLanguageFormGroup<string>
+            label={t('distributionName')}
+            errorMessage={extractLanguageErrors(errors, 'title')}
+            values={distribution.title ?? {}}
+            onChange={(v) => setDistribution({ title: v })}
+            emptyValue=""
+            element={(id, value, onChange) => <BaseInput id={id} disabled={saving} value={value} onChange={(e) => onChange(e.target.value)} />}
+        />
+    );
+
+    const setUploadSetting = (v: UploadSetting) => {
+        setUploadSettingState(v);
+        setDistribution({ isDataService: v.enableDataService });
+    };
 
     return (
         <>
@@ -210,33 +247,88 @@ export function DistributionForm(props: Props) {
                 />
             ) : null}
             {uploadSetting.enableUpload ? (
-                <FormElementGroup
-                    label={t('fileUpload')}
-                    errorMessage={errors['downloadurl']}
-                    element={(id) => (
-                        <FileUpload
-                            id={id}
-                            disabled={saving}
-                            onChange={async (e) => {
-                                const files = e.target.files ?? [];
-                                if (files.length > 0) {
-                                    const file = await upload(files[0]);
-                                    if (file) {
-                                        setDistribution({
-                                            downloadUrl: file.url,
-                                            fileId: file.id
-                                        });
+                <>
+                    <FormElementGroup
+                        label={t('fileUpload')}
+                        errorMessage={errors['downloadurl']}
+                        element={(id) => (
+                            <FileUpload
+                                id={id}
+                                disabled={saving}
+                                onChange={async (e) => {
+                                    const files = e.target.files ?? [];
+                                    if (files.length > 0) {
+                                        const file = await upload(files[0]);
+                                        if (file) {
+                                            setDistribution({
+                                                downloadUrl: file.url,
+                                                fileId: file.id
+                                            });
+                                        }
                                     }
-                                }
-                            }}
-                        />
-                    )}
-                />
+                                }}
+                            />
+                        )}
+                    />
+                    <p className="govuk-hint">{t('maximumFileUploadSize')}: 250 MB</p>
+                    {uploading ? <Alert type="info">{t('fileUploadProgress')}</Alert> : null}
+                    {uploadError ? <ErrorAlert error={uploadError} /> : null}
+                </>
             ) : null}
-            <p className="govuk-hint">{t('maximumFileUploadSize')}: 250 MB</p>
 
-            {uploading ? <Alert type="info">{t('fileUploadProgress')}</Alert> : null}
-            {uploadError ? <ErrorAlert error={uploadError} /> : null}
+            {uploadSetting.enableDataService ? (
+                <>
+                    {distributionTitle}
+
+                    <MultiLanguageFormGroup<string>
+                        label={t('endpointDescription')}
+                        values={distribution.description ?? {}}
+                        onChange={(v) => setDistribution({ description: v })}
+                        emptyValue=""
+                        errorMessage={extractLanguageErrors(errors, 'description')}
+                        element={(id, value, onChange) => <TextArea id={id} disabled={saving} value={value} onChange={(e) => onChange(e.target.value)} />}
+                    />
+
+                    <FormElementGroup
+                        label={t('endpoint')}
+                        errorMessage={errors['endpointurl']}
+                        element={(id) => (
+                            <BaseInput
+                                id={id}
+                                disabled={saving}
+                                value={distribution.endpointUrl ?? ''}
+                                onChange={(e) => setDistribution({ endpointUrl: e.target.value })}
+                            />
+                        )}
+                    />
+
+                    <FormElementGroup
+                        label={t('documentation')}
+                        errorMessage={errors['documentation']}
+                        element={(id) => (
+                            <BaseInput
+                                id={id}
+                                disabled={saving}
+                                value={distribution.documentation ?? ''}
+                                onChange={(e) => setDistribution({ documentation: e.target.value })}
+                            />
+                        )}
+                    />
+
+                    <FormElementGroup
+                        label={t('applicableLegislations')}
+                        errorMessage={errors['applicablelegislations']}
+                        element={(id) => (
+                            <MultiTextBox
+                                id={id}
+                                disabled={saving}
+                                values={distribution.applicableLegislations}
+                                onChange={(e) => setDistribution({ applicableLegislations: e })}
+                            />
+                        )}
+                    />
+                </>
+            ) : null}
 
             {formatCodelist ? (
                 <FormElementGroup
@@ -331,14 +423,7 @@ export function DistributionForm(props: Props) {
                 />
             ) : null}
 
-            <MultiLanguageFormGroup<string>
-                label={t('distributionName')}
-                errorMessage={extractLanguageErrors(errors, 'title')}
-                values={distribution.title ?? {}}
-                onChange={(v) => setDistribution({ title: v })}
-                emptyValue=""
-                element={(id, value, onChange) => <BaseInput id={id} disabled={saving} value={value} onChange={(e) => onChange(e.target.value)} />}
-            />
+            {!uploadSetting.enableDataService ? <>{distributionTitle}</> : null}
         </>
     );
 }

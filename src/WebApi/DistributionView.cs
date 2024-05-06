@@ -1,4 +1,5 @@
 ﻿using NkodSk.Abstractions;
+using System.Security.Policy;
 
 namespace WebApi
 {
@@ -40,6 +41,18 @@ namespace WebApi
 
         public bool IsHarvested { get; set; }
 
+        public string? Description { get; set; }
+
+        public Dictionary<string, string>? DescriptionAll { get; set; }
+
+        public Uri? EndpointUrl { get; set; }
+
+        public bool IsDataService { get; set; }
+
+        public Uri? Documentation { get; set; }
+
+        public Uri[] ApplicableLegislations { get; set; } = Array.Empty<Uri>();
+
         private static Uri? TranslateToHttps(Uri? uri)
         {
             if (uri is not null && uri.Scheme == "http")
@@ -56,6 +69,8 @@ namespace WebApi
         {
             LegTermsOfUse? legTermsOfUse = distributionRdf.TermsOfUse;
 
+            DcatDataService? dataService = distributionRdf.DataService;
+
             DistributionView view = new DistributionView
             {
                 Id = id,
@@ -69,13 +84,18 @@ namespace WebApi
                 CompressFormat = distributionRdf.CompressFormat,
                 PackageFormat = distributionRdf.PackageFormat,
                 Title = distributionRdf.GetTitle(language),
-                AccessService = distributionRdf.AccessService,
-                IsHarvested = distributionRdf.IsHarvested
+                IsHarvested = distributionRdf.IsHarvested,
+                Description = dataService?.GetDescription(language),
+                EndpointUrl = dataService?.EndpointUrl,
+                Documentation = dataService?.Documentation,
+                ApplicableLegislations = dataService?.ApplicableLegislations.ToArray() ?? Array.Empty<Uri>(),
+                IsDataService = dataService is not null
             };
 
             if (fetchAllLanguages)
             {
                 view.TitleAll = distributionRdf.Title;
+                view.DescriptionAll = dataService?.Description;
             }
 
             view.FormatValue = await codelistProviderClient.MapCodelistValue("http://publications.europa.eu/resource/authority/file-type", view.Format?.ToString(), language);

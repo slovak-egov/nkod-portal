@@ -130,7 +130,6 @@ namespace WebApi.Test
             distribution.ConformsTo = conformsTo;
             distribution.CompressFormat = compressFormat;
             distribution.PackageFormat = packageFormat;
-            distribution.AccessService = accessService;
 
             LanguageDependedTexts titles = new LanguageDependedTexts();
             if (title is not null)

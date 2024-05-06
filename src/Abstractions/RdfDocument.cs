@@ -84,6 +84,7 @@ namespace NkodSk.Abstractions
             graph.NamespaceMap.AddNamespace("leg", LegPrefix);
             graph.NamespaceMap.AddNamespace("custom", CustomPrefix);
             graph.NamespaceMap.AddNamespace("ls", new Uri("https://data.gov.sk/def/ontology/legal-subject/"));
+            graph.NamespaceMap.AddNamespace("dcatap", new Uri("http://data.europa.eu/r5r/"));
         }
 
         internal static IGraph ParseGraph(string text)

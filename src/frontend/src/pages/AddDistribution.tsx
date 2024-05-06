@@ -30,7 +30,12 @@ export default function AddDistribution() {
         packageFormat: null,
         conformsTo: null,
         title: null,
-        fileId: null
+        fileId: null,
+        description: null,
+        endpointUrl: null,
+        documentation: null,
+        applicableLegislations: [],
+        isDataService: false
     });
 
     const [distributions, , , loadingDistributions, errorDistributions] = useDistributions(

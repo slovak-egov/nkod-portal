@@ -178,6 +178,11 @@ export type DistributionInput = {
     packageFormat: string | null;
     title: LanguageDependentTexts | null;
     fileId: string | null;
+    description: LanguageDependentTexts | null;
+    endpointUrl: string | null;
+    documentation: string | null;
+    applicableLegislations: string[];
+    isDataService: boolean;
 };
 
 export type LocalCatalogInput = {
@@ -259,6 +264,12 @@ export type Distribution = {
     title: string | null;
     titleAll: LanguageDependentTexts | null;
     isHarvested: boolean;
+    description: string | null;
+    descriptionAll: LanguageDependentTexts | null;
+    endpointUrl: string | null;
+    documentation: string | null;
+    applicableLegislations: string[];
+    isDataService: boolean;
 };
 
 export type LocalCatalog = {

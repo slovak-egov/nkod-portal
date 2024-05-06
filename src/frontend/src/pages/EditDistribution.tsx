@@ -27,7 +27,12 @@ export const transformEntityForEdit = (entity: Distribution): DistributionInput 
         packageFormat: entity.packageFormat ?? null,
         conformsTo: entity.conformsTo ?? null,
         title: entity.titleAll ?? {},
-        fileId: null
+        fileId: null,
+        description: entity.descriptionAll ?? {},
+        endpointUrl: entity.endpointUrl,
+        documentation: entity.documentation,
+        applicableLegislations: entity.applicableLegislations,
+        isDataService: entity.isDataService
     };
 };
 

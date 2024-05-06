@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Xml.Schema;
 using VDS.RDF;
 using VDS.RDF.Parsing;
+using VDS.RDF.Parsing.Tokens;
 
 namespace NkodSk.Abstractions
 {
@@ -116,8 +117,32 @@ namespace NkodSk.Abstractions
 
         public Uri? AccessService
         {
-            get => GetUriFromUriNode("dcat:accessService"); 
+            get => GetUriFromUriNode("dcat:accessService");
             set => SetUriNode("dcat:accessService", value);
+        }
+
+        public DcatDataService? DataService
+        {
+            get
+            {
+                Uri? accessService = AccessService;
+                if (accessService is not null)
+                {
+                    IUriNode node = Graph.GetUriNode(accessService);
+                    return new DcatDataService(Graph, node);
+                }
+                return null;
+            }
+        }
+
+        public DcatDataService GetOrCreateDataSerice()
+        {
+            DcatDataService? dataService = DataService;
+            if (dataService is null)
+            {
+                dataService = new DcatDataService(Graph, CreateSubject("dcat:accessService", "dcat:DataService", "service"));
+            }
+            return dataService;
         }
 
         public static DcatDistribution? Parse(string text)

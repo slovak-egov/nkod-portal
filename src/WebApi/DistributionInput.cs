@@ -35,6 +35,16 @@ namespace WebApi
 
         public Dictionary<string, string>? Title { get; set; }
 
+        public Dictionary<string, string>? Description { get; set; }
+
+        public string? EndpointUrl { get; set; }
+
+        public List<string>? ApplicableLegislations { get; set; }
+
+        public string? Documentation { get; set; }
+
+        public bool IsDataService { get; set; }
+
         public string? FileId { get; set; }
 
         public async Task<ValidationResults> Validate(string publisher, IDocumentStorageClient documentStorage, ICodelistProviderClient codelistProvider)
@@ -65,13 +75,42 @@ namespace WebApi
             await results.ValidateRequiredCodelistValue(nameof(OriginalDatabaseType), OriginalDatabaseType, DcatDistribution.LicenseCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(DatabaseProtectedBySpecialRightsType), DatabaseProtectedBySpecialRightsType, DcatDistribution.LicenseCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(PersonalDataContainmentType), PersonalDataContainmentType, DcatDistribution.PersonalDataContainmentTypeCodelist, codelistProvider);
-            results.ValidateUrl(nameof(DownloadUrl), DownloadUrl, true);
             await results.ValidateRequiredCodelistValue(nameof(Format), Format, DcatDistribution.FormatCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(MediaType), MediaType, DcatDistribution.MediaTypeCodelist, codelistProvider);
             results.ValidateUrl(nameof(ConformsTo), ConformsTo, false);
             await results.ValidateCodelistValue(nameof(CompressFormat), CompressFormat, DcatDistribution.MediaTypeCodelist, codelistProvider);
             await results.ValidateCodelistValue(nameof(PackageFormat), PackageFormat, DcatDistribution.MediaTypeCodelist, codelistProvider);
-            results.ValidateLanguageTexts(nameof(Title), Title, null, false);
+
+            List<string> languages = Title?.Keys.ToList() ?? new List<string>();
+            if (!languages.Contains("sk"))
+            {
+                languages.Add("sk");
+            }
+
+            results.ValidateLanguageTexts(nameof(Title), Title, languages, IsDataService);
+
+            if (IsDataService)
+            {
+                results.ValidateLanguageTexts(nameof(Description), Description, languages, false);
+                results.ValidateUrl(nameof(EndpointUrl), EndpointUrl, true);
+                results.ValidateUrl(nameof(Documentation), Documentation, false);
+
+                if (ApplicableLegislations is not null)
+                {
+                    foreach (string url in ApplicableLegislations)
+                    {
+                        if (url is null || !Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || !uri.LocalPath.Contains("/eli/"))
+                        {
+                            results.Add(nameof(ApplicableLegislations), "URL musí byť platné a obsahovať /eli/");
+                            break;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                results.ValidateUrl(nameof(DownloadUrl), DownloadUrl, true);
+            }
 
             if (PersonalDataContainmentType == "https://data.gov.sk/def/personal-data-occurence-type/3")
             {
@@ -87,13 +126,43 @@ namespace WebApi
             string? originalDatabaseAuthorName = !string.IsNullOrWhiteSpace(OriginalDatabaseAuthorName) ? OriginalDatabaseAuthorName : null;
 
             distribution.SetTermsOfUse(AuthorsWorkType.AsUri(), OriginalDatabaseType.AsUri(), DatabaseProtectedBySpecialRightsType.AsUri(), PersonalDataContainmentType.AsUri(), authorName, originalDatabaseAuthorName);
-            distribution.DownloadUrl = DownloadUrl.AsUri();
-            distribution.AccessUrl = DownloadUrl.AsUri();
             distribution.Format = Format.AsUri();
             distribution.MediaType = MediaType.AsUri();
             distribution.ConformsTo = ConformsTo.AsUri();
             distribution.CompressFormat = CompressFormat.AsUri();
             distribution.PackageFormat = PackageFormat.AsUri();
+
+            if (IsDataService)
+            {
+                distribution.AccessUrl = EndpointUrl.AsUri();
+                DcatDataService dataService = distribution.GetOrCreateDataSerice();
+                dataService.EndpointUrl = EndpointUrl.AsUri();
+                dataService.Documentation = Documentation.AsUri();
+                dataService.ConformsTo = ConformsTo.AsUri();
+                dataService.SetTitle(Title ?? new Dictionary<string, string>());
+                dataService.SetDescription(Description ?? new Dictionary<string, string>());
+
+                List<Uri> applicableLegislations = new List<Uri>();
+                if (ApplicableLegislations is not null)
+                {
+                    foreach (string applicableLegislation in ApplicableLegislations)
+                    {
+                        if (applicableLegislation.AsUri() is Uri uri)
+                        {
+                            applicableLegislations.Add(uri);
+                        }
+                    }
+                }
+                dataService.ApplicableLegislations = applicableLegislations;
+                distribution.DownloadUrl = null;
+            }
+            else
+            {
+                distribution.DownloadUrl = DownloadUrl.AsUri();
+                distribution.AccessUrl = DownloadUrl.AsUri();
+                distribution.AccessService = null;
+            }
+
             distribution.SetTitle(Title);
         }
     }

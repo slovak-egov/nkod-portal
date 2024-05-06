@@ -29,7 +29,9 @@ export default function DistributionRow(props: Props) {
                         <a href={distribution.downloadUrl} className="govuk-link" id={'distribution-accordion-heading-' + distribution.id}>
                             {distribution.title && distribution.title.trim().length > 0 ? distribution.title : dataset.name}
                         </a>
-                    ) : null}
+                    ) : (
+                        <>{distribution.title && distribution.title.trim().length > 0 ? distribution.title : dataset.name}</>
+                    )}
                 </span>
                 <span className="govuk-accordion__icon" aria-hidden="true" style={{ cursor: 'pointer' }} onClick={() => setExpanded(!expanded)}></span>
             </span>
@@ -39,6 +41,14 @@ export default function DistributionRow(props: Props) {
                 aria-labelledby={'distribution-accordion-heading-' + distribution.id}
                 style={{ display: expanded ? 'block' : 'none', margin: '10px 10px 0 10px' }}
             >
+                {distribution.description ? <p className="govuk-body">{distribution.description}</p> : null}
+
+                {distribution.endpointUrl ? (
+                    <p className="govuk-body">
+                        {t('endpointUrl')}: <>{distribution.endpointUrl}</>
+                    </p>
+                ) : null}
+
                 {distribution.termsOfUse?.authorsWorkTypeValue ? (
                     <p className="govuk-body">
                         {t('authorWorkType')}: <ReferenceLink value={distribution.termsOfUse.authorsWorkTypeValue} />
@@ -103,6 +113,26 @@ export default function DistributionRow(props: Props) {
                     <p className="govuk-body">
                         {t('packageMediaType')}: <ReferenceLink value={distribution.packageFormatValue} />
                     </p>
+                ) : null}
+
+                {distribution.documentation ? (
+                    <p className="govuk-body">
+                        {t('documentation')}: <ReferenceLink value={distribution.packageFormatValue} />
+                    </p>
+                ) : null}
+
+                {distribution.documentation ? (
+                    <p className="govuk-body">
+                        {t('documentation')}: <a href={distribution.documentation}>{distribution.documentation}</a>
+                    </p>
+                ) : null}
+
+                {distribution.applicableLegislations.length > 0 ? (
+                    <>
+                        <p className="govuk-body">
+                            {t('applicableLegislations')}: {distribution.applicableLegislations.map((l) => <ReferenceLink value={{id: l, label: l}}></ReferenceLink>).join(' ')}
+                        </p>
+                    </>
                 ) : null}
             </div>
             <hr className="govuk-line" aria-hidden="true" />
