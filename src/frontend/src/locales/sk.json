@@ -126,6 +126,7 @@
     "contactPointEmail": "Kontaktný bod, e-mailová adresa",
     "fileIsAvailableOnAddress": "Súbor je prístupný na adrese",
     "fileIsAvailableThroughDataService": "Súbor je prístupný cez dátovú službu",
+    "dataService": "dátová služba",
     "uploadFileToNkod": "Nahratie súboru do NKOD",
     "authorWorkType": "Typ autorského diela",
     "originalDatabaseType": "Typ originálnej databázy",

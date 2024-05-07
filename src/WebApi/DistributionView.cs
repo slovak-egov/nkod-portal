@@ -103,7 +103,7 @@ namespace WebApi
                 && legTermsOfUse.DatabaseProtectedBySpecialRightsType is not null
                 && legTermsOfUse.PersonalDataContainmentType is not null;
 
-            view.DownloadStatus = qualityService.IsDownloadQualityGood(distributionRdf.Uri);
+            view.DownloadStatus = distributionRdf.DownloadUrl is not null ? qualityService.IsDownloadQualityGood(distributionRdf.DownloadUrl.ToString()) : null;
 
             if (fetchAllLanguages)
             {

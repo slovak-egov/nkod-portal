@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { CodelistValue, Dataset, Distribution } from '../client';
 import FileIcon from './FileIcon';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import DataWarningIcon from './DataWarningIcon';
 
 type Props = {
@@ -31,7 +31,10 @@ export default function DistributionRow(props: Props) {
                             {distribution.title && distribution.title.trim().length > 0 ? distribution.title : dataset.name}
                         </a>
                     ) : (
-                        <>{distribution.title && distribution.title.trim().length > 0 ? distribution.title : dataset.name}</>
+                        <>
+                            {distribution.title && distribution.title.trim().length > 0 ? distribution.title : dataset.name}{' '}
+                            {distribution.isDataService ? <>({t('dataService')})</> : null}
+                        </>
                     )}
                     <DataWarningIcon distribution={distribution} />
                 </span>
@@ -47,7 +50,7 @@ export default function DistributionRow(props: Props) {
 
                 {distribution.endpointUrl ? (
                     <p className="govuk-body">
-                        {t('endpointUrl')}: <>{distribution.endpointUrl}</>
+                        {t('endpoint')}: <>{distribution.endpointUrl}</>
                     </p>
                 ) : null}
 
@@ -71,7 +74,7 @@ export default function DistributionRow(props: Props) {
 
                 {distribution.termsOfUse?.personalDataContainmentTypeValue ? (
                     <p className="govuk-body">
-                        {t('personalDataType')}:{distribution.termsOfUse.personalDataContainmentTypeValue.label}
+                        {t('personalDataType')}: {distribution.termsOfUse.personalDataContainmentTypeValue.label}
                     </p>
                 ) : null}
 
@@ -132,8 +135,12 @@ export default function DistributionRow(props: Props) {
                 {distribution.applicableLegislations.length > 0 ? (
                     <>
                         <p className="govuk-body">
-                            {t('applicableLegislations')}:{' '}
-                            {distribution.applicableLegislations.map((l) => <ReferenceLink value={{ id: l, label: l }}></ReferenceLink>).join(' ')}
+                            {t('applicableLegislations')}:
+                            {distribution.applicableLegislations.map((l) => (
+                                <Fragment key={l}>
+                                    <div>{l}</div>
+                                </Fragment>
+                            ))}
                         </p>
                     </>
                 ) : null}

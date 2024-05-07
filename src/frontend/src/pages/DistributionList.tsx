@@ -77,11 +77,14 @@ export default function DistributionList() {
                                                 <a href={d.downloadUrl} className="govuk-link">
                                                     <span style={{ display: 'block' }}>{d.title ?? d.formatValue?.label ?? d.id}</span>
                                                     {d.title && d.formatValue ? <span style={{ display: 'block' }}>{d.formatValue.label}</span> : null}
-                                                    <DataWarningIcon distribution={d} />
                                                 </a>
                                             ) : (
-                                                <span></span>
+                                                <>
+                                                    <span style={{ display: 'block' }}>{d.title ?? d.formatValue?.label ?? d.id}</span>
+                                                    {d.title && d.formatValue ? <span style={{ display: 'block' }}>{d.formatValue.label}</span> : null}
+                                                </>
                                             )}
+                                            <DataWarningIcon distribution={d} />
                                         </TableCell>
                                         <TableCell style={{ whiteSpace: 'nowrap' }}>
                                             {d.downloadUrl ? (

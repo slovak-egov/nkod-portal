@@ -5,11 +5,11 @@ namespace WebApi
 {
     public class DownloadDataQualityService
     {
-        private Dictionary<Uri, bool>? status;
+        private Dictionary<string, bool>? status;
 
         private readonly ISparqlClient client;
 
-        private TelemetryClient telemetryClient;
+        private readonly TelemetryClient telemetryClient;
 
         private Task lastWorkTask = Task.CompletedTask;
 
@@ -30,7 +30,9 @@ namespace WebApi
         {            
             try
             {
+                telemetryClient.TrackTrace("DownloadDataQualityService.Load");
                 status = await this.client.GetDownloadQuality();
+                telemetryClient.TrackTrace("DownloadDataQualityService.Loaded");
             }
             catch (Exception e)
             {
@@ -38,13 +40,13 @@ namespace WebApi
             }
         }
 
-        public bool? IsDownloadQualityGood(Uri distributionId)
+        public bool? IsDownloadQualityGood(string downloadUrl)
         {
             if (status == null)
             {
                 return null;
             }
-            if (status.TryGetValue(distributionId, out bool isGood))
+            if (status.TryGetValue(downloadUrl, out bool isGood))
             {
                 return isGood;
             }

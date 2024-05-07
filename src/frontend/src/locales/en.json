@@ -126,6 +126,7 @@
     "contactPointEmail": "Contact point, email address",
     "fileIsAvailableOnAddress": "The file is available at the address",
     "fileIsAvailableThroughDataService": "The file is available through the data service",
+    "dataService": "data service",
     "uploadFileToNkod": "File upload to NKOD",
     "authorWorkType": "Type of copyright work",
     "originalDatabaseType": "Type of original database",
