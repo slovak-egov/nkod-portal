@@ -27,12 +27,12 @@ const ApplicationListItem = (props: Props) => {
             <GridRow data-testid="sr-result">
                 <GridColumn widthUnits={1} totalUnits={1}>
                     <GridRow>
-                        <GridColumn widthUnits={1} totalUnits={2}>
+                        <GridColumn widthUnits={3} totalUnits={4}>
                             <Link to={'/aplikacia/' + app.id} className="idsk-card-title govuk-link">
                                 {app.title}
                             </Link>
                         </GridColumn>
-                        <GridColumn widthUnits={1} totalUnits={2} flexEnd>
+                        <GridColumn widthUnits={1} totalUnits={4} flexEnd>
                             {showEdit && (
                                 <Link to={`/aplikacia/${app.id}/upravit`} className="idsk-card-title govuk-link">
                                     {t('common.edit')}

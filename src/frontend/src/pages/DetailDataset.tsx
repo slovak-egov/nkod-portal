@@ -343,7 +343,7 @@ export default function DetailDataset(props: Props) {
                                     </GridColumn>
                                 </GridRow>
                             )}
-                            {cmsDataset && cmsDataset?.length > 0 && (
+                            {!loadingCmsDatasets && (
                                 <div ref={commentSectionRef}>
                                     <CommentSection contentId={cmsDataset?.[0]?.id} datasetUri={dataset.key} />
                                 </div>

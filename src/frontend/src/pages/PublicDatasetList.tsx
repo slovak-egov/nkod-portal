@@ -66,7 +66,7 @@ export default function PublicDatasetList() {
                                 <GridRow data-testid="sr-result">
                                     <GridColumn widthUnits={1} totalUnits={1}>
                                         <GridRow>
-                                            <GridColumn widthUnits={1} totalUnits={2}>
+                                            <GridColumn widthUnits={3} totalUnits={4}>
                                                 <Link to={'/datasety/' + c.id} className="idsk-card-title govuk-link">
                                                     {c.name}
                                                     {c.isSerie ? (
@@ -78,7 +78,7 @@ export default function PublicDatasetList() {
                                                     ) : null}
                                                 </Link>
                                             </GridColumn>
-                                            <GridColumn widthUnits={1} totalUnits={2} flexEnd>
+                                            <GridColumn widthUnits={1} totalUnits={4} flexEnd>
                                                 <LikeButton count={likeCount} contentId={cmsDatasetId} datasetUri={c.key} url={`datasets/likes`} />
                                                 <Link to={`/datasety/${c.id}/komentare`} className="no-link">
                                                     <CommentButton count={commentCount} />
@@ -102,7 +102,7 @@ export default function PublicDatasetList() {
                                             </div>
                                         </GridColumn>
                                     ) : null}
-                                    <GridColumn widthUnits={1} totalUnits={2}>
+                                    <GridColumn widthUnits={2} totalUnits={3}>
                                         {c.distributions.map((distribution) => {
                                             if (distribution.downloadUrl && distribution.formatValue) {
                                                 return (
@@ -117,7 +117,7 @@ export default function PublicDatasetList() {
                                         })}
                                     </GridColumn>
                                     {c.publisher ? (
-                                        <GridColumn widthUnits={1} totalUnits={2} data-testid="sr-result-publisher">
+                                        <GridColumn widthUnits={1} totalUnits={3} data-testid="sr-result-publisher">
                                             <span style={{ color: '#777', fontStyle: 'italic' }}>{c.publisher.name}</span>
                                         </GridColumn>
                                     ) : null}

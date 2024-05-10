@@ -40,7 +40,7 @@ export default function ApplicationDetail(props: Props) {
                         <Breadcrumbs
                             items={[
                                 { title: t('nkod'), link: '/' },
-                                { title: t('suggestionList.headerTitle'), link: '/aplikacia' },
+                                { title: t('applicationList.headerTitle'), link: '/aplikacia' },
                                 { title: application.title }
                             ]}
                         />

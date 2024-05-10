@@ -32,12 +32,12 @@ const SuggestionListItem = (props: Props) => {
             <GridRow data-testid="sr-result">
                 <GridColumn widthUnits={1} totalUnits={1}>
                     <GridRow>
-                        <GridColumn widthUnits={1} totalUnits={2}>
+                        <GridColumn widthUnits={3} totalUnits={4}>
                             <Link to={'/podnet/' + suggestion.id} className="idsk-card-title govuk-link">
                                 {suggestion.title}
                             </Link>
                         </GridColumn>
-                        <GridColumn widthUnits={1} totalUnits={2} flexEnd>
+                        <GridColumn widthUnits={1} totalUnits={4} flexEnd>
                             {showEdit && (
                                 <Link to={`/podnet/${suggestion.id}/upravit`} className="idsk-card-title govuk-link">
                                     {t('common.edit')}

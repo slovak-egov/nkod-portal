@@ -30,13 +30,13 @@ export default function ApplicationForm() {
     const [userInfo] = useUserInfo();
     const headers = useDefaultHeaders();
     const commentsRef = useRef(null);
+    const { id } = useParams();
     const [saving, setSaving] = useState<boolean>();
-    const [editable, setEditable] = useState<boolean>(false);
+    const [editable, setEditable] = useState<boolean>(!Boolean(id));
     const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
     const { isSuperAdmin, isMine } = useUserPermissions();
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { id } = useParams();
     useDocumentTitle(t('addApplicationPage.headerTitle'));
     const yupSchema = buildYup(schema, useSchemaConfig(schema.required));
 
