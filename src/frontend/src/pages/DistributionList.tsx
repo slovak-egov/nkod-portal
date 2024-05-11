@@ -30,9 +30,7 @@ export default function DistributionList() {
 
     return (
         <>
-            <Breadcrumbs
-                items={[{ title: t('nkod'), link: '/' }, { title: t('distributionList'), link: '/sprava/datasety' }, { title: t('distributionList') }]}
-            />
+            <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title: t('datasetList'), link: '/sprava/datasety' }, { title: t('distributionList') }]} />
             <MainContent>
                 <PageHeader>{t('distributionList')}</PageHeader>
                 {userInfo?.publisherView ? (
