@@ -26,13 +26,12 @@ namespace CMS.Applications
 		[Route("")]		
 		public async Task<ApplicationSearchResponse> Get(string datasetUri, int? pageNumber, int? pageSize)
 		{
-			var pageId = await GetArchiveGuidAsync();
-			var archive = await api.Archives.GetByIdAsync<ApplicationPost>(pageId);
-
 			int pn = 0;
 			int ps = 100000;
 			PaginationMetadata paginationMetadata = null;
-			IEnumerable<ApplicationPost> res = archive.Posts;
+
+			var blogId = await GetBlogGuidAsync();
+			IEnumerable<ApplicationPost> res = await api.Posts.GetAllAsync<ApplicationPost>(blogId);
 
 			if (!string.IsNullOrEmpty(datasetUri))
 			{
@@ -101,12 +100,12 @@ namespace CMS.Applications
 		[Route("search")]
 		public async Task<ApplicationSearchResponse> Search(ApplicationSearchRequest filter)
 		{
-			var pageId = await GetArchiveGuidAsync();
-			var archive = await api.Archives.GetByIdAsync<ApplicationPost>(pageId);
 			int pn = 0;
 			int ps = 100000;
 			PaginationMetadata paginationMetadata = null;
-			IEnumerable<ApplicationPost> res = archive.Posts;
+
+			var blogId = await GetBlogGuidAsync();
+			IEnumerable<ApplicationPost> res = await api.Posts.GetAllAsync<ApplicationPost>(blogId);
 
 			if (!string.IsNullOrWhiteSpace(filter.SearchQuery))
 			{
@@ -183,7 +182,7 @@ namespace CMS.Applications
 		[Authorize]
 		public async Task<IResult> Save(ApplicationDto dto)
         {
-            var archiveId = await GetArchiveGuidAsync();
+            var blogId = await GetBlogGuidAsync();
             var post = await api.Posts.CreateAsync<ApplicationPost>();
             post.Title = dto.Title;
             post.Application = new ApplicationRegion
@@ -215,7 +214,7 @@ namespace CMS.Applications
                 Slug = "application",
                 Type = TaxonomyType.Category
             };
-            post.BlogId = archiveId;
+            post.BlogId = blogId;
             post.Published = DateTime.Now;
             post.EnableComments = true;
 
@@ -256,7 +255,7 @@ namespace CMS.Applications
 			return Results.Ok();
 		}
 
-		private async Task<Guid> GetArchiveGuidAsync()
+		private async Task<Guid> GetBlogGuidAsync()
         {
             var page = await api.Pages.GetBySlugAsync(ApplicationsPage.WellKnownSlug);
             return page?.Id ?? (await CreatePage()).Id;

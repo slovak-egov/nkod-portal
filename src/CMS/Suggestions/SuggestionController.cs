@@ -1,4 +1,5 @@
-﻿using CMS.Comments;
+﻿using CMS.Applications;
+using CMS.Comments;
 using CMS.Datasets;
 using CMS.Likes;
 using Microsoft.AspNetCore.Authorization;
@@ -26,12 +27,12 @@ namespace CMS.Suggestions
 		[Route("")]
 		public async Task<SuggestionSearchResponse> Get(string datasetUri, int? pageNumber, int? pageSize)
 		{
-			var pageId = await GetArchiveGuidAsync();
-			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(pageId);
 			int pn = 0;
             int ps = 100000;
 			PaginationMetadata paginationMetadata = null;
-            IEnumerable<SuggestionPost> res = archive.Posts;
+
+			var blogId = await GetBlogGuidAsync();
+			IEnumerable<SuggestionPost> res = await api.Posts.GetAllAsync<SuggestionPost>(blogId);
 
 			if (!string.IsNullOrEmpty(datasetUri))
             {
@@ -93,13 +94,13 @@ namespace CMS.Suggestions
 		[HttpPost]
 		[Route("search")]
 		public async Task<SuggestionSearchResponse> Search(SuggestionSearchRequest filter)
-		{
-			var pageId = await GetArchiveGuidAsync();
-			var archive = await api.Archives.GetByIdAsync<SuggestionPost>(pageId);
+		{			
 			int pn = 0;
 			int ps = 100000;
 			PaginationMetadata paginationMetadata = null;
-			IEnumerable<SuggestionPost> res = archive.Posts;
+
+			var blogId = await GetBlogGuidAsync();
+			IEnumerable<SuggestionPost> res = await api.Posts.GetAllAsync<SuggestionPost>(blogId);
 
 			if (!string.IsNullOrWhiteSpace(filter.SearchQuery))
 			{
@@ -181,7 +182,7 @@ namespace CMS.Suggestions
 		[Authorize]
 		public async Task<IResult> Save(SuggestionDto dto)
         {
-            var archiveId = await GetArchiveGuidAsync();
+            var blogId = await GetBlogGuidAsync();
             var post = await api.Posts.CreateAsync<SuggestionPost>();
             post.Title = dto.Title;
             post.Suggestion = new SuggestionRegion
@@ -209,7 +210,7 @@ namespace CMS.Suggestions
                 Slug = "suggestion",
                 Type = TaxonomyType.Category
             };
-            post.BlogId = archiveId;
+            post.BlogId = blogId;
             post.Published = DateTime.Now;
 
             await api.Posts.SaveAsync(post);
@@ -245,7 +246,7 @@ namespace CMS.Suggestions
 			return Results.Ok();
 		}
 
-		private async Task<Guid> GetArchiveGuidAsync()
+		private async Task<Guid> GetBlogGuidAsync()
         {
             var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
             return page?.Id ?? (await CreatePage()).Id;

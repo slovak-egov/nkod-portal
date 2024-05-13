@@ -10,6 +10,7 @@ using SixLabors.ImageSharp.Formats.Gif;
 using System.Linq;
 using System.Text.Json.Serialization;
 using CMS.Applications;
+using CMS.Suggestions;
 
 namespace CMS.Datasets
 {
@@ -27,14 +28,14 @@ namespace CMS.Datasets
 		[HttpGet]
 		[Route("")]
 		public async Task<DatasetSearchResponse> Get(string datasetUri, int? pageNumber, int? pageSize)
-		{
-			var pageId = await GetArchiveGuidAsync();			
-			var archive = await api.Archives.GetByIdAsync<DatasetPost>(pageId);
+		{			
 			int pn = 0;
             int ps = 100000;
 			PaginationMetadata paginationMetadata = null;
-            IEnumerable<DatasetPost> res = archive.Posts;
 
+			var blogId = await GetBlogGuidAsync();
+			IEnumerable<DatasetPost> res = await api.Posts.GetAllAsync<DatasetPost>(blogId);
+			
 			if (!string.IsNullOrEmpty(datasetUri))
 			{
 				res = res.Where(p => p.Title == datasetUri);
@@ -89,7 +90,7 @@ namespace CMS.Datasets
 		[Authorize]
 		public async Task<IResult> Save(DatasetDto dto)
         {
-            var archiveId = await GetArchiveGuidAsync();
+            var blogId = await GetBlogGuidAsync();
             var post = await api.Posts.CreateAsync<DatasetPost>();
 			post.Title = dto.DatasetUri;
 			post.Dataset = new DatasetRegion
@@ -103,7 +104,7 @@ namespace CMS.Datasets
                 Slug = "dataset",
                 Type = TaxonomyType.Category
             };
-            post.BlogId = archiveId;
+            post.BlogId = blogId;
             post.Published = DateTime.Now;
 
             await api.Posts.SaveAsync(post);
@@ -131,7 +132,7 @@ namespace CMS.Datasets
 			return Results.Ok();
 		}
 
-		private async Task<Guid> GetArchiveGuidAsync()
+		private async Task<Guid> GetBlogGuidAsync()
         {
             var page = await api.Pages.GetBySlugAsync(DatasetsPage.WellKnownSlug);
             return page?.Id ?? (await CreatePage()).Id;
@@ -168,9 +169,10 @@ namespace CMS.Datasets
 
 			if (dto.ContentId == null)
 			{
-				var pageId = await GetArchiveGuidAsync();
-				var archive = await api.Archives.GetByIdAsync<DatasetPost>(pageId);
-				post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
+				var blogId = await GetBlogGuidAsync();
+				IEnumerable<DatasetPost> posts = await api.Posts.GetAllAsync<DatasetPost>(blogId);
+				post = posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
+				
 				IResult res = null;
 				Ok<Guid> resOK;
 
@@ -194,9 +196,8 @@ namespace CMS.Datasets
 						post = await api.Posts.GetByIdAsync<DatasetPost>(resOK.Value);
 					}
 					else
-					{
-						archive = await api.Archives.GetByIdAsync<DatasetPost>(pageId);
-						post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
+					{						
+						post = posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
 					}
 				}
 			}
@@ -241,9 +242,10 @@ namespace CMS.Datasets
 		[Authorize]
 		public async Task<IResult> AddComment(DatasetCommentDto dto)
 		{
-			var pageId = await GetArchiveGuidAsync();
-			var archive = await api.Archives.GetByIdAsync<DatasetPost>(pageId);
-			DatasetPost post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
+			var blogId = await GetBlogGuidAsync();
+			IEnumerable<DatasetPost> posts = await api.Posts.GetAllAsync<DatasetPost>(blogId);
+			DatasetPost post = posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
+
 			PageComment comment = null;
 			IResult res = null;
 			Ok<Guid> resOK;
@@ -269,8 +271,7 @@ namespace CMS.Datasets
 				}
 				else
 				{
-					archive = await api.Archives.GetByIdAsync<DatasetPost>(pageId);
-					post = archive.Posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
+					post = posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
 				}
             }
 
