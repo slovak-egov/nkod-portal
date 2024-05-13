@@ -8,6 +8,8 @@ using Piranha.Data.EF.SQLite;
 using Piranha.Local;
 using System.Text.Json.Serialization;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Security.Cryptography;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,28 +24,31 @@ builder.AddPiranha(options =>
     var connectionString = builder.Configuration.GetConnectionString("piranha");
     options.UseEF<SQLiteDb>(db => db.UseSqlite(connectionString));
 		
-	options.Services.AddAuthentication("Bearer")	
-	.AddJwtBearer(options =>
+	options.Services.AddAuthentication(options =>
 	{
+		options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+		options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+		options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+	}).AddJwtBearer(options =>
+	{
+		var publicKeyBytes = Convert.FromBase64String(builder.Configuration["Authentication:SecretForKey"]);
+		var rsa = RSA.Create(2048);
+		rsa.ImportRSAPublicKey(publicKeyBytes, out _);
+		var key = new RsaSecurityKey(rsa);
+
+		options.RequireHttpsMetadata = false;
+		options.SaveToken = true;
 		options.TokenValidationParameters = new()
 		{
 			ValidateIssuer = true,
 			ValidateAudience = true,
 			ValidateIssuerSigningKey = true,
 			ValidIssuer = builder.Configuration["Authentication:Issuer"],
-			ValidAudience = builder.Configuration["Authentication:Audience"],
-			IssuerSigningKey = new SymmetricSecurityKey(
-			   Convert.FromBase64String(builder.Configuration["Authentication:SecretForKey"]))
+			ValidAudience = builder.Configuration["Authentication:Audience"],			
+			IssuerSigningKey = key
 		};
 	});
-
-	options.Services.AddAuthorization(options => 
-	{
-		options.AddPolicy("MustBeAuthenticated", policy =>
-		{
-			policy.RequireAuthenticatedUser();
-		});
-	});
+	options.Services.AddAuthorization();
 
 	options.Services.AddSwaggerGen(options =>
     {
@@ -66,11 +71,11 @@ builder.AddPiranha(options =>
 				{
 					Reference = new OpenApiReference
 					{
-						Type=ReferenceType.SecurityScheme,
-						Id="Bearer"
+						Type = ReferenceType.SecurityScheme,
+						Id = "Bearer"
 					}
 				},
-				new string[]{}
+				Array.Empty<string>()
 			}
 		});
 	});
@@ -118,9 +123,6 @@ app.UsePiranha(options =>
         .AllowAnyHeader()
         .SetIsOriginAllowed(_ => app.Environment.IsDevelopment())
         .AllowCredentials());
-
-	app.UseAuthentication();
-	app.UseAuthorization();
 });
 
 app.UseSwagger();
@@ -131,7 +133,7 @@ app.UseSwaggerUI(options =>
     options.RoutePrefix = string.Empty;
 });
 
-//app.UseAuthentication();
-//app.UseAuthorization();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.Run();

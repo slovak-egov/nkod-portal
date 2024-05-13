@@ -13,8 +13,6 @@ namespace CMS.Applications
 {
     [Route("applications")]
     [ApiController]
-    [AllowAnonymous]
-	[Authorize(AuthenticationSchemes = "Bearer", Policy = "MustBeAuthenticated")]
 	public class ApplicationController : ControllerBase
     {
         private readonly IApi api;
@@ -25,7 +23,7 @@ namespace CMS.Applications
         }
 		
 		[HttpGet]
-		[Route("")]
+		[Route("")]		
 		public async Task<ApplicationSearchResponse> Get(string datasetUri, int? pageNumber, int? pageSize)
 		{
 			var pageId = await GetArchiveGuidAsync();
@@ -67,7 +65,7 @@ namespace CMS.Applications
             };
 		} 
 
-		[HttpGet("{id}")]
+		[HttpGet("{id}")]		
 		public async Task<ApplicationDto> GetByID(Guid id)
 		{
 			var post = await api.Posts.GetByIdAsync<ApplicationPost>(id);
@@ -182,7 +180,8 @@ namespace CMS.Applications
 
 		[HttpPost]
         [Route("")]
-        public async Task<IResult> Save(ApplicationDto dto)
+		[Authorize]
+		public async Task<IResult> Save(ApplicationDto dto)
         {
             var archiveId = await GetArchiveGuidAsync();
             var post = await api.Posts.CreateAsync<ApplicationPost>();
@@ -225,7 +224,8 @@ namespace CMS.Applications
         }
 
         [HttpPut("{id}")]
-        public async Task<IResult> Update(Guid id, ApplicationDto dto)
+		[Authorize]
+		public async Task<IResult> Update(Guid id, ApplicationDto dto)
         {
             var post = await api.Posts.GetByIdAsync<ApplicationPost>(id);
             post.Title = dto.Title;
@@ -249,6 +249,7 @@ namespace CMS.Applications
         }
 
 		[HttpDelete("{id}")]
+		[Authorize]
 		public async Task<IResult> Delete(Guid id)
 		{
 			await api.Posts.DeleteAsync(id);
@@ -280,6 +281,7 @@ namespace CMS.Applications
 
 		[HttpPost]
 		[Route("likes")]
+		[Authorize]
 		public async Task<IResult> AddRemoveLike(LikeDto dto)
 		{
 			var post = await api.Posts.GetByIdAsync<ApplicationPost>(dto.ContentId);

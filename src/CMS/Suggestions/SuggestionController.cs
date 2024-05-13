@@ -13,8 +13,6 @@ namespace CMS.Suggestions
 {
     [Route("suggestions")]
     [ApiController]
-    [AllowAnonymous]
-	[Authorize(AuthenticationSchemes = "Bearer", Policy = "MustBeAuthenticated")]
 	public class SuggestionController : ControllerBase
 	{
         private readonly IApi api;
@@ -180,7 +178,8 @@ namespace CMS.Suggestions
 
 		[HttpPost]
         [Route("")]
-        public async Task<IResult> Save(SuggestionDto dto)
+		[Authorize]
+		public async Task<IResult> Save(SuggestionDto dto)
         {
             var archiveId = await GetArchiveGuidAsync();
             var post = await api.Posts.CreateAsync<SuggestionPost>();
@@ -218,6 +217,7 @@ namespace CMS.Suggestions
         }
 
 		[HttpPut("{id}")]
+		[Authorize]
 		public async Task<IResult> Update(Guid id, SuggestionDto dto)
 		{
 			var post = await api.Posts.GetByIdAsync<SuggestionPost>(id);
@@ -238,6 +238,7 @@ namespace CMS.Suggestions
 		}
 
 		[HttpDelete("{id}")]
+		[Authorize]
 		public async Task<IResult> Delete(Guid id)
 		{
 			await api.Posts.DeleteAsync(id);
@@ -269,6 +270,7 @@ namespace CMS.Suggestions
 
 		[HttpPost]
 		[Route("likes")]
+		[Authorize]
 		public async Task<IResult> AddRemoveLike(LikeDto dto)
 		{
 			var post = await api.Posts.GetByIdAsync<SuggestionPost>(dto.ContentId);

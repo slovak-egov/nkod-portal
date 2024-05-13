@@ -15,8 +15,6 @@ namespace CMS.Datasets
 {
     [Route("datasets")]
     [ApiController]
-    [AllowAnonymous]
-	[Authorize(AuthenticationSchemes = "Bearer", Policy = "MustBeAuthenticated")]
 	public class DatasetController : ControllerBase
 	{
         private readonly IApi api;
@@ -88,7 +86,8 @@ namespace CMS.Datasets
         
 		[HttpPost]
         [Route("")]
-        public async Task<IResult> Save(DatasetDto dto)
+		[Authorize]
+		public async Task<IResult> Save(DatasetDto dto)
         {
             var archiveId = await GetArchiveGuidAsync();
             var post = await api.Posts.CreateAsync<DatasetPost>();
@@ -112,6 +111,7 @@ namespace CMS.Datasets
 		}
 
 		[HttpPut("{id}")]
+		[Authorize]
 		public async Task<IResult> Update(Guid id, DatasetDto dto)
 		{
 			var post = await api.Posts.GetByIdAsync<DatasetPost>(id);
@@ -124,6 +124,7 @@ namespace CMS.Datasets
 		}
 
 		[HttpDelete("{id}")]
+		[Authorize]
 		public async Task<IResult> Delete(Guid id)
 		{
 			await api.Posts.DeleteAsync(id);
@@ -155,6 +156,7 @@ namespace CMS.Datasets
 
 		[HttpPost]
 		[Route("likes")]
+		[Authorize]
 		public async Task<IResult> AddRemoveLike(DatasetLikeDto dto)
 		{
 			DatasetPost post = null;
@@ -236,6 +238,7 @@ namespace CMS.Datasets
 
 		[HttpPost]
 		[Route("comments")]
+		[Authorize]
 		public async Task<IResult> AddComment(DatasetCommentDto dto)
 		{
 			var pageId = await GetArchiveGuidAsync();

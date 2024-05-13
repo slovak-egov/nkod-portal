@@ -12,9 +12,7 @@ using System.ComponentModel.DataAnnotations;
 namespace CMS.Comments
 {
 	[Route("comments")]
-	[ApiController]
-	[AllowAnonymous]
-	[Authorize(AuthenticationSchemes = "Bearer", Policy = "MustBeAuthenticated")]
+	[ApiController]	
 	public class CommentController : ControllerBase
 	{
 		private readonly IApi api;
@@ -88,6 +86,7 @@ namespace CMS.Comments
 
 		[HttpPost]
 		[Route("")]
+		[Authorize]
 		public async Task<IResult> AddComment(CommentDto dto)
 		{
 			var comment = new PageComment()
@@ -104,6 +103,7 @@ namespace CMS.Comments
 		}
 
 		[HttpPut("{id}")]
+		[Authorize]
 		public async Task<IResult> Update(Guid id, CommentDto dto)
 		{
 			Comment comment = await api.Posts.GetCommentByIdAsync(id);
@@ -115,6 +115,7 @@ namespace CMS.Comments
 		}
 
 		[HttpDelete("{id}")]
+		[Authorize]
 		public async Task<IResult> Delete(Guid id)
 		{
 			Comment comment = await api.Posts.GetCommentByIdAsync(id);
