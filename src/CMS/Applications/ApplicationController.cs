@@ -8,6 +8,7 @@ using Piranha;
 using Piranha.Extend.Fields;
 using Piranha.Models;
 using CMS.Datasets;
+using System.Security.Claims;
 
 namespace CMS.Applications
 {
@@ -182,7 +183,23 @@ namespace CMS.Applications
 		[Authorize]
 		public async Task<IResult> Save(ApplicationDto dto)
         {
-            var blogId = await GetBlogGuidAsync();
+			ClaimsPrincipal user = HttpContext.User;
+
+			if (user == null)
+			{
+				return Results.Forbid();
+			}
+
+			if (!(user.IsInRole("Superadmin") ||
+				user.IsInRole("Publisher") ||
+				user.IsInRole("PublisherAdmin") ||
+				user.IsInRole("CommunityUser")
+				))
+			{
+				return Results.Forbid();
+			}
+
+			var blogId = await GetBlogGuidAsync();
             var post = await api.Posts.CreateAsync<ApplicationPost>();
             post.Title = dto.Title;
             post.Application = new ApplicationRegion
@@ -226,9 +243,27 @@ namespace CMS.Applications
 		[Authorize]
 		public async Task<IResult> Update(Guid id, ApplicationDto dto)
         {
-            var post = await api.Posts.GetByIdAsync<ApplicationPost>(id);
-            post.Title = dto.Title;
+			ClaimsPrincipal user = HttpContext.User;					
 
+			if (user == null)
+			{
+				return Results.Forbid();
+			}
+
+			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
+			var post = await api.Posts.GetByIdAsync<ApplicationPost>(id);
+						
+			if (!(user.IsInRole("Superadmin") || 
+				((user.IsInRole("Publisher") ||
+				user.IsInRole("PublisherAdmin") ||
+				user.IsInRole("CommunityUser")
+				) && userId == Guid.Parse(post.Application.UserId.Value))
+				))
+			{
+				return Results.Forbid();
+			}
+
+			post.Title = dto.Title;
 			post.Application.UserId = dto.UserId.ToString("D");
 			post.Application.UserEmail = dto.UserEmail;
 			post.Application.Description = dto.Description;
@@ -251,6 +286,26 @@ namespace CMS.Applications
 		[Authorize]
 		public async Task<IResult> Delete(Guid id)
 		{
+			ClaimsPrincipal user = HttpContext.User;			
+
+			if (user == null)
+			{
+				return Results.Forbid();
+			}
+
+			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
+			var post = await api.Posts.GetByIdAsync<ApplicationPost>(id);
+
+			if (!(user.IsInRole("Superadmin") ||
+				((user.IsInRole("Publisher") ||
+				user.IsInRole("PublisherAdmin") ||
+				user.IsInRole("CommunityUser")
+				) && userId == Guid.Parse(post.Application.UserId.Value))
+				))
+			{
+				return Results.Forbid();
+			}
+
 			await api.Posts.DeleteAsync(id);
 			return Results.Ok();
 		}
@@ -283,6 +338,22 @@ namespace CMS.Applications
 		[Authorize]
 		public async Task<IResult> AddRemoveLike(LikeDto dto)
 		{
+			ClaimsPrincipal user = HttpContext.User;
+
+			if (user == null)
+			{
+				return Results.Forbid();
+			}
+
+			if (!(user.IsInRole("Superadmin") ||
+				user.IsInRole("Publisher") ||
+				user.IsInRole("PublisherAdmin") ||
+				user.IsInRole("CommunityUser")
+				))
+			{
+				return Results.Forbid();
+			}
+
 			var post = await api.Posts.GetByIdAsync<ApplicationPost>(dto.ContentId);
 
 			if (post.Application.Likes?.Value != null)

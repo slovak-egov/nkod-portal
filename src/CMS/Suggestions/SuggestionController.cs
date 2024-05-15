@@ -8,6 +8,7 @@ using Piranha;
 using Piranha.Extend.Fields;
 using Piranha.Models;
 using System.Linq;
+using System.Security.Claims;
 using System.Text.Json.Serialization;
 
 namespace CMS.Suggestions
@@ -111,7 +112,7 @@ namespace CMS.Suggestions
 
 			if (filter.OrgToUris != null)
 			{
-				res = res.Where(p => filter.OrgToUris.ToList().Contains(p.Suggestion.OrgToUri));
+				res = res.Where(p => filter.OrgToUris.Select(u => u.ToUpper()).Contains(p.Suggestion.OrgToUri.Value.ToUpper()));
 			}
 
 			if (filter.Types != null)
@@ -182,7 +183,23 @@ namespace CMS.Suggestions
 		[Authorize]
 		public async Task<IResult> Save(SuggestionDto dto)
         {
-            var blogId = await GetBlogGuidAsync();
+			ClaimsPrincipal user = HttpContext.User;
+
+			if(user == null)
+			{
+				return Results.Forbid();
+			}
+						
+			if (!(user.IsInRole("Superadmin") ||
+				user.IsInRole("Publisher") ||
+				user.IsInRole("PublisherAdmin") ||
+				user.IsInRole("CommunityUser")
+				))
+			{
+				return Results.Forbid();
+			}			
+
+			var blogId = await GetBlogGuidAsync();
             var post = await api.Posts.CreateAsync<SuggestionPost>();
             post.Title = dto.Title;
             post.Suggestion = new SuggestionRegion
@@ -221,7 +238,47 @@ namespace CMS.Suggestions
 		[Authorize]
 		public async Task<IResult> Update(Guid id, SuggestionDto dto)
 		{
+			ClaimsPrincipal user = HttpContext.User;
+			Uri userPublisher = null;
+			Uri orgToUri = null;
+
+			if (user == null)
+			{
+				return Results.Forbid();
+			}			
+
+			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
 			var post = await api.Posts.GetByIdAsync<SuggestionPost>(id);
+
+			if (user.IsInRole("Publisher") || user.IsInRole("PublisherAdmin"))
+			{
+				string publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
+
+				if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out userPublisher))
+				{
+					userPublisher = null;
+				}
+
+				if (string.IsNullOrEmpty(post.Suggestion.OrgToUri) || !Uri.TryCreate(post.Suggestion.OrgToUri, UriKind.Absolute, out orgToUri))
+				{
+					orgToUri = null;
+				}
+			}			
+
+			if (!(user.IsInRole("Superadmin") 
+				||
+				((user.IsInRole("Publisher") || user.IsInRole("PublisherAdmin")) && 
+				((userId == Guid.Parse(post.Suggestion.UserId.Value) &&
+				post.Suggestion.Status.Value == SuggestionStates.C) || 
+				(userPublisher != null && orgToUri !=null && userPublisher == orgToUri))) 
+				||
+				(user.IsInRole("CommunityUser") && 
+				userId == Guid.Parse(post.Suggestion.UserId.Value) && 
+				post.Suggestion.Status.Value == SuggestionStates.C)
+				))
+			{
+				return Results.Forbid();
+			}			
 			
 			post.Title = dto.Title;
 			post.Suggestion.Description = dto.Description;
@@ -242,6 +299,26 @@ namespace CMS.Suggestions
 		[Authorize]
 		public async Task<IResult> Delete(Guid id)
 		{
+			ClaimsPrincipal user = HttpContext.User;
+
+			if (user == null)
+			{
+				return Results.Forbid();
+			}
+
+			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
+			var post = await api.Posts.GetByIdAsync<SuggestionPost>(id);
+
+			if (!(user.IsInRole("Superadmin") ||
+				((user.IsInRole("Publisher") ||
+				user.IsInRole("PublisherAdmin") ||
+				user.IsInRole("CommunityUser")
+				) && (userId == Guid.Parse(post.Suggestion.UserId.Value) && post.Suggestion.Status.Value == SuggestionStates.C))
+				))
+			{
+				return Results.Forbid();
+			}
+
 			await api.Posts.DeleteAsync(id);
 			return Results.Ok();
 		}
@@ -274,6 +351,22 @@ namespace CMS.Suggestions
 		[Authorize]
 		public async Task<IResult> AddRemoveLike(LikeDto dto)
 		{
+			ClaimsPrincipal user = HttpContext.User;
+
+			if (user == null)
+			{
+				return Results.Forbid();
+			}
+
+			if (!(user.IsInRole("Superadmin") ||
+				user.IsInRole("Publisher") ||
+				user.IsInRole("PublisherAdmin") ||
+				user.IsInRole("CommunityUser")
+				))
+			{
+				return Results.Forbid();
+			}
+
 			var post = await api.Posts.GetByIdAsync<SuggestionPost>(dto.ContentId);
 
             if (post.Suggestion.Likes?.Value != null)

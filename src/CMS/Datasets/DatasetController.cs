@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using CMS.Applications;
 using CMS.Suggestions;
+using System.Security.Claims;
 
 namespace CMS.Datasets
 {
@@ -90,7 +91,23 @@ namespace CMS.Datasets
 		[Authorize]
 		public async Task<IResult> Save(DatasetDto dto)
         {
-            var blogId = await GetBlogGuidAsync();
+			ClaimsPrincipal user = HttpContext.User;
+
+			if (user == null)
+			{
+				return Results.Forbid();
+			}
+
+			if (!(user.IsInRole("Superadmin") ||
+				user.IsInRole("Publisher") ||
+				user.IsInRole("PublisherAdmin") ||
+				user.IsInRole("CommunityUser")
+				))
+			{
+				return Results.Forbid();
+			}
+
+			var blogId = await GetBlogGuidAsync();
             var post = await api.Posts.CreateAsync<DatasetPost>();
 			post.Title = dto.DatasetUri;
 			post.Dataset = new DatasetRegion
@@ -115,6 +132,18 @@ namespace CMS.Datasets
 		[Authorize]
 		public async Task<IResult> Update(Guid id, DatasetDto dto)
 		{
+			ClaimsPrincipal user = HttpContext.User;
+
+			if (user == null)
+			{
+				return Results.Forbid();
+			}
+
+			if (!user.IsInRole("Superadmin"))
+			{
+				return Results.Forbid();
+			}
+
 			var post = await api.Posts.GetByIdAsync<DatasetPost>(id);
 
 			post.Title = dto.DatasetUri;
@@ -128,6 +157,18 @@ namespace CMS.Datasets
 		[Authorize]
 		public async Task<IResult> Delete(Guid id)
 		{
+			ClaimsPrincipal user = HttpContext.User;
+
+			if (user == null)
+			{
+				return Results.Forbid();
+			}
+
+			if (!user.IsInRole("Superadmin"))
+			{
+				return Results.Forbid();
+			}
+
 			await api.Posts.DeleteAsync(id);
 			return Results.Ok();
 		}
@@ -160,6 +201,22 @@ namespace CMS.Datasets
 		[Authorize]
 		public async Task<IResult> AddRemoveLike(DatasetLikeDto dto)
 		{
+			ClaimsPrincipal user = HttpContext.User;
+
+			if (user == null)
+			{
+				return Results.Forbid();
+			}
+
+			if (!(user.IsInRole("Superadmin") ||
+				user.IsInRole("Publisher") ||
+				user.IsInRole("PublisherAdmin") ||
+				user.IsInRole("CommunityUser")
+				))
+			{
+				return Results.Forbid();
+			}
+
 			DatasetPost post = null;
 
 			if (dto.ContentId == null && string.IsNullOrWhiteSpace(dto.DatasetUri))
@@ -242,6 +299,22 @@ namespace CMS.Datasets
 		[Authorize]
 		public async Task<IResult> AddComment(DatasetCommentDto dto)
 		{
+			ClaimsPrincipal user = HttpContext.User;
+
+			if (user == null)
+			{
+				return Results.Forbid();
+			}
+
+			if (!(user.IsInRole("Superadmin") ||
+				user.IsInRole("Publisher") ||
+				user.IsInRole("PublisherAdmin") ||
+				user.IsInRole("CommunityUser")
+				))
+			{
+				return Results.Forbid();
+			}
+
 			var blogId = await GetBlogGuidAsync();
 			IEnumerable<DatasetPost> posts = await api.Posts.GetAllAsync<DatasetPost>(blogId);
 			DatasetPost post = posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();

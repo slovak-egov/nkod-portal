@@ -8,6 +8,7 @@ using Piranha.Extend.Fields;
 using Piranha.Models;
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 
 namespace CMS.Comments
 {
@@ -89,6 +90,22 @@ namespace CMS.Comments
 		[Authorize]
 		public async Task<IResult> AddComment(CommentDto dto)
 		{
+			ClaimsPrincipal user = HttpContext.User;
+
+			if (user == null)
+			{
+				return Results.Forbid();
+			}
+
+			if (!(user.IsInRole("Superadmin") ||
+				user.IsInRole("Publisher") ||
+				user.IsInRole("PublisherAdmin") ||
+				user.IsInRole("CommunityUser")
+				))
+			{
+				return Results.Forbid();
+			}
+
 			var comment = new PageComment()
 			{
 				UserId = dto.UserId.ToString("D"),
@@ -106,7 +123,24 @@ namespace CMS.Comments
 		[Authorize]
 		public async Task<IResult> Update(Guid id, CommentDto dto)
 		{
+			ClaimsPrincipal user = HttpContext.User;
+
+			if (user == null)
+			{
+				return Results.Forbid();
+			}
+
+			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
 			Comment comment = await api.Posts.GetCommentByIdAsync(id);
+
+			if (!((user.IsInRole("Superadmin") ||
+				user.IsInRole("Publisher") ||
+				user.IsInRole("PublisherAdmin") ||
+				user.IsInRole("CommunityUser")) && 
+				userId == Guid.Parse(comment.UserId)))
+			{
+				return Results.Forbid();
+			}			
 
 			comment.Body = dto.Body;
 
@@ -118,10 +152,30 @@ namespace CMS.Comments
 		[Authorize]
 		public async Task<IResult> Delete(Guid id)
 		{
+			ClaimsPrincipal user = HttpContext.User;
+
+			if (user == null)
+			{
+				return Results.Forbid();
+			}
+
+			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
 			Comment comment = await api.Posts.GetCommentByIdAsync(id);
 			IEnumerable<Comment> comments = await api.Posts.GetAllCommentsAsync(comment.ContentId);
 			comments = comments.Where(c => Guid.Parse(c.Author) == comment.Id);
 
+			if (!(user.IsInRole("Superadmin") ||
+				((user.IsInRole("Publisher") ||
+				user.IsInRole("PublisherAdmin") ||
+				user.IsInRole("CommunityUser")
+				) && 
+				userId == Guid.Parse(comment.UserId) && 
+				comments.Count() == 0)
+				))
+			{
+				return Results.Forbid();
+			}
+			
 			if (comments.Count() >= 0)
 			{
 				foreach (Comment c in comments) 
