@@ -229,8 +229,12 @@ namespace CMS.Suggestions
             };
             post.BlogId = blogId;
             post.Published = DateTime.Now;
+			post.Slug = String.Format("{0}-{1}-{2:yyyy-MM-dd-HH-mm-ss-fff}", 
+				post.Category.Slug, 
+				SlugUtil.Slugify(post.Title), 
+				post.Published.Value);
 
-            await api.Posts.SaveAsync(post);
+			await api.Posts.SaveAsync(post);
             return Results.Ok<Guid>(post.Id);
         }
 
