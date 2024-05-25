@@ -86,7 +86,7 @@ export default function PublicDatasetList() {
                                         if (distribution.downloadUrl && distribution.formatValue) {
                                             return (
                                                 <Fragment key={distribution.id}>
-                                                    <a href={distribution.downloadUrl} className="govuk-link">
+                                                    <a href={distribution.downloadUrl} className="govuk-link" style={{ wordBreak: 'break-all' }}>
                                                         {distribution.formatValue.label}
                                                     </a>{' '}
                                                 </Fragment>
