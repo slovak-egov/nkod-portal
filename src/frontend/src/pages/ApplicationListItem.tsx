@@ -2,7 +2,6 @@ import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useUserPermissions } from '../client';
-import { applicationTypeCodeList } from '../codelist/ApplicationCodelist';
 import CommentButton from '../components/CommentButton';
 import GridColumn from '../components/GridColumn';
 import GridRow from '../components/GridRow';
@@ -63,7 +62,7 @@ const ApplicationListItem = (props: Props) => {
                 {app.type && (
                     <>
                         <GridColumn widthUnits={1} totalUnits={2}>
-                            <span style={{ color: '#000', fontWeight: 'bold' }}>{applicationTypeCodeList?.find((type) => type.id === app.type)?.label}</span>
+                            <span style={{ color: '#000', fontWeight: 'bold' }}>{t(`codelists.applicationType.${app.type}`)}</span>
                         </GridColumn>
                     </>
                 )}

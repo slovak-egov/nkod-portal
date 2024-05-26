@@ -55,7 +55,7 @@ export default function CommentElement(props: Props) {
                                 <GridColumn widthUnits={1} totalUnits={4} flexEnd>
                                     <GridRow>
                                         <GridColumn widthUnits={1} totalUnits={1} flexEnd>
-                                            {comment.created && <p className="govuk-body-s">{moment(comment.created).format(DATE_FORMAT)}</p>}
+                                            {comment.created && <p className="govuk-body-s">{moment.utc(comment.created).local().format(DATE_FORMAT)}</p>}
                                         </GridColumn>
                                         <GridColumn widthUnits={1} totalUnits={1} flexEnd>
                                             {isLogged && (

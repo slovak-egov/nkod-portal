@@ -1,9 +1,8 @@
 import { PropsWithChildren, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePublisherLists } from '../client';
-import { applicationThemeCodeList, applicationTypeCodeList } from '../codelist/ApplicationCodelist';
-import { suggestionStatusList, suggestionTypeCodeList } from '../codelist/SuggestionCodelist';
-import { RequestCmsQuery } from '../interface/cms.interface';
+import { getCodeListValues } from '../helpers/helpers';
+import { ApplicationTheme, ApplicationType, RequestCmsQuery, SuggestionStatusCode, SuggestionType } from '../interface/cms.interface';
 import FormElementGroup from './FormElementGroup';
 import GridColumn from './GridColumn';
 import GridRow from './GridRow';
@@ -158,7 +157,8 @@ export default function SearchResultsCms<T extends RequestCmsQuery>(props: Props
                                         selectedValues={query.orgToUris ? query.orgToUris ?? null : []}
                                         onChange={(v) =>
                                             props.setQueryParameters({
-                                                orgToUris: v?.length === 0 ? null : v
+                                                orgToUris: v?.length === 0 ? null : v,
+                                                pageNumber: 0
                                             } as any)
                                         }
                                     />
@@ -168,11 +168,12 @@ export default function SearchResultsCms<T extends RequestCmsQuery>(props: Props
                                     <GenericFilter
                                         key={codelistId}
                                         titleKey="addSuggestion.fields.type"
-                                        values={suggestionTypeCodeList}
+                                        values={getCodeListValues(t, SuggestionType, 'codelists.suggestionType.')}
                                         selectedValues={query.types ? query.types ?? null : []}
                                         onChange={(v) =>
                                             props.setQueryParameters({
-                                                types: v?.length === 0 ? null : v
+                                                types: v?.length === 0 ? null : v,
+                                                pageNumber: 0
                                             } as any)
                                         }
                                     />
@@ -182,11 +183,12 @@ export default function SearchResultsCms<T extends RequestCmsQuery>(props: Props
                                     <GenericFilter
                                         key={codelistId}
                                         titleKey="addSuggestion.fields.status"
-                                        values={suggestionStatusList}
+                                        values={getCodeListValues(t, SuggestionStatusCode, 'codelists.suggestionStatus.')}
                                         selectedValues={query.statuses ? query.statuses ?? null : []}
                                         onChange={(v) =>
                                             props.setQueryParameters({
-                                                statuses: v?.length === 0 ? null : v
+                                                statuses: v?.length === 0 ? null : v,
+                                                pageNumber: 0
                                             } as any)
                                         }
                                     />
@@ -196,11 +198,12 @@ export default function SearchResultsCms<T extends RequestCmsQuery>(props: Props
                                     <GenericFilter
                                         key={codelistId}
                                         titleKey="addApplicationPage.fields.applicationType"
-                                        values={applicationTypeCodeList}
+                                        values={getCodeListValues(t, ApplicationType, 'codelists.applicationType.')}
                                         selectedValues={query.types ? query.types ?? null : []}
                                         onChange={(v) =>
                                             props.setQueryParameters({
-                                                types: v?.length === 0 ? null : v
+                                                types: v?.length === 0 ? null : v,
+                                                pageNumber: 0
                                             } as any)
                                         }
                                     />
@@ -210,11 +213,12 @@ export default function SearchResultsCms<T extends RequestCmsQuery>(props: Props
                                     <GenericFilter
                                         key={codelistId}
                                         titleKey="addApplicationPage.fields.applicationTheme"
-                                        values={applicationThemeCodeList}
+                                        values={getCodeListValues(t, ApplicationTheme, 'codelists.applicationTheme.')}
                                         selectedValues={query.themes ? query.themes ?? null : []}
                                         onChange={(v) =>
                                             props.setQueryParameters({
-                                                themes: v?.length === 0 ? null : v
+                                                themes: v?.length === 0 ? null : v,
+                                                pageNumber: 0
                                             } as any)
                                         }
                                     />

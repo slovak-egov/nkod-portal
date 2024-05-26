@@ -98,7 +98,7 @@ export default function Header() {
                 submenu: []
             },
             {
-                title: t('codelists'),
+                title: t('codelists.label'),
                 link: '/sprava/ciselniky',
                 submenu: []
             }

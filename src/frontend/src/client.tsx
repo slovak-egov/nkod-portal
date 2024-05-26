@@ -3,7 +3,7 @@ import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { useSearchParams } from 'react-router-dom';
-import { AutocompleteOption } from './components/ReactSelectElement';
+import { AutocompleteOption, MORE_FAKE_OPTION } from './components/ReactSelectElement';
 
 const baseUrl = process.env.REACT_APP_API_URL;
 
@@ -1277,12 +1277,14 @@ export function useEndpointUrl() {
 }
 
 export const useSearchPublisher = ({ language, query }: { language: string; query: string; filters?: any; pageSize?: number }) => {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
     const [publishers, setPublishers] = useState<AutocompleteOption<string>[]>([]);
+    const [totalCount, setTotalCount] = useState<number>(0);
     const headers = useDefaultHeaders();
 
-    const load = async (query: string, filters?: any, pageSize = 50) => {
+    const load = async (query: string, filters?: any, pageSize = 200) => {
         setLoading(true);
         setError(null);
         try {
@@ -1306,8 +1308,13 @@ export const useSearchPublisher = ({ language, query }: { language: string; quer
                         label: item?.nameAll?.sk
                     }))
                     .sort((a: AutocompleteOption<string>, b: AutocompleteOption<string>) => a.label.localeCompare(b.label));
+
+                if (response.data.totalCount > data.length) {
+                    data.push({ value: MORE_FAKE_OPTION, label: t('common.moreInDB'), isDisabled: true });
+                }
             }
             setPublishers(data);
+            setTotalCount(response.data.totalCount);
             return data as AutocompleteOption<string>[];
         } catch (err) {
             if (err instanceof Error) {
@@ -1322,16 +1329,17 @@ export const useSearchPublisher = ({ language, query }: { language: string; quer
         load(query);
     }, [query]);
 
-    return [publishers, loading, error, load] as const;
+    return [publishers, loading, error, load, totalCount] as const;
 };
 
 export const useSearchDataset = ({ language, query, filters }: { language: string; query: string; filters?: any; pageSize?: number }) => {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
     const [datasets, setDatasets] = useState<AutocompleteOption<string>[]>([]);
     const headers = useDefaultHeaders();
 
-    const load = async (query: string, filters?: any, pageSize = 50) => {
+    const load = async (query: string, filters?: any, pageSize = 200) => {
         setLoading(true);
         setError(null);
         try {
@@ -1355,6 +1363,10 @@ export const useSearchDataset = ({ language, query, filters }: { language: strin
                         label: item.name ?? ''
                     }))
                     .sort((a: AutocompleteOption<string>, b: AutocompleteOption<string>) => a.label.localeCompare(b.label));
+
+                if (response.data.totalCount > data.length) {
+                    data.push({ value: MORE_FAKE_OPTION, label: t('common.moreInDB'), isDisabled: true });
+                }
             }
             setDatasets(data);
             return data as AutocompleteOption<string>[];

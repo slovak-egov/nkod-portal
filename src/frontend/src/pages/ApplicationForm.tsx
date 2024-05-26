@@ -8,7 +8,7 @@ import { useNavigate, useParams } from 'react-router';
 import { buildYup } from 'schema-to-yup';
 import { CodelistValue, useDefaultHeaders, useDocumentTitle, useUserInfo, useUserPermissions } from '../client';
 import { sendCmsDelete, sendCmsPost, sendCmsPut } from '../cms';
-import { applicationThemeCodeList, applicationTypeCodeList } from '../codelist/ApplicationCodelist';
+
 import BaseInput from '../components/BaseInput';
 import Breadcrumbs from '../components/Breadcrumbs';
 import Button from '../components/Button';
@@ -20,7 +20,7 @@ import MainContent from '../components/MainContent';
 import PageHeader from '../components/PageHeader';
 import SelectElementItems from '../components/SelectElementItems';
 import TextArea from '../components/TextArea';
-import { QueryGuard, dataUrlToFileList, getBase64, useLoadData, useSchemaConfig } from '../helpers/helpers';
+import { QueryGuard, dataUrlToFileList, getBase64, getCodeListValues, useLoadData, useSchemaConfig } from '../helpers/helpers';
 import { AppRegistrationFormValues, Application, ApplicationTheme, ApplicationType } from '../interface/cms.interface';
 import CommentSection from './CommentSection';
 import SuccessErrorPage from './SuccessErrorPage';
@@ -87,7 +87,7 @@ export default function ApplicationForm() {
         if (result?.status === 200) {
             navigate('/aplikacia');
         }
-    }, [id, navigate]);
+    }, [id, navigate, headers]);
 
     const onSubmit: SubmitHandler<AppRegistrationFormValues> = async (data) => {
         try {
@@ -141,14 +141,6 @@ export default function ApplicationForm() {
 
     return (
         <>
-            <Breadcrumbs
-                items={[
-                    { title: t('nkod'), link: '/' },
-                    { title: t('applicationList.headerTitle'), link: '/aplikacia' },
-                    { title: t('addApplicationPage.headerTitle') }
-                ]}
-            />
-
             {saveSuccess ? (
                 <SuccessErrorPage
                     msg={id ? t('applicationEditSuccessful') : t('applicationAddSuccessful')}
@@ -158,196 +150,208 @@ export default function ApplicationForm() {
             ) : (
                 <>
                     <QueryGuard {...loadFormData} isNew={!id}>
-                        <MainContent>
-                            <GridRow>
-                                <GridColumn widthUnits={1} totalUnits={1}>
-                                    <PageHeader size="l">{t('addApplicationPage.title')}</PageHeader>
-                                </GridColumn>
-                                <GridColumn widthUnits={2} totalUnits={3}>
-                                    <form onSubmit={handleSubmit(onSubmit, onErrors)}>
-                                        <h2 className="govuk-heading-m">{t('addApplicationPage.applicationSubTitle')}</h2>
+                        <>
+                            <Breadcrumbs
+                                items={[
+                                    { title: t('nkod'), link: '/' },
+                                    { title: t('applicationList.headerTitle'), link: '/aplikacia' },
+                                    { title: t('addApplicationPage.headerTitle') }
+                                ]}
+                            />
 
-                                        <FormElementGroup
-                                            label={t('addApplicationPage.fields.applicationName')}
-                                            errorMessage={errors.title?.message}
-                                            element={(id) => <BaseInput id={id} disabled={saving || !editable} {...register('title')} />}
-                                        />
-                                        <FormElementGroup
-                                            label={t('addApplicationPage.fields.applicationDescription')}
-                                            errorMessage={errors.description?.message}
-                                            element={(id) => <TextArea id={id} disabled={saving || !editable} {...register('description')} />}
-                                        />
+                            <MainContent>
+                                <GridRow>
+                                    <GridColumn widthUnits={1} totalUnits={1}>
+                                        <PageHeader size="l">{t('addApplicationPage.title')}</PageHeader>
+                                    </GridColumn>
+                                    <GridColumn widthUnits={2} totalUnits={3}>
+                                        <form onSubmit={handleSubmit(onSubmit, onErrors)}>
+                                            <h2 className="govuk-heading-m">{t('addApplicationPage.applicationSubTitle')}</h2>
 
-                                        <Controller
-                                            render={({ field }) => (
-                                                <FormElementGroup
-                                                    label={t('addApplicationPage.fields.applicationType')}
-                                                    errorMessage={errors.type?.message}
-                                                    element={(id) => (
-                                                        <SelectElementItems<CodelistValue>
-                                                            id={id}
-                                                            disabled={saving || !editable}
-                                                            options={applicationTypeCodeList}
-                                                            selectedValue={field.value}
-                                                            onChange={field.onChange}
-                                                            renderOption={(v) => v.label}
-                                                            getValue={(v) => v.id}
-                                                        />
-                                                    )}
-                                                />
-                                            )}
-                                            name="type"
-                                            control={control}
-                                        />
+                                            <FormElementGroup
+                                                label={t('addApplicationPage.fields.applicationName')}
+                                                errorMessage={errors.title?.message}
+                                                element={(id) => <BaseInput id={id} disabled={saving || !editable} {...register('title')} />}
+                                            />
+                                            <FormElementGroup
+                                                label={t('addApplicationPage.fields.applicationDescription')}
+                                                errorMessage={errors.description?.message}
+                                                element={(id) => <TextArea id={id} disabled={saving || !editable} {...register('description')} />}
+                                            />
 
-                                        <Controller
-                                            render={({ field }) => (
-                                                <FormElementGroup
-                                                    label={t('addApplicationPage.fields.applicationTheme')}
-                                                    errorMessage={errors.theme?.message}
-                                                    element={(id) => (
-                                                        <SelectElementItems<CodelistValue>
-                                                            id={id}
-                                                            disabled={saving || !editable}
-                                                            options={applicationThemeCodeList}
-                                                            selectedValue={field.value}
-                                                            onChange={field.onChange}
-                                                            renderOption={(v) => v.label}
-                                                            getValue={(v) => v.id}
-                                                        />
-                                                    )}
-                                                />
-                                            )}
-                                            name="theme"
-                                            control={control}
-                                        />
+                                            <Controller
+                                                render={({ field }) => (
+                                                    <FormElementGroup
+                                                        label={t('addApplicationPage.fields.applicationType')}
+                                                        errorMessage={errors.type?.message}
+                                                        element={(id) => (
+                                                            <SelectElementItems<CodelistValue>
+                                                                id={id}
+                                                                disabled={saving || !editable}
+                                                                options={getCodeListValues(t, ApplicationType, 'codelists.applicationType.')}
+                                                                selectedValue={field.value}
+                                                                onChange={field.onChange}
+                                                                renderOption={(v) => v.label}
+                                                                getValue={(v) => v.id}
+                                                            />
+                                                        )}
+                                                    />
+                                                )}
+                                                name="type"
+                                                control={control}
+                                            />
 
-                                        <FormElementGroup
-                                            label={t('addApplicationPage.fields.applicationUrl')}
-                                            element={(id) => (
-                                                <BaseInput id={id} disabled={saving || !editable} {...register('url')} placeholder="https://..." />
-                                            )}
-                                        />
+                                            <Controller
+                                                render={({ field }) => (
+                                                    <FormElementGroup
+                                                        label={t('addApplicationPage.fields.applicationTheme')}
+                                                        errorMessage={errors.theme?.message}
+                                                        element={(id) => (
+                                                            <SelectElementItems<CodelistValue>
+                                                                id={id}
+                                                                disabled={saving || !editable}
+                                                                options={getCodeListValues(t, ApplicationTheme, 'codelists.applicationTheme.')}
+                                                                selectedValue={field.value}
+                                                                onChange={field.onChange}
+                                                                renderOption={(v) => v.label}
+                                                                getValue={(v) => v.id}
+                                                            />
+                                                        )}
+                                                    />
+                                                )}
+                                                name="theme"
+                                                control={control}
+                                            />
 
-                                        {watch('logo') && (
-                                            <>
-                                                <label className="govuk-label">{t('addApplicationPage.fields.applicationLogo')}</label>
-                                                <img src={getValues('logo')} width="200px" alt={t('addApplicationPage.fields.applicationLogo')} />
-                                                <Button
-                                                    buttonType="secondary"
-                                                    title={t('addApplicationPage.fields.applicationLogoRemove')}
-                                                    onClick={() => {
-                                                        setValue('logo', undefined);
-                                                        setValue('logoFiles', null);
-                                                    }}
-                                                >
-                                                    <svg width="20" height="20" viewBox="0 0 20 5" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                        <path d="M10 0.5V4M20 2.3382L0 2.3382" stroke="#0B0C0C" strokeWidth="4" />
-                                                    </svg>
-                                                </Button>
-                                            </>
-                                        )}
+                                            <FormElementGroup
+                                                label={t('addApplicationPage.fields.applicationUrl')}
+                                                element={(id) => (
+                                                    <BaseInput id={id} disabled={saving || !editable} {...register('url')} placeholder="https://..." />
+                                                )}
+                                            />
 
-                                        <FormElementGroup
-                                            label={t(`addApplicationPage.fields.applicationLogo${getValues('logoFiles') ? 'Change' : ''}`)}
-                                            element={(id) => <FileUpload id={id} disabled={saving || !editable} {...register('logoFiles')} />}
-                                        />
-
-                                        {fields.map((field, index) => {
-                                            return (
-                                                <FormElementGroup
-                                                    key={field.id}
-                                                    label={t('addApplicationPage.fields.applicationDataset')}
-                                                    element={(id) => (
-                                                        <>
-                                                            <GridRow>
-                                                                <GridColumn widthUnits={3} totalUnits={4}>
-                                                                    <BaseInput
-                                                                        id={id}
-                                                                        disabled={saving || !editable}
-                                                                        {...register(`datasetURIsForm.${index}.value`)}
-                                                                    />
-                                                                </GridColumn>
-                                                                <GridColumn widthUnits={1} totalUnits={4}>
-                                                                    {fields.length > 1 && (
-                                                                        <Button buttonType="secondary" onClick={() => remove(index)}>
-                                                                            <svg
-                                                                                width="20"
-                                                                                height="20"
-                                                                                viewBox="0 0 20 5"
-                                                                                fill="none"
-                                                                                xmlns="http://www.w3.org/2000/svg"
-                                                                            >
-                                                                                <path d="M10 0.5V4M20 2.3382L0 2.3382" stroke="#0B0C0C" strokeWidth="4" />
-                                                                            </svg>
-                                                                        </Button>
-                                                                    )}
-                                                                    {fields.length - 1 === index && (
-                                                                        <Button
-                                                                            buttonType="secondary"
-                                                                            onClick={() => append({ value: '' })}
-                                                                            className={classNames({ 'govuk-!-margin-left-5': index !== 0 })}
-                                                                        >
-                                                                            <svg
-                                                                                width="20"
-                                                                                height="20"
-                                                                                viewBox="0 0 20 20"
-                                                                                fill="none"
-                                                                                xmlns="http://www.w3.org/2000/svg"
-                                                                            >
-                                                                                <path d="M8 10H11.5M9.8382 0L9.8382 20" stroke="#0B0C0C" strokeWidth="4" />
-                                                                                <path d="M10 8V11.5M20 9.8382L0 9.8382" stroke="#0B0C0C" strokeWidth="4" />
-                                                                            </svg>
-                                                                        </Button>
-                                                                    )}
-                                                                </GridColumn>
-                                                            </GridRow>
-                                                        </>
-                                                    )}
-                                                />
-                                            );
-                                        })}
-
-                                        <h2 className="govuk-heading-m ">{t('addApplicationPage.contactSubTitle')}</h2>
-
-                                        <FormElementGroup
-                                            label={t('addApplicationPage.fields.contactFirstName')}
-                                            errorMessage={errors.contactName?.message}
-                                            element={(id) => <BaseInput id={id} disabled={saving || !editable} {...register('contactName')} />}
-                                        />
-                                        <FormElementGroup
-                                            label={t('addApplicationPage.fields.contactLastName')}
-                                            errorMessage={errors.contactSurname?.message}
-                                            element={(id) => <BaseInput id={id} disabled={saving || !editable} {...register('contactSurname')} />}
-                                        />
-                                        <FormElementGroup
-                                            label={t('addApplicationPage.fields.contactEmail')}
-                                            errorMessage={errors.contactEmail?.message}
-                                            element={(id) => <BaseInput id={id} type="email" disabled={saving || !editable} {...register('contactEmail')} />}
-                                        />
-
-                                        <GridRow>
-                                            {editable && (
-                                                <GridColumn widthUnits={1} totalUnits={2}>
-                                                    <Button disabled={saving} type={'submit'}>
-                                                        {t('addApplicationPage.saveButton')}
+                                            {watch('logo') && (
+                                                <>
+                                                    <label className="govuk-label">{t('addApplicationPage.fields.applicationLogo')}</label>
+                                                    <img src={getValues('logo')} width="200px" alt={t('addApplicationPage.fields.applicationLogo')} />
+                                                    <Button
+                                                        buttonType="secondary"
+                                                        title={t('addApplicationPage.fields.applicationLogoRemove')}
+                                                        onClick={() => {
+                                                            setValue('logo', undefined);
+                                                            setValue('logoFiles', null);
+                                                        }}
+                                                    >
+                                                        <svg width="20" height="20" viewBox="0 0 20 5" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            <path d="M10 0.5V4M20 2.3382L0 2.3382" stroke="#0B0C0C" strokeWidth="4" />
+                                                        </svg>
                                                     </Button>
-                                                </GridColumn>
+                                                </>
                                             )}
-                                            {editable && (
-                                                <GridColumn widthUnits={1} totalUnits={2} flexEnd>
-                                                    <Button buttonType="warning" type={'button'} onClick={deleteApplication}>
-                                                        {t('common.delete')}
-                                                    </Button>
-                                                </GridColumn>
-                                            )}
-                                        </GridRow>
-                                    </form>
-                                </GridColumn>
-                            </GridRow>
-                        </MainContent>
+
+                                            <FormElementGroup
+                                                label={t(`addApplicationPage.fields.applicationLogo${getValues('logoFiles') ? 'Change' : ''}`)}
+                                                element={(id) => <FileUpload id={id} disabled={saving || !editable} {...register('logoFiles')} />}
+                                            />
+
+                                            {fields.map((field, index) => {
+                                                return (
+                                                    <FormElementGroup
+                                                        key={field.id}
+                                                        label={t('addApplicationPage.fields.applicationDataset')}
+                                                        element={(id) => (
+                                                            <>
+                                                                <GridRow>
+                                                                    <GridColumn widthUnits={3} totalUnits={4}>
+                                                                        <BaseInput
+                                                                            id={id}
+                                                                            disabled={saving || !editable}
+                                                                            {...register(`datasetURIsForm.${index}.value`)}
+                                                                        />
+                                                                    </GridColumn>
+                                                                    <GridColumn widthUnits={1} totalUnits={4}>
+                                                                        {fields.length > 1 && (
+                                                                            <Button buttonType="secondary" onClick={() => remove(index)}>
+                                                                                <svg
+                                                                                    width="20"
+                                                                                    height="20"
+                                                                                    viewBox="0 0 20 5"
+                                                                                    fill="none"
+                                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                                >
+                                                                                    <path d="M10 0.5V4M20 2.3382L0 2.3382" stroke="#0B0C0C" strokeWidth="4" />
+                                                                                </svg>
+                                                                            </Button>
+                                                                        )}
+                                                                        {fields.length - 1 === index && (
+                                                                            <Button
+                                                                                buttonType="secondary"
+                                                                                onClick={() => append({ value: '' })}
+                                                                                className={classNames({ 'govuk-!-margin-left-5': index !== 0 })}
+                                                                            >
+                                                                                <svg
+                                                                                    width="20"
+                                                                                    height="20"
+                                                                                    viewBox="0 0 20 20"
+                                                                                    fill="none"
+                                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                                >
+                                                                                    <path d="M8 10H11.5M9.8382 0L9.8382 20" stroke="#0B0C0C" strokeWidth="4" />
+                                                                                    <path d="M10 8V11.5M20 9.8382L0 9.8382" stroke="#0B0C0C" strokeWidth="4" />
+                                                                                </svg>
+                                                                            </Button>
+                                                                        )}
+                                                                    </GridColumn>
+                                                                </GridRow>
+                                                            </>
+                                                        )}
+                                                    />
+                                                );
+                                            })}
+
+                                            <h2 className="govuk-heading-m ">{t('addApplicationPage.contactSubTitle')}</h2>
+
+                                            <FormElementGroup
+                                                label={t('addApplicationPage.fields.contactFirstName')}
+                                                errorMessage={errors.contactName?.message}
+                                                element={(id) => <BaseInput id={id} disabled={saving || !editable} {...register('contactName')} />}
+                                            />
+                                            <FormElementGroup
+                                                label={t('addApplicationPage.fields.contactLastName')}
+                                                errorMessage={errors.contactSurname?.message}
+                                                element={(id) => <BaseInput id={id} disabled={saving || !editable} {...register('contactSurname')} />}
+                                            />
+                                            <FormElementGroup
+                                                label={t('addApplicationPage.fields.contactEmail')}
+                                                errorMessage={errors.contactEmail?.message}
+                                                element={(id) => (
+                                                    <BaseInput id={id} type="email" disabled={saving || !editable} {...register('contactEmail')} />
+                                                )}
+                                            />
+
+                                            <GridRow>
+                                                {editable && (
+                                                    <GridColumn widthUnits={1} totalUnits={2}>
+                                                        <Button disabled={saving} type={'submit'}>
+                                                            {t('addApplicationPage.saveButton')}
+                                                        </Button>
+                                                    </GridColumn>
+                                                )}
+                                                {editable && id && (
+                                                    <GridColumn widthUnits={1} totalUnits={2} flexEnd>
+                                                        <Button buttonType="warning" type={'button'} onClick={deleteApplication}>
+                                                            {t('common.delete')}
+                                                        </Button>
+                                                    </GridColumn>
+                                                )}
+                                            </GridRow>
+                                        </form>
+                                    </GridColumn>
+                                </GridRow>
+                            </MainContent>
+                            <div ref={commentsRef}>{id && <CommentSection contentId={id} />}</div>
+                        </>
                     </QueryGuard>
-                    <div ref={commentsRef}>{id && <CommentSection contentId={id} />}</div>
                 </>
             )}
         </>

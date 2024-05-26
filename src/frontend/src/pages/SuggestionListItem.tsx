@@ -2,7 +2,6 @@ import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useUserPermissions } from '../client';
-import { suggestionStatusList } from '../codelist/SuggestionCodelist';
 import CommentButton from '../components/CommentButton';
 import GridColumn from '../components/GridColumn';
 import GridRow from '../components/GridRow';
@@ -67,9 +66,7 @@ const SuggestionListItem = (props: Props) => {
                 )}
 
                 <GridColumn widthUnits={1} totalUnits={4}>
-                    <span className="govuk-body-m govuk-!-font-weight-bold">
-                        {suggestionStatusList?.find((status) => status.id === suggestion.status)?.label}
-                    </span>
+                    <span className="govuk-body-m govuk-!-font-weight-bold">{t(`codelists.suggestionStatus.${suggestion.status}`) ?? ''}</span>
                 </GridColumn>
                 {publisher && (
                     <GridColumn widthUnits={3} totalUnits={4} data-testid="sr-result-publisher" flexEnd>

@@ -3,9 +3,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { FieldValues, Path, UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { sendCmsGet } from '../cms';
-import ErrorAlert from '../components/ErrorAlert';
 import Loading from '../components/Loading';
 import { IComment, ICommentSorted } from '../interface/cms.interface';
+import NotFound from '../pages/NotFound';
 
 interface IUseLoadData<TForm extends FieldValues> {
     form: UseFormReturn<TForm>;
@@ -128,6 +128,9 @@ export const QueryGuard = <T extends unknown>(props: IQueryGuardProps<T>) => {
     if (loading) {
         return <Loading />;
     }
+    if (!loading && !isDefined(data)) {
+        return <NotFound />;
+    }
     return null;
 };
 
@@ -184,4 +187,11 @@ export const useSchemaConfig = (required: string[]) => {
             })
     );
     return errMessages;
+};
+
+export const getCodeListValues = (translator: any, values: any, translationPrefix: string) => {
+    return Object.values(values)?.map((value: any) => ({
+        id: value,
+        label: translator(`${translationPrefix}${value.toString()}`)
+    }));
 };

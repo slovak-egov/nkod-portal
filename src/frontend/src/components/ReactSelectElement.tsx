@@ -6,7 +6,10 @@ import { forwardRef } from 'react';
 export type AutocompleteOption<T> = {
     value: T;
     label: string;
+    isDisabled?: boolean;
 };
+
+export const MORE_FAKE_OPTION = 'MOREFAKEOPTION';
 
 type Props<T> = {
     id: string;
@@ -17,6 +20,16 @@ type Props<T> = {
     isLoading: boolean;
     disabled?: boolean;
     options?: OptionsOrGroups<any, any> | boolean;
+};
+
+const formatOptionLabel = (option: any, getOptionLabel: (value: any) => string) => {
+    return option.value !== MORE_FAKE_OPTION ? (
+        getOptionLabel(option)
+    ) : (
+        <div style={{ display: 'flex', color: 'grey', alignItems: 'center', justifyContent: 'center', fontFamily: 'Source Sans Pro' }}>
+            <b>{option.label}</b>
+        </div>
+    );
 };
 
 export default forwardRef(function ReactSelectElement<T>(props: Props<T>, ref: any) {
@@ -72,7 +85,7 @@ export default forwardRef(function ReactSelectElement<T>(props: Props<T>, ref: a
             isLoading={isLoading}
             loadOptions={loadOptions}
             value={value}
-            getOptionLabel={getOptionLabel}
+            formatOptionLabel={(option) => formatOptionLabel(option, getOptionLabel)}
             onChange={onChange}
             defaultOptions={options}
         />
