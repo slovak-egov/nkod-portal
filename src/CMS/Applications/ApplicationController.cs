@@ -41,7 +41,7 @@ namespace CMS.Applications
 				p.Application.DatasetURIs.Value.Contains(datasetUri));
 			}
 
-			res = res.OrderByDescending(c => c.Created);
+			res = res.OrderByDescending(c => c.Published);
 
 			if (pageNumber != null || pageSize != null)
 			{
@@ -66,10 +66,18 @@ namespace CMS.Applications
 		} 
 
 		[HttpGet("{id}")]		
-		public async Task<ApplicationDto> GetByID(Guid id)
+		public async Task<ActionResult<ApplicationDto>> GetByID(Guid id)
 		{
 			var post = await api.Posts.GetByIdAsync<ApplicationPost>(id);
-            return Convert(post);
+
+			if (post == null)
+			{
+				return NotFound();
+			}
+			else
+			{
+				return Convert(post);
+			}
 		}
 
 		private static ApplicationDto Convert(ApplicationPost p)
@@ -77,9 +85,9 @@ namespace CMS.Applications
             return new ApplicationDto
             {
                 Id = p.Id,				
-				Created = p.Created,
-                Updated = p.LastModified,
-                CommentCount = p.CommentCount,
+				Created = p.Published.Value,
+				Updated = (p.Application.Updated != null && p.Application.Updated.Value > DateTime.MinValue) ? p.Application.Updated.Value : p.Published.Value,
+				CommentCount = p.CommentCount,
 				LikeCount = (p.Application.Likes?.Value != null) ? p.Application.Likes.Value.Count() : 0,
 				UserId = (p.Application.UserId.Value != null) ? Guid.Parse(p.Application.UserId.Value) : Guid.Empty,
 				UserEmail = p.Application.UserEmail,
@@ -131,12 +139,12 @@ namespace CMS.Applications
 				{
 					case OrderByTypes.Created:
 						{
-							res = res.OrderByDescending(p => p.Created);
+							res = res.OrderByDescending(p => p.Published);
 							break;
 						};
 					case OrderByTypes.Updated:
 						{
-							res = res.OrderByDescending(p => p.LastModified);
+							res = res.OrderByDescending(p => p.Application.Updated);
 							break;
 						};
 					case OrderByTypes.Title:
@@ -153,7 +161,7 @@ namespace CMS.Applications
 			}
 			else
 			{
-				res = res.OrderByDescending(c => c.Created);
+				res = res.OrderByDescending(c => c.Published);
 			}
 
 			if (filter.PageNumber != null || filter.PageSize != null)
@@ -184,17 +192,18 @@ namespace CMS.Applications
 		public async Task<IResult> Save(ApplicationDto dto)
         {
 			ClaimsPrincipal user = HttpContext.User;
+			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
 
 			if (user == null)
 			{
 				return Results.Forbid();
 			}
-
-			if (!(user.IsInRole("Superadmin") ||
+			
+			if (!((user.IsInRole("Superadmin") ||
 				user.IsInRole("Publisher") ||
 				user.IsInRole("PublisherAdmin") ||
 				user.IsInRole("CommunityUser")
-				))
+				) && userId == dto.UserId))
 			{
 				return Results.Forbid();
 			}
@@ -222,7 +231,8 @@ namespace CMS.Applications
                 ContactSurname = dto.ContactSurname,
                 ContactEmail = dto.ContactEmail,
                 DatasetURIs = (dto.DatasetURIs != null) ? new MultiSelectField<string> { Value = dto.DatasetURIs } : null,
-				Likes = new MultiSelectField<Guid>()
+				Likes = new MultiSelectField<Guid>(),
+				Updated = new CustomField<DateTime> { Value = DateTime.UtcNow }
 			};
 
             post.Category = new Taxonomy
@@ -232,7 +242,7 @@ namespace CMS.Applications
                 Type = TaxonomyType.Category
             };
             post.BlogId = blogId;
-            post.Published = DateTime.Now;
+            post.Published = DateTime.UtcNow;
             post.EnableComments = true;
 			post.Slug = String.Format("{0}-{1}-{2:yyyy-MM-dd-HH-mm-ss-fff}",
 				post.Category.Slug,
@@ -245,18 +255,23 @@ namespace CMS.Applications
 
         [HttpPut("{id}")]
 		[Authorize]
-		public async Task<IResult> Update(Guid id, ApplicationDto dto)
+		public async Task<ActionResult> Update(Guid id, ApplicationDto dto)
         {
 			ClaimsPrincipal user = HttpContext.User;					
 
 			if (user == null)
 			{
-				return Results.Forbid();
+				return Forbid();
 			}
 
 			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
 			var post = await api.Posts.GetByIdAsync<ApplicationPost>(id);
-						
+
+			if (post == null)
+			{
+				return NotFound();
+			}
+
 			if (!(user.IsInRole("Superadmin") || 
 				((user.IsInRole("Publisher") ||
 				user.IsInRole("PublisherAdmin") ||
@@ -264,12 +279,10 @@ namespace CMS.Applications
 				) && userId == Guid.Parse(post.Application.UserId.Value))
 				))
 			{
-				return Results.Forbid();
+				return Forbid();
 			}
 
 			post.Title = dto.Title;
-			post.Application.UserId = dto.UserId.ToString("D");
-			post.Application.UserEmail = dto.UserEmail;
 			post.Application.Description = dto.Description;
             post.Application.Type.Value = dto.Type;
             post.Application.Theme.Value = dto.Theme;
@@ -280,25 +293,30 @@ namespace CMS.Applications
             post.Application.ContactSurname = dto.ContactSurname;
             post.Application.ContactEmail = dto.ContactEmail;
             post.Application.DatasetURIs = (dto.DatasetURIs != null) ? new MultiSelectField<string> { Value = dto.DatasetURIs } : null;
-			post.LastModified = DateTime.Now;
+			post.Application.Updated.Value = DateTime.UtcNow;
 
 			await api.Posts.SaveAsync(post);
-            return Results.Ok();
+            return Ok();
         }
 
 		[HttpDelete("{id}")]
 		[Authorize]
-		public async Task<IResult> Delete(Guid id)
+		public async Task<ActionResult> Delete(Guid id)
 		{
 			ClaimsPrincipal user = HttpContext.User;			
 
 			if (user == null)
 			{
-				return Results.Forbid();
+				return Forbid();
 			}
 
 			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
 			var post = await api.Posts.GetByIdAsync<ApplicationPost>(id);
+
+			if (post == null)
+			{
+				return NotFound();
+			}
 
 			if (!(user.IsInRole("Superadmin") ||
 				((user.IsInRole("Publisher") ||
@@ -307,11 +325,11 @@ namespace CMS.Applications
 				) && userId == Guid.Parse(post.Application.UserId.Value))
 				))
 			{
-				return Results.Forbid();
+				return Forbid();
 			}
 
 			await api.Posts.DeleteAsync(id);
-			return Results.Ok();
+			return Ok();
 		}
 
 		private async Task<Guid> GetBlogGuidAsync()
@@ -326,7 +344,7 @@ namespace CMS.Applications
 
             newPage.Title = ApplicationsPage.WellKnownSlug;
             newPage.EnableComments = true;
-            newPage.Published = DateTime.Now;
+            newPage.Published = DateTime.UtcNow;
             newPage.SiteId = await GetSiteGuidAsync();
             await api.Pages.SaveAsync(newPage);
             return newPage;
@@ -343,17 +361,18 @@ namespace CMS.Applications
 		public async Task<IResult> AddRemoveLike(LikeDto dto)
 		{
 			ClaimsPrincipal user = HttpContext.User;
+			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
 
 			if (user == null)
 			{
 				return Results.Forbid();
 			}
 
-			if (!(user.IsInRole("Superadmin") ||
+			if (!((user.IsInRole("Superadmin") ||
 				user.IsInRole("Publisher") ||
 				user.IsInRole("PublisherAdmin") ||
 				user.IsInRole("CommunityUser")
-				))
+				) && userId == dto.UserId))
 			{
 				return Results.Forbid();
 			}

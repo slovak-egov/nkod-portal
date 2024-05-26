@@ -91,17 +91,18 @@ namespace CMS.Comments
 		public async Task<IResult> AddComment(CommentDto dto)
 		{
 			ClaimsPrincipal user = HttpContext.User;
+			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
 
 			if (user == null)
 			{
 				return Results.Forbid();
 			}
 
-			if (!(user.IsInRole("Superadmin") ||
+			if (!((user.IsInRole("Superadmin") ||
 				user.IsInRole("Publisher") ||
 				user.IsInRole("PublisherAdmin") ||
 				user.IsInRole("CommunityUser")
-				))
+				) && userId == dto.UserId))
 			{
 				return Results.Forbid();
 			}
@@ -112,7 +113,7 @@ namespace CMS.Comments
 				Author = dto.ParentId.ToString("D"),
 				Email = dto.Email,
 				Body = dto.Body,
-				Created = DateTime.Now
+				Created = DateTime.UtcNow
 			};
 
 			await api.Posts.SaveCommentAsync(dto.ContentId, comment);

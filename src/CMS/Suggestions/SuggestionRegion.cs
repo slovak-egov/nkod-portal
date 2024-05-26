@@ -14,5 +14,6 @@ namespace CMS.Suggestions
         [Field] public SelectField<ContentTypes> Type { get; set; }
         [Field] public SelectField<SuggestionStates> Status { get; set; }
 		[Field] public MultiSelectField<Guid> Likes { get; set; }
+		[Field] public CustomField<DateTime> Updated { get; set; }
 	}
 }

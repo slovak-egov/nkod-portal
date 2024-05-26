@@ -8,5 +8,6 @@ namespace CMS.Datasets
 	{
 		[Field] public StringField DatasetUri { get; set; }
 		[Field] public MultiSelectField<Guid> Likes { get; set; }
+		[Field] public CustomField<DateTime> Updated { get; set; }
 	}
 }

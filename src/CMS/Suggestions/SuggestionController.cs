@@ -10,6 +10,7 @@ using Piranha.Models;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace CMS.Suggestions
 {
@@ -40,7 +41,7 @@ namespace CMS.Suggestions
 				res = res.Where(p => p.Suggestion.DatasetUri == datasetUri);
 			}
 
-            res = res.OrderByDescending(c => c.Created);
+            res = res.OrderByDescending(c => c.Published);
 
 			if (pageNumber != null || pageSize != null)
 			{
@@ -65,10 +66,18 @@ namespace CMS.Suggestions
 		}     
         
 		[HttpGet("{id}")]		
-		public async Task<SuggestionDto> GetByID(Guid id)
+		public async Task<ActionResult<SuggestionDto>> GetByID(Guid id)
 		{
 			var post = await api.Posts.GetByIdAsync<SuggestionPost>(id);
-			return Convert(post);
+
+			if (post == null)
+			{
+				return NotFound();
+			}
+			else
+			{
+				return Convert(post);
+			}
 		}
 
 		private static SuggestionDto Convert(SuggestionPost p)
@@ -76,9 +85,9 @@ namespace CMS.Suggestions
             return new SuggestionDto
 			{
                 Id = p.Id,
-				Created = p.Created,
-				Updated = p.LastModified,
-                CommentCount = p.CommentCount,
+				Created = p.Published.Value,
+				Updated = (p.Suggestion.Updated != null && p.Suggestion.Updated.Value > DateTime.MinValue) ? p.Suggestion.Updated.Value: p.Published.Value,
+				CommentCount = p.CommentCount,
                 LikeCount = (p.Suggestion.Likes?.Value != null) ? p.Suggestion.Likes.Value.Count() : 0,
 				Status = p.Suggestion.Status.Value,
                 OrgToUri = p.Suggestion.OrgToUri,
@@ -131,12 +140,12 @@ namespace CMS.Suggestions
 				{
 					case OrderByTypes.Created:
 						{
-							res = res.OrderByDescending(p => p.Created);
+							res = res.OrderByDescending(p => p.Published);
 							break;
 						};
 					case OrderByTypes.Updated:
 						{
-							res = res.OrderByDescending(p => p.LastModified);
+							res = res.OrderByDescending(p => p.Suggestion.Updated);
 							break;
 						};
 					case OrderByTypes.Title:
@@ -153,7 +162,7 @@ namespace CMS.Suggestions
 			}
 			else
 			{
-				res = res.OrderByDescending(c => c.Created);
+				res = res.OrderByDescending(c => c.Published);
 			}			
 
 			if (filter.PageNumber != null || filter.PageSize != null)
@@ -184,17 +193,18 @@ namespace CMS.Suggestions
 		public async Task<IResult> Save(SuggestionDto dto)
         {
 			ClaimsPrincipal user = HttpContext.User;
+			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
 
-			if(user == null)
+			if (user == null)
 			{
 				return Results.Forbid();
 			}
 						
-			if (!(user.IsInRole("Superadmin") ||
+			if (!((user.IsInRole("Superadmin") ||
 				user.IsInRole("Publisher") ||
 				user.IsInRole("PublisherAdmin") ||
 				user.IsInRole("CommunityUser")
-				))
+				) && userId == dto.UserId))
 			{
 				return Results.Forbid();
 			}			
@@ -214,11 +224,12 @@ namespace CMS.Suggestions
                 {
                     Value = dto.Type
                 },
-                Status = new SelectField<SuggestionStates>
+                Status =  new SelectField<SuggestionStates>
                 {
-                    Value = dto.Status
-                },
-                Likes = new MultiSelectField<Guid>()
+                    Value = SuggestionStates.C
+				},
+                Likes = new MultiSelectField<Guid>(), 
+				Updated = new CustomField<DateTime> { Value = DateTime.UtcNow }
 			};
 
             post.Category = new Taxonomy
@@ -228,11 +239,11 @@ namespace CMS.Suggestions
                 Type = TaxonomyType.Category
             };
             post.BlogId = blogId;
-            post.Published = DateTime.Now;
+            post.Published = DateTime.UtcNow;
 			post.Slug = String.Format("{0}-{1}-{2:yyyy-MM-dd-HH-mm-ss-fff}", 
 				post.Category.Slug, 
 				SlugUtil.Slugify(post.Title), 
-				post.Published.Value);
+				post.Published.Value);			
 
 			await api.Posts.SaveAsync(post);
             return Results.Ok<Guid>(post.Id);
@@ -240,7 +251,7 @@ namespace CMS.Suggestions
 
 		[HttpPut("{id}")]
 		[Authorize]
-		public async Task<IResult> Update(Guid id, SuggestionDto dto)
+		public async Task<ActionResult> Update(Guid id, SuggestionDto dto)
 		{
 			ClaimsPrincipal user = HttpContext.User;
 			Uri userPublisher = null;
@@ -248,11 +259,16 @@ namespace CMS.Suggestions
 
 			if (user == null)
 			{
-				return Results.Forbid();
+				return Forbid();
 			}			
 
 			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
 			var post = await api.Posts.GetByIdAsync<SuggestionPost>(id);
+
+			if (post == null)
+			{
+				return NotFound();
+			}
 
 			if (user.IsInRole("Publisher") || user.IsInRole("PublisherAdmin"))
 			{
@@ -281,37 +297,47 @@ namespace CMS.Suggestions
 				post.Suggestion.Status.Value == SuggestionStates.C)
 				))
 			{
-				return Results.Forbid();
-			}			
+				return Forbid();
+			}
+
+			if (user.IsInRole("Superadmin") || user.IsInRole("CommunityUser"))
+			{
+				post.Title = dto.Title;
+				post.Suggestion.Description = dto.Description;
+				post.Suggestion.OrgToUri = dto.OrgToUri;
+				post.Suggestion.DatasetUri = dto.DatasetUri;
+				post.Suggestion.Type.Value = dto.Type;
+			}
+
+			if (user.IsInRole("Superadmin") || user.IsInRole("Publisher") || user.IsInRole("PublisherAdmin"))
+			{
+				post.Suggestion.Status.Value = dto.Status;
+			}
 			
-			post.Title = dto.Title;
-			post.Suggestion.Description = dto.Description;
-			post.Suggestion.UserId = dto.UserId.ToString("D");
-			post.Suggestion.UserEmail = dto.UserEmail;
-			post.Suggestion.UserOrgUri = dto.UserOrgUri;
-			post.Suggestion.OrgToUri = dto.OrgToUri;
-			post.Suggestion.DatasetUri = dto.DatasetUri;
-			post.Suggestion.Type.Value = dto.Type;
-			post.Suggestion.Status.Value = dto.Status;
-			post.LastModified = DateTime.Now;
+			post.Suggestion.Updated.Value = DateTime.UtcNow;
 
 			await api.Posts.SaveAsync(post);
-			return Results.Ok();
+			return Ok();
 		}
 
 		[HttpDelete("{id}")]
 		[Authorize]
-		public async Task<IResult> Delete(Guid id)
+		public async Task<ActionResult> Delete(Guid id)
 		{
 			ClaimsPrincipal user = HttpContext.User;
 
 			if (user == null)
 			{
-				return Results.Forbid();
+				return Forbid();
 			}
 
 			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
 			var post = await api.Posts.GetByIdAsync<SuggestionPost>(id);
+
+			if (post == null)
+			{
+				return NotFound();
+			}
 
 			if (!(user.IsInRole("Superadmin") ||
 				((user.IsInRole("Publisher") ||
@@ -320,11 +346,11 @@ namespace CMS.Suggestions
 				) && (userId == Guid.Parse(post.Suggestion.UserId.Value) && post.Suggestion.Status.Value == SuggestionStates.C))
 				))
 			{
-				return Results.Forbid();
+				return Forbid();
 			}
 
 			await api.Posts.DeleteAsync(id);
-			return Results.Ok();
+			return Ok();
 		}
 
 		private async Task<Guid> GetBlogGuidAsync()
@@ -339,7 +365,7 @@ namespace CMS.Suggestions
 
             newPage.Title = SuggestionsPage.WellKnownSlug;
             newPage.EnableComments = true;
-            newPage.Published = DateTime.Now;
+            newPage.Published = DateTime.UtcNow;
             newPage.SiteId = await GetSiteGuidAsync();
             await api.Pages.SaveAsync(newPage);
             return newPage;
@@ -356,17 +382,18 @@ namespace CMS.Suggestions
 		public async Task<IResult> AddRemoveLike(LikeDto dto)
 		{
 			ClaimsPrincipal user = HttpContext.User;
+			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
 
 			if (user == null)
 			{
 				return Results.Forbid();
 			}
 
-			if (!(user.IsInRole("Superadmin") ||
+			if (!((user.IsInRole("Superadmin") ||
 				user.IsInRole("Publisher") ||
 				user.IsInRole("PublisherAdmin") ||
 				user.IsInRole("CommunityUser")
-				))
+				) && userId == dto.UserId))
 			{
 				return Results.Forbid();
 			}

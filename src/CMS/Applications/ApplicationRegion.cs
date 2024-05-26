@@ -18,5 +18,6 @@ namespace CMS.Applications
         [Field] public StringField ContactSurname { get; set; }
         [Field] public StringField ContactEmail { get; set; }
 		[Field] public MultiSelectField<Guid> Likes { get; set; }
+		[Field] public CustomField<DateTime> Updated { get; set; }
 	}
 }

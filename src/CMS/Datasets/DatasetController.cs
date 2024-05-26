@@ -42,7 +42,7 @@ namespace CMS.Datasets
 				res = res.Where(p => p.Title == datasetUri);
 			}
 
-			res = res.OrderByDescending(c => c.Created);
+			res = res.OrderByDescending(c => c.Published);
 
 			if (pageNumber != null || pageSize != null)
 			{
@@ -67,10 +67,18 @@ namespace CMS.Datasets
 		}     
         
 		[HttpGet("{id}")]		
-		public async Task<DatasetDto> GetByID(Guid id)
+		public async Task<ActionResult<DatasetDto>> GetByID(Guid id)
 		{
 			var post = await api.Posts.GetByIdAsync<DatasetPost>(id);
-			return Convert(post);
+
+			if (post == null)
+			{
+				return NotFound();
+			}
+			else
+			{
+				return Convert(post);
+			}
 		}
 
 		private static DatasetDto Convert(DatasetPost p)
@@ -78,9 +86,9 @@ namespace CMS.Datasets
             return new DatasetDto
 			{
                 Id = p.Id,
-				Created = p.Created,
-				Updated = p.LastModified,
-                CommentCount = p.CommentCount,
+				Created = p.Published.Value,
+				Updated = (p.Dataset.Updated != null && p.Dataset.Updated.Value > DateTime.MinValue) ? p.Dataset.Updated.Value : p.Published.Value,
+				CommentCount = p.CommentCount,
                 LikeCount = (p.Dataset.Likes?.Value != null) ? p.Dataset.Likes.Value.Count() : 0,				
                 DatasetUri = p.Title
             };
@@ -112,7 +120,8 @@ namespace CMS.Datasets
 			post.Title = dto.DatasetUri;
 			post.Dataset = new DatasetRegion
             {
-                Likes = new MultiSelectField<Guid>()
+                Likes = new MultiSelectField<Guid>(),
+				Updated = new CustomField<DateTime> { Value = DateTime.UtcNow }
 			};
 
             post.Category = new Taxonomy
@@ -122,7 +131,7 @@ namespace CMS.Datasets
                 Type = TaxonomyType.Category
             };
             post.BlogId = blogId;
-            post.Published = DateTime.Now;
+            post.Published = DateTime.UtcNow;
 			post.Slug = String.Format("{0}-{1}-{2:yyyy-MM-dd-HH-mm-ss-fff}",
 				post.Category.Slug,
 				SlugUtil.Slugify(post.Title),
@@ -134,47 +143,59 @@ namespace CMS.Datasets
 
 		[HttpPut("{id}")]
 		[Authorize]
-		public async Task<IResult> Update(Guid id, DatasetDto dto)
+		public async Task<ActionResult> Update(Guid id, DatasetDto dto)
 		{
 			ClaimsPrincipal user = HttpContext.User;
 
 			if (user == null)
 			{
-				return Results.Forbid();
+				return Forbid();
 			}
 
 			if (!user.IsInRole("Superadmin"))
 			{
-				return Results.Forbid();
+				return Forbid();
 			}
 
 			var post = await api.Posts.GetByIdAsync<DatasetPost>(id);
 
+			if (post == null)
+			{
+				return NotFound();
+			}
+
 			post.Title = dto.DatasetUri;
-			post.LastModified = DateTime.Now;
+			post.Dataset.Updated.Value = DateTime.UtcNow;
 
 			await api.Posts.SaveAsync(post);
-			return Results.Ok();
+			return Ok();
 		}
 
 		[HttpDelete("{id}")]
 		[Authorize]
-		public async Task<IResult> Delete(Guid id)
+		public async Task<ActionResult> Delete(Guid id)
 		{
 			ClaimsPrincipal user = HttpContext.User;
 
 			if (user == null)
 			{
-				return Results.Forbid();
+				return Forbid();
 			}
 
 			if (!user.IsInRole("Superadmin"))
 			{
-				return Results.Forbid();
+				return Forbid();
+			}
+
+			var post = await api.Posts.GetByIdAsync<DatasetPost>(id);
+
+			if (post == null)
+			{
+				return NotFound();
 			}
 
 			await api.Posts.DeleteAsync(id);
-			return Results.Ok();
+			return Ok();
 		}
 
 		private async Task<Guid> GetBlogGuidAsync()
@@ -189,7 +210,7 @@ namespace CMS.Datasets
 
             newPage.Title = DatasetsPage.WellKnownSlug;
             newPage.EnableComments = true;
-            newPage.Published = DateTime.Now;
+            newPage.Published = DateTime.UtcNow;
             newPage.SiteId = await GetSiteGuidAsync();
             await api.Pages.SaveAsync(newPage);
             return newPage;
@@ -206,17 +227,18 @@ namespace CMS.Datasets
 		public async Task<IResult> AddRemoveLike(DatasetLikeDto dto)
 		{
 			ClaimsPrincipal user = HttpContext.User;
+			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
 
 			if (user == null)
 			{
 				return Results.Forbid();
 			}
 
-			if (!(user.IsInRole("Superadmin") ||
+			if (!((user.IsInRole("Superadmin") ||
 				user.IsInRole("Publisher") ||
 				user.IsInRole("PublisherAdmin") ||
 				user.IsInRole("CommunityUser")
-				))
+				) && userId == dto.UserId))
 			{
 				return Results.Forbid();
 			}
@@ -304,17 +326,18 @@ namespace CMS.Datasets
 		public async Task<IResult> AddComment(DatasetCommentDto dto)
 		{
 			ClaimsPrincipal user = HttpContext.User;
+			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
 
 			if (user == null)
 			{
 				return Results.Forbid();
 			}
 
-			if (!(user.IsInRole("Superadmin") ||
+			if (!((user.IsInRole("Superadmin") ||
 				user.IsInRole("Publisher") ||
 				user.IsInRole("PublisherAdmin") ||
 				user.IsInRole("CommunityUser")
-				))
+				) && userId == dto.UserId))
 			{
 				return Results.Forbid();
 			}
@@ -358,7 +381,7 @@ namespace CMS.Datasets
 				Author = Guid.Empty.ToString("D"),
 				Email = dto.Email,
 				Body = dto.Body,
-				Created = DateTime.Now
+				Created = DateTime.UtcNow
 			};
 
 			await api.Posts.SaveCommentAsync(post.Id, comment);
