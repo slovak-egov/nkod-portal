@@ -111,12 +111,12 @@ namespace CMS.Suggestions
 
 			var blogId = await GetBlogGuidAsync();
 			IEnumerable<SuggestionPost> res = await api.Posts.GetAllAsync<SuggestionPost>(blogId);
-
+			
 			if (!string.IsNullOrWhiteSpace(filter.SearchQuery))
 			{
 				var searchQuery = filter.SearchQuery.Trim();
-				res = res.Where(p => p.Title.Contains(searchQuery)
-					|| (p.Suggestion.Description != null && p.Suggestion.Description.Value != null && p.Suggestion.Description.Value.Contains(searchQuery)));
+				res = res.Where(p => p.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
+					|| (p.Suggestion.Description != null && p.Suggestion.Description.Value != null && p.Suggestion.Description.Value.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)));
 			}
 
 			if (filter.OrgToUris != null)
@@ -194,6 +194,7 @@ namespace CMS.Suggestions
         {
 			ClaimsPrincipal user = HttpContext.User;
 			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
+			string userEmail = user?.Claims.FirstOrDefault(c => c.Type.Contains("emailaddress"))?.Value;
 
 			if (user == null)
 			{
@@ -204,7 +205,7 @@ namespace CMS.Suggestions
 				user.IsInRole("Publisher") ||
 				user.IsInRole("PublisherAdmin") ||
 				user.IsInRole("CommunityUser")
-				) && userId == dto.UserId))
+				) && userId == dto.UserId && userEmail.ToUpper() == dto.UserEmail.ToUpper()))
 			{
 				return Results.Forbid();
 			}			
@@ -300,7 +301,16 @@ namespace CMS.Suggestions
 				return Forbid();
 			}
 
-			if (user.IsInRole("Superadmin") || user.IsInRole("CommunityUser"))
+			if (user.IsInRole("Superadmin"))
+			{
+				post.Title = dto.Title;
+				post.Suggestion.Description = dto.Description;
+				post.Suggestion.OrgToUri = dto.OrgToUri;
+				post.Suggestion.DatasetUri = dto.DatasetUri;
+				post.Suggestion.Type.Value = dto.Type;
+				post.Suggestion.Status.Value = dto.Status;
+			}
+			else if (user.IsInRole("CommunityUser"))
 			{
 				post.Title = dto.Title;
 				post.Suggestion.Description = dto.Description;
@@ -308,10 +318,20 @@ namespace CMS.Suggestions
 				post.Suggestion.DatasetUri = dto.DatasetUri;
 				post.Suggestion.Type.Value = dto.Type;
 			}
-
-			if (user.IsInRole("Superadmin") || user.IsInRole("Publisher") || user.IsInRole("PublisherAdmin"))
+			if (user.IsInRole("Publisher") || user.IsInRole("PublisherAdmin"))
 			{
-				post.Suggestion.Status.Value = dto.Status;
+				if (userPublisher != null && orgToUri != null && userPublisher == orgToUri)
+				{
+					post.Suggestion.Status.Value = dto.Status;
+				}
+				else 
+				{
+					post.Title = dto.Title;
+					post.Suggestion.Description = dto.Description;
+					post.Suggestion.OrgToUri = dto.OrgToUri;
+					post.Suggestion.DatasetUri = dto.DatasetUri;
+					post.Suggestion.Type.Value = dto.Type;
+				}
 			}
 			
 			post.Suggestion.Updated.Value = DateTime.UtcNow;

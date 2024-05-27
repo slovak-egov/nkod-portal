@@ -119,8 +119,8 @@ namespace CMS.Applications
 			if (!string.IsNullOrWhiteSpace(filter.SearchQuery))
 			{
 				var searchQuery = filter.SearchQuery.Trim();
-				res = res.Where(p => p.Title.Contains(searchQuery)
-					|| (p.Application.Description != null && p.Application.Description.Value != null && p.Application.Description.Value.Contains(searchQuery)));
+				res = res.Where(p => p.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
+					|| (p.Application.Description != null && p.Application.Description.Value != null && p.Application.Description.Value.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)));
 			}
 
 			if (filter.Types != null)
@@ -193,6 +193,7 @@ namespace CMS.Applications
         {
 			ClaimsPrincipal user = HttpContext.User;
 			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
+			string userEmail = user?.Claims.FirstOrDefault(c => c.Type.Contains("emailaddress"))?.Value;
 
 			if (user == null)
 			{
@@ -203,7 +204,7 @@ namespace CMS.Applications
 				user.IsInRole("Publisher") ||
 				user.IsInRole("PublisherAdmin") ||
 				user.IsInRole("CommunityUser")
-				) && userId == dto.UserId))
+				) && userId == dto.UserId && userEmail.ToUpper() == dto.UserEmail.ToUpper()))
 			{
 				return Results.Forbid();
 			}
