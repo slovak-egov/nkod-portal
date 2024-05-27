@@ -47,6 +47,10 @@ namespace WebApi
 
         public string? FileId { get; set; }
 
+        public Dictionary<string, string>? ContactName { get; set; }
+
+        public string? ContactEmail { get; set; }
+
         public async Task<ValidationResults> Validate(string publisher, IDocumentStorageClient documentStorage, ICodelistProviderClient codelistProvider)
         {
             ValidationResults results = new ValidationResults();
@@ -80,6 +84,7 @@ namespace WebApi
             results.ValidateUrl(nameof(ConformsTo), ConformsTo, false);
             await results.ValidateCodelistValue(nameof(CompressFormat), CompressFormat, DcatDistribution.MediaTypeCodelist, codelistProvider);
             await results.ValidateCodelistValue(nameof(PackageFormat), PackageFormat, DcatDistribution.MediaTypeCodelist, codelistProvider);
+            results.ValidateApplicableLegislations(nameof(ApplicableLegislations), ApplicableLegislations);
 
             List<string> languages = Title?.Keys.ToList() ?? new List<string>();
             if (!languages.Contains("sk"))
@@ -89,23 +94,22 @@ namespace WebApi
 
             results.ValidateLanguageTexts(nameof(Title), Title, languages, IsDataService);
 
+            bool isDatasetHvd = dataset is not null && dataset.IsHvd;
+
             if (IsDataService)
             {
+                languages = ContactName?.Keys.ToList() ?? new List<string>();
+                if (!languages.Contains("sk"))
+                {
+                    languages.Add("sk");
+                }
+
+                results.ValidateLanguageTexts(nameof(ContactName), ContactName, languages, isDatasetHvd);
+                results.ValidateEmail(nameof(ContactEmail), ContactEmail, isDatasetHvd);
+
                 results.ValidateLanguageTexts(nameof(Description), Description, languages, false);
                 results.ValidateUrl(nameof(EndpointUrl), EndpointUrl, true);
-                results.ValidateUrl(nameof(Documentation), Documentation, false);
-
-                if (ApplicableLegislations is not null)
-                {
-                    foreach (string url in ApplicableLegislations)
-                    {
-                        if (url is null || !Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || !uri.LocalPath.Contains("/eli/"))
-                        {
-                            results.Add(nameof(ApplicableLegislations), "URL musí byť platné a obsahovať /eli/");
-                            break;
-                        }
-                    }
-                }
+                results.ValidateUrl(nameof(Documentation), Documentation, isDatasetHvd);
             }
             else
             {

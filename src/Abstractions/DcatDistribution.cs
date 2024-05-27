@@ -121,6 +121,12 @@ namespace NkodSk.Abstractions
             set => SetUriNode("dcat:accessService", value);
         }
 
+        public IEnumerable<Uri> ApplicableLegislations
+        {
+            get => GetUrisFromUriNode("dcatap:applicableLegislation");
+            set => SetUriNodes("dcatap:applicableLegislation", value);
+        }
+
         public DcatDataService? DataService
         {
             get

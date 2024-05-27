@@ -901,6 +901,8 @@ app.MapPut("/datasets", [Authorize] async ([FromBody] DatasetInput? dataset, [Fr
                                 FileMetadata metadata = datasetRdf.UpdateMetadata(hasDistributions || dataset.IsSerie, publisherAgent, state.Metadata);
                                 metadata = await datasetRdf.UpdateReferenceToParent(parentDataset, metadata, client);
                                 await client.InsertFile(datasetRdf.ToString(), true, metadata).ConfigureAwait(false);
+                                await client.UpdateDatasetMetadata(id, false).ConfigureAwait(false);
+
                                 result.Id = metadata.Id.ToString();
                                 result.Success = true;
                             }

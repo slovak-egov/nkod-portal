@@ -71,5 +71,10 @@ namespace TestBase
                 quality.Remove(distributionId);
             }
         }
+
+        Task<Dictionary<string, bool>> ISparqlClient.GetDownloadQuality()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

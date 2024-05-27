@@ -54,5 +54,11 @@ namespace NkodSk.Abstractions
             get => GetUrisFromUriNode("dcatap:applicableLegislation");
             set => SetUriNodes("dcatap:applicableLegislation", value);
         }
+
+        public Uri? HvdCategory
+        {
+            get => GetUriFromUriNode("dcatap:hvdCategory");
+            set => SetUriNode("dcatap:hvdCategory", value);
+        }
     }
 }

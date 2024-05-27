@@ -24,6 +24,12 @@ namespace NkodSk.Abstractions
 
         public const string EuroVocPrefix = "http://eurovoc.europa.eu/";
 
+        public const string HvdCategoryCodelist = "http://publications.europa.eu/resource/dataset/high-value-dataset-category";
+
+        public const string HvdType = "http://publications.europa.eu/resource/authority/dataset-type/HVD";
+
+        public const string HvdLegislation = "http://data.europa.eu/eli/reg_impl/2023/138/oj";
+
         private Guid? createdId;
 
         private DateTimeOffset? issued;
@@ -179,6 +185,19 @@ namespace NkodSk.Abstractions
             set => SetTextToUriNode("dct:temporalResolution", value, new Uri(RdfDocument.XsdPrefix + "duration"));
         }
 
+        public IEnumerable<Uri> ApplicableLegislations
+        {
+            get => GetUrisFromUriNode("dcatap:applicableLegislation");
+            set => SetUriNodes("dcatap:applicableLegislation", value);
+        }
+
+        public Uri? HvdCategory
+        {
+            get => GetUriFromUriNode("dcatap:hvdCategory");
+            set => SetUriNode("dcatap:hvdCategory", value);
+        }
+
+        public bool IsHvd => Type.Any(t => string.Equals(t.ToString(), HvdType, StringComparison.OrdinalIgnoreCase));
 
         public Uri? IsPartOf
         {
@@ -251,6 +270,13 @@ namespace NkodSk.Abstractions
         {
             (IGraph graph, IEnumerable<IUriNode> nodes) = Parse(text, "dcat:Dataset");
             IUriNode? node = nodes.FirstOrDefault();
+
+            if (node is null)
+            {
+                nodes = RdfDocument.ParseNode(graph, "dcat:DatasetSeries");
+                node = nodes.FirstOrDefault();
+            }
+
             if (node is not null)
             {
                 return new DcatDataset(graph, node);

@@ -91,6 +91,20 @@ namespace NkodSk.Abstractions
                         if (distribution is not null)
                         {
                             datasetMetadata = distribution.UpdateDatasetMetadata(datasetMetadata);
+                            distribution.ApplicableLegislations = dataset.ApplicableLegislations;
+
+                            if (distribution.DataService is DcatDataService dataService)
+                            {
+                                dataService.ApplicableLegislations = dataset.ApplicableLegislations;
+                                dataService.HvdCategory = dataset.HvdCategory;
+                            }
+
+                            string content = distribution.ToString();
+                            if (!string.Equals(state.Content, content, StringComparison.Ordinal))
+                            {
+                                await InsertFile(content, true, distribution.UpdateMetadata(datasetMetadata, state.Metadata));
+                            }
+
                             distribution.IncludeInDataset(dataset);
                         }
                     }

@@ -283,6 +283,21 @@ namespace NkodSk.Abstractions
             return subject;
         }
 
+        public void SetRootTypes(params Uri[] types)
+        {
+            IUriNode rdfTypeNode = Graph.GetUriNode(new Uri(RdfSpecsHelper.RdfType));
+            
+            foreach (Triple t in Graph.GetTriplesWithSubjectPredicate(Node, rdfTypeNode).ToList())
+            {
+                Graph.Retract(t);
+            }
+
+            foreach (Uri uri in types)
+            {
+                Graph.Assert(Node, rdfTypeNode, Graph.CreateUriNode(uri));
+            }
+        }
+
         public bool IsHarvested
         {
             get => GetBooleanFromUriNode("custom:isHarvested") ?? false;

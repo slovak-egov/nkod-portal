@@ -150,7 +150,7 @@ namespace NkodSk.Abstractions
 
         public static Uri DctPrefix { get; } = new Uri(@"http://purl.org/dc/terms/");
 
-        private static Uri DcatPrefix { get; } = new Uri(@"http://www.w3.org/ns/dcat#");
+        public static Uri DcatPrefix { get; } = new Uri(@"http://www.w3.org/ns/dcat#");
 
         private static Uri FoafPrefix { get; } = new Uri(@"http://xmlns.com/foaf/0.1/");
 

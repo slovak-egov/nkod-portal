@@ -229,6 +229,23 @@ namespace NkodSk.Abstractions
             return true;
         }
 
+        public bool ValidateApplicableLegislations(string key, List<string>? values)
+        {
+            bool isValid = true;
+            if (values is not null)
+            {
+                foreach (string url in values)
+                {
+                    if (url is null || !Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || !uri.LocalPath.Contains("/eli/"))
+                    {
+                        AddError(key, "URL musí byť platné a obsahovať /eli/");
+                        isValid = false;
+                    }
+                }
+            }
+            return isValid;
+        }
+
         public async Task<bool> ValidateDataset(string key, string? id, string? childId, string publisher, IDocumentStorageClient documentStorage)
         {
             if (!string.IsNullOrEmpty(id) && Guid.TryParse(id, out Guid datasetId))

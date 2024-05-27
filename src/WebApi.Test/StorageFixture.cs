@@ -171,7 +171,7 @@ namespace WebApi.Test
             dataset.AccrualPeriodicity = new Uri("http://publications.europa.eu/resource/dataset/frequency/1");
             dataset.SetKeywords(new Dictionary<string, List<string>> { { "sk", new List<string> { "keyword1Sk", "keyword2Sk" } }, { "en", new List<string> { "keyword1En", "keyword2En" } } });
             dataset.Type = new[] { new Uri("https://data.gov.sk/set/codelist/dataset-type/1") };
-            dataset.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") };
+            dataset.Spatial = new[] { new Uri("https://data.gov.sk/id/nuts1/SK0"), new Uri("http://publications.europa.eu/resource/dataset/country/2") };
             dataset.SetTemporal(new DateOnly(2023, 8, 16), new DateOnly(2023, 9, 10));
             dataset.SetContactPoint(new LanguageDependedTexts { { "sk", "nameSk" }, { "en", "nameEn" } }, "test@example.com");
             dataset.LandingPage = new Uri("http://example.com/documentation");
@@ -259,14 +259,20 @@ namespace WebApi.Test
             });
             CreateCodelistFile(DcatDataset.TypeCodelist, new Dictionary<string, LanguageDependedTexts>
             {
-                { "https://data.gov.sk/set/codelist/dataset-type/1", new LanguageDependedTexts{ { "sk", "type1sk" }, { "en", "type1en" } } }
+                { "https://data.gov.sk/set/codelist/dataset-type/1", new LanguageDependedTexts{ { "sk", "type1sk" }, { "en", "type1en" } } },
+                { "http://publications.europa.eu/resource/authority/dataset-type/HVD", new LanguageDependedTexts{ { "sk", "HVD" }, { "en", "HVD" } } }
             });
             CreateCodelistFile(DcatDataset.SpatialCodelist, new Dictionary<string, LanguageDependedTexts>
             {
-                { "http://publications.europa.eu/resource/dataset/country/1", new LanguageDependedTexts{ { "sk", "country1sk" }, { "en", "country1en" } } },
+                { "https://data.gov.sk/id/nuts1/SK0", new LanguageDependedTexts{ { "sk", "country1sk" }, { "en", "country1en" } } },
                 { "http://publications.europa.eu/resource/dataset/country/2", new LanguageDependedTexts{ { "sk", "country2sk" }, { "en", "country2en" } } }
             });
             CreateCodelistFile(DcatDataset.EuroVocThemeCodelist, new Dictionary<string, LanguageDependedTexts>());
+            CreateCodelistFile(DcatDataset.HvdCategoryCodelist, new Dictionary<string, LanguageDependedTexts>
+            {
+                { "http://publications.europa.eu/resource/dataset/high-value-dataset-category/1", new LanguageDependedTexts{ { "sk", "HVD 1 sk" }, { "en", "HVD 1 en" } } },
+                { "http://publications.europa.eu/resource/dataset/high-value-dataset-category/2", new LanguageDependedTexts{ { "sk", "HVD 2 sk" }, { "en", "HVD 2 en" } } }
+            });
         }
 
         public void CreateDistributionCodelists()
