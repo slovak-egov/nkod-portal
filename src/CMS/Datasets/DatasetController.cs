@@ -327,6 +327,7 @@ namespace CMS.Datasets
 		{
 			ClaimsPrincipal user = HttpContext.User;
 			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
+			string userEmail = user?.Claims.FirstOrDefault(c => c.Type.Contains("emailaddress"))?.Value;
 
 			if (user == null)
 			{
@@ -337,7 +338,7 @@ namespace CMS.Datasets
 				user.IsInRole("Publisher") ||
 				user.IsInRole("PublisherAdmin") ||
 				user.IsInRole("CommunityUser")
-				) && userId == dto.UserId))
+				) && userId == dto.UserId && userEmail.ToUpper() == dto.Email.ToUpper()))
 			{
 				return Results.Forbid();
 			}
