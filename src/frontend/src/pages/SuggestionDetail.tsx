@@ -52,7 +52,7 @@ export default function SuggestionDetail(props: Props) {
                                 {suggestion.datasetUri && (
                                     <DetailItemElement
                                         value={
-                                            <a href={suggestion.datasetUri} className="govuk-link">
+                                            <a href={`/datasety/${suggestion.datasetUri.split('/').pop()}`} className="govuk-link">
                                                 {suggestion.datasetName ?? suggestion.datasetUri}
                                             </a>
                                         }

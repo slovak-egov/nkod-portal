@@ -140,7 +140,7 @@ export default function SearchResultsCms<T extends RequestCmsQuery>(props: Props
                                         renderOption={(e) => e.name}
                                         getValue={(e) => e.value}
                                         selectedValue={props.query.orderBy ?? props.orderOptions[0].value}
-                                        onChange={(o) => props.setQueryParameters({ orderBy: o } as Partial<T>)}
+                                        onChange={(o) => props.setQueryParameters({ orderBy: o, pageNumber: 0 } as Partial<T>)}
                                     />
                                 )}
                             />
