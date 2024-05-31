@@ -1,5 +1,5 @@
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Controller, SubmitHandler, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
@@ -58,6 +58,16 @@ export default function SuggestionForm() {
         }
     });
 
+    // Trigger datasets search (retrieve datasets for specific publisher) in new suggestion form, when user has publisher
+    useEffect(() => {
+        const fetchDatasets = async () => {
+            if (!id && userInfo?.publisher) {
+                await searchDataset('', { publishers: [userInfo?.publisher] }, 99999);
+            }
+        };
+        fetchDatasets();
+    }, []);
+
     const {
         control,
         register,
@@ -73,7 +83,7 @@ export default function SuggestionForm() {
         url: `suggestions/${id}`,
         transform: async (data: Suggestion) => {
             const pubItems = await searchPublisher('', { key: [data.orgToUri] }, 1);
-            const datasetItems = await searchDataset('', { publishers: [data.orgToUri] }, 9999);
+            const datasetItems = await searchDataset('', { publishers: [data.orgToUri] }, 99999);
             let orgToUri = '';
             let datasetUri = '';
             if (pubItems?.length) {
