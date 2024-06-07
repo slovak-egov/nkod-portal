@@ -214,10 +214,8 @@ builder.Services.AddApplicationInsightsTelemetry(options =>
 builder.Services.AddSingleton<ITelemetryInitializer, RequestTelementryInitializer>();
 
 string? frontendUrl = builder.Configuration["FrontendUrl"];
-string? fromEmail = builder.Configuration["SendGridFromEmail"];
-string? fromName = builder.Configuration["SendGridFromName"];
-string? sendGridApiKey = builder.Configuration["SendGridApiKey"];
-builder.Services.AddSingleton<IEmailService>(_ => new EmailService(sendGridApiKey, fromEmail, fromName));
+EmailOptions? emailOptions = builder.Configuration.GetSection("EmailOptions").Get<EmailOptions>();
+builder.Services.AddSingleton<IEmailService>(_ => new SmtpEmailService(emailOptions?.Host, emailOptions?.Port ?? 25, emailOptions?.Username, emailOptions?.Password, emailOptions?.UseSsl ?? false, emailOptions?.FromAddress, emailOptions?.FromName));
 
 builder.Logging.AddConsole();
 
@@ -874,6 +872,10 @@ app.MapPost("/register", async ([FromBody] UserRegistrationInput? input, [FromSe
             using IDbContextTransaction tx = await context.Database.BeginTransactionAsync();
             if (!await context.Users.AnyAsync(u => u.Email == input.Email))
             {
+                TimeZoneInfo tz = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+                DateTimeOffset expiryTimeUtc = DateTimeOffset.UtcNow.AddDays(2);
+                DateTimeOffset expiryTimeOffset = TimeZoneInfo.ConvertTime(expiryTimeUtc, tz);
+
                 UserRecord user = new UserRecord
                 {
                     Id = Guid.NewGuid().ToString(),
@@ -885,7 +887,7 @@ app.MapPost("/register", async ([FromBody] UserRegistrationInput? input, [FromSe
                     RegistrationSourceIpAddress = "1",
                     Registered = DateTimeOffset.Now,
                     ActivationToken = CreateRandomString(),
-                    ActivationTokenExpiryTime = DateTimeOffset.Now.AddDays(1)
+                    ActivationTokenExpiryTime = expiryTimeUtc
                 };
 
                 user.SetPassword(password);
@@ -895,7 +897,18 @@ app.MapPost("/register", async ([FromBody] UserRegistrationInput? input, [FromSe
                 tx.Commit();
 
                 string link = $"{frontendUrl}potvrdenie-registracie?id={HttpUtility.UrlEncode(user.Id)}&token={HttpUtility.UrlEncode(user.ActivationToken)}";
-                await emailService.SendEmail(user.Email, "Aktivácia žiadosti o vytvorenie konta", $"<a href=\"{HttpUtility.HtmlAttributeEncode(link)}\">Potvrdiť</a>");
+                string encodedLink = HttpUtility.HtmlEncode(link);
+
+                string text = "Vážený používateľ,<br>" +
+                        "na získanie prístupových práv pre aktívneho používateľa portálu data.slovensko.sk, prosím, " +
+                        $"kliknite na nasledujúci odkaz do {expiryTimeOffset:d. M. yyyy, H:mm}: <a href=\"{encodedLink}\">{encodedLink}</a>. Tento odkaz Vám umožní využívať možnosti, ktoré ponúka portál pre zaregistrovaných používateľov.<br><br>" +
+                        "Po potvrdení Vám budú poskytnuté prístupové práva na zadanie podnetu, registráciu aplikácie, vloženie komentára a ďalšie funkcionality.<br><br>" +
+                        "Pokiaľ máte akékoľvek otázky alebo potrebujete pomoc, neváhajte nás kontaktovať na e-maili opendata@mirri.gov.sk.<br><br>" +
+                        "Tešíme sa na spoluprácu a Váš príspevok k rozvoju otvorených dát v Slovenskej republike.<br><br>" +
+                        "S pozdravom<br>" +
+                        "Tím centrálneho portálu otvorených dát data.slovensko.sk";
+
+                await emailService.SendEmail(user.Email, "Aktivácia žiadosti o vytvorenie konta", text);
                 
                 result.Id = user.Id;
                 result.Success = true;
@@ -975,12 +988,27 @@ app.MapPost("/recovery", async ([FromBody] PasswordRecoveryInput? input, [FromSe
                         user.RecoveryToken = CreateRandomString();
                     }
 
-                    user.RecoveryTokenExpiryTime = DateTimeOffset.Now.AddDays(1);
+                    TimeZoneInfo tz = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+                    DateTimeOffset expiryTimeUtc = DateTimeOffset.UtcNow.AddDays(2);
+                    DateTimeOffset expiryTimeOffset = TimeZoneInfo.ConvertTime(expiryTimeUtc, tz);
+
+                    user.RecoveryTokenExpiryTime = expiryTimeUtc;
                     user.RecoveryTokenSentTimes++;
                     await context.SaveChangesAsync();
 
                     string link = $"{frontendUrl}obnova-hesla?id={HttpUtility.UrlEncode(user.Id)}&token={HttpUtility.UrlEncode(user.RecoveryToken)}";
-                    await emailService.SendEmail(user.Email, "Aktivácia žiadosti o obnovu hesla", $"<a href=\"{HttpUtility.HtmlAttributeEncode(link)}\">Potvrdiť</a>");
+                    string encodedLink = HttpUtility.HtmlEncode(link);
+
+                    string text = "Vážený používateľ,<br>" +
+                       "zistili sme, že ste požiadali o obnovu hesla k Vášmu účtu na portáli data.slovensko.sk.<br><br>" +
+                       $"Ak ste zabudli Vaše heslo, môžete si vygenerovať nové kliknutím na nasledujúci odkaz: <a href=\"{encodedLink}\">{encodedLink}</a>.<br><br>" +
+                       $"Prosím, pamätajte si, že tento odkaz bude platný iba počas nasledujúcich dvoch dní do {expiryTimeOffset:d. M. yyyy, H:mm}, preto nezabudnite na obnovu hesla čo najskôr.<br><br>" +
+                       "Ak ste nežiadali o obnovu hesla alebo Ste si žiadny problém s heslom nevšimli, môžete tento e-mail ignorovať. Vaše heslo zostane nezmenené.<br><br>" +
+                       "Ak máte akékoľvek ďalšie otázky alebo potrebujete pomoc, neváhajte nás kontaktovať na emaili opendata@mirri.gov.sk<br><br>" +
+                       "S pozdravom,<br>" +
+                       "Tím centrálneho portálu otvorených dát data.slovensko.sk";
+
+                    await emailService.SendEmail(user.Email, "Aktivácia žiadosti o obnovu hesla", text);
 
                     result.Id = user.Id;
                     result.Success = true;
