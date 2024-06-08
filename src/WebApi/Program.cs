@@ -140,7 +140,8 @@ builder.Services.AddCors(options =>
                          "https://www.slovensko.sk",
                          "https://portal.upvsfixnew.gov.sk",
                          "https://schranka.slovensko.sk",
-                         "https://schranka.upvsfixnew.gov.sk"
+                         "https://schranka.upvsfixnew.gov.sk",
+                         "http://localhost:3000",
                          }).AllowAnyHeader().AllowAnyMethod();
                      });
 
@@ -216,16 +217,17 @@ app.UseStaticFiles(new StaticFileOptions
 
 if (app.Environment.IsDevelopment())
 {
-    //app.UseSwagger();
-    //app.UseSwaggerUI(options =>
-    //{
-    //    options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
-    //    options.RoutePrefix = string.Empty;
-    //});
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
+        options.RoutePrefix = string.Empty;
+    });
     app.UseCors("LocalhostOrigin");
 }
 else
 {
+    app.UseSwagger();
     app.UseCors("eFormulare");
 }
 
@@ -449,7 +451,7 @@ app.MapPost("/publishers/search", async ([FromBody] PublisherQuery query, [FromS
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
-});
+}).Produces<AbstractResponse<PublisherView>>();
 
 app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient) =>
 {
@@ -537,7 +539,7 @@ app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServi
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
-});
+}).Produces<AbstractResponse<DatasetView>>();
 
 app.MapPost("/distributions/search", async ([FromBody] DatasetQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient) =>
 {
@@ -585,7 +587,7 @@ app.MapPost("/distributions/search", async ([FromBody] DatasetQuery query, [From
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
-});
+}).Produces<AbstractResponse<DistributionView>>();
 
 app.MapPost("/local-catalogs/search", async ([FromBody] LocalCatalogsQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient) =>
 {
@@ -650,7 +652,7 @@ app.MapPost("/local-catalogs/search", async ([FromBody] LocalCatalogsQuery query
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
-});
+}).Produces<AbstractResponse<LocalCatalogView>>();
 
 app.MapGet("/codelists", async ([FromQuery(Name = "keys[]")] string[] keys, [FromServices] ICodelistProviderClient codelistProviderClient, [FromServices] TelemetryClient? telemetryClient) =>
 {
@@ -692,7 +694,7 @@ app.MapGet("/codelists", async ([FromQuery(Name = "keys[]")] string[] keys, [Fro
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
-});
+}).Produces<AbstractResponse<CodelistView[]>>();
 
 app.MapGet("/codelists/item", async (string key, string id, [FromServices] ICodelistProviderClient codelistProviderClient, [FromServices] TelemetryClient? telemetryClient) =>
 {
@@ -721,7 +723,7 @@ app.MapGet("/codelists/item", async (string key, string id, [FromServices] ICode
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
-});
+}).Produces<AbstractResponse<CodelistItemView>>();
 
 app.MapPost("/codelists/item", async ([FromQuery] string key, [FromQuery] string query, [FromServices] ICodelistProviderClient codelistProviderClient, [FromServices] TelemetryClient? telemetryClient) =>
 {
@@ -2304,11 +2306,11 @@ app.MapPost("/refresh", async ([FromServices] IIdentityAccessManagementClient cl
     }
 });
 
-app.MapGet("/saml/login", async ([FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapGet("/saml/login", async ([FromQuery] string? method, [FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
     {
-        return Results.Ok(await client.GetLogin());
+        return Results.Ok(await client.GetLogin(method));
     }
     catch (HttpRequestException e)
     {
@@ -2325,7 +2327,7 @@ app.MapGet("/saml/login", async ([FromServices] IIdentityAccessManagementClient 
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
-});
+}).Produces<DelegationAuthorizationResult>();
 
 app.MapGet("/saml/logout", async ([FromServices] IIdentityAccessManagementClient client, HttpRequest request, HttpResponse response, [FromServices] TelemetryClient? telemetryClient) =>
 {
@@ -2427,6 +2429,162 @@ app.MapGet("/validate-inviation", async ([FromServices] IIdentityAccessManagemen
         return Results.Problem();
     }
 });
+
+app.MapPost("/users/login", async ([FromBody] LoginInput? input, [FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        return Results.Ok(await client.Login(input).ConfigureAwait(false));
+    }
+    catch (HttpRequestException e)
+    {
+        telemetryClient?.TrackException(e);
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+}).Produces<TokenResult>().Produces<EmptyResult>(403);
+
+app.MapPost("/users/register", async ([FromBody] UserRegistrationInput? input, [FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        return Results.Ok(await client.Register(input).ConfigureAwait(false));
+    }
+    catch (HttpRequestException e)
+    {
+        telemetryClient?.TrackException(e);
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+}).Produces<SaveResult>();
+
+app.MapPost("/users/activation", async ([FromBody] ActivationInput? input, [FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        return Results.Ok(await client.ActivateAccount(input).ConfigureAwait(false));
+    }
+    catch (HttpRequestException e)
+    {
+        telemetryClient?.TrackException(e);
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+}).Produces<SaveResult>();
+
+app.MapPost("/users/recovery", async ([FromBody] PasswordRecoveryInput? input, [FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        return Results.Ok(await client.RequestPasswordRecovery(input).ConfigureAwait(false));
+    }
+    catch (HttpRequestException e)
+    {
+        telemetryClient?.TrackException(e);
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+}).Produces<SaveResult>();
+
+app.MapPost("/users/recovery-activation", async ([FromBody] PasswordRecoveryConfirmationInput? input, [FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        return Results.Ok(await client.ConfirmPasswordRecovery(input).ConfigureAwait(false));
+    }
+    catch (HttpRequestException e)
+    {
+        telemetryClient?.TrackException(e);
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+}).Produces<SaveResult>();
+
+app.MapPost("/users/change-password", async ([FromBody] PasswordChangeInput? input, [FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        return Results.Ok(await client.ChangePassword(input).ConfigureAwait(false));
+    }
+    catch (HttpRequestException e)
+    {
+        telemetryClient?.TrackException(e);
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+}).Produces<SaveResult>();
+
+app.MapGet("/signin-google", async ([FromQuery] string? code, string? state, [FromServices] IIdentityAccessManagementClient client, HttpResponse response, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        TokenResult? token = await client.SignGoogle(code, state).ConfigureAwait(false);
+        if (token is not null)
+        {
+            string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+            response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+        }
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+    }
+    return Results.Redirect("/");
+}).Produces<SaveResult>();
 
 app.Use(async (context, next) =>
 {

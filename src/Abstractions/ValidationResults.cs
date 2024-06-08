@@ -229,6 +229,17 @@ namespace NkodSk.Abstractions
             return true;
         }
 
+        public bool ValidatePassword(string key, string? password)
+        {
+            password = password?.Trim() ?? string.Empty;
+            if (password.Length < UserRegistrationInput.MinimalPasswordLength)
+            {
+                AddError(key, $"Heslo je príliš krátke, musí mať minimálne {UserRegistrationInput.MinimalPasswordLength} znakov");
+                return false;
+            }
+            return true;
+        }
+
         public async Task<bool> ValidateDataset(string key, string? id, string? childId, string publisher, IDocumentStorageClient documentStorage)
         {
             if (!string.IsNullOrEmpty(id) && Guid.TryParse(id, out Guid datasetId))
