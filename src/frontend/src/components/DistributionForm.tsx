@@ -18,6 +18,7 @@ type Props = {
     saving: boolean;
 };
 
+
 const requiredCodelists = [
     knownCodelists.distribution.license,
     knownCodelists.distribution.personalDataContainmentType,

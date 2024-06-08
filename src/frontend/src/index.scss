@@ -128,3 +128,42 @@ body {
     content: ' ';
     display: none;
 }
+
+.nkod-autocomplete {
+    border: 2px solid #0b0c0c;
+}
+
+.suggestion-subtitle {
+    color: $govuk-brand-colour;
+}
+
+.suggestion-select {
+    width: 100%;
+
+    &[disabled] > option {
+        color: black;
+    }
+}
+
+.like-button:hover {
+    cursor: pointer;
+}
+
+.flex-end {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.no-link {
+    text-decoration: none;
+    color: black;
+}
+
+.govuk-\!-text-align-centre {
+    text-align: center;
+}
+
+.idsk-header-web__nav-list-item-link {
+    padding-left: 21px;
+    padding-right: 21px;
+}
