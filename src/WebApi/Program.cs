@@ -2430,11 +2430,15 @@ app.MapGet("/validate-inviation", async ([FromServices] IIdentityAccessManagemen
     }
 });
 
-app.MapPost("/users/login", async ([FromBody] LoginInput? input, [FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/users/login", async ([FromBody] LoginInput? input, HttpResponse response, [FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
     {
-        return Results.Ok(await client.Login(input).ConfigureAwait(false));
+        TokenResult token = await client.Login(input).ConfigureAwait(false);
+        string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+        response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+
+        return Results.Ok(token);
     }
     catch (HttpRequestException e)
     {

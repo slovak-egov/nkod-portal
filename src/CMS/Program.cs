@@ -10,6 +10,7 @@ using System.Text.Json.Serialization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Security.Cryptography;
+using Microsoft.ApplicationInsights.Extensibility;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,9 +32,14 @@ builder.AddPiranha(options =>
 		options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
 	}).AddJwtBearer(options =>
 	{
-		var publicKeyBytes = Convert.FromBase64String(builder.Configuration["Authentication:SecretForKey"]);
-		var rsa = RSA.Create(2048);
-		rsa.ImportRSAPublicKey(publicKeyBytes, out _);
+        RSA rsa = RSA.Create();
+        string publicKeyString = builder.Configuration["Authentication:SecretForKey"];
+        rsa.ImportFromPem(publicKeyString);
+        if (string.IsNullOrEmpty(publicKeyString))
+        {
+            throw new Exception("Unable to get Authentication:SecretForKey");
+        }
+
 		var key = new RsaSecurityKey(rsa);
 
 		options.RequireHttpsMetadata = false;
@@ -85,6 +91,13 @@ builder.AddPiranha(options =>
 		options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
 	});
 });
+
+builder.Services.AddApplicationInsightsTelemetry(options =>
+{
+	options.ConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+	options.EnableAdaptiveSampling = false;
+});
+builder.Services.AddSingleton<ITelemetryInitializer, RequestTelementryInitializer>();
 
 var app = builder.Build();
 

@@ -642,7 +642,9 @@ app.MapPost("/refresh", async ([FromServices] ApplicationDbContext context, [Fro
 
 app.MapGet("/logout", [Authorize] async ([FromServices] ApplicationDbContext context, HttpRequest request, ClaimsPrincipal user, [FromServices] Saml2Configuration saml2Configuration, [FromServices] IConfiguration configuration, [FromServices] ILogger<Program> logger) =>
 {
-    if (string.Equals(user.FindFirstValue(ClaimTypes.AuthenticationMethod), "Native"))
+    string? method = user.FindFirstValue(ClaimTypes.AuthenticationMethod);
+
+    if (string.Equals(method, "Native") || string.Equals(method, "Google"))
     {
         string? id = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
