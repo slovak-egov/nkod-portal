@@ -19,13 +19,13 @@ export default function Codelists() {
     const [codelists, loading, error, refresh] = useCodelistAdmin();
     const [uploading, upload] = useCodelistFileUpload();
     const { t } = useTranslation();
-    useDocumentTitle(t('codelists.label'));
+    useDocumentTitle(t('codelists.title'));
 
     return (
         <>
-            <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title: t('codelists.label') }]} />
+            <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title: t('codelists.title') }]} />
             <MainContent>
-                <PageHeader>{t('codelists.label')}</PageHeader>
+                <PageHeader>{t('codelists.title')}</PageHeader>
 
                 <FormElementGroup
                     label={t('codelistFileUpload')}

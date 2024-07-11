@@ -2225,17 +2225,13 @@ app.MapMethods("/download", new[] { "HEAD" }, async ([FromServices] IDocumentSto
 {
     try
     {
+        string language = "sk";
         if (Guid.TryParse(id, out Guid key))
         {
             FileMetadata? metadata = await FindAndValidateDownload(client, key).ConfigureAwait(false);
             if (metadata is not null)
             {
-                ContentDisposition contentDisposition = new ContentDisposition
-                {
-                    DispositionType = "attachment",
-                    FileName = metadata.OriginalFileName
-                };
-                response.Headers.ContentDisposition = contentDisposition.ToString();
+                response.Headers.ContentDisposition = metadata.CreateAttachmentHeader(language).ToString();
                 long? size = await client.GetSize(key).ConfigureAwait(false);
                 if (size.HasValue)
                 {
