@@ -7,7 +7,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.22.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.18" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.20" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="7.5.1" />
     <PackageReference Include="Piranha" Version="10.4.0" />
     <PackageReference Include="Piranha.AspNetCore" Version="10.4.0" />
@@ -15,8 +15,8 @@
     <PackageReference Include="Piranha.Data.EF.SQLite" Version="10.4.0" />
     <PackageReference Include="Piranha.ImageSharp" Version="10.4.0" />
     <PackageReference Include="Piranha.Local.FileStorage" Version="10.4.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="6.5.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="6.5.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="6.6.2" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="6.6.2" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.5.1" />
   </ItemGroup>
 
