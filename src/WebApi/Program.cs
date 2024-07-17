@@ -383,6 +383,20 @@ async Task<FileStorageResponse> GetStorageResponse(AbstractQuery query, string l
     {
         storageQuery = storageQueryDecorator(storageQuery);
 
+        if (storageQuery.AdditionalFilters is not null)
+        {
+            foreach (string[] items in storageQuery.AdditionalFilters.Values)
+            {
+                for (int i = 0; i < items.Length; i++)
+                {
+                    if (items[i] is null)
+                    {
+                        return new FileStorageResponse(new List<FileState>(), 0, new List<Facet>());
+                    }
+                }
+            }
+        }
+
         return await client.GetFileStates(storageQuery).ConfigureAwait(false);
     }
     else
