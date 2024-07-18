@@ -17,5 +17,7 @@
         public string? Role { get; set; }
 
         public string? AuthorizationMethod { get; set; }
+
+        public string? FormattedName { get; set; }
     }
 }

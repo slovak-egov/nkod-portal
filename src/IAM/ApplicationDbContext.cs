@@ -18,7 +18,7 @@ namespace IAM
             return await Users.FirstOrDefaultAsync(u => u.Id == id && u.Publisher == publisherId);
         }
 
-        public async Task<UserRecord?> GetOrCreateUser(string id, string? firstName, string? lastName, string? email, string? publisher, string? invitation)
+        public async Task<UserRecord?> GetOrCreateUser(string id, string? firstName, string? lastName, string? email, string? publisher, string? invitation, string? formattedName)
         {
             UserRecord? user = await Users.FirstOrDefaultAsync(u => u.Id == id);
 
@@ -51,7 +51,8 @@ namespace IAM
                         Email = email,
                         Publisher = publisher,
                         Role = "PublisherAdmin",
-                        IsActive = true
+                        IsActive = true,
+                        FormattedName = formattedName
                     };
 
                     await Users.AddAsync(user);
@@ -61,6 +62,12 @@ namespace IAM
             else if (!user.IsActive)
             {
                 user = null;
+            }
+
+            if (user is not null && !string.IsNullOrWhiteSpace(formattedName))
+            {
+                user.FormattedName = formattedName;
+                await SaveChangesAsync();
             }
 
             return user;
@@ -86,7 +93,8 @@ namespace IAM
                             Email = email,
                             Role = "CommunityUser",
                             IsActive = true,
-                            ExternalId = externalId
+                            ExternalId = externalId,
+                            FormattedName = $"{firstName} {lastName}"
                         };
 
                         await Users.AddAsync(user);

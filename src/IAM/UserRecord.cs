@@ -23,6 +23,8 @@ namespace IAM
 
         public string LastName { get; set; } = string.Empty;
 
+        public string? FormattedName { get; set; }
+
         public DateTimeOffset? RefreshTokenExpiryTime { get; set; }
 
         public DateTimeOffset? InvitedAt { get; set; }

@@ -551,7 +551,8 @@ app.MapGet("/user-info", [Authorize] async ([FromServices] ApplicationDbContext 
                 LastName = lastName ?? record.LastName,
                 Email = record.Email,
                 CompanyName = user.FindFirstValue("CompanyName"),
-                AuthorizationMethod = user.FindFirstValue(ClaimTypes.AuthenticationMethod)
+                AuthorizationMethod = user.FindFirstValue(ClaimTypes.AuthenticationMethod),
+                FormattedName = record.FormattedName
             });
         }
         else
@@ -889,7 +890,8 @@ app.MapPost("/register", async ([FromBody] UserRegistrationInput? input, [FromSe
                     RegistrationSourceIpAddress = "1",
                     Registered = DateTimeOffset.Now,
                     ActivationToken = CreateRandomString(),
-                    ActivationTokenExpiryTime = expiryTimeUtc
+                    ActivationTokenExpiryTime = expiryTimeUtc,
+                    FormattedName = $"{input.FirstName} {input.LastName}"
                 };
 
                 user.SetPassword(password);
@@ -1144,6 +1146,7 @@ app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configurat
     string? companyName = saml2AuthnResponse.ClaimsIdentity.FindFirst("Subject.FormattedName")?.Value;
     string? identificationNumber = saml2AuthnResponse.ClaimsIdentity.FindFirst("ActorID")?.Value;
     string? delegationType = saml2AuthnResponse.ClaimsIdentity.FindFirst("DelegationType")?.Value;
+    string? formattedName = saml2AuthnResponse.ClaimsIdentity.FindFirst("Actor.FormattedName")?.Value;
 
     if (telemetryClient is not null)
     {
@@ -1170,7 +1173,7 @@ app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configurat
    
     if (!string.IsNullOrEmpty(id))
     {
-        UserRecord? user = await context.GetOrCreateUser(id, firstName, lastName, email, publisher, invitation).ConfigureAwait(false);
+        UserRecord? user = await context.GetOrCreateUser(id, firstName, lastName, email, publisher, invitation, formattedName).ConfigureAwait(false);
         if (user is not null && user.IsActive)
         {
             return Results.Ok(await CreateToken(context, user, configuration, signingCredentials, hasExplicitDelegation, customClaims, companyName: companyName));
