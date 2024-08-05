@@ -73,12 +73,20 @@ namespace CMS.Comments
 
 		private static CommentDto Convert(Comment c)
 		{
+			string userFormattedName = string.Empty;
+			int pos = c.Body.LastIndexOf('|');
+			if (pos >= 0)
+			{
+				userFormattedName = c.Body.Length > pos ? c.Body.Substring(pos + 1) : string.Empty;
+				c.Body = c.Body.Substring(0, pos);
+			}
+
 			return new CommentDto
 			{
 				Id = c.Id,
 				ContentId = c.ContentId,
 				UserId = (!string.IsNullOrEmpty(c.UserId)) ? Guid.Parse(c.UserId) : Guid.Empty,
-				Email = c.Email,
+				UserFormattedName = userFormattedName,
 				Body = c.Body,
 				Created = c.Created,
 				ParentId = (!string.IsNullOrEmpty(c.Author)) ? Guid.Parse(c.Author) : Guid.Empty,
@@ -92,9 +100,10 @@ namespace CMS.Comments
 		{
 			ClaimsPrincipal user = HttpContext.User;
 			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
-			string userEmail = user?.Claims.FirstOrDefault(c => c.Type.Contains("emailaddress"))?.Value;
+			string userEmail = userId + "@data.slovensko.sk";
+            string userFormattedName = user?.FindFirstValue(ClaimTypes.Name);
 
-			if (user == null)
+            if (user == null)
 			{
 				return Results.Forbid();
 			}
@@ -103,7 +112,7 @@ namespace CMS.Comments
 				user.IsInRole("Publisher") ||
 				user.IsInRole("PublisherAdmin") ||
 				user.IsInRole("CommunityUser")
-				) && userId == dto.UserId && userEmail.ToUpper() == dto.Email.ToUpper()))
+				) && userId == dto.UserId))
 			{
 				return Results.Forbid();
 			}
@@ -112,8 +121,8 @@ namespace CMS.Comments
 			{
 				UserId = dto.UserId.ToString("D"),
 				Author = dto.ParentId.ToString("D"),
-				Email = dto.Email,
-				Body = dto.Body,
+				Email = userEmail,
+				Body = dto.Body + "|" + userFormattedName,
 				Created = DateTime.UtcNow
 			};
 
@@ -132,7 +141,9 @@ namespace CMS.Comments
 				return Results.Forbid();
 			}
 
-			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
+            string userFormattedName = user?.FindFirstValue(ClaimTypes.Name);
+
+            Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
 			Comment comment = await api.Posts.GetCommentByIdAsync(id);
 
 			if (!((user.IsInRole("Superadmin") ||
@@ -142,9 +153,9 @@ namespace CMS.Comments
 				userId == Guid.Parse(comment.UserId)))
 			{
 				return Results.Forbid();
-			}			
+			}
 
-			comment.Body = dto.Body;
+			comment.Body = dto.Body + "|" + userFormattedName;
 
 			await api.Posts.SaveCommentAsync(dto.ContentId, comment);
 			return Results.Ok();

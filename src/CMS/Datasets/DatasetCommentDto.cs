@@ -12,11 +12,7 @@ namespace CMS.Datasets
 
 		[Required]
 		public Guid UserId { get; set; }
-		
-		[Required]
-		[EmailAddress]
-		public string Email { get; set; }
-
+				
 		[Required]
 		public string Body { get; set; }
 	}

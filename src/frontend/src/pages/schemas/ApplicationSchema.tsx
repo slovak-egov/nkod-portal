@@ -121,11 +121,7 @@ export const schema = {
         contactEmail: {
             type: 'string',
             format: 'email'
-        },
-        userEmail: {
-            type: 'string',
-            format: 'email'
         }
     },
-    required: ['title', 'description', 'type', 'theme', 'contactName', 'contactSurname', 'contactEmail', 'userEmail']
+    required: ['title', 'description', 'type', 'theme', 'contactName', 'contactSurname', 'contactEmail']
 };

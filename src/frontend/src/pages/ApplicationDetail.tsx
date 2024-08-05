@@ -91,7 +91,7 @@ export default function ApplicationDetail(props: Props) {
                                     labelKey="addApplicationPage.contactSubTitle"
                                 />
 
-                                <DetailItemElement value={application.userEmail ?? application.userId} labelKey="common.author" />
+                                <DetailItemElement value={application.userFormattedName ?? application.userId} labelKey="common.author" />
 
                                 <DetailItemElement
                                     value={moment.utc(application.created).local().format(DATE_FORMAT_NO_SECONDS)}

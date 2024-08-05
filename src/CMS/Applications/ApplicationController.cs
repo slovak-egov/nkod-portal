@@ -90,7 +90,7 @@ namespace CMS.Applications
 				CommentCount = p.CommentCount,
 				LikeCount = (p.Application.Likes?.Value != null) ? p.Application.Likes.Value.Count() : 0,
 				UserId = (p.Application.UserId.Value != null) ? Guid.Parse(p.Application.UserId.Value) : Guid.Empty,
-				UserEmail = p.Application.UserEmail,
+				UserFormattedName = p.Application.UserFormattedName,
 				Type = p.Application.Type.Value,
                 Theme = p.Application.Theme.Value,
                 Description = p.Application.Description,
@@ -193,9 +193,10 @@ namespace CMS.Applications
         {
 			ClaimsPrincipal user = HttpContext.User;
 			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
-			string userEmail = user?.Claims.FirstOrDefault(c => c.Type.Contains("emailaddress"))?.Value;
+            string userEmail = userId + "@data.slovensko.sk";
+            string userFormattedName = user?.FindFirstValue(ClaimTypes.Name);
 
-			if (user == null)
+            if (user == null)
 			{
 				return Results.Forbid();
 			}
@@ -204,7 +205,7 @@ namespace CMS.Applications
 				user.IsInRole("Publisher") ||
 				user.IsInRole("PublisherAdmin") ||
 				user.IsInRole("CommunityUser")
-				) && userId == dto.UserId && userEmail.ToUpper() == dto.UserEmail.ToUpper()))
+				) && userId == dto.UserId))
 			{
 				return Results.Forbid();
 			}
@@ -215,8 +216,9 @@ namespace CMS.Applications
             post.Application = new ApplicationRegion
             {
 				UserId = dto.UserId.ToString("D"),
-				UserEmail = dto.UserEmail,
-				Description = dto.Description,
+				UserEmail = userEmail,
+				UserFormattedName = userFormattedName,
+                Description = dto.Description,
                 Type = new SelectField<ApplicationTypes>
                 {
                     Value = dto.Type

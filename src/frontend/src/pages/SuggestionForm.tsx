@@ -51,7 +51,6 @@ export default function SuggestionForm() {
         resolver: yupResolver(yupSchema),
         defaultValues: {
             userId: userInfo?.id,
-            userEmail: userInfo?.email,
             orgToUri: userInfo?.publisher ?? null,
             status: SuggestionStatusCode.CREATED,
             type: SuggestionType.SUGGESTION_FOR_PUBLISHED_DATASET
@@ -95,7 +94,6 @@ export default function SuggestionForm() {
 
             const formData = {
                 ...data,
-                userEmail: data.userEmail ?? userInfo?.email,
                 orgToUri,
                 datasetUri
             };

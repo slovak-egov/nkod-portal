@@ -13,11 +13,9 @@ namespace CMS.Comments
 
 		[Required]
 		public Guid UserId { get; set; }
-	
-		[Required]
-		[EmailAddress]
-		public string Email { get; set; }
 
+		public string UserFormattedName { get; set; }
+	
 		[Required]
 		public string Body { get; set; }
 

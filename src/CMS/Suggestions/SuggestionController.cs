@@ -94,7 +94,7 @@ namespace CMS.Suggestions
                 Type = p.Suggestion.Type.Value,
                 Description = p.Suggestion.Description,
                 UserId = Guid.Parse(p.Suggestion.UserId.Value),
-				UserEmail = p.Suggestion.UserEmail,
+				UserFormattedName = p.Suggestion.UserFormattedName,
                 UserOrgUri = p.Suggestion.UserOrgUri,
                 DatasetUri = p.Suggestion.DatasetUri.Value,
                 Title = p.Title
@@ -194,9 +194,10 @@ namespace CMS.Suggestions
         {
 			ClaimsPrincipal user = HttpContext.User;
 			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
-			string userEmail = user?.Claims.FirstOrDefault(c => c.Type.Contains("emailaddress"))?.Value;
+            string userEmail = userId + "@data.slovensko.sk";
+            string userFormattedName = user?.FindFirstValue(ClaimTypes.Name);
 
-			if (user == null)
+            if (user == null)
 			{
 				return Results.Forbid();
 			}
@@ -205,7 +206,7 @@ namespace CMS.Suggestions
 				user.IsInRole("Publisher") ||
 				user.IsInRole("PublisherAdmin") ||
 				user.IsInRole("CommunityUser")
-				) && userId == dto.UserId && userEmail.ToUpper() == dto.UserEmail.ToUpper()))
+				) && userId == dto.UserId))
 			{
 				return Results.Forbid();
 			}			
@@ -217,7 +218,8 @@ namespace CMS.Suggestions
             {
                 Description = dto.Description,
                 UserId = dto.UserId.ToString("D"),
-				UserEmail = dto.UserEmail,
+				UserEmail = userEmail,
+				UserFormattedName = userFormattedName,
                 UserOrgUri = dto.UserOrgUri,
                 OrgToUri = dto.OrgToUri,
                 DatasetUri = dto.DatasetUri,

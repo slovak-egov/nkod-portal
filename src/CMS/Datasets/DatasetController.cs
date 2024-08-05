@@ -327,9 +327,10 @@ namespace CMS.Datasets
 		{
 			ClaimsPrincipal user = HttpContext.User;
 			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
-			string userEmail = user?.Claims.FirstOrDefault(c => c.Type.Contains("emailaddress"))?.Value;
+            string userEmail = userId + "@data.slovensko.sk";
+            string userFormattedName = user?.FindFirstValue(ClaimTypes.Name);
 
-			if (user == null)
+            if (user == null)
 			{
 				return Results.Forbid();
 			}
@@ -338,7 +339,7 @@ namespace CMS.Datasets
 				user.IsInRole("Publisher") ||
 				user.IsInRole("PublisherAdmin") ||
 				user.IsInRole("CommunityUser")
-				) && userId == dto.UserId && userEmail.ToUpper() == dto.Email.ToUpper()))
+				) && userId == dto.UserId))
 			{
 				return Results.Forbid();
 			}
@@ -347,7 +348,7 @@ namespace CMS.Datasets
 			IEnumerable<DatasetPost> posts = await api.Posts.GetAllAsync<DatasetPost>(blogId);
 			DatasetPost post = posts.Where(p => p.Title == dto.DatasetUri).SingleOrDefault();
 
-			PageComment comment = null;
+            PageComment comment = null;
 			IResult res = null;
 			Ok<Guid> resOK;
 
@@ -380,8 +381,8 @@ namespace CMS.Datasets
 			{
 				UserId = dto.UserId.ToString("D"),
 				Author = Guid.Empty.ToString("D"),
-				Email = dto.Email,
-				Body = dto.Body,
+				Email = userEmail,
+				Body = dto.Body + "|" + userFormattedName,
 				Created = DateTime.UtcNow
 			};
 

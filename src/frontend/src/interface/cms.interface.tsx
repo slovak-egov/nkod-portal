@@ -3,7 +3,6 @@ import { Dataset } from '../client';
 export type AppRegistrationFormValues = {
     title: string;
     userId: string;
-    userEmail: string;
     description: string;
     type: ApplicationType;
     theme: ApplicationTheme;
@@ -74,7 +73,7 @@ export interface IComment {
     userId: string;
     author: string;
     parentId: string;
-    email: string;
+    userFormattedName: string;
     body: string;
     created: string;
 }
@@ -90,7 +89,6 @@ export interface CommentFormValues {
 
 export interface SuggestionFormValues {
     userId: string;
-    userEmail: string;
     userOrgUri?: string | null;
     orgToUri?: any;
     type: string;
@@ -179,7 +177,7 @@ export interface Application extends Audited, Likeable, Commentable {
     id: string;
     title: string;
     userId: string;
-    userEmail: string;
+    userFormattedName: string;
     description: string;
     type: ApplicationType;
     theme: ApplicationTheme;
@@ -209,4 +207,5 @@ export interface Suggestion extends SuggestionFormValues, Audited, Likeable, Com
     suggestionStatus: string;
     createdDate: Date;
     createdBy?: string;
+    userFormattedName: string;
 }

@@ -66,9 +66,9 @@ function AppNavigator(props: Props) {
                 if (userInfo.publisherView === null) {
                     if (userInfo.role === 'PublisherAdmin') {
                         navigate('/registracia');
-                    } else if (userInfo.role === 'Superadmin') {
+                    } else if (userInfo.role === 'Superadmin' || userInfo.role === 'CommunityUser') {
                         navigate('/');
-                    } else if (userInfo.role !== 'Superadmin') {
+                    } else if (userInfo.role !== 'Superadmin' && userInfo.role !== 'CommunityUser') {
                         navigate('/sprava/neplatne-zastupenie');
                     }
                 } else if (!userInfo.publisherActive) {

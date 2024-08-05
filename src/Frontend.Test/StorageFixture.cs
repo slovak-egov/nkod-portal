@@ -9,7 +9,7 @@ using VDS.RDF;
 
 namespace Frontend.Test
 {
-    class StorageFixture
+    public class StorageFixture : IDisposable
     {
         private readonly string path;
 

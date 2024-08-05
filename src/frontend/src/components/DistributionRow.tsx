@@ -23,9 +23,9 @@ export default function DistributionRow(props: Props) {
 
     return (
         <div data-testid="distribution">
-            <span style={{ display: 'flex', position: 'relative', paddingRight: '30px' }} className={expanded ? 'expanded' : ''}>
+            <span style={{ display: 'flex', position: 'relative', paddingRight: '30px', alignItems: 'center' }} className={expanded ? 'expanded' : ''}>
                 <FileIcon format={distribution.formatValue?.label ?? ''} />
-                <span className="govuk-body nkod-detail-distribution-url" style={{ lineHeight: '20px', paddingTop: '20px' }}>
+                <span className="govuk-body nkod-detail-distribution-url" style={{ lineHeight: '20px', marginBottom: 0, paddingRight: '30px' }}>
                     {distribution.downloadUrl ? (
                         <a href={distribution.downloadUrl} className="govuk-link" id={'distribution-accordion-heading-' + distribution.id}>
                             {distribution.title && distribution.title.trim().length > 0 ? distribution.title : dataset.name}

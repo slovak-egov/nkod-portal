@@ -44,7 +44,6 @@ export default function ApplicationForm() {
         resolver: yupResolver(yupSchema),
         defaultValues: {
             userId: userInfo?.id,
-            userEmail: userInfo?.email,
             datasetURIsForm: [{ value: '' }],
             type: ApplicationType.MOBILE_APPLICATION,
             theme: ApplicationTheme.EDUCATION,
@@ -99,7 +98,6 @@ export default function ApplicationForm() {
                     ...rest,
                     id,
                     logo,
-                    userEmail: userInfo?.email,
                     logoFileName: data.logoFiles?.length ? data.logoFiles[0]?.name : null,
                     url: data.url ? data.url : null,
                     datasetURIs: data.datasetURIsForm?.map((dataset) => dataset.value) ?? []

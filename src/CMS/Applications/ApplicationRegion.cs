@@ -7,7 +7,8 @@ namespace CMS.Applications
     {
 		[Field] public StringField UserId { get; set; }
 		[Field] public StringField UserEmail { get; set; }
-		[Field] public TextField Description { get; set; }
+        [Field] public StringField UserFormattedName { get; set; }
+        [Field] public TextField Description { get; set; }
         [Field] public SelectField<ApplicationTypes> Type { get; set; }
 		[Field] public SelectField<ApplicationThemes> Theme { get; set; }
 		[Field] public StringField Url { get; set; }

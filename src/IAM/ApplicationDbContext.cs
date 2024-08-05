@@ -41,22 +41,41 @@ namespace IAM
                     }
                 }
                 
-                if (user is null && !string.IsNullOrEmpty(publisher) && !string.IsNullOrEmpty(firstName) && !string.IsNullOrEmpty(lastName))
+                if (user is null && !string.IsNullOrEmpty(firstName) && !string.IsNullOrEmpty(lastName))
                 {
-                    user = new UserRecord
+                    if (!string.IsNullOrEmpty(publisher))
                     {
-                        Id = id,
-                        FirstName = firstName,
-                        LastName = lastName,
-                        Email = email,
-                        Publisher = publisher,
-                        Role = "PublisherAdmin",
-                        IsActive = true,
-                        FormattedName = formattedName
-                    };
+                        user = new UserRecord
+                        {
+                            Id = id,
+                            FirstName = firstName,
+                            LastName = lastName,
+                            Email = email,
+                            Publisher = publisher,
+                            Role = "PublisherAdmin",
+                            IsActive = true,
+                            FormattedName = formattedName
+                        };
 
-                    await Users.AddAsync(user);
-                    await SaveChangesAsync();
+                        await Users.AddAsync(user);
+                        await SaveChangesAsync();
+                    } 
+                    else
+                    {
+                        user = new UserRecord
+                        {
+                            Id = id,
+                            FirstName = firstName,
+                            LastName = lastName,
+                            Email = email,
+                            Role = "CommunityUser",
+                            IsActive = true,
+                            FormattedName = formattedName
+                        };
+
+                        await Users.AddAsync(user);
+                        await SaveChangesAsync();
+                    }
                 }
             }
             else if (!user.IsActive)

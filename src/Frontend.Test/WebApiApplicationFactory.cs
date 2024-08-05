@@ -30,7 +30,7 @@ using WebApi;
 
 namespace Frontend.Test
 {
-    class WebApiApplicationFactory : WebApplicationFactory<Program>, ITokenService
+    public class WebApiApplicationFactory : WebApplicationFactory<Program>, ITokenService
     {
         private readonly IFileStorage storage;
 
@@ -38,15 +38,16 @@ namespace Frontend.Test
 
         private const string DefaultAudience = "http://test/";
 
-        private readonly byte[] defaultKey = RandomNumberGenerator.GetBytes(32);
+        private byte[] defaultKey;
 
         private TestIdentityAccessManagementClient? testIdentityAccessManagementClient;
 
         private IHost? host;
 
-        public WebApiApplicationFactory(IFileStorage storage)
+        public WebApiApplicationFactory(IFileStorage storage, byte[]? defaultKey = null)
         {
             this.storage = storage;
+            this.defaultKey = defaultKey ?? RandomNumberGenerator.GetBytes(32);
         }
 
         public TestIdentityAccessManagementClient TestIdentityAccessManagementClient => Services.GetRequiredService<TestIdentityAccessManagementClient>();
@@ -65,7 +66,7 @@ namespace Frontend.Test
                     FoafAgent agent = FoafAgent.Create(new Uri(publisher));
                     FileMetadata metadata = new FileMetadata(Guid.NewGuid(), "Test", FileType.PublisherRegistration, null, publisher, true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
                     storage.InsertFile(agent.ToString(), metadata, true, accessPolicy);
-                }              
+                }
             }
 
             Services.GetRequiredService<TestIdentityAccessManagementClient>().AddUser(publisher, new PersistentUserInfo
@@ -77,10 +78,10 @@ namespace Frontend.Test
                 Id = id
             });
 
-            return CreateToken(id, role, publisher, companyName);
+            return CreateToken(id, role, publisher, companyName, "test@example.com");
         }
 
-        public string CreateToken(string id, string? role, string? publisher = null, string? companyName = null)
+        public string CreateToken(string id, string? role, string? publisher = null, string? companyName = null, string? email = null)
         {
             List<Claim> claims = new List<Claim>();
             if (!string.IsNullOrEmpty(role))
@@ -94,6 +95,10 @@ namespace Frontend.Test
             if (!string.IsNullOrEmpty(companyName))
             {
                 claims.Add(new Claim("CompanyName", companyName));
+            }
+            if (!string.IsNullOrEmpty(email))
+            {
+                claims.Add(new Claim(ClaimTypes.Email, email));
             }
             claims.Add(new Claim(ClaimTypes.Name, "Test User"));
             claims.Add(new Claim(ClaimTypes.NameIdentifier, id));
@@ -120,6 +125,7 @@ namespace Frontend.Test
                     services.Remove(sd);
                 }
 
+                services.RemoveAll(typeof(IHostedService));
                 services.AddSingleton(storage);
                 services.AddSingleton<IDocumentStorageClient, TestDocumentStorageClient>();
                 services.AddTransient<IFileStorageAccessPolicy, DefaultFileAccessPolicy>();

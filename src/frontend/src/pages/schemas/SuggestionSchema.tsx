@@ -11,10 +11,6 @@ export const schema = {
             type: 'string',
             format: 'url'
         },
-        userEmail: {
-            type: 'string',
-            format: 'email'
-        },
         orgToUri: {
             type: 'string',
             format: 'url'
@@ -82,5 +78,5 @@ export const schema = {
             ]
         }
     },
-    required: ['userId', 'orgToUri', 'type', 'title', 'description', 'status', 'userEmail']
+    required: ['userId', 'orgToUri', 'type', 'title', 'description', 'status']
 };

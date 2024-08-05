@@ -1008,7 +1008,7 @@ export function useUserPermissions() {
     const isSuperAdmin = userRole === 'SUPERADMIN';
     const isCommunityUser = userRole === 'COMMUNITYUSER';
     const isPublisher = ['PUBLISHER', 'PUBLISHERADMIN'].includes(userRole ?? '');
-    const isMine = (objectUserId: string) => userInfo?.id === objectUserId;
+    const isMine = (objectUserId: string) => userInfo?.id.toLowerCase() === objectUserId.toLowerCase();
     const isMineOrg = (objectOrgId: string) => userInfo?.publisher === objectOrgId;
 
     return {

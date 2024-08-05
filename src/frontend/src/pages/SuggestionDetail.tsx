@@ -62,7 +62,7 @@ export default function SuggestionDetail(props: Props) {
 
                                 <DetailItemElement value={t(`codelists.suggestionStatus.${suggestion.status}`) ?? ''} labelKey="addSuggestion.fields.status" />
 
-                                <DetailItemElement value={suggestion.userEmail ?? suggestion.userId} labelKey="common.author" />
+                                <DetailItemElement value={suggestion.userFormattedName ?? suggestion.userId} labelKey="common.author" />
 
                                 <DetailItemElement
                                     value={moment.utc(suggestion.created).local().format(DATE_FORMAT_NO_SECONDS)}

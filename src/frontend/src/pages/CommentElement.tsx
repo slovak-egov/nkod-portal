@@ -49,7 +49,7 @@ export default function CommentElement(props: Props) {
                             <GridRow>
                                 <GridColumn widthUnits={3} totalUnits={4}>
                                     <p className="govuk-body-m">
-                                        (<b>{comment.email}</b>) {comment.body}
+                                        (<b>{comment.userFormattedName}</b>) {comment.body}
                                     </p>
                                 </GridColumn>
                                 <GridColumn widthUnits={1} totalUnits={4} flexEnd>

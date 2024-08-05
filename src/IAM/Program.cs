@@ -244,6 +244,11 @@ async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord? us
         claims.Add(new Claim(ClaimTypes.NameIdentifier, user.Id));
         claims.Add(new Claim(ClaimTypes.GivenName, user.FirstName));
         claims.Add(new Claim(ClaimTypes.Surname, user.LastName));
+
+        if (!string.IsNullOrEmpty(user.FormattedName))
+        {
+            claims.Add(new Claim(ClaimTypes.Name, user.FormattedName));
+        }
     }
 
     claims.Add(new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()));

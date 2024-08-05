@@ -86,6 +86,19 @@ namespace TestBase
             return null;
         }
 
+        public PersistentUserInfo? GetUserByEmail(string email)
+        {
+            foreach (List<Entry> usersByPublisher in users.Values)
+            {
+                Entry? user = usersByPublisher.FirstOrDefault(u => u.UserInfo.Email == email);
+                if (user is not null)
+                {
+                    return user.UserInfo;
+                }
+            }
+            return null;
+        }
+
         public Task<UserSaveResult> CreateUser(NewUserInput input)
         {
             return Task.FromResult(CreateUser(input, PublisherId));
