@@ -42,11 +42,7 @@ namespace NkodSk.RdfFulltextIndex
 
         private readonly DirectoryTaxonomyWriter taxonomyWriter;
 
-        private TaxonomyReader taxonomyReader;
-
-        private IndexReader indexReader;
-
-        private IndexSearcher indexSearcher;
+        private IndexSeacherProvider indexSeacherProvider;
 
         private const LuceneVersion Version = LuceneVersion.LUCENE_48;
 
@@ -61,12 +57,10 @@ namespace NkodSk.RdfFulltextIndex
 
             IndexWriterConfig indexWriterConfig = new IndexWriterConfig(Version, analyzer);
             indexWriter = new IndexWriter(directory, indexWriterConfig);
-
-            indexReader = indexWriter.GetReader(true);
-            indexSearcher = new IndexSearcher(indexReader);
-
             taxonomyWriter = new DirectoryTaxonomyWriter(taxonomyDirectory);
-            taxonomyReader = new DirectoryTaxonomyReader(taxonomyWriter);
+
+            indexSeacherProvider = new IndexSeacherProvider(indexWriter, taxonomyWriter);
+
             this.languages = languages;
         }
 
@@ -173,122 +167,140 @@ namespace NkodSk.RdfFulltextIndex
             }
 
             indexWriter.Commit();
-
-            indexReader = indexWriter.GetReader(true);
-            indexSearcher = new IndexSearcher(indexReader);
-
             taxonomyWriter.Commit();
-            taxonomyReader = new DirectoryTaxonomyReader(taxonomyWriter);
+
+            CreateIndexReader();
         }
 
         public void RemoveFromIndex(Guid id)
         {
             indexWriter.DeleteDocuments(new Term("id", id.ToString()));
-
             indexWriter.Commit();
 
-            indexReader = indexWriter.GetReader(true);
-            indexSearcher = new IndexSearcher(indexReader);
+            CreateIndexReader();
+        }
 
-            taxonomyWriter.Commit();
-            taxonomyReader = new DirectoryTaxonomyReader(taxonomyWriter);
+        private void CreateIndexReader()
+        {
+            lock (indexWriter)
+            {
+                IndexSeacherProvider oldIndexSeacherProvider = indexSeacherProvider;
+                indexSeacherProvider = new IndexSeacherProvider(indexWriter, taxonomyWriter);
+                oldIndexSeacherProvider.TryDispose();
+            }
         }
 
         public FulltextResponse Search(FileStorageQuery externalQuery)
         {
-            IndexSearcher indexSearcher = this.indexSearcher;
+            IndexSeacherProvider provider;
 
-            BooleanQuery booleanClauses = new BooleanQuery();
-
-            booleanClauses.Add(new TermQuery(new Term("lang", externalQuery.Language)), Occur.MUST);
-
-            string query = externalQuery.QueryText?.Trim() ?? string.Empty;
-
-            StringBuilder sb = new StringBuilder();
-            string normalizedString = query.Normalize(NormalizationForm.FormD);
-            for (int i = 0; i < normalizedString.Length; i++)
+            lock (indexWriter)
             {
-                char c = normalizedString[i];
-                var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c);
-                if (unicodeCategory != UnicodeCategory.NonSpacingMark)
+                provider = indexSeacherProvider;
+                provider.IncreaseClientsCount();
+            }
+
+            try
+            {
+                IndexSearcher indexSearcher = provider.IndexSearcher;
+                TaxonomyReader taxonomyReader = provider.TaxonomyReader;
+
+                BooleanQuery booleanClauses = new BooleanQuery();
+
+                booleanClauses.Add(new TermQuery(new Term("lang", externalQuery.Language)), Occur.MUST);
+
+                string query = externalQuery.QueryText?.Trim() ?? string.Empty;
+
+                StringBuilder sb = new StringBuilder();
+                string normalizedString = query.Normalize(NormalizationForm.FormD);
+                for (int i = 0; i < normalizedString.Length; i++)
                 {
-                    sb.Append(c);
-                }
-            }
-
-            query = sb.ToString().Normalize(NormalizationForm.FormC);
-
-            if (!string.IsNullOrWhiteSpace(query))
-            {
-                BooleanQuery textQueries = new BooleanQuery();
-
-                string escapedQuery = QueryParserBase.Escape(query) + "*";
-
-                QueryParser queryParserTitle = new QueryParser(Version, "title", analyzer);
-                textQueries.Add(queryParserTitle.Parse(escapedQuery), Occur.SHOULD);
-
-                QueryParser queryParserDescription = new QueryParser(Version, "description", analyzer);
-                textQueries.Add(queryParserDescription.Parse(escapedQuery), Occur.SHOULD);
-
-                booleanClauses.Add(textQueries, Occur.MUST);
-            }
-
-            if (externalQuery.DateTo.HasValue)
-            {
-                booleanClauses.Add(TermRangeQuery.NewStringRange("startDate", null, externalQuery.DateTo.Value.ToString("yyyyMMdd"), true, true), Occur.MUST);
-            }
-
-            if (externalQuery.DateFrom.HasValue)
-            {
-                booleanClauses.Add(TermRangeQuery.NewStringRange("endDate",  externalQuery.DateFrom.Value.ToString("yyyyMMdd"), null, true, true), Occur.MUST);
-            }
-
-            FacetsCollector facetsCollector = new FacetsCollector();
-            TopDocs topDocs = FacetsCollector.Search(indexSearcher, booleanClauses, 50000, facetsCollector);
-
-            FulltextResponse response = new FulltextResponse
-            {
-                TotalCount = topDocs.TotalHits
-            };
-
-            HashSet<Guid> ids = new HashSet<Guid>();
-
-            for (int i = 0;; i++)
-            {
-                int index = externalQuery.SkipResults + i;
-                if (index < topDocs.ScoreDocs.Length)
-                {
-                    ScoreDoc scoreDoc = topDocs.ScoreDocs[index];
-                    Document document = indexSearcher.Doc(scoreDoc.Doc);
-                    Guid id = Guid.Parse(document.Get("id"));
-                    if (ids.Add(id))
+                    char c = normalizedString[i];
+                    var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c);
+                    if (unicodeCategory != UnicodeCategory.NonSpacingMark)
                     {
-                        response.Documents.Add(new FulltextResponseDocument(id));
+                        sb.Append(c);
                     }
                 }
-                else break;
-            }
 
-            Facets facets = new FastTaxonomyFacetCounts(taxonomyReader, facetsConfig, facetsCollector);
+                query = sb.ToString().Normalize(NormalizationForm.FormC);
 
-            if (externalQuery.RequiredFacets is not null)
-            {
-                foreach (string key in externalQuery.RequiredFacets)
+                if (!string.IsNullOrWhiteSpace(query))
                 {
-                    Facet fulltextFacet = new Facet(key);
-                    response.Facets[key] = fulltextFacet;
-                    FacetResult facetResult = facets.GetTopChildren(10, key);
-                    if (facetResult?.LabelValues is not null)
+                    BooleanQuery textQueries = new BooleanQuery();
+
+                    string escapedQuery = QueryParserBase.Escape(query) + "*";
+
+                    QueryParser queryParserTitle = new QueryParser(Version, "title", analyzer);
+                    textQueries.Add(queryParserTitle.Parse(escapedQuery), Occur.SHOULD);
+
+                    QueryParser queryParserDescription = new QueryParser(Version, "description", analyzer);
+                    textQueries.Add(queryParserDescription.Parse(escapedQuery), Occur.SHOULD);
+
+                    booleanClauses.Add(textQueries, Occur.MUST);
+                }
+
+                if (externalQuery.DateTo.HasValue)
+                {
+                    booleanClauses.Add(TermRangeQuery.NewStringRange("startDate", null, externalQuery.DateTo.Value.ToString("yyyyMMdd"), true, true), Occur.MUST);
+                }
+
+                if (externalQuery.DateFrom.HasValue)
+                {
+                    booleanClauses.Add(TermRangeQuery.NewStringRange("endDate", externalQuery.DateFrom.Value.ToString("yyyyMMdd"), null, true, true), Occur.MUST);
+                }
+
+                FacetsCollector facetsCollector = new FacetsCollector();
+                TopDocs topDocs = FacetsCollector.Search(indexSearcher, booleanClauses, 50000, facetsCollector);
+
+                FulltextResponse response = new FulltextResponse
+                {
+                    TotalCount = topDocs.TotalHits
+                };
+
+                HashSet<Guid> ids = new HashSet<Guid>();
+
+                for (int i = 0; ; i++)
+                {
+                    int index = externalQuery.SkipResults + i;
+                    if (index < topDocs.ScoreDocs.Length)
                     {
-                        foreach (var result in facetResult.LabelValues)
+                        ScoreDoc scoreDoc = topDocs.ScoreDocs[index];
+                        Document document = indexSearcher.Doc(scoreDoc.Doc);
+                        Guid id = Guid.Parse(document.Get("id"));
+                        if (ids.Add(id))
                         {
-                            fulltextFacet.Values[result.Label] = (int)result.Value;
+                            response.Documents.Add(new FulltextResponseDocument(id));
+                        }
+                    }
+                    else break;
+                }
+
+                Facets facets = new FastTaxonomyFacetCounts(taxonomyReader, facetsConfig, facetsCollector);
+
+                if (externalQuery.RequiredFacets is not null)
+                {
+                    foreach (string key in externalQuery.RequiredFacets)
+                    {
+                        Facet fulltextFacet = new Facet(key);
+                        response.Facets[key] = fulltextFacet;
+                        FacetResult facetResult = facets.GetTopChildren(10, key);
+                        if (facetResult?.LabelValues is not null)
+                        {
+                            foreach (var result in facetResult.LabelValues)
+                            {
+                                fulltextFacet.Values[result.Label] = (int)result.Value;
+                            }
                         }
                     }
                 }
-            }
 
-            return response;
+                return response;
+            }
+            finally
+            {
+                provider.Dispose();
+            }            
         }
     }
 }

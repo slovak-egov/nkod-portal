@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Abstractions\Abstractions.csproj" />
     <ProjectReference Include="..\CodelistProvider\CodelistProvider.csproj" />
+    <ProjectReference Include="..\RdfFileStorage.Test\RdfFileStorage.Test.csproj" />
     <ProjectReference Include="..\TestBase\TestBase.csproj" />
   </ItemGroup>
 

@@ -58,5 +58,23 @@ namespace CodelistProviderClient.Test
             Codelist? list = await client.GetCodelist("unknown");
             Assert.Null(list);
         }
+
+        [Fact]
+        public async Task TestSingleCodelistItem()
+        {
+            using Storage storage = new Storage(fixture.GetStoragePath());
+            using CodelistApplicationFactory applicationFactory = new CodelistApplicationFactory(storage, AnonymousAccessPolicy.Default);
+            HttpClient httpClient = applicationFactory.CreateClient();
+            DefaultHttpClientFactory httpClientFactory = new DefaultHttpClientFactory(httpClient);
+            CodelistProviderClient client = new CodelistProviderClient(httpClientFactory, new AnonymousHttpContextValueAccessor());
+            Codelist? list = await client.GetCodelist(DcatDataset.ThemeCodelist);
+            Assert.NotNull(list);
+
+            CodelistItem? item = list.Items.GetValueOrDefault("http://publications.europa.eu/resource/authority/data-theme/AGRI");
+            Assert.NotNull(item);
+
+            item = list.Items.GetValueOrDefault("http://publications.europa.eu/resource/authority/data-theme/agri");
+            Assert.NotNull(item);
+        }
     }
 }

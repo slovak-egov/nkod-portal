@@ -21,7 +21,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Abstractions\Abstractions.csproj" />
     <ProjectReference Include="..\DocumentStorageClient\DocumentStorageClient.csproj" />
-    <ProjectReference Include="..\RdfFileStorage.Test\RdfFileStorage.Test.csproj" />
   </ItemGroup>
 
 </Project>
