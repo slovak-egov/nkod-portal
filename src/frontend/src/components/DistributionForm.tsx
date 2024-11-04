@@ -18,7 +18,6 @@ type Props = {
     saving: boolean;
 };
 
-
 const requiredCodelists = [
     knownCodelists.distribution.license,
     knownCodelists.distribution.personalDataContainmentType,
@@ -234,7 +233,7 @@ export function DistributionForm(props: Props) {
                     )}
                 />
             ) : null}
-            <p className="govuk-hint">{t('maximumFileUploadSize')}: 250 MB</p>
+            <p className="govuk-hint">{t('maximumFileUploadSize')}: 600 MB</p>
 
             {uploading ? <Alert type="info">{t('fileUploadProgress')}</Alert> : null}
             {uploadError ? <ErrorAlert error={uploadError} /> : null}

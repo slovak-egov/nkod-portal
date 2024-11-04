@@ -185,7 +185,7 @@ builder.Services.AddApplicationInsightsTelemetry(options =>
 }).AddApplicationInsightsTelemetryProcessor<ExceptionFilter>();
 builder.Services.AddSingleton<ITelemetryInitializer, RequestTelementryInitializer>();
 
-const int maxFileSize = 250 * 1024 * 1024;
+const int maxFileSize = 600 * 1024 * 1024;
 
 builder.Services.Configure<FormOptions>(options =>
 {
@@ -2483,7 +2483,10 @@ app.MapPost("/users/login", async ([FromBody] LoginInput? input, HttpResponse re
     }
     catch (HttpRequestException e)
     {
-        telemetryClient?.TrackException(e);
+        if (e.StatusCode != System.Net.HttpStatusCode.Forbidden)
+        {
+            telemetryClient?.TrackException(e);
+        }
         return e.StatusCode switch
         {
             System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
@@ -2622,6 +2625,13 @@ app.MapGet("/signin-google", async ([FromQuery] string? code, string? state, [Fr
         {
             string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
             response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+        }
+    }
+    catch (HttpRequestException e)
+    {
+        if (e.StatusCode != System.Net.HttpStatusCode.Forbidden)
+        {
+            telemetryClient?.TrackException(e);
         }
     }
     catch (Exception e)
