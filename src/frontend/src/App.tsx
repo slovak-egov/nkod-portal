@@ -47,6 +47,7 @@ import SuggestionDetail from './pages/SuggestionDetail';
 import SuggestionForm from './pages/SuggestionForm';
 import SuggestionList from './pages/SuggestionList';
 import UserList from './pages/UserList';
+import Alert from './components/Alert';
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -186,6 +187,13 @@ function App(props: Props) {
                 }}
             >
                 <BrowserRouter>
+                    <Alert style={{ margin: 0, padding: '20px 0' }}>
+                        Zúčastnite sa{' '}
+                        <a href="https://docs.google.com/forms/d/e/1FAIpQLSfnYVGTOBKyUSBrAvBALwqP8oHJOKlwtsdMTCq-vUKcNdPIzw/viewform?usp=sf_link">
+                            prieskumu používateľov portálu
+                        </a>{' '}
+                        a pomôžte nám zlepšovať otvorené dáta na Slovensku.
+                    </Alert>
                     <Header />
                     <AppNavigator {...props} />
                     <div className="govuk-width-container">
