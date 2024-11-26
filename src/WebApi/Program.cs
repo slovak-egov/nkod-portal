@@ -38,6 +38,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using System.Net.Mime;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Caching.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -214,6 +215,7 @@ builder.Services.AddSingleton(sp =>
     return new DownloadDataQualityService(sparqlClient, sp.GetRequiredService<TelemetryClient>());
 });
 
+builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 
@@ -2640,6 +2642,37 @@ app.MapGet("/signin-google", async ([FromQuery] string? code, string? state, [Fr
     }
     return Results.Redirect("/");
 }).Produces<SaveResult>();
+
+async Task<string> ServeCached(Uri remoteUri, IMemoryCache cache)
+{
+    if (cache.TryGetValue(remoteUri.OriginalString, out object? value) && value is string stringValue)
+    {
+        return stringValue;
+    }
+    else
+    {
+        using HttpClient client = new HttpClient();
+        stringValue = await client.GetStringAsync(remoteUri);
+        cache.Set(remoteUri.OriginalString, stringValue, DateTimeOffset.Now.AddHours(1));
+        return stringValue;
+    }
+}
+
+app.MapGet("/dcat3.jsonld", async ([FromServices] IMemoryCache cache) =>
+{
+    return Results.Content(
+        await ServeCached(
+            new Uri("https://raw.githubusercontent.com/slovak-egov/centralny-model-udajov/refs/heads/main/tbox/national/dcat-ap-sk/kontexty/rozhranie-katal%C3%B3gu-otvoren%C3%BDch-d%C3%A1t.jsonld"), cache), 
+        new Microsoft.Net.Http.Headers.MediaTypeHeaderValue("application/ld+json"));
+});
+
+app.MapGet("/dcat2.jsonld", async ([FromServices] IMemoryCache cache, HttpResponse response) =>
+{
+    return Results.Content(
+        await ServeCached(
+            new Uri("https://datova-kancelaria.github.io/dcat-ap-sk-2.0/kontexty/rozhranie-katal%C3%B3gu-otvoren%C3%BDch-d%C3%A1t.jsonld"), cache),
+        new Microsoft.Net.Http.Headers.MediaTypeHeaderValue("application/ld+json"));
+});
 
 app.Use(async (context, next) =>
 {
