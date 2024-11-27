@@ -18,7 +18,7 @@ spec:
       containers:
         - name: iamdb
           image: mysql:8.1
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           env:
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:

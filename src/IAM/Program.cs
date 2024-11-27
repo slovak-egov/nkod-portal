@@ -1,4 +1,4 @@
-using IAM;
+﻿using IAM;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.StaticFiles.Infrastructure;
@@ -35,6 +35,17 @@ using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights;
 using ITfoxtec.Identity.Saml2.Claims;
+using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.AspNetCore.Cryptography.KeyDerivation;
+using Google.Protobuf.WellKnownTypes;
+using System.Text.RegularExpressions;
+using System.Web;
+using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
+using Abstractions;
+using Google.Apis.Auth.OAuth2;
+using Google.Apis.Oauth2.v2;
+using Google.Apis.Services;
+using System.Net;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -136,7 +147,7 @@ builder.Services.AddSingleton(services =>
     {
         saml2Configuration.AllowedIssuer = entityDescriptor.EntityId;
         saml2Configuration.SingleSignOnDestination = entityDescriptor.IdPSsoDescriptor.SingleSignOnServices.First().Location;
-        saml2Configuration.SingleLogoutDestination = entityDescriptor.IdPSsoDescriptor.SingleLogoutServices.First().Location;
+        saml2Configuration.SingleLogoutDestination = entityDescriptor.IdPSsoDescriptor.SingleLogoutServices.FirstOrDefault()?.Location;
         foreach (X509Certificate2 signingCertificate in entityDescriptor.IdPSsoDescriptor.SigningCertificates)
         {
             if (signingCertificate.IsValidLocalTime())
@@ -202,6 +213,10 @@ builder.Services.AddApplicationInsightsTelemetry(options =>
 });
 builder.Services.AddSingleton<ITelemetryInitializer, RequestTelementryInitializer>();
 
+string? frontendUrl = builder.Configuration["FrontendUrl"];
+EmailOptions? emailOptions = builder.Configuration.GetSection("EmailOptions").Get<EmailOptions>();
+builder.Services.AddSingleton<IEmailService>(_ => new SmtpEmailService(emailOptions?.Host, emailOptions?.Port ?? 25, emailOptions?.Username, emailOptions?.Password, emailOptions?.UseSsl ?? false, emailOptions?.FromAddress, emailOptions?.FromName));
+
 builder.Logging.AddConsole();
 
 WebApplication app = builder.Build();
@@ -229,6 +244,11 @@ async Task<TokenResult> CreateToken(ApplicationDbContext context, UserRecord? us
         claims.Add(new Claim(ClaimTypes.NameIdentifier, user.Id));
         claims.Add(new Claim(ClaimTypes.GivenName, user.FirstName));
         claims.Add(new Claim(ClaimTypes.Surname, user.LastName));
+
+        if (!string.IsNullOrEmpty(user.FormattedName))
+        {
+            claims.Add(new Claim(ClaimTypes.Name, user.FormattedName));
+        }
     }
 
     claims.Add(new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()));
@@ -536,6 +556,8 @@ app.MapGet("/user-info", [Authorize] async ([FromServices] ApplicationDbContext 
                 LastName = lastName ?? record.LastName,
                 Email = record.Email,
                 CompanyName = user.FindFirstValue("CompanyName"),
+                AuthorizationMethod = user.FindFirstValue(ClaimTypes.AuthenticationMethod),
+                FormattedName = record.FormattedName
             });
         }
         else
@@ -626,6 +648,29 @@ app.MapPost("/refresh", async ([FromServices] ApplicationDbContext context, [Fro
 
 app.MapGet("/logout", [Authorize] async ([FromServices] ApplicationDbContext context, HttpRequest request, ClaimsPrincipal user, [FromServices] Saml2Configuration saml2Configuration, [FromServices] IConfiguration configuration, [FromServices] ILogger<Program> logger) =>
 {
+    string? method = user.FindFirstValue(ClaimTypes.AuthenticationMethod);
+
+    if (string.Equals(method, "Native") || string.Equals(method, "Google"))
+    {
+        string? id = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (id is not null)
+        {
+            UserRecord? record = await context.Users.FindAsync(id);
+            if (record is not null)
+            {
+                record.RefreshToken = null;
+                record.RefreshTokenExpiryTime = null;
+                await context.SaveChangesAsync();
+            }
+        }
+
+        return Results.Ok(new DelegationAuthorizationResult
+        {
+            DoLogout = true
+        });
+    }
+
     string? content = request.Query["SAMLResponse"];
 
     if (!string.IsNullOrEmpty(content))
@@ -744,8 +789,33 @@ app.MapPost("/delegate-publisher", [Authorize] async ([FromServices] Application
     }
 });
 
-app.MapGet("/login", ([FromServices] Saml2Configuration saml2Configuration, IConfiguration configuration, [FromServices] ILogger<Program> logger) =>
+app.MapGet("/login", ([FromServices] Saml2Configuration saml2Configuration, [FromQuery] string? method, IConfiguration configuration, [FromServices] ILogger<Program> logger) =>
 {
+    if (string.Equals(method, "Google", StringComparison.OrdinalIgnoreCase))
+    {
+        UriBuilder redirectUriBuilder = new UriBuilder(frontendUrl ?? string.Empty);
+        redirectUriBuilder.Path = "/signin-google";
+
+        string baseUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+        Dictionary<string, string?> parameters = new Dictionary<string, string?>
+        {
+            { "client_id", configuration["Authentication:Google:ClientId"] },
+            { "response_type", "code" },
+            { "access_type", "online" },
+            { "scope", "email profile" },
+            { "redirect_uri", redirectUriBuilder.ToString() },
+            { "state", "google" }
+        };
+
+        UriBuilder ub = new UriBuilder(baseUrl);
+        ub.Query = string.Join("&", parameters.Select(k => $"{HttpUtility.UrlEncode(k.Key)}={HttpUtility.UrlEncode(k.Value)}"));
+
+        return Results.Ok(new DelegationAuthorizationResult
+        {
+            RedirectUrl = ub.ToString()
+        });
+    }
+
     string? returnUrl = configuration["Saml2:ReturnUrl"];
     if (string.IsNullOrEmpty(returnUrl))
     { 
@@ -766,6 +836,296 @@ app.MapGet("/login", ([FromServices] Saml2Configuration saml2Configuration, ICon
     {
         RedirectUrl = redirectBinding.RedirectLocation.OriginalString
     });
+});
+
+app.MapPost("/login", async ([FromBody] LoginInput? input, [FromServices] ApplicationDbContext context, [FromServices] SigningCredentials signingCredentials, IConfiguration configuration) =>
+{
+    if (!string.IsNullOrEmpty(input?.Email) && !string.IsNullOrEmpty(input?.Password))
+    {
+        UserRecord? user = await context.Users.FirstOrDefaultAsync(u => u.Email == input.Email && u.IsActive);
+        if (user is not null && !string.IsNullOrWhiteSpace(user.Password) && user.VerifyPassword(input.Password))
+        {
+            List<Claim> customClaims = new List<Claim> { new Claim(ClaimTypes.AuthenticationMethod, "Native") };
+
+            return Results.Ok(await CreateToken(context, user, configuration, signingCredentials, false, customClaims));
+        }
+    }
+
+    return Results.Forbid();
+});
+
+string CreateRandomString()
+{
+    byte[] buffer = new byte[32];
+    using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
+    {
+        rng.GetBytes(buffer);
+    }
+    return Convert.ToBase64String(buffer).Trim('=');
+}
+
+app.MapPost("/register", async ([FromBody] UserRegistrationInput? input, [FromServices] ApplicationDbContext context, [FromServices] IEmailService emailService) =>
+{
+    SaveResult result = new SaveResult();
+
+    input ??= new UserRegistrationInput();
+
+    ValidationResults validationResults = input.Validate();
+    if (validationResults.IsValid)
+    {
+        string password = input.Password?.Trim() ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(input.Email) && !string.IsNullOrWhiteSpace(password) && password.Length >= UserRegistrationInput.MinimalPasswordLength && !string.IsNullOrWhiteSpace(input.FirstName) && !string.IsNullOrWhiteSpace(input.LastName))
+        {
+            using IDbContextTransaction tx = await context.Database.BeginTransactionAsync();
+            if (!await context.Users.AnyAsync(u => u.Email == input.Email))
+            {
+                TimeZoneInfo tz = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+                DateTimeOffset expiryTimeUtc = DateTimeOffset.UtcNow.AddDays(2);
+                DateTimeOffset expiryTimeOffset = TimeZoneInfo.ConvertTime(expiryTimeUtc, tz);
+
+                UserRecord user = new UserRecord
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Email = input.Email,
+                    Role = "CommunityUser",
+                    FirstName = input.FirstName,
+                    LastName = input.LastName,
+                    IsActive = false,
+                    RegistrationSourceIpAddress = "1",
+                    Registered = DateTimeOffset.Now,
+                    ActivationToken = CreateRandomString(),
+                    ActivationTokenExpiryTime = expiryTimeUtc,
+                    FormattedName = $"{input.FirstName} {input.LastName}"
+                };
+
+                user.SetPassword(password);
+
+                context.Users.Add(user);
+                await context.SaveChangesAsync();
+                tx.Commit();
+
+                string link = $"{frontendUrl}potvrdenie-registracie?id={HttpUtility.UrlEncode(user.Id)}&token={HttpUtility.UrlEncode(user.ActivationToken)}";
+                string encodedLink = HttpUtility.HtmlEncode(link);
+
+                string text = "Vážený používateľ,<br>" +
+                        "na získanie prístupových práv pre aktívneho používateľa portálu data.slovensko.sk, prosím, " +
+                        $"kliknite na nasledujúci odkaz do {expiryTimeOffset:d. M. yyyy, H:mm}: <a href=\"{encodedLink}\">{encodedLink}</a>. Tento odkaz Vám umožní využívať možnosti, ktoré ponúka portál pre zaregistrovaných používateľov.<br><br>" +
+                        "Po potvrdení Vám budú poskytnuté prístupové práva na zadanie podnetu, registráciu aplikácie, vloženie komentára a ďalšie funkcionality.<br><br>" +
+                        "Pokiaľ máte akékoľvek otázky alebo potrebujete pomoc, neváhajte nás kontaktovať na e-maili opendata@mirri.gov.sk.<br><br>" +
+                        "Tešíme sa na spoluprácu a Váš príspevok k rozvoju otvorených dát v Slovenskej republike.<br><br>" +
+                        "S pozdravom<br>" +
+                        "Tím centrálneho portálu otvorených dát data.slovensko.sk";
+
+                await emailService.SendEmail(user.Email, "Aktivácia žiadosti o vytvorenie konta", text);
+                
+                result.Id = user.Id;
+                result.Success = true;
+            }
+            else
+            {
+                validationResults.AddError(nameof(input.Email), "E-mail je už zaregistrovaný");
+            }
+        }
+    }
+    result.Errors = validationResults;
+    return Results.Ok(result);
+});
+
+app.MapPost("/activation", async ([FromBody] ActivationInput? input, [FromServices] ApplicationDbContext context) =>
+{
+    SaveResult result = new SaveResult();
+    ValidationResults results = new ValidationResults();
+
+    if (!string.IsNullOrEmpty(input?.Id) && !string.IsNullOrEmpty(input.Token))
+    {
+        UserRecord? user = await context.Users.FirstOrDefaultAsync(u => u.Id == input.Id);
+        if (user is not null && !string.IsNullOrEmpty(user.ActivationToken))
+        {
+            if (user.ActivationTokenExpiryTime.HasValue && user.ActivationTokenExpiryTime.Value >= DateTimeOffset.Now)
+            {
+                if (string.Equals(user.ActivationToken, input.Token, StringComparison.Ordinal))
+                {
+                    user.ActivationToken = null;
+                    user.ActivationTokenExpiryTime = null;
+                    user.IsActive = true;
+                    user.ActivatedAt = DateTimeOffset.Now;
+                    await context.SaveChangesAsync();
+
+                    result.Id = user.Id;
+                    result.Success = true;
+                }
+            }
+            else
+            {
+                results.AddError(nameof(input.Token), "Overenie aktivácie exspirovalo");
+            }
+        }
+        else
+        {
+            results.AddError(nameof(input.Token), "Overenie aktivácie nie je platné");
+        }
+    }
+    else
+    {
+        results.AddError(nameof(input.Token), "Overenie aktivácie nie je platné");
+    }
+
+    result.Errors = results;
+
+    return Results.Ok(result);
+});
+
+app.MapPost("/recovery", async ([FromBody] PasswordRecoveryInput? input, [FromServices] ApplicationDbContext context, [FromServices] IEmailService emailService) =>
+{
+    SaveResult result = new SaveResult();
+
+    input ??= new PasswordRecoveryInput();
+
+    ValidationResults validationResults = input.Validate();
+    if (validationResults.IsValid)
+    {
+        if (!string.IsNullOrEmpty(input?.Email))
+        {
+            UserRecord? user = await context.Users.FirstOrDefaultAsync(u => u.Email == input.Email && u.IsActive);
+            if (user is not null && !string.IsNullOrEmpty(user.Password) && !string.IsNullOrEmpty(user.Email))
+            {
+                if (user.RecoveryTokenSentTimes < 3)
+                {
+                    if (string.IsNullOrEmpty(user.RecoveryToken))
+                    {
+                        user.RecoveryToken = CreateRandomString();
+                    }
+
+                    TimeZoneInfo tz = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+                    DateTimeOffset expiryTimeUtc = DateTimeOffset.UtcNow.AddDays(2);
+                    DateTimeOffset expiryTimeOffset = TimeZoneInfo.ConvertTime(expiryTimeUtc, tz);
+
+                    user.RecoveryTokenExpiryTime = expiryTimeUtc;
+                    user.RecoveryTokenSentTimes++;
+                    await context.SaveChangesAsync();
+
+                    string link = $"{frontendUrl}obnova-hesla?id={HttpUtility.UrlEncode(user.Id)}&token={HttpUtility.UrlEncode(user.RecoveryToken)}";
+                    string encodedLink = HttpUtility.HtmlEncode(link);
+
+                    string text = "Vážený používateľ,<br>" +
+                       "zistili sme, že ste požiadali o obnovu hesla k Vášmu účtu na portáli data.slovensko.sk.<br><br>" +
+                       $"Ak ste zabudli Vaše heslo, môžete si vygenerovať nové kliknutím na nasledujúci odkaz: <a href=\"{encodedLink}\">{encodedLink}</a>.<br><br>" +
+                       $"Prosím, pamätajte si, že tento odkaz bude platný iba počas nasledujúcich dvoch dní do {expiryTimeOffset:d. M. yyyy, H:mm}, preto nezabudnite na obnovu hesla čo najskôr.<br><br>" +
+                       "Ak ste nežiadali o obnovu hesla alebo Ste si žiadny problém s heslom nevšimli, môžete tento e-mail ignorovať. Vaše heslo zostane nezmenené.<br><br>" +
+                       "Ak máte akékoľvek ďalšie otázky alebo potrebujete pomoc, neváhajte nás kontaktovať na emaili opendata@mirri.gov.sk<br><br>" +
+                       "S pozdravom,<br>" +
+                       "Tím centrálneho portálu otvorených dát data.slovensko.sk";
+
+                    await emailService.SendEmail(user.Email, "Aktivácia žiadosti o obnovu hesla", text);
+
+                    result.Id = user.Id;
+                    result.Success = true;
+                }
+                else
+                {
+                    validationResults.AddError(nameof(input.Email), "Pre túto e-mailovú adresu boli odoslané príliš veľa požiadaviek na obnovu hesla");
+                }
+            }
+            else
+            {
+                validationResults.AddError(nameof(input.Email), "Konto pre zadanú e-mailovú adresu nebolo nájdené");
+            }
+        }
+    }
+     
+    result.Errors = validationResults;
+
+    return Results.Ok(result);
+});
+
+app.MapPost("/recovery-activation", async ([FromBody] PasswordRecoveryConfirmationInput? input, [FromServices] ApplicationDbContext context, [FromServices] IEmailService emailService) =>
+{
+    SaveResult result = new SaveResult();
+    ValidationResults results = new ValidationResults();
+
+    if (!string.IsNullOrEmpty(input?.Id) && !string.IsNullOrEmpty(input.Token) && !string.IsNullOrEmpty(input.Password))
+    {
+        UserRecord? user = await context.Users.FirstOrDefaultAsync(u => u.Id == input.Id && u.IsActive);
+        if (user is not null && !string.IsNullOrEmpty(user.RecoveryToken))
+        {
+            if (user.RecoveryTokenExpiryTime.HasValue && user.RecoveryTokenExpiryTime.Value >= DateTimeOffset.Now)
+            {
+                if (string.Equals(user.RecoveryToken, input.Token, StringComparison.Ordinal))
+                {
+                    user.RecoveryToken = null;
+                    user.RecoveryTokenSentTimes = 0;
+                    user.RecoveryTokenExpiryTime = null;
+                    user.SetPassword(input.Password);
+                    await context.SaveChangesAsync();
+
+                    result.Id = user.Id;
+                    result.Success = true;
+                }
+            }
+            else
+            {
+                results.AddError(nameof(input.Token), "Overenie aktivácie exspirovalo");
+            }
+        }
+        else
+        {
+            results.AddError(nameof(input.Token), "Overenie aktivácie nie je platné");
+        }
+    }
+    else
+    {
+        results.AddError(nameof(input.Token), "Overenie aktivácie nie je platné");
+    }
+
+    result.Errors = results;
+
+    return Results.Ok(result);
+});
+
+app.MapPost("/change-password", [Authorize] async ([FromBody] PasswordChangeInput? input, [FromServices] ApplicationDbContext context, ClaimsPrincipal principal) =>
+{
+    SaveResult result = new SaveResult();
+    input ??= new PasswordChangeInput();
+    ValidationResults validationResults = input.Validate();
+
+    string? id = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+    string? method = principal.FindFirstValue(ClaimTypes.AuthenticationMethod);
+
+    if (validationResults.IsValid)
+    {
+        if (!string.IsNullOrEmpty(id) && string.Equals(method, "Native", StringComparison.OrdinalIgnoreCase))
+        {
+            UserRecord? user = await context.Users.FirstOrDefaultAsync(u => u.Id == id && u.IsActive);
+            if (user is not null)
+            {
+                if (user.VerifyPassword(input.OldPassword ?? string.Empty))
+                {
+                    user.SetPassword(input.NewPassword!);
+                    await context.SaveChangesAsync();
+
+                    result.Id = user.Id;
+                    result.Success = true;
+                }
+                else
+                {
+                    validationResults.AddError(nameof(input.OldPassword), "Pôvodné heslo nie je správne");
+                }
+            }
+            else
+            {
+                return Results.Unauthorized();
+            }
+        }
+        else
+        {
+            return Results.Unauthorized();
+        }
+    }
+
+    result.Errors = validationResults;
+
+    return Results.Ok(result);
 });
 
 app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configuration, [FromServices] ApplicationDbContext context, HttpRequest request, [FromServices] SigningCredentials signingCredentials, IConfiguration configuration, [FromServices] ILogger<Program> logger, [FromServices] TelemetryClient? telemetryClient) =>
@@ -791,6 +1151,7 @@ app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configurat
     string? companyName = saml2AuthnResponse.ClaimsIdentity.FindFirst("Subject.FormattedName")?.Value;
     string? identificationNumber = saml2AuthnResponse.ClaimsIdentity.FindFirst("ActorID")?.Value;
     string? delegationType = saml2AuthnResponse.ClaimsIdentity.FindFirst("DelegationType")?.Value;
+    string? formattedName = saml2AuthnResponse.ClaimsIdentity.FindFirst("Actor.FormattedName")?.Value;
 
     if (telemetryClient is not null)
     {
@@ -817,7 +1178,7 @@ app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configurat
    
     if (!string.IsNullOrEmpty(id))
     {
-        UserRecord? user = await context.GetOrCreateUser(id, firstName, lastName, email, publisher, invitation).ConfigureAwait(false);
+        UserRecord? user = await context.GetOrCreateUser(id, firstName, lastName, email, publisher, invitation, formattedName).ConfigureAwait(false);
         if (user is not null && user.IsActive)
         {
             return Results.Ok(await CreateToken(context, user, configuration, signingCredentials, hasExplicitDelegation, customClaims, companyName: companyName));
@@ -879,6 +1240,77 @@ app.MapPost("/validate-invitation", async (IConfiguration configuration, [FromSe
         }
     }
     return Results.Ok(result);
+});
+
+app.MapGet("/signin-google", async ([FromServices] ApplicationDbContext context, [FromServices] SigningCredentials signingCredentials, [FromServices] IConfiguration configuration, [FromServices] ILogger<Program> logger, [FromServices] IHttpClientFactory httpClientFactory, [FromQuery] string? code, [FromQuery] string? state) =>
+{
+    if (!string.IsNullOrEmpty(code) && !string.IsNullOrEmpty(state) && string.Equals("google", state, StringComparison.Ordinal))
+    {
+        string? clientId = configuration["Authentication:Google:ClientId"];
+        string? clientSecret = configuration["Authentication:Google:ClientSecret"];
+
+        using HttpClientHandler handler = new HttpClientHandler();
+        handler.SslProtocols = SslProtocols.Tls12;
+
+        using (HttpClient client = new HttpClient(handler))
+        using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "https://oauth2.googleapis.com/token"))
+        {
+            UriBuilder redirectUriBuilder = new UriBuilder(frontendUrl ?? string.Empty);
+            redirectUriBuilder.Path = "/signin-google";
+
+            request.Content = new FormUrlEncodedContent(new Dictionary<string, string?>
+            {
+                { "code", code },
+                { "client_id", clientId },
+                { "client_secret", clientSecret },
+                { "redirect_uri" ,redirectUriBuilder.ToString() },
+                { "grant_type", "authorization_code" }
+            });
+
+            using (HttpResponseMessage response = await client.SendAsync(request))
+            {
+                if (response.IsSuccessStatusCode)
+                {
+                    GoogleTokenResponse? tokenResponse = await response.Content.ReadFromJsonAsync<GoogleTokenResponse>();
+                    if (tokenResponse?.AccessToken is not null)
+                    {
+                        Oauth2Service service = new Oauth2Service(new BaseClientService.Initializer()
+                        {
+                            HttpClientInitializer = GoogleCredential.FromAccessToken(tokenResponse.AccessToken),
+                        });
+
+                        Google.Apis.Oauth2.v2.Data.Userinfo userInfo = await service.Userinfo.Get().ExecuteAsync();
+
+                        if (userInfo is not null)
+                        {
+                            logger.LogInformation(JsonConvert.SerializeObject(userInfo));
+
+                            string? email = userInfo.Email;
+                            string? id = userInfo.Id;
+                            string? firstName = userInfo.GivenName;
+                            string? lastName = userInfo.FamilyName;
+
+                            List<Claim> customClaims = new List<Claim>
+                            {
+                                new Claim(ClaimTypes.AuthenticationMethod, "Google")
+                            };
+
+                            if (!string.IsNullOrEmpty(id))
+                            {
+                                UserRecord? user = await context.GetOrCreateExternalUser(id, firstName, lastName, email, "Google").ConfigureAwait(false);
+                                if (user is not null && user.IsActive)
+                                {
+                                    return Results.Ok(await CreateToken(context, user, configuration, signingCredentials, false, customClaims));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return Results.Forbid();
 });
 
 app.Use(async (context, next) =>

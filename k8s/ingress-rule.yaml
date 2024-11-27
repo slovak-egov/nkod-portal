@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webapi-ingress
+  namespace: nodc
+spec:
+  rules:
+    - host: demo.nkod
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: webapi
+                port:
+                  number: 6001
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cms-ingress
+  namespace: nodc
+spec:
+  rules:
+    - host: demo.nkod
+      http:
+        paths:
+          - path: /cms
+            pathType: Prefix
+            backend:
+              service:
+                name: cms
+                port:
+                  number: 6005

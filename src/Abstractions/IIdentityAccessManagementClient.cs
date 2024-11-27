@@ -24,12 +24,26 @@ namespace NkodSk.Abstractions
 
         Task<UserInfo> GetUserInfo();
 
-        Task<DelegationAuthorizationResult> GetLogin();
+        Task<DelegationAuthorizationResult> GetLogin(string? method);
+
+        Task<TokenResult> Login(LoginInput? input);
 
         Task<TokenResult> Consume(string content);
 
         Task<string> LoginHarvester(string auth, string? publisherId);
 
         Task<CheckInvitationResult> CheckInvitation();
+
+        Task<TokenResult> SignGoogle(string? code, string? state);
+
+        Task<SaveResult> Register(UserRegistrationInput? input);
+
+        Task<SaveResult> ActivateAccount(ActivationInput? input);
+
+        Task<SaveResult> RequestPasswordRecovery(PasswordRecoveryInput? input);
+
+        Task<SaveResult> ConfirmPasswordRecovery(PasswordRecoveryConfirmationInput? input);
+
+        Task<SaveResult> ChangePassword(PasswordChangeInput? input);
     }
 }

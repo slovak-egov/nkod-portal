@@ -34,7 +34,7 @@ export default function EditCatalog()
     useDocumentTitle(t('editCatalog'));
 
     return <>
-            <Breadcrumbs items={[{title: t('nkod'), link: '/'}, {title: t('localCatalogList'), link: '/sprava/lokalne-katalógy'}, {title: t('editCatalog')}]} />
+            <Breadcrumbs items={[{title: t('nkod'), link: '/'}, {title: t('localCatalogList'), link: '/sprava/lokalne-katalogy'}, {title: t('editCatalog')}]} />
             <MainContent>
                 <div className="nkod-form-page">
                     <PageHeader>{t('editCatalog')}</PageHeader>

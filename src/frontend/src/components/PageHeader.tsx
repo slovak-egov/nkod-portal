@@ -1,7 +1,10 @@
-import { PropsWithChildren } from "react";
+import { PropsWithChildren } from 'react';
 
-type Props = PropsWithChildren
+export type Props = {
+    size?: 's' | 'm' | 'l' | 'xl';
+} & PropsWithChildren;
 
 export default function PageHeader(props: Props) {
-    return <h1 className="govuk-heading-xl">{props.children}</h1>;
+    const size = props.size ?? 'xl';
+    return <h1 className={`govuk-heading-${size}`}>{props.children}</h1>;
 }

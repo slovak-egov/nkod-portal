@@ -247,38 +247,33 @@ export function DistributionForm(props: Props) {
                 />
             ) : null}
             {uploadSetting.enableUpload ? (
-                <>
-                    <FormElementGroup
-                        label={t('fileUpload')}
-                        errorMessage={errors['downloadurl']}
-                        element={(id) => (
-                            <FileUpload
-                                id={id}
-                                disabled={saving}
-                                onChange={async (e) => {
-                                    const files = e.target.files ?? [];
-                                    if (files.length > 0) {
-                                        const file = await upload(files[0]);
-                                        if (file) {
-                                            setDistribution({
-                                                downloadUrl: file.url,
-                                                fileId: file.id
-                                            });
-                                        }
+                <FormElementGroup
+                    label={t('fileUpload')}
+                    errorMessage={errors['downloadurl']}
+                    element={(id) => (
+                        <FileUpload
+                            id={id}
+                            disabled={saving}
+                            onChange={async (e) => {
+                                const files = e.target.files ?? [];
+                                if (files.length > 0) {
+                                    const file = await upload(files[0]);
+                                    if (file) {
+                                        setDistribution({
+                                            downloadUrl: file.url,
+                                            fileId: file.id
+                                        });
                                     }
-                                }}
-                            />
-                        )}
-                    />
-                    <p className="govuk-hint">{t('maximumFileUploadSize')}: 250 MB</p>
-                    {uploading ? <Alert type="info">{t('fileUploadProgress')}</Alert> : null}
-                    {uploadError ? <ErrorAlert error={uploadError} /> : null}
-                </>
+                                }
+                            }}
+                        />
+                    )}
+                />
             ) : null}
+            <p className="govuk-hint">{t('maximumFileUploadSize')}: 600 MB</p>
 
-            {uploadSetting.enableDataService ? (
-                <>
-                    {distributionTitle}
+            {uploading ? <Alert type="info">{t('fileUploadProgress')}</Alert> : null}
+            {uploadError ? <ErrorAlert error={uploadError} /> : null}
 
                     <MultiLanguageFormGroup<string>
                         label={t('endpointDescription')}

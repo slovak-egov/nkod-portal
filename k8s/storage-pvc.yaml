@@ -8,6 +8,6 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 20Gi
-  storageClassName: oci
+      storage: $STORAGE_SIZE
+  storageClassName: $STORAGE_CLASS
   volumeMode: Filesystem

@@ -8,6 +8,6 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 2Gi
-  storageClassName: oci
+      storage: $IAMDB_SIZE
+  storageClassName: $STORAGE_CLASS
   volumeMode: Filesystem

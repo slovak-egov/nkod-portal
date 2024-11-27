@@ -1,42 +1,53 @@
-import Header from './components/Header';
+import { AxiosResponse, RawAxiosRequestHeaders } from 'axios';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom';
-import { Footer } from './components/Footer';
-import AddDataset from './pages/AddDataset';
-import DatasetList from './pages/DatasetList';
-import HomePage from './pages/HomePage';
-import DetailDataset from './pages/DetailDataset';
-import PublicPublisherList from './pages/PublicPublisherList';
-import PublicLocalCatalogList from './pages/PublicLocalCatalogList';
-import DetailLocalCatalog from './pages/DetailLocalCatalog';
-import PublicDatasetList from './pages/PublicDatasetList';
-import Alert from './components/Alert';
-import EditDataset from './pages/EditDataset';
-import DistributionList from './pages/DistributionList';
-import AddDistribution from './pages/AddDistribution';
-import CatalogList from './pages/CatalogList';
-import AddCatalog from './pages/AddCatalog';
-import EditCatalog from './pages/EditCatalog';
-import EditDistribution from './pages/EditDistribution';
-import Sparql from './pages/Sparql';
-import Quality from './pages/Quality';
-import Profile from './pages/Profile';
 import { Language, LanguageOptionsContext, TokenContext, TokenResult, UserInfo, sendPost, supportedLanguages, useUserInfo } from './client';
-import React, { useEffect, useState, useContext, useCallback } from 'react';
-import PublisherList from './pages/PublisherList';
-import UserList from './pages/UserList';
-import EditUser from './pages/EditUser';
-import AddUser from './pages/AddUser';
-import Codelists from './pages/Codelists';
+import { Footer } from './components/Footer';
+import Header from './components/Header';
+import ActivateUser from './pages/ActivateUser';
+import AddCatalog from './pages/AddCatalog';
+import AddDataset from './pages/AddDataset';
+import AddDistribution from './pages/AddDistribution';
 import AddPublisher from './pages/AddPublisher';
+import AddUser from './pages/AddUser';
+import ApplicationDetail from './pages/ApplicationDetail';
+import ApplicationForm from './pages/ApplicationForm';
+import ApplicationList from './pages/ApplicationList';
+import CatalogList from './pages/CatalogList';
+import ChangeLicenses from './pages/ChangeLicenses';
+import Codelists from './pages/Codelists';
+import DatasetList from './pages/DatasetList';
+import DetailDataset from './pages/DetailDataset';
+import DetailLocalCatalog from './pages/DetailLocalCatalog';
+import DistributionList from './pages/DistributionList';
+import EditCatalog from './pages/EditCatalog';
+import EditDataset from './pages/EditDataset';
+import EditDistribution from './pages/EditDistribution';
+import EditPublisher from './pages/EditPublisher';
+import EditUser from './pages/EditUser';
+import ForgottenPassword from './pages/ForgottenPassword';
+import ForgottenPasswordActivation from './pages/ForgottenPasswordActivation';
+import HomePage from './pages/HomePage';
 import InfoPageInvalidDelegation from './pages/InfoPageInvalidDelegation';
 import InfoPageWaitingForApprove from './pages/InfoPageWaitingForApprove';
-import { AxiosResponse, RawAxiosRequestHeaders } from 'axios';
-import NotFound from './pages/NotFound';
 import Invitation from './pages/Invitation';
+import Login from './pages/Login';
 import LoginInProgress from './pages/LoginInProgress';
-import EditPublisher from './pages/EditPublisher';
+import NotFound from './pages/NotFound';
+import Profile from './pages/Profile';
+import PublicDatasetList from './pages/PublicDatasetList';
+import PublicLocalCatalogList from './pages/PublicLocalCatalogList';
+import PublicPublisherList from './pages/PublicPublisherList';
+import PublisherList from './pages/PublisherList';
 import PublisherRegistration from './pages/PublisherRegistration';
-import ChangeLicenses from './pages/ChangeLicenses';
+import Quality from './pages/Quality';
+import RegisterUser from './pages/RegisterUser';
+import Sparql from './pages/Sparql';
+import SuggestionDetail from './pages/SuggestionDetail';
+import SuggestionForm from './pages/SuggestionForm';
+import SuggestionList from './pages/SuggestionList';
+import UserList from './pages/UserList';
+import Alert from './components/Alert';
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -56,9 +67,9 @@ function AppNavigator(props: Props) {
                 if (userInfo.publisherView === null) {
                     if (userInfo.role === 'PublisherAdmin') {
                         navigate('/registracia');
-                    } else if (userInfo.role === 'Superadmin') {
+                    } else if (userInfo.role === 'Superadmin' || userInfo.role === 'CommunityUser') {
                         navigate('/');
-                    } else if (userInfo.role !== 'Superadmin') {
+                    } else if (userInfo.role !== 'Superadmin' && userInfo.role !== 'CommunityUser') {
                         navigate('/sprava/neplatne-zastupenie');
                     }
                 } else if (!userInfo.publisherActive) {
@@ -139,16 +150,16 @@ function App(props: Props) {
 
     useEffect(() => {
         async function load() {
-            if (!headers['Authorization']) {
-                setUserInfo(null);
-                setUserInfoIsLoading(false);
-                return;
-            }
-
-            setUserInfoIsLoading(true);
             try {
-                const response: AxiosResponse<UserInfo> = await sendPost('user-info', {}, headers);
-                setUserInfo(response.data);
+                if (!headers['Authorization']) {
+                    setUserInfo(null);
+                    setUserInfoIsLoading(false);
+                    return;
+                }
+
+                setUserInfoIsLoading(true);
+
+                setUserInfo((await sendPost('user-info', {}, headers)).data);
             } catch (err) {
                 setUserInfo(null);
             } finally {
@@ -176,6 +187,13 @@ function App(props: Props) {
                 }}
             >
                 <BrowserRouter>
+                    <Alert style={{ margin: 0, padding: '20px 0' }}>
+                        Zúčastnite sa{' '}
+                        <a href="https://docs.google.com/forms/d/e/1FAIpQLSfnYVGTOBKyUSBrAvBALwqP8oHJOKlwtsdMTCq-vUKcNdPIzw/viewform?usp=sf_link">
+                            prieskumu používateľov portálu
+                        </a>{' '}
+                        a pomôžte nám zlepšovať otvorené dáta na Slovensku.
+                    </Alert>
                     <Header />
                     <AppNavigator {...props} />
                     <div className="govuk-width-container">
@@ -184,6 +202,7 @@ function App(props: Props) {
                                 <Routes>
                                     <Route path="/" Component={HomePage} />
 
+                                    <Route path="/datasety/:id/komentare" element={<DetailDataset scrollToComments />} />
                                     <Route path="/datasety/:id" element={<DetailDataset />} />
                                     <Route path="/datasety" element={<PublicDatasetList />} />
                                     <Route path="/poskytovatelia" element={<PublicPublisherList />} />
@@ -235,6 +254,17 @@ function App(props: Props) {
                                         </>
                                     ) : null}
 
+                                    <Route path="/aplikacia" Component={ApplicationList} />
+                                    <Route path="/aplikacia/:id/upravit" Component={ApplicationForm} />
+                                    <Route path="/aplikacia/:id/komentare" element={<ApplicationDetail scrollToComments />} />
+                                    <Route path="/aplikacia/:id" element={<ApplicationDetail />} />
+                                    <Route path="/aplikacia/pridat" Component={ApplicationForm} />
+                                    <Route path="/podnet" Component={SuggestionList} />
+                                    <Route path="/podnet/:id/upravit" element={<SuggestionForm />} />
+                                    <Route path="/podnet/:id/komentare" element={<SuggestionDetail scrollToComments />} />
+                                    <Route path="/podnet/:id" element={<SuggestionDetail />} />
+                                    <Route path="/podnet/pridat" Component={SuggestionForm} />
+
                                     {userInfo?.role === 'Superadmin' ? (
                                         <>
                                             <Route path="/sprava/poskytovatelia" Component={PublisherList} />
@@ -243,6 +273,12 @@ function App(props: Props) {
                                             <Route path="/sprava/ciselniky" Component={Codelists} />
                                         </>
                                     ) : null}
+
+                                    <Route path="/registracia" Component={RegisterUser} />
+                                    <Route path="/prihlasenie" Component={Login} />
+                                    <Route path="/potvrdenie-registracie" Component={ActivateUser} />
+                                    <Route path="/zabudnute-heslo" Component={ForgottenPassword} />
+                                    <Route path="/obnova-hesla" Component={ForgottenPasswordActivation} />
 
                                     <Route path="*" Component={NotFound} />
                                 </Routes>

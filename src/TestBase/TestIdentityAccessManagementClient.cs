@@ -86,6 +86,19 @@ namespace TestBase
             return null;
         }
 
+        public PersistentUserInfo? GetUserByEmail(string email)
+        {
+            foreach (List<Entry> usersByPublisher in users.Values)
+            {
+                Entry? user = usersByPublisher.FirstOrDefault(u => u.UserInfo.Email == email);
+                if (user is not null)
+                {
+                    return user.UserInfo;
+                }
+            }
+            return null;
+        }
+
         public Task<UserSaveResult> CreateUser(NewUserInput input)
         {
             return Task.FromResult(CreateUser(input, PublisherId));
@@ -220,7 +233,7 @@ namespace TestBase
             throw new HttpRequestException("Forbidden", null, System.Net.HttpStatusCode.Forbidden);
         }
 
-        public Task<DelegationAuthorizationResult> GetLogin()
+        public Task<DelegationAuthorizationResult> GetLogin(string? method)
         {
             throw new NotImplementedException();
         }
@@ -245,6 +258,41 @@ namespace TestBase
         }
 
         public Task<CheckInvitationResult> CheckInvitation()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<TokenResult> SignGoogle(string? code, string? state)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<SaveResult> Register(UserRegistrationInput? input)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<SaveResult> ActivateAccount(ActivationInput? input)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<SaveResult> RequestPasswordRecovery(PasswordRecoveryInput? input)
+        { 
+            throw new NotImplementedException(); 
+        }
+
+        public Task<SaveResult> ConfirmPasswordRecovery(PasswordRecoveryConfirmationInput? input) 
+        {
+            throw new NotImplementedException(); 
+        }
+
+        public Task<SaveResult> ChangePassword(PasswordChangeInput? input) 
+        { 
+            throw new NotImplementedException(); 
+        }
+
+        public Task<TokenResult> Login(LoginInput? input)
         {
             throw new NotImplementedException();
         }

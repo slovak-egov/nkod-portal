@@ -3,6 +3,7 @@ import { initializeNode } from './IdSkModule';
 
 type Props = {
     buttonType: 'primary' | 'secondary' | 'warning';
+    type?: 'submit' | 'reset' | 'button' | undefined;
 } & ButtonHTMLAttributes<HTMLButtonElement>;
 
 export default function Button(props: Props) {
@@ -33,5 +34,6 @@ export default function Button(props: Props) {
 }
 
 Button.defaultProps = {
-    buttonType: 'primary'
+    buttonType: 'primary',
+    type: 'submit'
 };

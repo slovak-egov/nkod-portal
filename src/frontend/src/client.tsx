@@ -3,8 +3,19 @@ import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { useSearchParams } from 'react-router-dom';
+import { AutocompleteOption, MORE_FAKE_OPTION } from './components/ReactSelectElement';
 
 const baseUrl = process.env.REACT_APP_API_URL;
+
+export type OrderOption = {
+    name: string;
+    value: string;
+};
+
+export enum LoginMethod {
+    EGOV = '',
+    GOOGLE = 'google'
+}
 
 export type TokenContextType = {
     token: TokenResult | null;
@@ -133,9 +144,9 @@ export type UserInfo = {
     id: string;
     firstName: string;
     lastName: string;
-    email: string | null;
+    email: string;
     role: string | null;
-    companyName: string | null;
+    companyName: string;
 };
 
 export type DatasetInput = {
@@ -248,6 +259,7 @@ type TermsOfUse = {
 
 export type Distribution = {
     id: string;
+    key: string;
     datasetId: string | null;
     termsOfUse: TermsOfUse | null;
     downloadUrl: string | null;
@@ -276,11 +288,13 @@ export type Distribution = {
 
 export type LocalCatalog = {
     id: string;
+    key: string;
     isPublic: boolean;
     name: string;
     nameAll: LanguageDependentTexts | null;
     description: string | null;
     descriptionAll: LanguageDependentTexts | null;
+    publisherId: string | null;
     publisher: Publisher | null;
     contactPoint: CardView | null;
     homePage: string | null;
@@ -324,6 +338,35 @@ type User = {
     role: string | null;
     isActive: boolean;
     invitationExpiresAt: string | null;
+};
+
+export type UserActivation = {
+    id: string | null;
+    token: string | null;
+};
+
+export type UserForgottenPasswordForm = {
+    email: string;
+};
+
+export type UserForgottenPasswordActivationForm = {
+    id: string | null;
+    token: string | null;
+    password: string;
+    passwordConfirm: string;
+};
+
+export type UserLoginForm = {
+    email: string;
+    password: string;
+};
+
+export type UserRegistrationForm = {
+    email: string;
+    password: string;
+    passwordConfirm: string;
+    firstName: string;
+    lastName: string;
 };
 
 type CodelistAdminView = {
@@ -566,6 +609,153 @@ export function useUsers() {
     return [items, query, setQueryParameters, loading, error, refresh] as const;
 }
 
+export function useUserLogin() {
+    const [logging, setLogging] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const headers = useDefaultHeaders();
+    const { t } = useTranslation();
+
+    const login = useCallback(
+        async (request: UserLoginForm) => {
+            setLogging(true);
+            try {
+                const response: AxiosResponse<TokenResult> = await sendPost('users/login', request, headers);
+                if (!response?.data?.token) {
+                    throw new Error(t('loginPage.failed'));
+                }
+                return { success: Boolean(response?.data?.token), data: response };
+            } catch (err) {
+                if (err instanceof AxiosError) {
+                    if (err.response?.status === 403) {
+                        setError(new Error(t('loginPage.incorrectLoginOrPassword')));
+                    } else {
+                        setError(err);
+                    }
+                }
+                return { success: false };
+            } finally {
+                setLogging(false);
+            }
+        },
+        [headers]
+    );
+
+    return [logging, error, login] as const;
+}
+
+export function useUserForgottenPassword() {
+    const [sending, setSending] = useState(false);
+    const [success, setSuccess] = useState(false);
+    const [errors, setErrors] = useState<Error[] | null>(null);
+    const headers = useDefaultHeaders();
+
+    const sendEmail = useCallback(
+        async (request: UserForgottenPasswordForm) => {
+            setSending(true);
+            try {
+                const response: AxiosResponse<SaveResult> = await sendPost('users/recovery', request, headers);
+                setSuccess(response.data?.success);
+                if (!response?.data?.success) {
+                    setErrors(concatErrors(response.data.errors));
+                }
+            } catch (err) {
+                if (err instanceof Error) {
+                    setErrors([err]);
+                }
+            } finally {
+                setSending(false);
+            }
+        },
+        [headers]
+    );
+
+    return [success, sending, errors, sendEmail] as const;
+}
+
+export function useUserForgottenActivationPassword() {
+    const [sending, setSending] = useState(false);
+    const [success, setSuccess] = useState(false);
+    const [errors, setErrors] = useState<Error[] | null>(null);
+    const headers = useDefaultHeaders();
+
+    const changePassword = useCallback(
+        async (request: UserForgottenPasswordActivationForm) => {
+            setSending(true);
+            try {
+                const response: AxiosResponse<SaveResult> = await sendPost('users/recovery-activation', request, headers);
+                setSuccess(response.data?.success);
+                if (!response?.data?.success) {
+                    setErrors(concatErrors(response.data.errors));
+                }
+            } catch (err) {
+                if (err instanceof Error) {
+                    setErrors([err]);
+                }
+            } finally {
+                setSending(false);
+            }
+        },
+        [headers]
+    );
+
+    return [success, sending, errors, changePassword] as const;
+}
+
+export function useUserRegister() {
+    const [saving, setSaving] = useState(false);
+    const [errors, setErrors] = useState<Error[] | null>(null);
+    const headers = useDefaultHeaders();
+
+    const register = useCallback(
+        async (request: UserRegistrationForm) => {
+            setSaving(true);
+            try {
+                const response: AxiosResponse<SaveResult> = await sendPost('users/register', request, headers);
+                if (!response?.data?.success) {
+                    setErrors(concatErrors(response.data.errors));
+                }
+                return { success: response?.data?.success, data: response };
+            } catch (err) {
+                if (err instanceof Error) {
+                    setErrors([err]);
+                }
+                return { success: false };
+            } finally {
+                setSaving(false);
+            }
+        },
+        [headers]
+    );
+
+    return [saving, errors, register] as const;
+}
+
+export function useUserActivate() {
+    const [saving, setSaving] = useState(false);
+    const [errors, setErrors] = useState<Error[] | null>(null);
+    const headers = useDefaultHeaders();
+
+    const activate = useCallback(
+        async (request: UserActivation) => {
+            setSaving(true);
+            try {
+                const response: AxiosResponse<SaveResult> = await sendPost('users/activation', request, headers);
+                if (!response?.data?.success) {
+                    setErrors(concatErrors(response.data.errors));
+                }
+            } catch (err) {
+                if (err instanceof Error) {
+                    setErrors([err]);
+                }
+            } finally {
+                setSaving(false);
+            }
+        },
+        [headers]
+    );
+    return [saving, errors, activate] as const;
+}
+
 export function useCodelists(keys: string[]) {
     const [codelists, setCodelists] = useState<Codelist[]>([]);
     const [loading, setLoading] = useState(false);
@@ -670,15 +860,16 @@ export function useEntityAdd<T>(url: string, initialValue: T) {
     return [entity, setEntityProperties, errors, saving, save] as const;
 }
 
-export async function sendGet(url: string, headers: RawAxiosRequestHeaders) {
+export async function sendGet(url: string, headers: RawAxiosRequestHeaders, params?: {}) {
     return await axios.get(baseUrl + url, {
-        headers: headers
+        headers,
+        params
     });
 }
 
 export async function sendPost<TInput>(url: string, input: TInput, headers: RawAxiosRequestHeaders, abortController: AbortController | null = null) {
     const options: AxiosRequestConfig<TInput> = {
-        headers: headers
+        headers
     };
     if (abortController !== null) {
         options['signal'] = abortController.signal;
@@ -688,7 +879,7 @@ export async function sendPost<TInput>(url: string, input: TInput, headers: RawA
 
 export async function sendPut<TInput>(url: string, input: TInput, headers: RawAxiosRequestHeaders) {
     return await axios.put(baseUrl + url, input, {
-        headers: headers
+        headers
     });
 }
 
@@ -820,6 +1011,27 @@ export function useDefaultHeaders() {
     return ctx?.defaultHeaders ?? {};
 }
 
+export function useUserPermissions() {
+    const [userInfo] = useUserInfo();
+    const userRole = userInfo?.role?.toUpperCase();
+
+    const isLogged = Boolean(userInfo?.id);
+    const isSuperAdmin = userRole === 'SUPERADMIN';
+    const isCommunityUser = userRole === 'COMMUNITYUSER';
+    const isPublisher = ['PUBLISHER', 'PUBLISHERADMIN'].includes(userRole ?? '');
+    const isMine = (objectUserId: string) => userInfo?.id.toLowerCase() === objectUserId.toLowerCase();
+    const isMineOrg = (objectOrgId: string) => userInfo?.publisher === objectOrgId;
+
+    return {
+        isSuperAdmin,
+        isCommunityUser,
+        isPublisher,
+        isLogged,
+        isMine,
+        isMineOrg
+    };
+}
+
 export function extractLanguageErrors(errors: { [id: string]: string }, key: string) {
     const filtered: { [id: string]: string } = {};
     for (const [k, v] of Object.entries(errors)) {
@@ -881,7 +1093,7 @@ export function useSingleFileUpload(url: string) {
             const formData = new FormData();
             formData.append('file', file, file.name);
 
-            if (file.size <= 262144000) {
+            if (file.size <= 629145600) {
                 setUploading(true);
                 setError(null);
                 try {
@@ -951,9 +1163,14 @@ export function useCodelistAdmin() {
     return [items, loading, error, refresh] as const;
 }
 
-export async function doLogin(headers: RawAxiosRequestHeaders) {
+export async function doLogin(headers: RawAxiosRequestHeaders, method?: LoginMethod) {
     type DelegationAuthorizationResult = { redirectUrl: string };
-    const response: AxiosResponse<DelegationAuthorizationResult> = await sendGet('saml/login', headers);
+    const params: { [key: string]: string } = {};
+    if (method) {
+        params['method'] = method;
+    }
+
+    const response: AxiosResponse<DelegationAuthorizationResult> = await sendGet('saml/login', headers, params);
     return response.data.redirectUrl;
 }
 
@@ -961,6 +1178,13 @@ export async function doLogout(headers: RawAxiosRequestHeaders) {
     type DelegationAuthorizationResult = { redirectUrl: string };
     const response: AxiosResponse<DelegationAuthorizationResult> = await sendGet('saml/logout', headers);
     return response.data.redirectUrl;
+}
+
+export async function loginWithRedirect(headers: RawAxiosRequestHeaders, method?: LoginMethod) {
+    const url = await doLogin(headers, method);
+    if (url) {
+        window.location.href = url;
+    }
 }
 
 export function useUserAdd(initialValue: NewUser) {
@@ -1068,4 +1292,177 @@ export function useEndpointUrl() {
     }, []);
 
     return endpointUrl;
+}
+
+export const useSearchPublisher = ({ language, query }: { language: string; query: string; filters?: any; pageSize?: number }) => {
+    const { t } = useTranslation();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const [publishers, setPublishers] = useState<AutocompleteOption<string>[]>([]);
+    const [totalCount, setTotalCount] = useState<number>(0);
+    const headers = useDefaultHeaders();
+
+    const load = async (query: string, filters?: any, pageSize = 200) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await sendPost(
+                'publishers/search',
+                {
+                    language: language,
+                    page: 1,
+                    filters,
+                    pageSize,
+                    orderBy: 'name',
+                    queryText: query
+                },
+                headers
+            );
+            let data: AutocompleteOption<string>[] = [];
+            if (response.data.items.length > 0) {
+                data = response.data.items
+                    .map((item: Publisher) => ({
+                        value: item.key,
+                        label: item?.nameAll?.sk
+                    }))
+                    .sort((a: AutocompleteOption<string>, b: AutocompleteOption<string>) => a.label.localeCompare(b.label));
+
+                if (response.data.totalCount > data.length) {
+                    data.push({ value: MORE_FAKE_OPTION, label: t('common.moreInDB'), isDisabled: true });
+                }
+            }
+            setPublishers(data);
+            setTotalCount(response.data.totalCount);
+            return data as AutocompleteOption<string>[];
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        load(query);
+    }, [query]);
+
+    return [publishers, loading, error, load, totalCount] as const;
+};
+
+export const useSearchDataset = ({ language, query, filters }: { language: string; query: string; filters?: any; pageSize?: number }) => {
+    const { t } = useTranslation();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const [datasets, setDatasets] = useState<AutocompleteOption<string>[]>([]);
+    const headers = useDefaultHeaders();
+
+    const load = async (query: string, filters?: any, pageSize = 200) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await sendPost(
+                'datasets/search',
+                {
+                    language,
+                    page: 1,
+                    filters,
+                    pageSize,
+                    orderBy: 'name',
+                    queryText: query
+                },
+                headers
+            );
+            let data: AutocompleteOption<string>[] = [];
+            if (response.data.items.length > 0) {
+                data = response.data.items
+                    .map((item: Dataset) => ({
+                        value: item.key,
+                        label: item.name ?? ''
+                    }))
+                    .sort((a: AutocompleteOption<string>, b: AutocompleteOption<string>) => a.label.localeCompare(b.label));
+
+                if (response.data.totalCount > data.length) {
+                    data.push({ value: MORE_FAKE_OPTION, label: t('common.moreInDB'), isDisabled: true });
+                }
+            }
+            setDatasets(data);
+            return data as AutocompleteOption<string>[];
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (filters) {
+            load(query);
+        }
+    }, [query]);
+
+    return [datasets, loading, error, load] as const;
+};
+
+export function usePublisherLists({
+    language,
+    page = 1,
+    pageSize = 10000,
+    orderBy = 'name'
+}: {
+    language: string;
+    page?: number;
+    pageSize?: number;
+    orderBy?: string;
+}) {
+    const [publishers, setPublishers] = useState<AutocompleteOption<any>[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<Error | null>(null);
+    const headers = useDefaultHeaders();
+
+    useEffect(() => {
+        async function load() {
+            setLoading(true);
+            setError(null);
+            setPublishers([]);
+            try {
+                const response = await sendPost(
+                    'publishers/search',
+                    {
+                        language: language,
+                        page: page,
+                        pageSize: pageSize,
+                        orderBy: orderBy
+                    },
+                    headers
+                );
+                if (response.data.items.length > 0) {
+                    setPublishers(
+                        response.data.items
+                            .map((item: Publisher) => ({
+                                value: item,
+                                label: item?.nameAll?.sk
+                            }))
+                            .sort((a: AutocompleteOption<Publisher>, b: AutocompleteOption<Publisher>) => a.label.localeCompare(b.label))
+                    );
+                }
+            } catch (err) {
+                if (err instanceof Error) {
+                    setError(err);
+                }
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        load();
+    }, [language, page, pageSize, orderBy]);
+
+    return [publishers, loading, error] as const;
+}
+
+function concatErrors(errors: { [id: string]: string }) {
+    return Object.keys(errors)?.map((errorKey) => new Error(errors[errorKey]));
 }

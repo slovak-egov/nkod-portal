@@ -15,7 +15,7 @@ namespace Abstractions
 
         public Dictionary<string, string> Labels { get; } = new Dictionary<string, string>();
 
-        public Dictionary<string, CodelistItem> Items { get; } = new Dictionary<string, CodelistItem>();
+        public Dictionary<string, CodelistItem> Items { get; } = new Dictionary<string, CodelistItem>(StringComparer.OrdinalIgnoreCase);
 
         public int ItemsCount { get; set; }
     }

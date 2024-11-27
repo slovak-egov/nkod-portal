@@ -1,10 +1,12 @@
-import { SelectHTMLAttributes } from "react";
+import classnames from 'classnames';
+import { SelectHTMLAttributes } from 'react';
 
-type Props = SelectHTMLAttributes<HTMLSelectElement>
+type Props = SelectHTMLAttributes<HTMLSelectElement>;
 
-export default function SelectElement(props: Props)
-{
-    return <select className="govuk-select" {...props}>
-        {props.children}
-    </select>;
+export default function SelectElement(props: Props) {
+    return (
+        <select {...props} className={classnames('govuk-select', props.className)}>
+            {props.children}
+        </select>
+    );
 }

@@ -218,12 +218,7 @@ app.MapMethods("/files/{id}/content", new[] { "HEAD" }, [AllowAnonymous] (IFileS
         long? size = storage.GetSize(id, accessPolicy);
         if (size.HasValue)
         {
-            ContentDisposition contentDisposition = new ContentDisposition
-            {
-                DispositionType = "attachment",
-                FileName = metadata.OriginalFileName
-            };
-            response.Headers.ContentDisposition = contentDisposition.ToString();
+            response.Headers.ContentDisposition = metadata.CreateAttachmentHeader("sk").ToString();
             response.ContentLength = size;
         }
         return Results.Ok();

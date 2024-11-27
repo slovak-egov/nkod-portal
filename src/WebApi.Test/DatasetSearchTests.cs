@@ -1125,5 +1125,22 @@ namespace WebApi.Test
             Assert.NotNull(response.Headers.Location);
             Assert.Equal("/datasety/" + metadata.Id.ToString(), response.Headers.Location.OriginalString);
         }
+
+        [Fact]
+        public async Task FilterWitnNullKeyShouldReturnEmptyResult()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDataset("Cestovné poriadky", PublisherId);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView> result;
+
+            result = await client.SearchDatasets(JsonContent.Create(new { Filters = new Dictionary<string, string?[]> { { "key", new string?[] { null } } } }));
+            Assert.Equal(0, result.TotalCount);
+            Assert.Empty(result.Items);
+        }
     }
 }

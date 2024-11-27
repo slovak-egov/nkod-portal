@@ -38,6 +38,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using System.Net.Mime;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Caching.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -140,7 +141,8 @@ builder.Services.AddCors(options =>
                          "https://www.slovensko.sk",
                          "https://portal.upvsfixnew.gov.sk",
                          "https://schranka.slovensko.sk",
-                         "https://schranka.upvsfixnew.gov.sk"
+                         "https://schranka.upvsfixnew.gov.sk",
+                         "http://localhost:3000",
                          }).AllowAnyHeader().AllowAnyMethod();
                      });
 
@@ -184,7 +186,7 @@ builder.Services.AddApplicationInsightsTelemetry(options =>
 }).AddApplicationInsightsTelemetryProcessor<ExceptionFilter>();
 builder.Services.AddSingleton<ITelemetryInitializer, RequestTelementryInitializer>();
 
-const int maxFileSize = 250 * 1024 * 1024;
+const int maxFileSize = 600 * 1024 * 1024;
 
 builder.Services.Configure<FormOptions>(options =>
 {
@@ -213,6 +215,7 @@ builder.Services.AddSingleton(sp =>
     return new DownloadDataQualityService(sparqlClient, sp.GetRequiredService<TelemetryClient>());
 });
 
+builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 
@@ -227,7 +230,6 @@ app.UseStaticFiles(new StaticFileOptions
     DefaultContentType = "text/plain"
 });
 
-
 if (app.Environment.IsDevelopment())
 {
     //app.UseSwagger();
@@ -236,10 +238,11 @@ if (app.Environment.IsDevelopment())
     //    options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
     //    options.RoutePrefix = string.Empty;
     //});
-    app.UseCors("LocalhostOrigin");
+    //app.UseCors("LocalhostOrigin");
 }
 else
 {
+    app.UseSwagger();
     app.UseCors("eFormulare");
 }
 
@@ -382,6 +385,20 @@ async Task<FileStorageResponse> GetStorageResponse(AbstractQuery query, string l
     {
         storageQuery = storageQueryDecorator(storageQuery);
 
+        if (storageQuery.AdditionalFilters is not null)
+        {
+            foreach (string[] items in storageQuery.AdditionalFilters.Values)
+            {
+                for (int i = 0; i < items.Length; i++)
+                {
+                    if (items[i] is null)
+                    {
+                        return new FileStorageResponse(new List<FileState>(), 0, new List<Facet>());
+                    }
+                }
+            }
+        }
+
         return await client.GetFileStates(storageQuery).ConfigureAwait(false);
     }
     else
@@ -463,7 +480,7 @@ app.MapPost("/publishers/search", async ([FromBody] PublisherQuery query, [FromS
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
-});
+}).Produces<AbstractResponse<PublisherView>>();
 
 app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient, [FromServices] DownloadDataQualityService qualityServiuce) =>
 {
@@ -551,7 +568,7 @@ app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServi
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
-});
+}).Produces<AbstractResponse<DatasetView>>();
 
 app.MapPost("/distributions/search", async ([FromBody] DatasetQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient, [FromServices] DownloadDataQualityService qualityServiuce) =>
 {
@@ -599,7 +616,7 @@ app.MapPost("/distributions/search", async ([FromBody] DatasetQuery query, [From
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
-});
+}).Produces<AbstractResponse<DistributionView>>();
 
 app.MapPost("/local-catalogs/search", async ([FromBody] LocalCatalogsQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient) =>
 {
@@ -664,7 +681,7 @@ app.MapPost("/local-catalogs/search", async ([FromBody] LocalCatalogsQuery query
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
-});
+}).Produces<AbstractResponse<LocalCatalogView>>();
 
 app.MapGet("/codelists", async ([FromQuery(Name = "keys[]")] string[] keys, [FromServices] ICodelistProviderClient codelistProviderClient, [FromServices] TelemetryClient? telemetryClient) =>
 {
@@ -706,7 +723,7 @@ app.MapGet("/codelists", async ([FromQuery(Name = "keys[]")] string[] keys, [Fro
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
-});
+}).Produces<AbstractResponse<CodelistView[]>>();
 
 app.MapGet("/codelists/item", async (string key, string id, [FromServices] ICodelistProviderClient codelistProviderClient, [FromServices] TelemetryClient? telemetryClient) =>
 {
@@ -735,7 +752,7 @@ app.MapGet("/codelists/item", async (string key, string id, [FromServices] ICode
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
-});
+}).Produces<AbstractResponse<CodelistItemView>>();
 
 app.MapPost("/codelists/item", async ([FromQuery] string key, [FromQuery] string query, [FromServices] ICodelistProviderClient codelistProviderClient, [FromServices] TelemetryClient? telemetryClient) =>
 {
@@ -2226,17 +2243,13 @@ app.MapMethods("/download", new[] { "HEAD" }, async ([FromServices] IDocumentSto
 {
     try
     {
+        string language = "sk";
         if (Guid.TryParse(id, out Guid key))
         {
             FileMetadata? metadata = await FindAndValidateDownload(client, key).ConfigureAwait(false);
             if (metadata is not null)
             {
-                ContentDisposition contentDisposition = new ContentDisposition
-                {
-                    DispositionType = "attachment",
-                    FileName = metadata.OriginalFileName
-                };
-                response.Headers.ContentDisposition = contentDisposition.ToString();
+                response.Headers.ContentDisposition = metadata.CreateAttachmentHeader(language).ToString();
                 long? size = await client.GetSize(key).ConfigureAwait(false);
                 if (size.HasValue)
                 {
@@ -2338,11 +2351,11 @@ app.MapPost("/refresh", async ([FromServices] IIdentityAccessManagementClient cl
     }
 });
 
-app.MapGet("/saml/login", async ([FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapGet("/saml/login", async ([FromQuery] string? method, [FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
     {
-        return Results.Ok(await client.GetLogin());
+        return Results.Ok(await client.GetLogin(method));
     }
     catch (HttpRequestException e)
     {
@@ -2359,7 +2372,7 @@ app.MapGet("/saml/login", async ([FromServices] IIdentityAccessManagementClient 
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
-});
+}).Produces<DelegationAuthorizationResult>();
 
 app.MapGet("/saml/logout", async ([FromServices] IIdentityAccessManagementClient client, HttpRequest request, HttpResponse response, [FromServices] TelemetryClient? telemetryClient) =>
 {
@@ -2460,6 +2473,207 @@ app.MapGet("/validate-inviation", async ([FromServices] IIdentityAccessManagemen
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
+});
+
+app.MapPost("/users/login", async ([FromBody] LoginInput? input, HttpResponse response, [FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        TokenResult token = await client.Login(input).ConfigureAwait(false);
+        string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+        response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+
+        return Results.Ok(token);
+    }
+    catch (HttpRequestException e)
+    {
+        if (e.StatusCode != System.Net.HttpStatusCode.Forbidden)
+        {
+            telemetryClient?.TrackException(e);
+        }
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+}).Produces<TokenResult>().Produces<EmptyResult>(403);
+
+app.MapPost("/users/register", async ([FromBody] UserRegistrationInput? input, [FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        return Results.Ok(await client.Register(input).ConfigureAwait(false));
+    }
+    catch (HttpRequestException e)
+    {
+        telemetryClient?.TrackException(e);
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+}).Produces<SaveResult>();
+
+app.MapPost("/users/activation", async ([FromBody] ActivationInput? input, [FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        return Results.Ok(await client.ActivateAccount(input).ConfigureAwait(false));
+    }
+    catch (HttpRequestException e)
+    {
+        telemetryClient?.TrackException(e);
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+}).Produces<SaveResult>();
+
+app.MapPost("/users/recovery", async ([FromBody] PasswordRecoveryInput? input, [FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        return Results.Ok(await client.RequestPasswordRecovery(input).ConfigureAwait(false));
+    }
+    catch (HttpRequestException e)
+    {
+        telemetryClient?.TrackException(e);
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+}).Produces<SaveResult>();
+
+app.MapPost("/users/recovery-activation", async ([FromBody] PasswordRecoveryConfirmationInput? input, [FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        return Results.Ok(await client.ConfirmPasswordRecovery(input).ConfigureAwait(false));
+    }
+    catch (HttpRequestException e)
+    {
+        telemetryClient?.TrackException(e);
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+}).Produces<SaveResult>();
+
+app.MapPost("/users/change-password", async ([FromBody] PasswordChangeInput? input, [FromServices] IIdentityAccessManagementClient client, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        return Results.Ok(await client.ChangePassword(input).ConfigureAwait(false));
+    }
+    catch (HttpRequestException e)
+    {
+        telemetryClient?.TrackException(e);
+        return e.StatusCode switch
+        {
+            System.Net.HttpStatusCode.Unauthorized => Results.StatusCode((int)e.StatusCode),
+            System.Net.HttpStatusCode.Forbidden => Results.StatusCode((int)e.StatusCode),
+            _ => Results.Problem()
+        };
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+}).Produces<SaveResult>();
+
+app.MapGet("/signin-google", async ([FromQuery] string? code, string? state, [FromServices] IIdentityAccessManagementClient client, HttpResponse response, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        TokenResult? token = await client.SignGoogle(code, state).ConfigureAwait(false);
+        if (token is not null)
+        {
+            string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+            response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+        }
+    }
+    catch (HttpRequestException e)
+    {
+        if (e.StatusCode != System.Net.HttpStatusCode.Forbidden)
+        {
+            telemetryClient?.TrackException(e);
+        }
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+    }
+    return Results.Redirect("/");
+}).Produces<SaveResult>();
+
+async Task<string> ServeCached(Uri remoteUri, IMemoryCache cache)
+{
+    if (cache.TryGetValue(remoteUri.OriginalString, out object? value) && value is string stringValue)
+    {
+        return stringValue;
+    }
+    else
+    {
+        using HttpClient client = new HttpClient();
+        stringValue = await client.GetStringAsync(remoteUri);
+        cache.Set(remoteUri.OriginalString, stringValue, DateTimeOffset.Now.AddHours(1));
+        return stringValue;
+    }
+}
+
+app.MapGet("/dcat3.jsonld", async ([FromServices] IMemoryCache cache) =>
+{
+    return Results.Content(
+        await ServeCached(
+            new Uri("https://raw.githubusercontent.com/slovak-egov/centralny-model-udajov/refs/heads/main/tbox/national/dcat-ap-sk/kontexty/rozhranie-katal%C3%B3gu-otvoren%C3%BDch-d%C3%A1t.jsonld"), cache), 
+        new Microsoft.Net.Http.Headers.MediaTypeHeaderValue("application/ld+json"));
+});
+
+app.MapGet("/dcat2.jsonld", async ([FromServices] IMemoryCache cache, HttpResponse response) =>
+{
+    return Results.Content(
+        await ServeCached(
+            new Uri("https://datova-kancelaria.github.io/dcat-ap-sk-2.0/kontexty/rozhranie-katal%C3%B3gu-otvoren%C3%BDch-d%C3%A1t.jsonld"), cache),
+        new Microsoft.Net.Http.Headers.MediaTypeHeaderValue("application/ld+json"));
 });
 
 app.Use(async (context, next) =>

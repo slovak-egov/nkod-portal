@@ -217,12 +217,12 @@ namespace NkodSk.Abstractions
         public async Task<Dictionary<string, bool>> GetDownloadQuality()
         {
             string content = await GetContent(@"SELECT ?distribution ?value
-                                                WHERE {
-                                                  ?measurment a <http://www.w3.org/ns/dqv#QualityMeasurement>;
-                                                  <http://www.w3.org/ns/dqv#isMeasurementOf> <https://data.gov.sk/def/observation/data-quality/metrics/metrikaDostupnostiDownloadURL>;
-                                                  <http://schema.org/object> ?distribution;
-                                                  <http://www.w3.org/ns/dqv#value> ?value.
-                                                }", false);
+                                         WHERE {
+                                           ?measurment a <http://www.w3.org/ns/dqv#QualityMeasurement>;
+                                           <http://www.w3.org/ns/dqv#isMeasurementOf> <https://data.gov.sk/def/observation/data-quality/metrics/metrikaDostupnostiDownloadURL>;
+                                           <http://schema.org/object> ?distribution;
+                                           <http://www.w3.org/ns/dqv#value> ?value.
+                                         }", false);
             Dictionary<string, bool> quality = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
             foreach (JToken token in JObject.Parse(content)?["results"]?["bindings"] ?? Enumerable.Empty<JToken>())
             {
