@@ -46,6 +46,7 @@ using Google.Apis.Auth.OAuth2;
 using Google.Apis.Oauth2.v2;
 using Google.Apis.Services;
 using System.Net;
+using Microsoft.Extensions.Options;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -173,6 +174,8 @@ builder.Services.AddSingleton(services =>
 });
 
 builder.Services.AddSaml2(slidingExpiration: true);
+
+builder.Services.Configure<MainConfigurationOptions>(builder.Configuration.GetSection("Main"));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -388,7 +391,7 @@ app.MapGet("/users", [Authorize] async ([FromServices] ApplicationDbContext cont
     }
 });
 
-app.MapPost("/users", [Authorize] async ([FromServices] ApplicationDbContext context, ClaimsPrincipal user, [FromBody] NewUserInput? input) =>
+app.MapPost("/users", [Authorize] async ([FromServices] ApplicationDbContext context, ClaimsPrincipal user, [FromBody] NewUserInput? input, IOptions<MainConfigurationOptions> mainConfigurationOptions, [FromServices] IEmailService emailService) =>
 {
     string? publisherId = user.GetAuthorizedPublisherId();
 
@@ -423,8 +426,27 @@ app.MapPost("/users", [Authorize] async ([FromServices] ApplicationDbContext con
                     record.InvitedBy = userId;
                 }
 
+                string? password = null;
+
+                if (mainConfigurationOptions.Value.UsePasswordForPublisherAccounts)
+                {
+                    password = record.CreateRandomPassword();
+                }
+
                 context.Users.Add(record);
                 await context.SaveChangesAsync();
+
+                if (!string.IsNullOrEmpty(password))
+                {
+                    string text = "Vážený používateľ,<br>" +
+                        "bolo Vám zriadené konto na testovacom portáli data-test.slovensko.sk<br>" +
+                        "Prihlasovacie meno: " + HttpUtility.HtmlEncode(record.Email) + "<br>" +
+                        "Heslo: " + HttpUtility.HtmlEncode(password) + "<br>" +
+                        "<br>" +
+                        "Tím centrálneho portálu otvorených dát data.slovensko.sk";
+
+                    await emailService.SendEmail(record.Email, "Konto na testovacom portáli data-test.slovensko.sk", text);
+                }
 
                 result.Id = record.Id;
                 result.Success = true;
@@ -838,16 +860,19 @@ app.MapGet("/login", ([FromServices] Saml2Configuration saml2Configuration, [Fro
     });
 });
 
-app.MapPost("/login", async ([FromBody] LoginInput? input, [FromServices] ApplicationDbContext context, [FromServices] SigningCredentials signingCredentials, IConfiguration configuration) =>
+app.MapPost("/login", async ([FromBody] LoginInput? input, [FromServices] ApplicationDbContext context, [FromServices] SigningCredentials signingCredentials, IOptions<MainConfigurationOptions> mainConfigurationOptions, IConfiguration configuration) =>
 {
     if (!string.IsNullOrEmpty(input?.Email) && !string.IsNullOrEmpty(input?.Password))
     {
         UserRecord? user = await context.Users.FirstOrDefaultAsync(u => u.Email == input.Email && u.IsActive);
         if (user is not null && !string.IsNullOrWhiteSpace(user.Password) && user.VerifyPassword(input.Password))
         {
-            List<Claim> customClaims = new List<Claim> { new Claim(ClaimTypes.AuthenticationMethod, "Native") };
+            if (user.Role == "CommunityUser" || mainConfigurationOptions.Value.UsePasswordForPublisherAccounts)
+            {
+                List<Claim> customClaims = new List<Claim> { new Claim(ClaimTypes.AuthenticationMethod, "Native") };
 
-            return Results.Ok(await CreateToken(context, user, configuration, signingCredentials, false, customClaims));
+                return Results.Ok(await CreateToken(context, user, configuration, signingCredentials, mainConfigurationOptions.Value.UsePasswordForPublisherAccounts, customClaims));
+            }
         }
     }
 

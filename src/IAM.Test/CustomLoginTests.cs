@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MySqlX.XDevAPI;
 using NkodSk.Abstractions;
@@ -316,6 +317,33 @@ namespace IAM.Test
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
 
+        private async Task TestValidLogin(Func<LoginInput, WebApiApplicationFactory, UserRecord, Task> inputCallback)
+        {
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory();
+            using HttpClient client = applicationFactory.CreateClient();
+
+            UserRecord existingUser = await applicationFactory.CreateCommunityUser("test@test.sk", "password");
+
+            LoginInput input = new LoginInput
+            {
+                Email = existingUser.Email,
+                Password = "password",
+            };
+
+            await inputCallback.Invoke(input, applicationFactory, existingUser);
+
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/login");
+            request.Content = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            TokenResult? result = await response.Content.ReadFromJsonAsync<TokenResult>();
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrEmpty(result.Token));
+            Assert.False(string.IsNullOrEmpty(result.RefreshToken));
+
+            ValidateToken(result.Token);
+        }
+
         [Fact]
         public async Task LoginShouldNotBePerformedWithoutValidEmail()
         {
@@ -392,6 +420,186 @@ namespace IAM.Test
             ValidateToken(result.Token);
         }
 
+        [Fact]
+        public async Task LoginShouldNotBePerformedForPublisher()
+        {
+            await TestInvalidLogin(async (i, f, existingUser) => {
+                using (IServiceScope scope = f.Services.CreateScope())
+                {
+                    ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    context.Attach(existingUser);
+                    existingUser.Role = "Publisher";
+                    existingUser.Publisher = "http://example.com/publisher";
+                    await context.SaveChangesAsync();
+                }
+            });
+        }
+
+        [Fact]
+        public async Task LoginShouldNotBePerformedForPublisherAdmin()
+        {
+            await TestInvalidLogin(async (i, f, existingUser) => {
+                using (IServiceScope scope = f.Services.CreateScope())
+                {
+                    ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    context.Attach(existingUser);
+                    existingUser.Role = "PublisherAdmin";
+                    existingUser.Publisher = "http://example.com/publisher";
+                    await context.SaveChangesAsync();
+                }
+            });
+        }
+
+        [Fact]
+        public async Task LoginShouldNotBePerformedForSupervisor()
+        {
+            await TestInvalidLogin(async (i, f, existingUser) => {
+                using (IServiceScope scope = f.Services.CreateScope())
+                {
+                    ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    context.Attach(existingUser);
+                    existingUser.Role = "Supervisor";
+                    await context.SaveChangesAsync();
+                }
+            });
+        }
+
+        [Fact]
+        public async Task LoginShouldBePerformedForPublisherWithConfig()
+        {
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(options =>
+            {
+                options.ConfigureAppConfiguration((context, configBuilder) =>
+                {
+                    configBuilder.AddInMemoryCollection(
+                           new Dictionary<string, string?>
+                           {
+                               ["Main:UsePasswordForPublisherAccounts"] = "true"
+                           });
+                });
+            });
+            using HttpClient client = applicationFactory.CreateClient();
+
+            UserRecord user = await applicationFactory.CreateCommunityUser("test@test.sk", "password");
+
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                context.Attach(user);
+                user.Role = "Publisher";
+                user.Publisher = "http://example.com/publisher";
+                await context.SaveChangesAsync();
+            }
+
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/login");
+            var input = new
+            {
+                Email = user.Email,
+                Password = "password",
+            };
+            request.Content = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            TokenResult? result = await response.Content.ReadFromJsonAsync<TokenResult>();
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrEmpty(result.Token));
+            Assert.False(string.IsNullOrEmpty(result.RefreshToken));
+
+            List<Claim> claims = GetClaims(result.Token);
+            Assert.Equal(new[] { "Publisher" }, claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value));
+            Assert.Equal(new[] { "http://example.com/publisher" }, claims.Where(c => c.Type == "Publisher").Select(c => c.Value));
+        }
+
+        [Fact]
+        public async Task LoginShouldBePerformedForPublisherAdminWithConfig()
+        {
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(options =>
+            {
+                options.ConfigureAppConfiguration((context, configBuilder) =>
+                {
+                    configBuilder.AddInMemoryCollection(
+                           new Dictionary<string, string?>
+                           {
+                               ["Main:UsePasswordForPublisherAccounts"] = "true"
+                           });
+                });
+            });
+            using HttpClient client = applicationFactory.CreateClient();
+
+            UserRecord user = await applicationFactory.CreateCommunityUser("test@test.sk", "password");
+
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                context.Attach(user);
+                user.Role = "PublisherAdmin";
+                user.Publisher = "http://example.com/publisher";
+                await context.SaveChangesAsync();
+            }
+
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/login");
+            var input = new
+            {
+                Email = user.Email,
+                Password = "password",
+            };
+            request.Content = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            TokenResult? result = await response.Content.ReadFromJsonAsync<TokenResult>();
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrEmpty(result.Token));
+            Assert.False(string.IsNullOrEmpty(result.RefreshToken));
+
+            List<Claim> claims = GetClaims(result.Token);
+            Assert.Equal(new[] { "PublisherAdmin" }, claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value));
+            Assert.Equal(new[] { "http://example.com/publisher" }, claims.Where(c => c.Type == "Publisher").Select(c => c.Value));
+        }
+
+        [Fact]
+        public async Task LoginShouldBePerformedForSupervisorWithConfig()
+        {
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(options =>
+            {
+                options.ConfigureAppConfiguration((context, configBuilder) =>
+                {
+                    configBuilder.AddInMemoryCollection(
+                           new Dictionary<string, string?>
+                           {
+                               ["Main:UsePasswordForPublisherAccounts"] = "true"
+                           });
+                });
+            });
+            using HttpClient client = applicationFactory.CreateClient();
+
+            UserRecord user = await applicationFactory.CreateCommunityUser("test@test.sk", "password");
+
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                context.Attach(user);
+                user.Role = "Supervisor";
+                await context.SaveChangesAsync();
+            }
+
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/login");
+            var input = new
+            {
+                Email = user.Email,
+                Password = "password",
+            };
+            request.Content = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            TokenResult? result = await response.Content.ReadFromJsonAsync<TokenResult>();
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrEmpty(result.Token));
+            Assert.False(string.IsNullOrEmpty(result.RefreshToken));
+
+            List<Claim> claims = GetClaims(result.Token);
+            Assert.Equal(new[] { "Supervisor" }, claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value));
+        }
+
         private async Task<TokenResult> Login(HttpClient client, UserRecord user)
         {
             using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/login");
@@ -444,7 +652,7 @@ namespace IAM.Test
         {
             List<Claim> claims = GetClaims(token);
             Assert.Equal(new[] { "CommunityUser" }, claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value));
-            Assert.Empty(claims.Where(c => c.Type == "Publisher"));
+            Assert.DoesNotContain(claims, c => c.Type == "Publisher");
         }
 
         [Fact]

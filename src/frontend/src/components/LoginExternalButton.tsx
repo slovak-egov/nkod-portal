@@ -25,6 +25,10 @@ export default function LoginExternalButton(props: Props) {
         );
     };
 
+    if (window.location.hostname !== 'data.slovensko.sk') {
+        return null;
+    }
+
     switch (method) {
         case LoginMethod.GOOGLE:
             return renderButton(

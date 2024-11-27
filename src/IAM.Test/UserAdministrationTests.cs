@@ -12,6 +12,7 @@ using System.Security.Policy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.ApplicationInsights.WindowsServer;
+using Microsoft.Extensions.Configuration;
 
 namespace IAM.Test
 {
@@ -517,6 +518,72 @@ namespace IAM.Test
                 Assert.NotNull(user.InvitedAt);
                 Assert.Null(user.ActivatedAt);
                 Assert.False(user.IsActive);
+                Assert.Null(user.Password);
+            }
+        }
+
+        [Fact]
+        public async Task CreateUserShouldBeAllowedForSuperadminWithNameAndPassword()
+        {
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(options =>
+            {
+                options.ConfigureAppConfiguration((context, configBuilder) =>
+                {
+                    configBuilder.AddInMemoryCollection(
+                           new Dictionary<string, string?>
+                           {
+                               ["Main:UsePasswordForPublisherAccounts"] = "true"
+                           });
+                });
+            });
+
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            }
+
+            Guid id = Guid.NewGuid();
+
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("Superadmin", PublisherId, id: id.ToString()));
+
+            NewUserInput input = new NewUserInput
+            {
+                Email = "test@example.com",
+                FirstName = "Meno",
+                LastName = "Priezvisko",
+                Role = "Publisher",
+            };
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/users", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            UserSaveResult? result = await response.Content.ReadFromJsonAsync<UserSaveResult>();
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrEmpty(result.Id));
+            Assert.True(result.Success);
+            Assert.Null(result.Errors);
+            Assert.False(string.IsNullOrEmpty(result.InvitationToken));
+
+            using (IServiceScope scope = applicationFactory.Services.CreateScope())
+            {
+                ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                Assert.Equal(1, await context.Users.CountAsync());
+
+                UserRecord? user = await context.Users.FirstOrDefaultAsync(u => u.Id == result.Id);
+                Assert.NotNull(user);
+                Assert.Equal(PublisherId, user.Publisher);
+                Assert.Equal(input.Email, user.Email);
+                Assert.Equal(input.Role, user.Role);
+                Assert.Null(user.RefreshToken);
+                Assert.Null(user.RefreshTokenExpiryTime);
+                Assert.False(string.IsNullOrEmpty(user.InvitationToken));
+                Assert.Equal(id, user.InvitedBy);
+                Assert.NotNull(user.InvitedAt);
+                Assert.Null(user.ActivatedAt);
+                Assert.False(user.IsActive);
+                Assert.NotNull(user.Password);
+                Assert.NotEmpty(user.Password);
             }
         }
 

@@ -187,6 +187,11 @@ function App(props: Props) {
                 }}
             >
                 <BrowserRouter>
+                    {window.location.hostname !== 'data.slovensko.sk' ? (
+                        <Alert type="warning" style={{ margin: 0, padding: '20px 0' }}>
+                            TEST verzia
+                        </Alert>
+                    ) : null}
                     <Alert style={{ margin: 0, padding: '20px 0' }}>
                         Zúčastnite sa{' '}
                         <a href="https://docs.google.com/forms/d/e/1FAIpQLSfnYVGTOBKyUSBrAvBALwqP8oHJOKlwtsdMTCq-vUKcNdPIzw/viewform?usp=sf_link">
