@@ -129,21 +129,37 @@ namespace WebApi.Test
             Assert.Equal(input.PackageFormat, distribution.PackageFormat?.ToString());
             Extensions.AssertTextsEqual(input.Title, distribution.Title);
 
-            Extensions.AssertTextsEqual(input.Description, distribution.DataService?.Description);
-            Assert.Equal(input.EndpointUrl, distribution.DataService?.EndpointUrl?.ToString());
-            Assert.Equal(input.ApplicableLegislations, distribution.DataService?.ApplicableLegislations.Select(v => v.ToString()));
-            Assert.Equal(input.Documentation, distribution.DataService?.Documentation?.ToString());
-
             DcatDataset dataset = DcatDataset.Parse(storage.GetFileState(datasetId, accessPolicy)!.Content!)!;
-            if (dataset.IsHvd)
+
+            List<string>? applicationLegilations = new List<string>(input.ApplicableLegislations ?? Enumerable.Empty<string>());
+            if (input.ApplicableLegislations != null)
             {
-                Assert.Equal(dataset.ApplicableLegislations, distribution.ApplicableLegislations);
-                if (distribution.DataService is DcatDataService dataService)
+                if (dataset.IsHvd && !applicationLegilations.Contains(DcatDataset.HvdLegislation))
                 {
-                    Assert.Equal(dataset.ApplicableLegislations, dataService.ApplicableLegislations);
-                    Assert.Equal(dataset.HvdCategory, dataService.HvdCategory);
-                }                
+                    applicationLegilations.Add(DcatDataset.HvdLegislation);
+                }
             }
+
+            Assert.Equivalent(applicationLegilations, distribution.ApplicableLegislations.Select(v => v.ToString()));
+
+            if (input.IsDataService)
+            {
+                Assert.Equal(input.EndpointUrl, distribution.DataService?.EndpointUrl?.ToString());
+                Assert.Equivalent(applicationLegilations, distribution.DataService?.ApplicableLegislations.Select(v => v.ToString()));
+                Assert.Equal(input.Documentation, distribution.DataService?.Documentation?.ToString());
+                Assert.Equal(input.ConformsTo, distribution.DataService?.ConformsTo?.ToString());
+                Assert.Equal(input.EndpointDescription, distribution.DataService?.EndpointDescription?.ToString());
+                Assert.Equal(input.ConformsTo, distribution.DataService?.ConformsTo?.ToString());
+                Assert.Equal(input.HvdCategory, distribution.DataService?.HvdCategory?.ToString());
+            }
+            else
+            {
+                Assert.Null(distribution.AccessService);
+                Assert.Null(distribution.DataService);
+            }
+
+            Extensions.AssertTextsEqual(input.ContactName, distribution.DataService?.ContactPoint?.Name);
+            Assert.Equal(input.ContactEmail, distribution.DataService?.ContactPoint?.Email);
 
             ValidateDatasetModifyChange(storage, datasetId);
         }
@@ -1021,6 +1037,8 @@ namespace WebApi.Test
             using HttpClient client = applicationFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             DistributionInput input = CreateDataServiceInput(datasetId);
+            input.ContactName = new Dictionary<string, string> { { "sk", "Service ContactName" } };
+            input.ContactEmail = "contact@example.com";
 
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
@@ -1049,7 +1067,10 @@ namespace WebApi.Test
             using HttpClient client = applicationFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             DistributionInput input = CreateDataServiceInput(datasetId);
+            input.ContactName = new Dictionary<string, string> { { "sk", "Service ContactName" } };
+            input.ContactEmail = "contact@example.com";
             input.Id = distributions[0].ToString();
+
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PutAsync("/distributions", requestContent);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);

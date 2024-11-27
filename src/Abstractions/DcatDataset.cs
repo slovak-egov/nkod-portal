@@ -173,6 +173,18 @@ namespace NkodSk.Abstractions
             set => SetUriNode("dct:conformsTo", value);
         }
 
+        public Uri? Documentation
+        {
+            get => GetUriFromUriNode("foaf:page");
+            set => SetUriNode("foaf:page", value);
+        }
+
+        public Uri? Relation
+        {
+            get => GetUriFromUriNode("dct:relation");
+            set => SetUriNode("dct:relation", value);
+        }
+
         public decimal? SpatialResolutionInMeters
         {
             get => GetDecimalFromUriNode("dcat:spatialResolutionInMeters");
@@ -201,8 +213,8 @@ namespace NkodSk.Abstractions
 
         public Uri? IsPartOf
         {
-            get => GetUriFromUriNode("dct:isPartOf");
-            set => SetUriNode("dct:isPartOf", value);
+            get => GetUriFromUriNode("dcat:inSeries");
+            set => SetUriNode("dcat:inSeries", value);
         }
 
         public string? IsPartOfInternalId

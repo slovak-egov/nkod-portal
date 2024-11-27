@@ -1,4 +1,5 @@
 ﻿using NkodSk.Abstractions;
+using System.Linq;
 using System.Xml.Linq;
 
 namespace WebApi
@@ -29,6 +30,8 @@ namespace WebApi
 
         public string? ConformsTo { get; set; }
 
+        public string? HvdCategory { get; set; }
+
         public string? CompressFormat { get; set; }
 
         public string? PackageFormat { get; set; }
@@ -50,6 +53,8 @@ namespace WebApi
         public Dictionary<string, string>? ContactName { get; set; }
 
         public string? ContactEmail { get; set; }
+
+        public string? EndpointDescription { get; set; }
 
         public async Task<ValidationResults> Validate(string publisher, IDocumentStorageClient documentStorage, ICodelistProviderClient codelistProvider)
         {
@@ -81,6 +86,7 @@ namespace WebApi
             await results.ValidateRequiredCodelistValue(nameof(PersonalDataContainmentType), PersonalDataContainmentType, DcatDistribution.PersonalDataContainmentTypeCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(Format), Format, DcatDistribution.FormatCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(MediaType), MediaType, DcatDistribution.MediaTypeCodelist, codelistProvider);
+            await results.ValidateCodelistValue(nameof(HvdCategory), HvdCategory, DcatDataset.HvdCategoryCodelist, codelistProvider);
             results.ValidateUrl(nameof(ConformsTo), ConformsTo, false);
             await results.ValidateCodelistValue(nameof(CompressFormat), CompressFormat, DcatDistribution.MediaTypeCodelist, codelistProvider);
             await results.ValidateCodelistValue(nameof(PackageFormat), PackageFormat, DcatDistribution.MediaTypeCodelist, codelistProvider);
@@ -124,7 +130,7 @@ namespace WebApi
             return results;
         }
 
-        public void MapToRdf(DcatDistribution distribution)
+        public void MapToRdf(DcatDistribution distribution, DcatDataset dataset)
         {
             string? authorName = !string.IsNullOrWhiteSpace(AuthorName) ? AuthorName : null;
             string? originalDatabaseAuthorName = !string.IsNullOrWhiteSpace(OriginalDatabaseAuthorName) ? OriginalDatabaseAuthorName : null;
@@ -136,6 +142,35 @@ namespace WebApi
             distribution.CompressFormat = CompressFormat.AsUri();
             distribution.PackageFormat = PackageFormat.AsUri();
 
+            bool isDatasetHvd = dataset is not null && dataset.IsHvd;
+
+            List<Uri> applicableLegislations = new List<Uri>();
+            if (ApplicableLegislations is not null)
+            {
+                foreach (string applicableLegislation in ApplicableLegislations)
+                {
+                    if (applicableLegislation.AsUri() is Uri uri)
+                    {
+                        applicableLegislations.Add(uri);
+                    }
+                }
+            }
+
+            if (isDatasetHvd)
+            {
+                Uri hvdLegislation = new Uri(DcatDataset.HvdLegislation);
+                if (!applicableLegislations.Any(u => string.Equals(u.OriginalString, StringComparer.OrdinalIgnoreCase)))
+                {
+                    applicableLegislations.Add(hvdLegislation);
+                }
+            }
+            else
+            {
+                applicableLegislations.RemoveAll(u => string.Equals(u.OriginalString, DcatDataset.HvdLegislation, StringComparison.OrdinalIgnoreCase));
+            }
+
+            distribution.ApplicableLegislations = applicableLegislations;
+
             if (IsDataService)
             {
                 distribution.AccessUrl = EndpointUrl.AsUri();
@@ -144,19 +179,10 @@ namespace WebApi
                 dataService.Documentation = Documentation.AsUri();
                 dataService.ConformsTo = ConformsTo.AsUri();
                 dataService.SetTitle(Title ?? new Dictionary<string, string>());
-                dataService.SetDescription(Description ?? new Dictionary<string, string>());
+                dataService.EndpointDescription = EndpointDescription.AsUri();
+                dataService.HvdCategory = HvdCategory.AsUri();
+                dataService.SetContactPoint(ContactName is not null ? new LanguageDependedTexts(ContactName) : null, ContactEmail);
 
-                List<Uri> applicableLegislations = new List<Uri>();
-                if (ApplicableLegislations is not null)
-                {
-                    foreach (string applicableLegislation in ApplicableLegislations)
-                    {
-                        if (applicableLegislation.AsUri() is Uri uri)
-                        {
-                            applicableLegislations.Add(uri);
-                        }
-                    }
-                }
                 dataService.ApplicableLegislations = applicableLegislations;
                 distribution.DownloadUrl = null;
             }

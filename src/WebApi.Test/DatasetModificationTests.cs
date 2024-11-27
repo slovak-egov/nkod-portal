@@ -1354,7 +1354,7 @@ namespace WebApi.Test
             {
                 FileState? state = storage.GetFileState(distributionId, accessPolicy);
                 Assert.NotNull(state);
-                DcatDistribution distribution = DcatDistribution.Parse(state.Content);
+                DcatDistribution distribution = DcatDistribution.Parse(state.Content!)!;
                 Assert.Contains(DcatDataset.HvdLegislation, distribution.ApplicableLegislations.Select(t => t.ToString()));
 
                 DcatDataService? dataService = distribution.DataService;

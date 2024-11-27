@@ -1074,7 +1074,7 @@ app.MapPost("/distributions", [Authorize] async ([FromBody] DistributionInput? d
                         if (validationResults.IsValid)
                         {
                             DcatDistribution distributionRdf = DcatDistribution.Create(datasetId);
-                            distribution.MapToRdf(distributionRdf);
+                            distribution.MapToRdf(distributionRdf, dataset);
                             FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata);
                             await client.InsertFile(distributionRdf.ToString(), false, metadata).ConfigureAwait(false);
                             await client.UpdateDatasetMetadata(datasetId, true).ConfigureAwait(false);  
@@ -1181,7 +1181,7 @@ app.MapPut("/distributions", [Authorize] async ([FromBody] DistributionInput dis
                                 ValidationResults validationResults = await distribution.Validate(publisherId, client, codelistProviderClient);
                                 if (validationResults.IsValid)
                                 {
-                                    distribution.MapToRdf(distributionRdf);
+                                    distribution.MapToRdf(distributionRdf, dataset);
                                     FileMetadata metadata = distributionRdf.UpdateMetadata(datasetState.Metadata, state.Metadata);
                                     await client.InsertFile(distributionRdf.ToString(), true, metadata).ConfigureAwait(false);
                                     await client.UpdateDatasetMetadata(datasetId, true).ConfigureAwait(false);

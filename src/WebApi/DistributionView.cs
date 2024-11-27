@@ -42,21 +42,25 @@ namespace WebApi
 
         public bool IsHarvested { get; set; }
 
-        public string? Description { get; set; }
-
-        public Dictionary<string, string>? DescriptionAll { get; set; }
-
+        public Uri? EndpointDescription { get; set; }
+                
         public Uri? EndpointUrl { get; set; }
 
         public bool IsDataService { get; set; }
 
         public Uri? Documentation { get; set; }
-
+        
         public Uri[] ApplicableLegislations { get; set; } = Array.Empty<Uri>();
 
         public bool? DownloadStatus { get; set; }
 
         public bool LicenseStatus { get; set; }
+
+        public Uri? HvdCategory { get; set; }
+
+        public CodelistItemView? HvdCategoryValue { get; set; }
+
+        public CardView? ContactPoint { get; set; }
 
         private static Uri? TranslateToHttps(Uri? uri)
         {
@@ -75,6 +79,7 @@ namespace WebApi
             LegTermsOfUse? legTermsOfUse = distributionRdf.TermsOfUse;
 
             DcatDataService? dataService = distributionRdf.DataService;
+            VcardKind? contactPoint = dataService?.ContactPoint;
 
             DistributionView view = new DistributionView
             {
@@ -90,10 +95,12 @@ namespace WebApi
                 PackageFormat = distributionRdf.PackageFormat,
                 Title = distributionRdf.GetTitle(language),
                 IsHarvested = distributionRdf.IsHarvested,
-                Description = dataService?.GetDescription(language),
+                EndpointDescription = dataService?.EndpointDescription,
                 EndpointUrl = dataService?.EndpointUrl,
                 Documentation = dataService?.Documentation,
                 ApplicableLegislations = dataService?.ApplicableLegislations.ToArray() ?? Array.Empty<Uri>(),
+                HvdCategory = dataService?.HvdCategory,
+                ContactPoint = contactPoint is not null ? CardView.MapFromRdf(contactPoint, language, fetchAllLanguages) : null,
                 IsDataService = dataService is not null
             };
 
@@ -108,13 +115,13 @@ namespace WebApi
             if (fetchAllLanguages)
             {
                 view.TitleAll = distributionRdf.Title;
-                view.DescriptionAll = dataService?.Description;
             }
 
             view.FormatValue = await codelistProviderClient.MapCodelistValue("http://publications.europa.eu/resource/authority/file-type", view.Format?.ToString(), language);
             view.MediaTypeValue = await codelistProviderClient.MapCodelistValue("http://www.iana.org/assignments/media-types", view.MediaType?.ToString(), language);
             view.CompressFormatValue = await codelistProviderClient.MapCodelistValue("http://www.iana.org/assignments/media-types", view.CompressFormat?.ToString(), language);
             view.PackageFormatValue = await codelistProviderClient.MapCodelistValue("http://www.iana.org/assignments/media-types", view.PackageFormat?.ToString(), language);
+            view.HvdCategoryValue = await codelistProviderClient.MapCodelistValue(DcatDataset.HvdCategoryCodelist, view.HvdCategory?.ToString(), language);
 
             return view;
         }

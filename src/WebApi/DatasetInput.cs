@@ -39,6 +39,10 @@ namespace WebApi
 
         public string? Specification { get; set; }
 
+        public string? Documentation { get; set; }
+        
+        public string? Relation { get; set; }
+
         public List<string>? EuroVocThemes { get; set; }
 
         public string? SpatialResolutionInMeters { get; set; }
@@ -74,6 +78,8 @@ namespace WebApi
             results.ValidateEmail(nameof(ContactEmail), ContactEmail, false);
             results.ValidateUrl(nameof(LandingPage), LandingPage, false);
             results.ValidateUrl(nameof(Specification), Specification, false);
+            results.ValidateUrl(nameof(Documentation), Documentation, false);
+            results.ValidateUrl(nameof(Relation), Relation, false);
             results.ValidateApplicableLegislations(nameof(ApplicableLegislations), ApplicableLegislations);
             
             if (Type is not null && Type.Any(t => string.Equals(t.ToString(), DcatDataset.HvdType, StringComparison.OrdinalIgnoreCase)))
@@ -146,6 +152,8 @@ namespace WebApi
                 ContactEmail);
             dataset.LandingPage = LandingPage.AsUri();
             dataset.Specification = Specification.AsUri();
+            dataset.Documentation = Documentation.AsUri();
+            dataset.Relation = Relation.AsUri();
             dataset.SpatialResolutionInMeters = SpatialResolutionInMeters is not null ? decimal.Parse(SpatialResolutionInMeters, System.Globalization.CultureInfo.CurrentCulture) : null;
             dataset.TemporalResolution = TemporalResolution;
             dataset.IsSerie = IsSerie;

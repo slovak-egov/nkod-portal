@@ -78,7 +78,7 @@ namespace NkodSk.Abstractions
                 };
                 FileStorageResponse response = await GetFileStates(query).ConfigureAwait(false);
 
-                datasetMetadata = dataset.UpdateMetadata(response.Files.Count > 0, publisher, datasetMetadata);
+                datasetMetadata = dataset.UpdateMetadata(response.Files.Count > 0 || dataset.IsSerie, publisher, datasetMetadata);
                 datasetMetadata = DcatDistribution.ClearDatasetMetadata(datasetMetadata);
 
                 dataset.RemoveAllDistributions();
@@ -91,12 +91,48 @@ namespace NkodSk.Abstractions
                         if (distribution is not null)
                         {
                             datasetMetadata = distribution.UpdateDatasetMetadata(datasetMetadata);
-                            distribution.ApplicableLegislations = dataset.ApplicableLegislations;
 
-                            if (distribution.DataService is DcatDataService dataService)
+                            Uri hvdLegislation = new Uri(DcatDataset.HvdLegislation);
+
+                            if (dataset.IsHvd)
                             {
-                                dataService.ApplicableLegislations = dataset.ApplicableLegislations;
-                                dataService.HvdCategory = dataset.HvdCategory;
+                                void AddLegislationIfNeeded(IEnumerable<Uri> original, Action<IEnumerable<Uri>> setter)
+                                {
+                                    List<Uri> list = new List<Uri>(original);
+                                    if (!list.Any(u => string.Equals(u.OriginalString, hvdLegislation.OriginalString, StringComparison.OrdinalIgnoreCase)))
+                                    {
+                                        list.Add(hvdLegislation);
+                                        setter(list);
+                                    }
+                                }
+
+                                AddLegislationIfNeeded(distribution.ApplicableLegislations, l => distribution.ApplicableLegislations = l);
+
+                                if (distribution.DataService is DcatDataService dataService)
+                                {
+                                    AddLegislationIfNeeded(dataService.ApplicableLegislations, l => dataService.ApplicableLegislations = l);
+                                    dataService.HvdCategory = dataService.HvdCategory;
+                                }
+                            }
+                            else
+                            {
+                                void RemoveLegislationIfNeeded(IEnumerable<Uri> original, Action<IEnumerable<Uri>> setter)
+                                {
+                                    if (original.Any(u => string.Equals(u.OriginalString, hvdLegislation.OriginalString, StringComparison.OrdinalIgnoreCase)))
+                                    {
+                                        List<Uri> list = new List<Uri>(original);
+                                        list.RemoveAll(u => string.Equals(u.OriginalString, hvdLegislation.OriginalString, StringComparison.OrdinalIgnoreCase));
+                                        setter(list);
+                                    }
+                                }
+
+                                RemoveLegislationIfNeeded(distribution.ApplicableLegislations, l => distribution.ApplicableLegislations = l);
+
+                                if (distribution.DataService is DcatDataService dataService)
+                                {
+                                    RemoveLegislationIfNeeded(dataService.ApplicableLegislations, l => dataService.ApplicableLegislations = l);
+                                    dataService.HvdCategory = dataService.HvdCategory;
+                                }
                             }
 
                             string content = distribution.ToString();
