@@ -103,7 +103,6 @@ export default function Login() {
                             </form>
 
                             <h2 className="govuk-heading-m">{t('loginPage.socialLogin.title')}</h2>
-
                             <GridRow>
                                 <GridColumn widthUnits={1} totalUnits={1}>
                                     <LoginExternalButton method={LoginMethod.EGOV} />
