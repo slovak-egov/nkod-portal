@@ -193,14 +193,14 @@ namespace Frontend.Test
             input.AccessUrl = new Uri("http://example.com/endpoint");
             input.SetTitle(new Dictionary<string, string> { { "sk", "TestSk" } });
             input.ConformsTo = new Uri("http://example.com/conforms");
+            input.ApplicableLegislations = new List<Uri> { new Uri("http://example.com/eli/1"), new Uri("http://example.com/eli/2") };
 
             DcatDataService dataService = input.GetOrCreateDataSerice();
             dataService.EndpointUrl = input.AccessUrl;
             dataService.Documentation = new Uri("http://example.com/specification");
             dataService.ConformsTo = input.ConformsTo;
             dataService.SetTitle(new Dictionary<string, string> { { "sk", "TestSk" } });
-            dataService.SetDescription(new Dictionary<string, string> { { "sk", "TestSk Description" } });
-            dataService.ApplicableLegislations = new List<Uri> { new Uri("http://example.com/eli/1"), new Uri("http://example.com/eli/2") };
+            dataService.ApplicableLegislations = input.ApplicableLegislations;
 
             return input;
         }
@@ -796,14 +796,14 @@ namespace Frontend.Test
             input.PackageFormat = input.CompressFormat;
             input.ConformsTo = new Uri("http://example.com/new/conforms");
             input.SetTitle(new Dictionary<string, string> { { "sk", "TestSkOther New" } });
+            input.ApplicableLegislations = new List<Uri> { new Uri("http://example.com/eli/3"), new Uri("http://example.com/eli/4") };
 
             DcatDataService dataService = input.GetOrCreateDataSerice();
             dataService.EndpointUrl = input.AccessUrl;
             dataService.Documentation = new Uri("http://example.com/new/specification");
             dataService.ConformsTo = input.ConformsTo;
             dataService.SetTitle(new Dictionary<string, string> { { "sk", "TestSkOther New" } });
-            dataService.SetDescription(new Dictionary<string, string> { { "sk", "TestSk Description New" } });
-            dataService.ApplicableLegislations = new List<Uri> { new Uri("http://example.com/eli/3"), new Uri("http://example.com/eli/4") };
+            dataService.ApplicableLegislations = input.ApplicableLegislations;
 
             await Page.FillDistributionFields(input);
 

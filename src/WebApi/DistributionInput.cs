@@ -38,8 +38,6 @@ namespace WebApi
 
         public Dictionary<string, string>? Title { get; set; }
 
-        public Dictionary<string, string>? Description { get; set; }
-
         public string? EndpointUrl { get; set; }
 
         public List<string>? ApplicableLegislations { get; set; }
@@ -84,7 +82,6 @@ namespace WebApi
             await results.ValidateRequiredCodelistValue(nameof(OriginalDatabaseType), OriginalDatabaseType, DcatDistribution.LicenseCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(DatabaseProtectedBySpecialRightsType), DatabaseProtectedBySpecialRightsType, DcatDistribution.LicenseCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(PersonalDataContainmentType), PersonalDataContainmentType, DcatDistribution.PersonalDataContainmentTypeCodelist, codelistProvider);
-            await results.ValidateRequiredCodelistValue(nameof(Format), Format, DcatDistribution.FormatCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(MediaType), MediaType, DcatDistribution.MediaTypeCodelist, codelistProvider);
             await results.ValidateCodelistValue(nameof(HvdCategory), HvdCategory, DcatDataset.HvdCategoryCodelist, codelistProvider);
             results.ValidateUrl(nameof(ConformsTo), ConformsTo, false);
@@ -113,13 +110,14 @@ namespace WebApi
                 results.ValidateLanguageTexts(nameof(ContactName), ContactName, languages, isDatasetHvd);
                 results.ValidateEmail(nameof(ContactEmail), ContactEmail, isDatasetHvd);
 
-                results.ValidateLanguageTexts(nameof(Description), Description, languages, false);
                 results.ValidateUrl(nameof(EndpointUrl), EndpointUrl, true);
                 results.ValidateUrl(nameof(Documentation), Documentation, isDatasetHvd);
+                results.ValidateUrl(nameof(EndpointDescription), EndpointDescription, false);
             }
             else
             {
                 results.ValidateUrl(nameof(DownloadUrl), DownloadUrl, true);
+                await results.ValidateRequiredCodelistValue(nameof(Format), Format, DcatDistribution.FormatCodelist, codelistProvider);
             }
 
             if (PersonalDataContainmentType == "https://data.gov.sk/def/personal-data-occurence-type/3")

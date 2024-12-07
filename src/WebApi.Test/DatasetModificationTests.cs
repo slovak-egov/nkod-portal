@@ -33,7 +33,7 @@ namespace WebApi.Test
             this.fixture = fixture;
         }
 
-        private DatasetInput CreateInput(bool withOptionalProperties = false)
+        private DatasetInput CreateInput(bool withOptionalProperties = false, bool withHvdCategory = true)
         {
             DatasetInput input = new DatasetInput
             {
@@ -70,6 +70,14 @@ namespace WebApi.Test
                     { "en", "TestContentNameEn" },
                 };
                 input.ContactEmail = "contact@example.com";
+                input.LandingPage = "http://example.com/home";
+                input.Documentation = "http://example.com/documentation";
+                input.Specification = "http://example.com/specification";
+                input.Relation = "http://example.com/relation";
+                input.TemporalResolution = "P1D";
+                input.SpatialResolutionInMeters = "1";
+                input.ApplicableLegislations = new List<string> { "https://data.gov.sk/id/eli/sk/zz/2007/39/20220101" };
+                input.HvdCategory = "http://publications.europa.eu/resource/dataset/high-value-dataset-category/1";
             }
 
             return input;
@@ -1383,6 +1391,7 @@ namespace WebApi.Test
             DatasetInput input = CreateInput(true);
             input.Id = datasetId.ToString();
             input.Type = new List<string> { DcatDataset.HvdType };
+            input.HvdCategory = null;
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PutAsync("/datasets", requestContent);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

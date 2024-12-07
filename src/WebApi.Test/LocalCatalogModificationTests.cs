@@ -42,18 +42,18 @@ namespace WebApi.Test
                 IsPublic = true,
                 Type = DcatCatalog.LocalCatalogTypeCodelist + "/1",
                 EndpointUrl = "https://data.gov.sk/",
+                ContactName = new Dictionary<string, string>
+                {
+                    { "sk", "TestContentName" },
+                    { "en", "TestContentNameEn" },
+                },
+                ContactEmail = "contact@example.com"
             };
 
             if (withOptionalProperties)
             {
                 input.Name["en"] = "TestNameEn";
                 input.Description["en"] = "TestNameEn";
-                input.ContactName = new Dictionary<string, string>
-                {
-                    { "sk", "TestContentName" },
-                    { "en", "TestContentNameEn" },
-                };
-                input.ContactEmail = "contact@example.com";
                 input.HomePage = "https://data.gov.sk/";
             }
 

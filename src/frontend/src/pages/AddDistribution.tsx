@@ -1,4 +1,4 @@
-import { useDistributionAdd, useDistributions, useDocumentTitle, useUserInfo } from '../client';
+import { useDataset, useDistributionAdd, useDistributions, useDocumentTitle, useUserInfo } from '../client';
 
 import PageHeader from '../components/PageHeader';
 import Breadcrumbs from '../components/Breadcrumbs';
@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 
 export default function AddDistribution() {
     const { datasetId } = useParams();
+    const [dataset] = useDataset(datasetId);
 
     const [distribution, setDistribution, errors, saving, save] = useDistributionAdd({
         datasetId: datasetId ?? '',
@@ -31,11 +32,14 @@ export default function AddDistribution() {
         conformsTo: null,
         title: null,
         fileId: null,
-        description: null,
         endpointUrl: null,
         documentation: null,
         applicableLegislations: [],
-        isDataService: false
+        isDataService: false,
+        endpointDescription: null,
+        hvdCategory: null,
+        contactName: {},
+        contactEmail: null
     });
 
     const [distributions, , , loadingDistributions, errorDistributions] = useDistributions(
@@ -99,7 +103,7 @@ export default function AddDistribution() {
 
                     {!loading ? (
                         <>
-                            <DistributionForm distribution={distribution} setDistribution={setDistribution} errors={errors} saving={saving} />
+                            <DistributionForm distribution={distribution} setDistribution={setDistribution} errors={errors} saving={saving} dataset={dataset} />
 
                             <Button
                                 style={{ marginRight: '20px' }}

@@ -31,10 +31,10 @@ export default function DistributionRow(props: Props) {
                             {distribution.title && distribution.title.trim().length > 0 ? distribution.title : dataset.name}
                         </a>
                     ) : (
-                        <>
+                        <span data-testid="service-name">
                             {distribution.title && distribution.title.trim().length > 0 ? distribution.title : dataset.name}{' '}
                             {distribution.isDataService ? <>({t('dataService')})</> : null}
-                        </>
+                        </span>
                     )}
                     <DataWarningIcon distribution={distribution} />
                 </span>
@@ -46,11 +46,9 @@ export default function DistributionRow(props: Props) {
                 aria-labelledby={'distribution-accordion-heading-' + distribution.id}
                 style={{ display: expanded ? 'block' : 'none', margin: '10px 10px 0 10px' }}
             >
-                {distribution.description ? <p className="govuk-body">{distribution.description}</p> : null}
-
                 {distribution.endpointUrl ? (
                     <p className="govuk-body">
-                        {t('endpoint')}: <>{distribution.endpointUrl}</>
+                        {t('endpoint')}: <a href={distribution.endpointUrl}>{distribution.endpointUrl}</a>
                     </p>
                 ) : null}
 
@@ -74,7 +72,7 @@ export default function DistributionRow(props: Props) {
 
                 {distribution.termsOfUse?.personalDataContainmentTypeValue ? (
                     <p className="govuk-body">
-                        {t('personalDataType')}: {distribution.termsOfUse.personalDataContainmentTypeValue.label}
+                        {t('personalDataType')}: <ReferenceLink value={distribution.termsOfUse.personalDataContainmentTypeValue} />
                     </p>
                 ) : null}
 
@@ -104,7 +102,7 @@ export default function DistributionRow(props: Props) {
 
                 {distribution.conformsTo ? (
                     <p className="govuk-body">
-                        {t('conformsTo')}: {distribution.conformsTo}
+                        {t('conformsTo')}: <a href={distribution.conformsTo}>{distribution.conformsTo}</a>
                     </p>
                 ) : null}
 
@@ -120,25 +118,37 @@ export default function DistributionRow(props: Props) {
                     </p>
                 ) : null}
 
-                {distribution.documentation ? (
+                {distribution.hvdCategoryValue ? (
                     <p className="govuk-body">
-                        {t('documentation')}: <ReferenceLink value={distribution.packageFormatValue} />
+                        {t('hvdCategory')}: <ReferenceLink value={distribution.hvdCategoryValue} />
                     </p>
                 ) : null}
 
                 {distribution.documentation ? (
                     <p className="govuk-body">
-                        {t('documentation')}: <a href={distribution.documentation}>{distribution.documentation}</a>
+                        {t('documentationLink')}: <a href={distribution.documentation}>{distribution.documentation}</a>
+                    </p>
+                ) : null}
+
+                {distribution.endpointDescription ? (
+                    <p className="govuk-body">
+                        {t('endpointDescription')}: <a href={distribution.endpointDescription}>{distribution.endpointDescription}</a>
+                    </p>
+                ) : null}
+
+                {distribution.contactPoint ? (
+                    <p className="govuk-body">
+                        {t('contactPoint')}: {distribution.contactPoint.name} {distribution.contactPoint.email}
                     </p>
                 ) : null}
 
                 {distribution.applicableLegislations.length > 0 ? (
                     <>
                         <p className="govuk-body">
-                            {t('applicableLegislations')}:
+                            {t('applicableLegislations')}:{' '}
                             {distribution.applicableLegislations.map((l) => (
                                 <Fragment key={l}>
-                                    <div>{l}</div>
+                                    <div>{l}</div>{' '}
                                 </Fragment>
                             ))}
                         </p>

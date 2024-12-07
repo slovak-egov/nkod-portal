@@ -53,10 +53,10 @@ namespace WebApi
         private async void OnTimerTick(object? state)
         {
             await lastWorkTask;
-            lastWorkTask = Task.Run(() => ExecuteAsync(CancellationToken.None));
+            lastWorkTask = Task.Run(() => ExecuteAsync(CancellationToken.None, Console.WriteLine));
         }
 
-        private async Task ExecuteAsync(CancellationToken stoppingToken)
+        public async Task ExecuteAsync(CancellationToken stoppingToken, Action<string> logger)
         {
             HttpContextValueAccessor httpContextValueAccessor = new HttpContextValueAccessor();
 
@@ -83,16 +83,17 @@ namespace WebApi
             };
             HttpClient httpClient = new HttpClient(httpClientHandler);
             httpClient.BaseAddress = new Uri(sparqlEndpointUrl);
+            httpClient.Timeout = TimeSpan.FromSeconds(300);
 
             SparqlClient sparqlClient = new SparqlClient(httpClient);
 
             HarvestedDataImport dataImport = new HarvestedDataImport(sparqlClient, documentStorageClient, async p =>
             {
                 string token = await iamClient.LoginHarvester(authToken, p);
-                Console.WriteLine($"Token: {token}");
+                logger($"Token: {token}");
                 httpContextValueAccessor.Token = token;
                 httpContextValueAccessor.Publisher = p;
-            }, Console.WriteLine);
+            }, logger);
             await dataImport.Import();
         }
 

@@ -39,6 +39,8 @@ using Microsoft.AspNetCore.Http.Features;
 using System.Net.Mime;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Caching.Memory;
+using J2N.Text;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -200,7 +202,12 @@ builder.WebHost.ConfigureKestrel(options =>
 });
 
 ImportHarvestedHostedService importHarvestedHostedService = new ImportHarvestedHostedService(documentStorageUrl, iamClientUrl, builder.Configuration["HarvesterAuthToken"] ?? string.Empty, builder.Configuration["PrivateSparqlEndpoint"] ?? string.Empty);
-builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService>(importHarvestedHostedService));
+builder.Services.AddSingleton(importHarvestedHostedService);
+
+if (builder.Configuration["DisableHarvestation"] != "1")
+{
+    builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService>(importHarvestedHostedService));
+}
 
 builder.Services.AddSingleton(sp =>
 {
@@ -2674,6 +2681,26 @@ app.MapGet("/dcat2.jsonld", async ([FromServices] IMemoryCache cache, HttpRespon
         await ServeCached(
             new Uri("https://datova-kancelaria.github.io/dcat-ap-sk-2.0/kontexty/rozhranie-katal%C3%B3gu-otvoren%C3%BDch-d%C3%A1t.jsonld"), cache),
         new Microsoft.Net.Http.Headers.MediaTypeHeaderValue("application/ld+json"));
+});
+
+app.MapGet("/fetch-harvested", async ([FromServices] ImportHarvestedHostedService service, HttpResponse response) =>
+{
+    response.ContentType = "text/plain";
+    response.Headers["Cache-Control"] = "no-cache";
+    SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
+    await service.ExecuteAsync(CancellationToken.None, async l => {
+        await semaphore.WaitAsync();
+        try
+        {
+            await response.WriteAsync(l);
+            await response.WriteAsync(Environment.NewLine);
+            await response.Body.FlushAsync();
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    });
 });
 
 app.Use(async (context, next) =>

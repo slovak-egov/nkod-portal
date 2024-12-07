@@ -8,7 +8,6 @@ import ValidationSummary from '../components/ValidationSummary';
 import { DatasetForm } from '../components/DatasetForm';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import AlertPublisher2 from '../components/AlertPublisher2';
 
 export default function AddDataset() {
     const [dataset, setDataset, errors, saving, save] = useDatasetAdd({
@@ -26,11 +25,15 @@ export default function AddDataset() {
         contactEmail: null,
         landingPage: null,
         specification: null,
+        documentation: null,
+        relation: null,
         euroVocThemes: [],
         spatialResolutionInMeters: null,
         temporalResolution: null,
         isPartOf: null,
-        isSerie: false
+        isSerie: false,
+        applicableLegislations: [],
+        hvdCategory: null
     });
 
     const [userInfo] = useUserInfo();

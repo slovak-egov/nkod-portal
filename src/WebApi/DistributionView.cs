@@ -90,7 +90,7 @@ namespace WebApi
                 AccessUrl = TranslateToHttps(distributionRdf.AccessUrl),
                 Format = distributionRdf.Format,
                 MediaType = distributionRdf.MediaType,
-                ConformsTo = distributionRdf.ConformsTo,
+                ConformsTo = dataService?.ConformsTo ?? distributionRdf.ConformsTo,
                 CompressFormat = distributionRdf.CompressFormat,
                 PackageFormat = distributionRdf.PackageFormat,
                 Title = distributionRdf.GetTitle(language),
@@ -98,11 +98,15 @@ namespace WebApi
                 EndpointDescription = dataService?.EndpointDescription,
                 EndpointUrl = dataService?.EndpointUrl,
                 Documentation = dataService?.Documentation,
-                ApplicableLegislations = dataService?.ApplicableLegislations.ToArray() ?? Array.Empty<Uri>(),
                 HvdCategory = dataService?.HvdCategory,
                 ContactPoint = contactPoint is not null ? CardView.MapFromRdf(contactPoint, language, fetchAllLanguages) : null,
                 IsDataService = dataService is not null
             };
+
+            Uri[] applicableLegislationsDistribution = distributionRdf.ApplicableLegislations.ToArray();
+            Uri[] applicableLegislationsDataService = dataService?.ApplicableLegislations.ToArray() ?? Array.Empty<Uri>();
+
+            view.ApplicableLegislations = applicableLegislationsDataService.Length > 0 ? applicableLegislationsDataService : applicableLegislationsDistribution;
 
             view.LicenseStatus = legTermsOfUse is not null
                 && legTermsOfUse.AuthorsWorkType is not null

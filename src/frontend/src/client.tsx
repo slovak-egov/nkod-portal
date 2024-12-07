@@ -47,7 +47,8 @@ export const knownCodelists = {
         type: 'https://data.gov.sk/set/codelist/dataset-type',
         accrualPeriodicity: 'http://publications.europa.eu/resource/authority/frequency',
         spatial: 'https://data.gov.sk/def/ontology/location',
-        euroVoc: 'http://eurovoc.europa.eu/100141'
+        euroVoc: 'http://eurovoc.europa.eu/100141',
+        hvdCategory: 'http://data.europa.eu/bna/asd487ae75'
     },
     distribution: {
         personalDataContainmentType: 'https://data.gov.sk/set/codelist/personal-data-occurence-type',
@@ -165,7 +166,11 @@ export type DatasetInput = {
     contactEmail: string | null;
     landingPage: string | null;
     specification: string | null;
+    documentation: string | null;
+    relation: string | null;
     euroVocThemes: string[];
+    applicableLegislations: string[];
+    hvdCategory: string | null;
     spatialResolutionInMeters: string | null;
     temporalResolution: string | null;
     isPartOf: string | null;
@@ -189,11 +194,14 @@ export type DistributionInput = {
     packageFormat: string | null;
     title: LanguageDependentTexts | null;
     fileId: string | null;
-    description: LanguageDependentTexts | null;
     endpointUrl: string | null;
+    endpointDescription: string | null;
     documentation: string | null;
     applicableLegislations: string[];
     isDataService: boolean;
+    contactName: LanguageDependentTexts;
+    contactEmail: string | null;
+    hvdCategory: string | null;
 };
 
 export type LocalCatalogInput = {
@@ -232,6 +240,8 @@ export type Dataset = {
     contactPoint: CardView | null;
     landingPage: string | null;
     specification: string | null;
+    documentation: string | null;
+    relation: string | null;
     euroVocThemes: string[];
     euroVocThemeValues: string[];
     spatialResolutionInMeters: number | null;
@@ -242,6 +252,9 @@ export type Dataset = {
     isHarvested: boolean;
     issued: string | null;
     lastUpdated: string | null;
+    applicableLegislations: string[];
+    hvdCategory: string | null;
+    hvdCategoryValue: CodelistValue | null;
 };
 
 type TermsOfUse = {
@@ -276,14 +289,16 @@ export type Distribution = {
     title: string | null;
     titleAll: LanguageDependentTexts | null;
     isHarvested: boolean;
-    description: string | null;
-    descriptionAll: LanguageDependentTexts | null;
     endpointUrl: string | null;
     documentation: string | null;
     applicableLegislations: string[];
     isDataService: boolean;
     downloadStatus: boolean | null;
     licenseStatus: boolean;
+    hvdCategory: string | null;
+    hvdCategoryValue: CodelistValue | null;
+    endpointDescription: string | null;
+    contactPoint: CardView | null;
 };
 
 export type LocalCatalog = {

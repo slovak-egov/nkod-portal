@@ -31,7 +31,11 @@ const transformEntityForEdit = (entity: Dataset): DatasetInput => {
         spatialResolutionInMeters: entity.spatialResolutionInMeters?.toLocaleString() ?? null,
         temporalResolution: entity.temporalResolution,
         isPartOf: entity.isPartOf,
-        isSerie: entity.isSerie
+        isSerie: entity.isSerie,
+        documentation: entity.documentation,
+        relation: entity.relation,
+        applicableLegislations: entity.applicableLegislations,
+        hvdCategory: entity.hvdCategory
     };
 };
 

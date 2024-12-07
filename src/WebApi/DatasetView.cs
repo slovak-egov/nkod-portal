@@ -76,7 +76,7 @@ namespace WebApi
 
         public string? LastUpdated { get; set; }
 
-        public Uri[] ApplicableLegislation { get; set; } = Array.Empty<Uri>();
+        public Uri[] ApplicableLegislations { get; set; } = Array.Empty<Uri>();
         
         public Uri? HvdCategory { get; set; }
 
@@ -101,7 +101,7 @@ namespace WebApi
                 KeywordsAll = datasetRdf.Keywords,
                 Type = datasetRdf.Type.ToArray(),
                 Spatial = datasetRdf.Spatial.ToArray(),
-                ApplicableLegislation = datasetRdf.ApplicableLegislations.ToArray(),
+                ApplicableLegislations = datasetRdf.ApplicableLegislations.ToArray(),
                 HvdCategory = datasetRdf.HvdCategory,
                 Temporal = temporal is not null ? new TemporalView { StartDate = temporal.StartDate?.ToString(CultureInfo.CurrentCulture), EndDate = temporal.EndDate?.ToString(CultureInfo.CurrentCulture) } : null,
                 ContactPoint = contactPoint is not null ? CardView.MapFromRdf(contactPoint, language, fetchAllLanguages) : null,

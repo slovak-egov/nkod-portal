@@ -147,10 +147,16 @@ namespace Frontend.Test
                 { "http://publications.europa.eu/resource/dataset/country/2", new LanguageDependedTexts{ { "sk", "country2sk" }, { "en", "country2en" } } }
             });
             CreateCodelistFile(DcatDataset.EuroVocThemeCodelist, new Dictionary<string, LanguageDependedTexts>());
+            CreateCodelistFile(DcatDataset.HvdCategoryCodelist, new Dictionary<string, LanguageDependedTexts>
+            {
+                { "http://publications.europa.eu/resource/dataset/high-value-dataset-category/1", new LanguageDependedTexts{ { "sk", "HVD 1 sk" }, { "en", "HVD 1 en" } } },
+                { "http://publications.europa.eu/resource/dataset/high-value-dataset-category/2", new LanguageDependedTexts{ { "sk", "HVD 2 sk" }, { "en", "HVD 2 en" } } }
+            });
         }
 
         public void CreateDistributionCodelists()
         {
+            CreateDatasetCodelists();
             CreateCodelistFile(DcatDistribution.LicenseCodelist, new Dictionary<string, LanguageDependedTexts>
             {
                 { "https://data.gov.sk/def/authors-work-type/1", new LanguageDependedTexts{ { "sk", "work1sk" }, { "en", "work1en" } } },

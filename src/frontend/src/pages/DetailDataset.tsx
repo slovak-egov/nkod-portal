@@ -117,7 +117,7 @@ export default function DetailDataset(props: Props) {
                                     <GridColumn widthUnits={1} totalUnits={4}>
                                         <div className="nkod-detail-attribute">
                                             <div className="govuk-body nkod-detail-attribute-name">{t('theme')}</div>
-                                            <div className="govuk-body nkod-detail-attribute-value" data-testid="themes" style={{ wordBreak: 'break-all' }}>
+                                            <div className="govuk-body nkod-detail-attribute-value" data-testid="themes" style={{ wordBreak: 'break-word' }}>
                                                 {dataset.themeValues.map((l) => (
                                                     <div key={l.label}>{l.label}</div>
                                                 ))}
@@ -132,7 +132,7 @@ export default function DetailDataset(props: Props) {
                                     <GridColumn widthUnits={1} totalUnits={4}>
                                         <div className="nkod-detail-attribute">
                                             <div className="govuk-body nkod-detail-attribute-name">{t('datasetType')}</div>
-                                            <div className="govuk-body nkod-detail-attribute-value" data-testid="types" style={{ wordBreak: 'break-all' }}>
+                                            <div className="govuk-body nkod-detail-attribute-value" data-testid="types" style={{ wordBreak: 'break-word' }}>
                                                 {dataset.typeValues.map((l) => (
                                                     <div key={l.label}>{l.label}</div>
                                                 ))}
@@ -147,7 +147,7 @@ export default function DetailDataset(props: Props) {
                                             <div
                                                 className="govuk-body nkod-detail-attribute-value"
                                                 data-testid="landing-page"
-                                                style={{ wordBreak: 'break-all' }}
+                                                style={{ wordBreak: 'break-word' }}
                                             >
                                                 <a href={dataset.landingPage} className="govuk-link">
                                                     {t('show')}
@@ -160,7 +160,11 @@ export default function DetailDataset(props: Props) {
                                     <GridColumn widthUnits={1} totalUnits={4}>
                                         <div className="nkod-detail-attribute">
                                             <div className="govuk-body nkod-detail-attribute-name">{t('dataSerie')}</div>
-                                            <div className="govuk-body nkod-detail-attribute-value" data-testid="data-serie" style={{ wordBreak: 'break-all' }}>
+                                            <div
+                                                className="govuk-body nkod-detail-attribute-value"
+                                                data-testid="data-serie"
+                                                style={{ wordBreak: 'break-word' }}
+                                            >
                                                 <a href={'/datasety/' + dataset.isPartOf} className="govuk-link">
                                                     {t('show')}
                                                 </a>
@@ -175,7 +179,7 @@ export default function DetailDataset(props: Props) {
                                             <div
                                                 className="govuk-body nkod-detail-attribute-value"
                                                 data-testid="specification"
-                                                style={{ wordBreak: 'break-all' }}
+                                                style={{ wordBreak: 'break-word' }}
                                             >
                                                 <a href={dataset.specification} className="govuk-link">
                                                     {t('show')}
@@ -184,11 +188,71 @@ export default function DetailDataset(props: Props) {
                                         </div>
                                     </GridColumn>
                                 ) : null}
+                                {dataset.documentation ? (
+                                    <GridColumn widthUnits={1} totalUnits={4}>
+                                        <div className="nkod-detail-attribute">
+                                            <div className="govuk-body nkod-detail-attribute-name">{t('documentationLink')}</div>
+                                            <div
+                                                className="govuk-body nkod-detail-attribute-value"
+                                                data-testid="documentation"
+                                                style={{ wordBreak: 'break-word' }}
+                                            >
+                                                <a href={dataset.documentation} className="govuk-link">
+                                                    {t('show')}
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </GridColumn>
+                                ) : null}
+                                {dataset.relation ? (
+                                    <GridColumn widthUnits={1} totalUnits={4}>
+                                        <div className="nkod-detail-attribute">
+                                            <div className="govuk-body nkod-detail-attribute-name">{t('relation')}</div>
+                                            <div className="govuk-body nkod-detail-attribute-value" data-testid="relation" style={{ wordBreak: 'break-word' }}>
+                                                <a href={dataset.relation} className="govuk-link">
+                                                    {t('show')}
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </GridColumn>
+                                ) : null}
+                                {dataset.hvdCategoryValue ? (
+                                    <GridColumn widthUnits={1} totalUnits={4}>
+                                        <div className="nkod-detail-attribute">
+                                            <div className="govuk-body nkod-detail-attribute-name">{t('hvdCategory')}</div>
+                                            <div
+                                                className="govuk-body nkod-detail-attribute-value"
+                                                data-testid="hvd-category"
+                                                style={{ wordBreak: 'break-word' }}
+                                            >
+                                                {dataset.hvdCategoryValue.label}
+                                            </div>
+                                        </div>
+                                    </GridColumn>
+                                ) : null}
+                                {dataset.applicableLegislations.length > 0 ? (
+                                    <GridColumn widthUnits={1} totalUnits={4}>
+                                        <div className="nkod-detail-attribute">
+                                            <div className="govuk-body nkod-detail-attribute-name">{t('applicableLegislations')}</div>
+                                            <div
+                                                className="govuk-body nkod-detail-attribute-value"
+                                                data-testid="applicable-legislations"
+                                                style={{ wordBreak: 'break-word' }}
+                                            >
+                                                {dataset.applicableLegislations.map((l) => (
+                                                    <div key={l} style={{ marginBottom: '10px' }}>
+                                                        {l}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </GridColumn>
+                                ) : null}
                                 {dataset.contactPoint?.name || dataset.contactPoint?.email ? (
                                     <GridColumn widthUnits={1} totalUnits={4}>
                                         <div className="nkod-detail-attribute">
                                             <div className="govuk-body nkod-detail-attribute-name">{t('contactPoint')}</div>
-                                            <div className="govuk-body nkod-detail-attribute-value" style={{ wordBreak: 'break-all' }}>
+                                            <div className="govuk-body nkod-detail-attribute-value" style={{ wordBreak: 'break-word' }}>
                                                 {dataset.contactPoint?.name ? (
                                                     <div>
                                                         <span data-testid="contact-name">{dataset.contactPoint.name}</span>
@@ -207,7 +271,7 @@ export default function DetailDataset(props: Props) {
                                     <GridColumn widthUnits={1} totalUnits={4}>
                                         <div className="nkod-detail-attribute">
                                             <div className="govuk-body nkod-detail-attribute-name">{t('datasetUri')}</div>
-                                            <div className="govuk-body nkod-detail-attribute-value" data-testid="uri" style={{ wordBreak: 'break-all' }}>
+                                            <div className="govuk-body nkod-detail-attribute-value" data-testid="uri" style={{ wordBreak: 'break-word' }}>
                                                 {dataset.key}
                                             </div>
                                         </div>
@@ -237,7 +301,7 @@ export default function DetailDataset(props: Props) {
                                     {dataset.spatialResolutionInMeters ? (
                                         <div className="nkod-detail-attribute">
                                             <div className="govuk-body nkod-detail-attribute-name">{t('spatialResolution')}</div>
-                                            <div className="govuk-body nkod-detail-attribute-value" style={{ wordBreak: 'break-all' }}>
+                                            <div className="govuk-body nkod-detail-attribute-value" style={{ wordBreak: 'break-word' }}>
                                                 <span data-testid="spatial-resolution">{dataset.spatialResolutionInMeters}</span>
                                             </div>
                                         </div>
@@ -245,7 +309,7 @@ export default function DetailDataset(props: Props) {
                                     {dataset.temporal?.startDate || dataset.temporal?.endDate || dataset.temporalResolution ? (
                                         <div className="nkod-detail-attribute">
                                             <div className="govuk-body nkod-detail-attribute-name">{t('timeValidity')}</div>
-                                            <div className="govuk-body nkod-detail-attribute-value" style={{ wordBreak: 'break-all' }}>
+                                            <div className="govuk-body nkod-detail-attribute-value" style={{ wordBreak: 'break-word' }}>
                                                 {dataset.temporal?.startDate ? (
                                                     <div>
                                                         <span style={{ fontWeight: 'bold' }}>{t('from')}: </span>{' '}
@@ -270,7 +334,7 @@ export default function DetailDataset(props: Props) {
                                     {dataset.issued ? (
                                         <div className="nkod-detail-attribute">
                                             <div className="govuk-body nkod-detail-attribute-name">{t('issuedDate')}</div>
-                                            <div className="govuk-body nkod-detail-attribute-value" style={{ wordBreak: 'break-all' }}>
+                                            <div className="govuk-body nkod-detail-attribute-value" style={{ wordBreak: 'break-word' }}>
                                                 <span data-testid="date-issued">{dataset.issued}</span>
                                             </div>
                                         </div>
@@ -278,7 +342,7 @@ export default function DetailDataset(props: Props) {
                                     {dataset.lastUpdated ? (
                                         <div className="nkod-detail-attribute">
                                             <div className="govuk-body nkod-detail-attribute-name">{t('lastModifiedDate')}</div>
-                                            <div className="govuk-body nkod-detail-attribute-value" style={{ wordBreak: 'break-all' }}>
+                                            <div className="govuk-body nkod-detail-attribute-value" style={{ wordBreak: 'break-word' }}>
                                                 <span data-testid="data-last-updated">{dataset.lastUpdated}</span>
                                             </div>
                                         </div>

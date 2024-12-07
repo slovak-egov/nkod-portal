@@ -57,6 +57,11 @@ namespace WebApi.Test
                     { "sk", "TitleSk" },
                     { "en", "TitleEn" },
                 };
+                input.ApplicableLegislations = new List<string>
+                {
+                    "https://data.gov.sk/id/eli/sk/zz/2019/95",
+                    "https://data.gov.sk/id/eli/sk/zz/2007/39/20220101",
+                };
             }
 
             return input;
@@ -73,7 +78,6 @@ namespace WebApi.Test
                 PersonalDataContainmentType = "https://data.gov.sk/def/ontology/law/personalDataContainmentType/1",
                 AuthorName = "AuthorName",
                 OriginalDatabaseAuthorName = "OriginalDatabaseAuthorName",
-                Format = "http://publications.europa.eu/resource/dataset/file-type/1",
                 MediaType = "http://www.iana.org/assignments/media-types/text/csv",
                 EndpointUrl = "http://data.gov.sk/download",
                 IsDataService = true,
@@ -82,17 +86,20 @@ namespace WebApi.Test
                     { "sk", "TitleSk" },
                     { "en", "TitleEn" },
                 },
-                Description = new Dictionary<string, string>
-                {
-                    { "sk", "DescriptionSk" },
-                    { "en", "DescritpionEn" },
-                },
                 ApplicableLegislations = new List<string>
                 {
                     "https://data.gov.sk/id/eli/sk/zz/2019/95",
                     "https://data.gov.sk/id/eli/sk/zz/2007/39/20220101",
                 },
                 Documentation = "http://data.gov.sk/specification",
+                ContactName = new Dictionary<string, string>
+                {
+                    { "sk", "TestContentName" },
+                    { "en", "TestContentNameEn" },
+                },
+                ContactEmail = "contact@example.com",
+                EndpointDescription = "http://data.gov.sk/endpoint",
+                HvdCategory = "http://publications.europa.eu/resource/dataset/high-value-dataset-category/1"
             };
 
             return input;
@@ -108,7 +115,10 @@ namespace WebApi.Test
             Assert.Equal(publisher, state.Metadata.Publisher);
             Assert.Equal(FileType.DistributionRegistration, state.Metadata.Type);
             Assert.Equal(datasetId, state.Metadata.ParentFile);
-            Assert.Equal(input.Format, state.Metadata.Name["sk"]);
+            if (!input.IsDataService)
+            {
+                Assert.Equal(input.Format, state.Metadata.Name["sk"]);
+            }
             Assert.True((DateTimeOffset.Now - state.Metadata.Created).Duration().TotalMinutes < 1);
             Assert.True((DateTimeOffset.Now - state.Metadata.LastModified).Duration().TotalMinutes < 1);
 

@@ -32,7 +32,8 @@ const requiredCodelists = [
     knownCodelists.dataset.theme,
     knownCodelists.dataset.type,
     knownCodelists.dataset.accrualPeriodicity,
-    knownCodelists.dataset.spatial
+    knownCodelists.dataset.spatial,
+    knownCodelists.dataset.hvdCategory
 ];
 
 export function DatasetForm(props: Props) {
@@ -77,6 +78,9 @@ export function DatasetForm(props: Props) {
     const themeCodelist = codelists.find((c) => c.id === knownCodelists.dataset.theme);
     const accrualPeriodicityCodelist = codelists.find((c) => c.id === knownCodelists.dataset.accrualPeriodicity);
     const spatialCodelist = codelists.find((c) => c.id === knownCodelists.dataset.spatial);
+    const hvdCategoryCodelist = codelists.find((c) => c.id === knownCodelists.dataset.hvdCategory);
+
+    const isHvd = dataset.type.includes('http://publications.europa.eu/resource/authority/dataset-type/HVD');
 
     const saving = props.saving;
 
@@ -243,6 +247,20 @@ export function DatasetForm(props: Props) {
                     <BaseInput id={id} disabled={saving} value={dataset.specification ?? ''} onChange={(e) => setDataset({ specification: e.target.value })} />
                 )}
             />
+            <FormElementGroup
+                label={t('documentationLink')}
+                errorMessage={errors['documentation']}
+                element={(id) => (
+                    <BaseInput id={id} disabled={saving} value={dataset.documentation ?? ''} onChange={(e) => setDataset({ documentation: e.target.value })} />
+                )}
+            />
+            <FormElementGroup
+                label={t('relatedSource')}
+                errorMessage={errors['relation']}
+                element={(id) => (
+                    <BaseInput id={id} disabled={saving} value={dataset.relation ?? ''} onChange={(e) => setDataset({ relation: e.target.value })} />
+                )}
+            />
 
             <FormElementGroup
                 label={t('euroVocClassification')}
@@ -274,6 +292,39 @@ export function DatasetForm(props: Props) {
                     />
                 )}
             />
+
+            <FormElementGroup
+                label={t('applicableLegislation')}
+                errorMessage={errors['applicablelegislation']}
+                element={(id) => (
+                    <MultiTextBox
+                        id={id}
+                        disabled={saving}
+                        values={dataset.applicableLegislations}
+                        onChange={(e) => setDataset({ applicableLegislations: e })}
+                    />
+                )}
+            />
+
+            {isHvd && hvdCategoryCodelist ? (
+                <FormElementGroup
+                    label={t('hvdCategory')}
+                    errorMessage={errors['hvdcategory']}
+                    element={(id) => (
+                        <SelectElementItems<CodelistValue>
+                            id={id}
+                            disabled={saving}
+                            options={[{ id: '', label: t('none') }, ...hvdCategoryCodelist.values]}
+                            selectedValue={dataset.hvdCategory ?? ''}
+                            renderOption={(v) => v.label}
+                            getValue={(v) => v.id}
+                            onChange={(v) => {
+                                setDataset({ ...dataset, hvdCategory: v });
+                            }}
+                        />
+                    )}
+                />
+            ) : null}
 
             <div style={{ marginBottom: '2em' }}>
                 <Checkbox label={t('datasetIsSerie')} checked={dataset.isSerie} onCheckedChange={(v) => setDataset({ isSerie: v })} />

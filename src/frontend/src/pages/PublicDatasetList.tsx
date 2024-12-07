@@ -110,7 +110,7 @@ export default function PublicDatasetList() {
                                             if (distribution.downloadUrl && distribution.formatValue) {
                                                 return (
                                                     <Fragment key={distribution.id}>
-                                                        <a href={distribution.downloadUrl} className="govuk-link" style={{ wordBreak: 'break-all' }}>
+                                                        <a href={distribution.downloadUrl} className="govuk-link" style={{ wordBreak: 'break-word' }}>
                                                             {distribution.formatValue.label}
                                                         </a>{' '}
                                                     </Fragment>

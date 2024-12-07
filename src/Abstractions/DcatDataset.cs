@@ -24,7 +24,7 @@ namespace NkodSk.Abstractions
 
         public const string EuroVocPrefix = "http://eurovoc.europa.eu/";
 
-        public const string HvdCategoryCodelist = "http://publications.europa.eu/resource/dataset/high-value-dataset-category";
+        public const string HvdCategoryCodelist = "http://data.europa.eu/bna/asd487ae75";
 
         public const string HvdType = "http://publications.europa.eu/resource/authority/dataset-type/HVD";
 
@@ -387,7 +387,7 @@ namespace NkodSk.Abstractions
                 Graph.Retract(t);
                 if (t.Object is IUriNode node)
                 {
-                    RemoveTriples(node);
+                    RemoveTriples(node, new HashSet<string> { Graph.CreateUriNode("dcat:accessService").Uri.OriginalString, Graph.CreateUriNode("dcat:contactPoint").Uri.OriginalString });
                 }
             }
         }

@@ -431,6 +431,8 @@ app.MapPost("/users", [Authorize] async ([FromServices] ApplicationDbContext con
                 if (mainConfigurationOptions.Value.UsePasswordForPublisherAccounts)
                 {
                     password = record.CreateRandomPassword();
+                    record.InvitationToken = null;
+                    record.IsActive = true;
                 }
 
                 context.Users.Add(record);

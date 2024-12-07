@@ -1,4 +1,4 @@
-using AngleSharp.Attributes;
+Ôªøusing AngleSharp.Attributes;
 using Lucene.Net.Search.Similarities;
 using NkodSk.Abstractions;
 using NkodSk.RdfFileStorage;
@@ -43,7 +43,7 @@ namespace ImportRegistrations.Test
             dataset.SpatialResolutionInMeters = 10;
             dataset.TemporalResolution = "P2D";
             dataset.SetEuroVocLabelThemes(new Dictionary<string, List<string>> {
-                { "sk", new List<string> { "nepovolen· likvid·cia odpadu", "chemick˝ odpad" } },
+                { "sk", new List<string> { "nepovolen√° likvid√°cia odpadu", "chemick√Ω odpad" } },
                 { "en", new List<string> { "unauthorised dumping", "chemical waste" } }
             });
 
@@ -339,6 +339,73 @@ namespace ImportRegistrations.Test
             {
                 return string.Equals(role, "Harvester", StringComparison.OrdinalIgnoreCase);
             }
+        }
+
+        [Fact]
+        public async Task TestImportDataSeries()
+        {
+            string path = fixture.GetStoragePath();
+
+            string publisherId = "http://data.gob.sk/test";
+            fixture.CreatePublisher(publisherId);
+            (Uri catalogUri, Guid catalogId) = fixture.CreateLocalCatalog("Test", publisherId);
+            using Storage storage = new Storage(path);
+            TestSparqlClient sparqlClient = new TestSparqlClient();
+
+            (DcatDataset dataset, DcatDistribution distribution) = CreateDatasetAndDistribution(publisherId);
+            dataset.IsSerie = true;
+            sparqlClient.Add(catalogUri, dataset);
+            sparqlClient.Add(dataset.Uri, distribution);
+
+            HttpContextValueAccessor httpContextValueAccessor = new HttpContextValueAccessor();
+
+            HarvestedDataImport import = new HarvestedDataImport(
+                sparqlClient,
+                new TestDocumentStorageClient(storage, new DefaultFileAccessPolicy(httpContextValueAccessor)),
+                p =>
+                {
+                    httpContextValueAccessor.Publisher = p;
+                    return Task.CompletedTask;
+                },
+                s => { }); ;
+
+            await import.Import();
+
+            AssertExpectedState(storage, publisherId, catalogUri, dataset, distribution);
+        }
+
+        [Fact]
+        public async Task TestImportNewCatalogWithServes()
+        {
+            string path = fixture.GetStoragePath();
+
+            string publisherId = "http://data.gob.sk/test";
+            fixture.CreatePublisher(publisherId);
+            (Uri catalogUri, Guid catalogId) = fixture.CreateLocalCatalog("Test", publisherId);
+            using Storage storage = new Storage(path);
+            TestSparqlClient sparqlClient = new TestSparqlClient();
+
+            (DcatDataset dataset, DcatDistribution distribution) = CreateDatasetAndDistribution(publisherId);
+            dataset.Graph.Assert(new VDS.RDF.Triple(dataset.Node, dataset.Graph.CreateUriNode("dcat:distribution"), distribution.Node));
+            dataset.Graph.Assert(new VDS.RDF.Triple(distribution.Node, dataset.Graph.CreateUriNode("dcat:servesDataset"), dataset.Node));
+            sparqlClient.Add(catalogUri, dataset);
+            sparqlClient.Add(dataset.Uri, distribution);
+
+            HttpContextValueAccessor httpContextValueAccessor = new HttpContextValueAccessor();
+
+            HarvestedDataImport import = new HarvestedDataImport(
+                sparqlClient,
+                new TestDocumentStorageClient(storage, new DefaultFileAccessPolicy(httpContextValueAccessor)),
+                p =>
+                {
+                    httpContextValueAccessor.Publisher = p;
+                    return Task.CompletedTask;
+                },
+                s => { }); ;
+
+            await import.Import();
+
+            AssertExpectedState(storage, publisherId, catalogUri, dataset, distribution);
         }
     }
 }
