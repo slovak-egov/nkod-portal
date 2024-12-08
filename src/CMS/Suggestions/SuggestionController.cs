@@ -375,7 +375,7 @@ namespace CMS.Suggestions
 			return Ok();
 		}
 
-		private async Task<Guid> GetBlogGuidAsync()
+		public async Task<Guid> GetBlogGuidAsync()
         {
             var page = await api.Pages.GetBySlugAsync(SuggestionsPage.WellKnownSlug);
             return page?.Id ?? (await CreatePage()).Id;

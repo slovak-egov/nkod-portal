@@ -389,5 +389,65 @@ namespace CMS.Datasets
 			await api.Posts.SaveCommentAsync(post.Id, comment);
 			return Results.Ok<Guid>(post.Id);
 		}
+
+        [Route("order")]
+        public async Task<IResult> Order(string property, bool reverse)
+		{
+			List<CountableDataset> datasets;
+            switch (property)
+			{
+				case "comments":
+					Dictionary<Guid, int> commentsCount = new Dictionary<Guid, int>();
+					foreach (Comment c in  await api.Posts.GetAllCommentsAsync(onlyApproved: false))
+					{
+						commentsCount.TryGetValue(c.ContentId, out int count);
+                        commentsCount[c.ContentId] = count + 1;
+					}
+					datasets = new List<CountableDataset>(commentsCount.Count);
+					foreach ((Guid contentId, int count) in commentsCount)
+					{
+                        DatasetPost post = await api.Posts.GetByIdAsync<DatasetPost>(contentId);
+						if (post is not null)
+						{
+							datasets.Add(new CountableDataset(post.Title, count));
+						}
+                    }
+                    break;
+				case "suggestions":
+					SuggestionController suggestionController = new SuggestionController(api);
+					Guid suggestionBlogId = await suggestionController.GetBlogGuidAsync();
+                    Dictionary<string, int> suggestionCount = new Dictionary<string, int>();
+					foreach (SuggestionPost s in await api.Posts.GetAllAsync<SuggestionPost>(suggestionBlogId))
+					{
+						string datasetUri = s.Suggestion?.DatasetUri?.Value;
+						if (datasetUri is not null)
+						{
+                            suggestionCount.TryGetValue(datasetUri, out int count);
+                            suggestionCount[datasetUri] = count + 1;
+                        }                        
+                    }
+                    datasets = new List<CountableDataset>(suggestionCount.Count);
+                    foreach ((string key, int count) in suggestionCount)
+					{
+                        datasets.Add(new CountableDataset(key, count));
+                    }
+					break;
+				default:
+                    var blogId = await GetBlogGuidAsync();
+                    List<DatasetPost> res = (await api.Posts.GetAllAsync<DatasetPost>(blogId)).ToList();
+                    datasets = new List<CountableDataset>(res.Count);
+                    foreach (DatasetPost post in res)
+                    {
+                        datasets.Add(new CountableDataset(post.Title, post.Dataset.Likes.Value.Count()));
+                    }
+					break;
+            }
+
+			int coef = reverse ? -1 : 1;            
+			datasets.Sort((a, b) => (a.Count - b.Count) * coef);
+			return Results.Ok(datasets.Select(d => d.Uri));
+        }
+
+		private record CountableDataset(string Uri, int Count) { }
 	}
 }

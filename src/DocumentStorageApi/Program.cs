@@ -68,7 +68,18 @@ builder.Services.AddSingleton<IFileStorage>(_ =>
     {
         throw new Exception($"Directory from configutation StoragePath does not exist ({fileStroragePath})");
     }
-    return new Storage(fileStroragePath);
+    Storage storage = new Storage(fileStroragePath);
+
+    string? cmsServer = builder.Configuration["CmsServer"];
+    if (!string.IsNullOrEmpty(cmsServer))
+    {
+        Uri cmsServerBaseUri = new Uri(cmsServer);
+        storage.AddOrderProvider(FileStorageOrderProperty.LikesCount, new CmsServerOrderProvider(cmsServerBaseUri, "likes"));
+        storage.AddOrderProvider(FileStorageOrderProperty.CommentsCount, new CmsServerOrderProvider(cmsServerBaseUri, "comments"));
+        storage.AddOrderProvider(FileStorageOrderProperty.SuggestionsCount, new CmsServerOrderProvider(cmsServerBaseUri, "suggestions"));
+    }
+
+    return storage;
 });
 builder.Services.AddScoped<IFileStorageAccessPolicy, DefaultFileAccessPolicy>();
 builder.Services.AddSingleton<FulltextStorageMap>();

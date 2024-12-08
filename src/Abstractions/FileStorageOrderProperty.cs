@@ -11,6 +11,9 @@ namespace NkodSk.Abstractions
         Created,
         LastModified,
         Name,
-        Relevance
+        Relevance,
+        LikesCount,
+        CommentsCount,
+        SuggestionsCount
     }
 }
