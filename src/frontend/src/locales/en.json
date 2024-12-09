@@ -436,5 +436,8 @@
     "yes": "yes",
     "datasetUri": "Dataset URI",
     "issuedDate": "Issued",
-    "lastModifiedDate": "Last modified"
+    "lastModifiedDate": "Last modified",
+    "byLikesCount": "by count of likes",
+    "byCommentsCount": "by count of comments",
+    "bySuggestionCount": "by count of suggestions"
 }
