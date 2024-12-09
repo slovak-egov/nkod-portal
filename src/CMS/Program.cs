@@ -99,6 +99,8 @@ builder.Services.AddApplicationInsightsTelemetry(options =>
 });
 builder.Services.AddSingleton<ITelemetryInitializer, RequestTelementryInitializer>();
 
+builder.Services.AddSingleton(sp => new NotificationService(builder.Configuration["NotificationService"]));
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
