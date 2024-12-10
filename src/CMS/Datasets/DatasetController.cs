@@ -438,7 +438,7 @@ namespace CMS.Datasets
                     datasets = new List<CountableDataset>(res.Count);
                     foreach (DatasetPost post in res)
                     {
-                        datasets.Add(new CountableDataset(post.Title, post.Dataset.Likes.Value.Count()));
+                        datasets.Add(new CountableDataset(post.Title, post.Dataset.Likes?.Value.Count() ?? 0));
                     }
 					break;
             }
