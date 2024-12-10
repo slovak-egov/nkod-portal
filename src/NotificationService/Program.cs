@@ -7,17 +7,7 @@ using NotificationService;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<MainDbContext>(options =>
-{
-    string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
-    if (string.IsNullOrEmpty(connectionString))
-    {
-        throw new Exception("Connection string not found.");
-    }
-
-    options.UseMySQL(connectionString);
-});
+builder.Services.AddMySQLServer<MainDbContext>(builder.Configuration.GetConnectionString("DefaultConnection") ?? string.Empty);
 
 builder.Services.AddApplicationInsightsTelemetry(options =>
 {
@@ -31,7 +21,7 @@ if (emailOptions is not null)
 {
     builder.Services.AddSingleton<ISender>(sp => new Sender(emailOptions));
 }
-builder.Services.AddTransient<SenderAccumulator>();
+builder.Services.AddScoped<SenderAccumulator>();
 builder.Services.AddSingleton<SenderAccumulatorLock>();
 builder.Services.AddSingleton<SenderService>();
 builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, SenderService>());
