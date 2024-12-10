@@ -7,28 +7,28 @@ namespace NotificationService
 {
     public class SenderService : IHostedService
     {
-        private readonly Sender sender;
-
-        private readonly Timer timer;
+        private Timer? timer;
 
         private readonly IServiceProvider serviceProvider;
 
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
 
-        public SenderService(Sender sender, IServiceProvider serviceProvider)
+        public SenderService(IServiceProvider serviceProvider)
         {
-            this.sender = sender;
             this.serviceProvider = serviceProvider;
-            timer = new Timer(OnTimerTick, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
         }
 
-        private async void OnTimerTick(object? state)
+        public async Task Run()
         {
             if (await semaphore.WaitAsync(TimeSpan.Zero))
             {
                 try
                 {
-                    MainDbContext context = serviceProvider.GetRequiredService<MainDbContext>();
+                    using IServiceScope scope = serviceProvider.CreateScope();
+
+                    SenderAccumulator senderAccumulator = scope.ServiceProvider.GetRequiredService<SenderAccumulator>();
+
+                    using MainDbContext context = scope.ServiceProvider.GetRequiredService<MainDbContext>();
                     using IDbContextTransaction tx = await context.Database.BeginTransactionAsync();
 
                     List<Notification> notifications = await context.Notifications.Where(n => !n.IsDeleted && n.Sent == null).ToListAsync();
@@ -39,9 +39,9 @@ namespace NotificationService
 
                         foreach ((string email, List<Notification> emailNotifications) in notificationsByEmail)
                         {
-                            if (await sender.TrySend(email, emailNotifications))
+                            if (await senderAccumulator.TrySend(email, emailNotifications))
                             {
-                                foreach (Notification notification in emailNotifications) 
+                                foreach (Notification notification in emailNotifications)
                                 {
                                     notification.Sent = DateTimeOffset.Now;
                                 }
@@ -50,7 +50,7 @@ namespace NotificationService
 
                         await context.SaveChangesAsync();
                         await tx.CommitAsync();
-                    }                    
+                    }
                 }
                 finally
                 {
@@ -59,14 +59,21 @@ namespace NotificationService
             }
         }
 
+        private async void OnTimerTick(object? state)
+        {
+            await Run();
+        }
+
         public Task StartAsync(CancellationToken cancellationToken)
         {
+            timer = new Timer(OnTimerTick, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
             return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            timer?.Dispose();
+            return Task.CompletedTask;
         }
     }
 }

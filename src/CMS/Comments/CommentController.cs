@@ -18,9 +18,12 @@ namespace CMS.Comments
 	{
 		private readonly IApi api;
 
-		public CommentController(IApi api)
+		private readonly INotificationService notificationService;
+
+		public CommentController(IApi api, INotificationService notificationService)
 		{
 			this.api = api;
+			this.notificationService = notificationService;
 		}
 
 		[HttpGet]
@@ -127,7 +130,53 @@ namespace CMS.Comments
 			};
 
 			await api.Posts.SaveCommentAsync(dto.ContentId, comment);
-			return Results.Ok<Guid>(comment.Id);
+
+            SuggestionPost suggestion = await api.Posts.GetByIdAsync<SuggestionPost>(dto.ContentId);
+			if (suggestion is not null)
+			{
+				HashSet<string> usersToNotify = new HashSet<string> { suggestion.Suggestion.UserEmail };
+
+				string commentText = dto.Body.Trim();
+				if (commentText.Length > 300)
+				{
+					commentText = string.Concat(commentText.AsSpan(0, 300), "...");
+				}
+				string commentUrl = $"/podnet/{suggestion.Id}";
+
+				foreach (Comment c in await api.Posts.GetAllCommentsAsync(postId: dto.ContentId, onlyApproved: false))
+				{
+					usersToNotify.Add(c.Email);
+				}
+
+				usersToNotify.Remove(comment.Email);
+
+                foreach (string email in usersToNotify)
+				{
+                    notificationService.Notify(email, commentUrl, suggestion.Title, $"K podnetu bol pridaný komentár {commentText}", new List<string> { comment.Id.ToString(), dto.ContentId.ToString() });
+                }
+			}
+
+            ApplicationPost app = await api.Posts.GetByIdAsync<ApplicationPost>(dto.ContentId);
+            if (app is not null)
+            {
+                HashSet<string> usersToNotify = new HashSet<string> { app.Application.UserEmail };
+
+                string commentText = dto.Body.Trim();
+                if (commentText.Length > 300)
+                {
+                    commentText = string.Concat(commentText.AsSpan(0, 300), "...");
+                }
+                string commentUrl = $"/aplikacia/{app.Id}";
+
+                usersToNotify.Remove(comment.Email);
+
+                foreach (string email in usersToNotify)
+                {
+                    notificationService.Notify(email, commentUrl, app.Title, $"K aplikácii bol pridaný komentár {commentText}", new List<string> { comment.Id.ToString(), dto.ContentId.ToString() });
+                }
+            }
+
+            return Results.Ok<Guid>(comment.Id);
 		}
 
 		[HttpPut("{id}")]
@@ -198,7 +247,10 @@ namespace CMS.Comments
 			}
 
 			await api.Posts.DeleteCommentAsync(id);
-			return Results.Ok();
+
+            notificationService.Delete(id.ToString());
+
+            return Results.Ok();
 		}
 	}
 }

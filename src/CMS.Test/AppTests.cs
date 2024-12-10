@@ -1,7 +1,10 @@
 ﻿using CMS.Applications;
+using CMS.Comments;
+using CMS.Datasets;
 using CMS.Likes;
 using CMS.Suggestions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using NkodSk.Abstractions;
 using Piranha;
 using System;
 using System.Collections.Generic;
@@ -10,6 +13,7 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using TestBase;
 
 namespace CMS.Test
 {
@@ -1374,6 +1378,180 @@ namespace CMS.Test
                 Assert.NotNull(updated);
                 Assert.Equal(new[] { otherUserId }, updated.Application.Likes.Value);
             }
+        }
+
+        [Fact]
+        public async Task AuthorShouldBeNotifiedOnComment()
+        {
+            using ApiApplicationFactory f = new ApiApplicationFactory();
+            using HttpClient client = f.CreateClient();
+            Guid userId = Guid.NewGuid();
+            string userEmail = "test@test.sk";
+
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(Superadmin, userId: userId.ToString(), userEmail: userEmail));
+
+            Guid assignedUserId = Guid.NewGuid();
+            string assignedUserEmail = "user@test.sk";
+
+            using IApi api = f.CreateApi();
+            ApplicationPost original = await api.CreateApplication(assignedUserId, assignedUserEmail);
+
+            CommentDto post = new CommentDto
+            {
+                Id = Guid.NewGuid(),
+                ContentId = original.Id,
+                UserId = userId,
+                Body = "Test body input",
+                Created = DateTime.MinValue,
+                ParentId = Guid.Empty
+            };
+            using HttpResponseMessage response = await client.PostAsync("/cms/comments", JsonContent.Create(post));
+            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+
+            Assert.Single(f.TestNotificationService.Notifications);
+            Assert.Equal(assignedUserEmail, f.TestNotificationService.Notifications[0].Item1);
+        }
+
+        [Fact]
+        public async Task AuthorShouldNotBeNotifiedAfterDelete()
+        {
+            using ApiApplicationFactory f = new ApiApplicationFactory();
+            using HttpClient client = f.CreateClient();
+            Guid userId = Guid.NewGuid();
+            string userEmail = "test@test.sk";
+
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(Superadmin, userId: userId.ToString(), userEmail: userEmail));
+
+            Guid assignedUserId = Guid.NewGuid();
+            string assignedUserEmail = "user@test.sk";
+
+            using IApi api = f.CreateApi();
+            ApplicationPost original = await api.CreateApplication(assignedUserId, assignedUserEmail);
+
+            CommentDto post = new CommentDto
+            {
+                Id = Guid.NewGuid(),
+                ContentId = original.Id,
+                UserId = userId,
+                Body = "Test body input",
+                Created = DateTime.MinValue,
+                ParentId = Guid.Empty
+            };
+            using HttpResponseMessage response = await client.PostAsync("/cms/comments", JsonContent.Create(post));
+            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+
+            using HttpResponseMessage response2 = await client.DeleteAsync($"/cms/applications/{original.Id}");
+            Assert.Equal(System.Net.HttpStatusCode.OK, response2.StatusCode);
+
+            Assert.Empty(f.TestNotificationService.Notifications);
+        }
+
+        [Fact]
+        public async Task NotificationShouldBeCanceledOnCommentDelete()
+        {
+            using ApiApplicationFactory f = new ApiApplicationFactory();
+            using HttpClient client = f.CreateClient();
+            Guid userId = Guid.NewGuid();
+            string userEmail = "test@test.sk";
+
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(Superadmin, userId: userId.ToString(), userEmail: userEmail));
+
+            Guid assignedUserId = Guid.NewGuid();
+            string assignedUserEmail = "user@test.sk";
+
+            using IApi api = f.CreateApi();
+            ApplicationPost original = await api.CreateApplication(assignedUserId, assignedUserEmail);
+
+            Guid otherUser = Guid.NewGuid();
+            string otherUserEmail = "other@test.sk";
+
+            await api.CreateComment(otherUser, otherUserEmail, original.Id);
+
+            CommentDto post = new CommentDto
+            {
+                Id = Guid.NewGuid(),
+                ContentId = original.Id,
+                UserId = userId,
+                Body = "Test body input",
+                Created = DateTime.MinValue,
+                ParentId = Guid.Empty
+            };
+            using HttpResponseMessage response = await client.PostAsync("/cms/comments", JsonContent.Create(post));
+            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+            Guid id = await response.Content.ReadFromJsonAsync<Guid>();
+
+            using HttpResponseMessage response2 = await client.DeleteAsync($"/cms/comments/{id}");
+            Assert.Equal(System.Net.HttpStatusCode.OK, response2.StatusCode);
+
+            Assert.Empty(f.TestNotificationService.Notifications);
+        }
+
+        [Fact]
+        public async Task PublisherShouldBeNotifiedOnCreate()
+        {
+            using ApiApplicationFactory f = new ApiApplicationFactory();
+            using HttpClient client = f.CreateClient();
+            Guid userId = Guid.NewGuid();
+            string userEmail = "test@test.sk";
+            string publisher = "http://example.com/publisher";
+            string publisherEmail = "publisher@example.com";
+
+            FoafAgent agent = FoafAgent.Create(new Uri(publisher));
+            agent.EmailAddress = publisherEmail;
+            f.FileStorage.InsertFile(agent.ToString(), agent.UpdateMetadata() with { IsPublic = true }, false, new AllAccessFilePolicy());
+
+            DcatDataset dataset = DcatDataset.Create();
+            dataset.Publisher = new Uri(publisher);
+            f.FileStorage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, agent), false, new AllAccessFilePolicy());
+
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(Superadmin, userId: userId.ToString(), userEmail: userEmail));
+
+            using IApi api = f.CreateApi();
+
+            ApplicationDto post = CreateInput(userId);
+            post.DatasetURIs = new List<string> { dataset.Uri.OriginalString };
+            using HttpResponseMessage response = await client.PostAsync("/cms/applications", JsonContent.Create(post));
+            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+
+            Assert.Single(f.TestNotificationService.Notifications);
+            Assert.Equal(publisherEmail, f.TestNotificationService.Notifications[0].Item1);
+        }
+
+        [Fact]
+        public async Task NotificationSholdBeCancelledOnDelete()
+        {
+            using ApiApplicationFactory f = new ApiApplicationFactory();
+            using HttpClient client = f.CreateClient();
+            Guid userId = Guid.NewGuid();
+            string userEmail = "test@test.sk";
+            string publisher = "http://example.com/publisher";
+            string publisherEmail = "publisher@example.com";
+
+            FoafAgent agent = FoafAgent.Create(new Uri(publisher));
+            agent.EmailAddress = publisherEmail;
+            f.FileStorage.InsertFile(agent.ToString(), agent.UpdateMetadata() with { IsPublic = true }, false, new AllAccessFilePolicy());
+
+            DcatDataset dataset = DcatDataset.Create();
+            dataset.Publisher = new Uri(publisher);
+            f.FileStorage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, agent), false, new AllAccessFilePolicy());
+
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(Superadmin, userId: userId.ToString(), userEmail: userEmail));
+
+            using IApi api = f.CreateApi();
+
+            ApplicationDto post = CreateInput(userId);
+            post.DatasetURIs = new List<string> { dataset.Uri.OriginalString };
+            using HttpResponseMessage response = await client.PostAsync("/cms/applications", JsonContent.Create(post));
+            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+            Guid id = await response.Content.ReadFromJsonAsync<Guid>();
+
+            Assert.Single(f.TestNotificationService.Notifications);
+            Assert.Equal(publisherEmail, f.TestNotificationService.Notifications[0].Item1);
+
+            using HttpResponseMessage response2 = await client.DeleteAsync($"/cms/applications/{id}");
+            Assert.Equal(System.Net.HttpStatusCode.OK, response2.StatusCode);
+
+            Assert.Empty(f.TestNotificationService.Notifications);
         }
     }
 }

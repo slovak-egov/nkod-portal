@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using J2N.Collections.Generic.Extensions;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -10,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using NkodSk.Abstractions;
+using NkodSk.RdfFileStorage;
 using Piranha;
 using Piranha.Data.EF.SQLite;
 using System;
@@ -21,6 +23,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using TestBase;
 
 namespace CMS.Test
 {
@@ -36,6 +39,8 @@ namespace CMS.Test
 
         private readonly SqliteConnection defaultConnection;
 
+        private readonly string path;
+
         public ApiApplicationFactory(byte[]? defaultKey = null)
         {
             this.defaultKey = defaultKey ?? RandomNumberGenerator.GetBytes(32);
@@ -46,6 +51,11 @@ namespace CMS.Test
 
             connectionString = $"Data Source=\"{Guid.NewGuid():N}\";Mode=Memory;Cache=Shared";
             defaultConnection = new SqliteConnection(connectionString);
+
+            path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(path);
+            FileStorage = new Storage(path);
+            TestNotificationService = new TestNotificationService();
         }
 
         public string CreateToken(string? role, string? publisher = null, string name = "Test User", int lifetimeMinutes = 15, string? companyName = null, string? userId = null, string? userEmail = null, byte[]? key = null, string? userFormattedName = null)
@@ -110,6 +120,12 @@ namespace CMS.Test
                         ValidateIssuerSigningKey = true
                     };
                 });
+
+                services.RemoveAll(s => s.ServiceType == typeof(IDocumentStorageClient));
+                services.RemoveAll(s => s.ServiceType == typeof(INotificationService));
+
+                services.AddSingleton<IDocumentStorageClient>(sp => new TestDocumentStorageClient(FileStorage, AnonymousAccessPolicy.Default));
+                services.AddSingleton<INotificationService>(TestNotificationService);
             });
         }
 
@@ -144,11 +160,20 @@ namespace CMS.Test
             return scope.ServiceProvider.GetRequiredService<IApi>();
         }
 
+        public IFileStorage FileStorage { get; }
+
+        public TestNotificationService TestNotificationService { get; }
+
         public override async ValueTask DisposeAsync()
         {
             await base.DisposeAsync();
 
             defaultConnection?.Dispose();
+
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path, true);
+            }
         }
     }
 }

@@ -12,6 +12,7 @@ using System.Text.Json.Serialization;
 using CMS.Applications;
 using CMS.Suggestions;
 using System.Security.Claims;
+using NkodSk.Abstractions;
 
 namespace CMS.Datasets
 {
@@ -21,9 +22,15 @@ namespace CMS.Datasets
 	{
         private readonly IApi api;
 
-        public DatasetController(IApi api)
+        private readonly INotificationService notificationService;
+
+        private readonly IDocumentStorageClient documentStorageClient;
+
+        public DatasetController(IApi api, INotificationService notificationService, IDocumentStorageClient documentStorageClient)
         {
             this.api = api;
+			this.notificationService = notificationService;
+			this.documentStorageClient = documentStorageClient;
         }       
         
 		[HttpGet]
@@ -387,7 +394,21 @@ namespace CMS.Datasets
 			};
 
 			await api.Posts.SaveCommentAsync(post.Id, comment);
-			return Results.Ok<Guid>(post.Id);
+
+			(string publisherEmail, string title, Guid? datasetId) = await documentStorageClient.GetEmailForDataset(dto.DatasetUri);
+            if (!string.IsNullOrEmpty(publisherEmail) && datasetId.HasValue)
+            {
+                string commentText = dto.Body.Trim();
+                if (commentText.Length > 300)
+                {
+                    commentText = string.Concat(commentText.AsSpan(0, 300), "...");
+                }
+                string commentUrl = $"/datasety/{datasetId.Value}";
+
+                notificationService.Notify(publisherEmail, commentUrl, title, $"K datasetu bol pridaný komentár {commentText}", new List<string> { comment.Id.ToString(), dto.DatasetUri.ToString() });
+            }
+
+            return Results.Ok<Guid>(post.Id);
 		}
 	}
 }

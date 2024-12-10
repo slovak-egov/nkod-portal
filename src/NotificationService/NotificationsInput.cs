@@ -2,6 +2,6 @@
 {
     public class NotificationsInput
     {
-        public List<NotificationInput> Notifications { get; } = [];
+        public List<NotificationInput> Notifications { get; set; } = [];
     }
 }

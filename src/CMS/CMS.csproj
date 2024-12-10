@@ -25,4 +25,9 @@
     <Folder Include="General\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Abstractions\Abstractions.csproj" />
+    <ProjectReference Include="..\DocumentStorageClient\DocumentStorageClient.csproj" />
+  </ItemGroup>
+
 </Project>
