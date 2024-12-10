@@ -30,6 +30,7 @@ namespace CMS
                             {
                                 Email = email,
                                 Url = new Uri(frontentBaseUri, url).OriginalString,
+                                Title = title,
                                 Description = description,
                                 Tags = tags
                             }

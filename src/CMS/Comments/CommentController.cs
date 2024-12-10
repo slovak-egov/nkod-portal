@@ -155,11 +155,11 @@ namespace CMS.Comments
                     notificationService.Notify(email, commentUrl, suggestion.Title, $"K podnetu bol pridaný komentár {commentText}", new List<string> { comment.Id.ToString(), dto.ContentId.ToString() });
                 }
 			}
-
+						
             ApplicationPost app = await api.Posts.GetByIdAsync<ApplicationPost>(dto.ContentId);
             if (app is not null)
             {
-                HashSet<string> usersToNotify = new HashSet<string> { app.Application.UserEmail };
+                HashSet<string> usersToNotify = new HashSet<string> { app.Application.ContactEmail };
 
                 string commentText = dto.Body.Trim();
                 if (commentText.Length > 300)

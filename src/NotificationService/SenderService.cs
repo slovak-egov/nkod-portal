@@ -29,7 +29,6 @@ namespace NotificationService
                     SenderAccumulator senderAccumulator = scope.ServiceProvider.GetRequiredService<SenderAccumulator>();
 
                     using MainDbContext context = scope.ServiceProvider.GetRequiredService<MainDbContext>();
-                    using IDbContextTransaction tx = await context.Database.BeginTransactionAsync();
 
                     List<Notification> notifications = await context.Notifications.Where(n => !n.IsDeleted && n.Sent == null).ToListAsync();
 
@@ -49,7 +48,6 @@ namespace NotificationService
                         }
 
                         await context.SaveChangesAsync();
-                        await tx.CommitAsync();
                     }
                 }
                 finally

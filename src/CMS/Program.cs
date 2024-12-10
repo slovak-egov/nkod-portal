@@ -16,8 +16,14 @@ using NkodSk.Abstractions;
 var builder = WebApplication.CreateBuilder(args);
 
 string documentStorageUrl = builder.Configuration["DocumentStorageUrl"];
-if (!Uri.IsWellFormedUriString(documentStorageUrl, UriKind.Absolute))
+if (Uri.IsWellFormedUriString(documentStorageUrl, UriKind.Absolute))
 {
+    builder.Services.AddHttpClient(DocumentStorageClient.DocumentStorageClient.HttpClientName, c =>
+    {
+        c.BaseAddress = new Uri(documentStorageUrl);
+    });
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddTransient<IHttpContextValueAccessor, EmptyHttpContextValueAccessor>();
     builder.Services.AddTransient<IDocumentStorageClient, DocumentStorageClient.DocumentStorageClient>();
 }
 

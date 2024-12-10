@@ -26,7 +26,7 @@ namespace NotificationService
             MimeMessage message = new MimeMessage();
             message.From.Add(new MailboxAddress(options.FromName, options.FromAddress));
             message.To.Add(new MailboxAddress(string.Empty, email));
-            message.Subject = "";
+            message.Subject = "Upozornenie na nový obsah na data.slovensko.sk";
             message.Body = new TextPart("html") { Text = body };
 
             await client.SendAsync(message);

@@ -45,8 +45,6 @@ app.MapPost("/notification", async ([FromBody] NotificationsInput notifications,
 
         Dictionary<string, List<NotificationInput>> notificationsByEmail = notifications.Notifications.GroupByKey(n => n.Email);
 
-        using IDbContextTransaction tx = await context.Database.BeginTransactionAsync();
-
         foreach ((string email, List<NotificationInput> emailNotifications) in notificationsByEmail)
         {
             bool sent = await sender.TrySend(email, emailNotifications);
@@ -60,6 +58,7 @@ app.MapPost("/notification", async ([FromBody] NotificationsInput notifications,
                     Id = id,
                     Email = n.Email,
                     Url = n.Url,
+                    Title = n.Title,
                     Description = n.Description,
                     Created = created,
                     Sent = sent ? sentOn : null,
@@ -78,7 +77,6 @@ app.MapPost("/notification", async ([FromBody] NotificationsInput notifications,
         }
 
         await context.SaveChangesAsync();
-        await tx.CommitAsync();
     }
 
     return Results.Ok();
@@ -88,7 +86,6 @@ app.MapDelete("/notification/tag", async ([FromQuery] string? tag, [FromServices
 {
     if (!string.IsNullOrEmpty(tag))
     {
-        using IDbContextTransaction tx = await context.Database.BeginTransactionAsync();
         foreach (NotificationTag notificationTag in context.NotificationTags.Where(n => n.Tag == tag))
         {
             Notification? notification = await context.Notifications.FindAsync(notificationTag.NotificationId);
@@ -98,7 +95,6 @@ app.MapDelete("/notification/tag", async ([FromQuery] string? tag, [FromServices
             }
         }
         await context.SaveChangesAsync();
-        await tx.CommitAsync();
 
         return Results.Ok();
     }

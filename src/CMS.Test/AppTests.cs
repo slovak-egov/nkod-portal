@@ -1409,7 +1409,7 @@ namespace CMS.Test
             Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
 
             Assert.Single(f.TestNotificationService.Notifications);
-            Assert.Equal(assignedUserEmail, f.TestNotificationService.Notifications[0].Item1);
+            Assert.Equal("test-contact@example.com", f.TestNotificationService.Notifications[0].Item1);
         }
 
         [Fact]

@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using MimeKit;
 using System.Text;
+using System.Web;
 
 namespace NotificationService
 {
@@ -26,8 +27,6 @@ namespace NotificationService
             {
                 try
                 {
-                    using IDbContextTransaction tx = await context.Database.BeginTransactionAsync();
-
                     DateTimeOffset limit = DateTimeOffset.Now.AddHours(-1);
                     if (await context.SentEmails.AnyAsync(n => n.Email == email && n.Sent >= limit))
                     {
@@ -35,6 +34,35 @@ namespace NotificationService
                     }
 
                     StringBuilder body = new StringBuilder();
+
+                    body.Append("Dobrý deň,<br>na stránke portálu Národného katalógu otvorených dát pribudol nový obsah.<br><br>");
+
+                    foreach (INotification notification in notifications)
+                    {
+                        if (!string.IsNullOrEmpty(notification.Url))
+                        {
+                            body.Append($"<a href=\"{HttpUtility.HtmlAttributeEncode(notification.Url)}\">");
+                        }
+
+                        body.AppendLine(HttpUtility.HtmlEncode(notification.Title));
+
+                        if (!string.IsNullOrEmpty(notification.Url))
+                        {
+                            body.AppendLine("</a>");
+                        }
+
+                        body.AppendLine("<br>");
+
+                        if (!string.IsNullOrEmpty(notification.Description))
+                        {
+                            body.AppendLine(HttpUtility.HtmlEncode(notification.Description));
+                            body.AppendLine("<br>");
+                        }
+
+                        body.AppendLine("<br>");
+                    }
+
+                    body.AppendLine("Tím centrálneho portálu otvorených dát data.slovensko.sk");
 
                     await sender.Send(email, body.ToString());
 
@@ -47,7 +75,6 @@ namespace NotificationService
                     context.Add(sentEmail);
 
                     await context.SaveChangesAsync();
-                    await tx.CommitAsync();
 
                     return true;
                 }
