@@ -414,7 +414,7 @@ namespace CMS.Datasets
                     }
                     break;
 				case "suggestions":
-					SuggestionController suggestionController = new SuggestionController(api);
+					SuggestionController suggestionController = new SuggestionController(api, notificationService, documentStorageClient);
 					Guid suggestionBlogId = await suggestionController.GetBlogGuidAsync();
                     Dictionary<string, int> suggestionCount = new Dictionary<string, int>();
 					foreach (SuggestionPost s in await api.Posts.GetAllAsync<SuggestionPost>(suggestionBlogId))
@@ -438,7 +438,7 @@ namespace CMS.Datasets
                     datasets = new List<CountableDataset>(res.Count);
                     foreach (DatasetPost post in res)
                     {
-                        datasets.Add(new CountableDataset(post.Title, post.Dataset.Likes?.Value.Count() ?? 0));
+                        datasets.Add(new CountableDataset(post.Title, post.Dataset.Likes?.Value?.Count() ?? 0));
                     }
 					break;
             }
