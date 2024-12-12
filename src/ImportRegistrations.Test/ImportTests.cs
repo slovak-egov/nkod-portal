@@ -407,5 +407,47 @@ namespace ImportRegistrations.Test
 
             AssertExpectedState(storage, publisherId, catalogUri, dataset, distribution);
         }
+
+        [Fact]
+        public async Task TestImportedCatalogChangeEndpoint()
+        {
+            string path = fixture.GetStoragePath();
+
+            string publisherId = "http://data.gob.sk/test";
+            fixture.CreatePublisher(publisherId);
+            (Uri catalogUri, Guid catalogId) = fixture.CreateLocalCatalog("Test", publisherId);
+            using Storage storage = new Storage(path);
+
+            (DcatDataset dataset, DcatDistribution distribution) = CreateDatasetAndDistribution(publisherId);
+            TestSparqlClient sparqlClient = new TestSparqlClient();
+            sparqlClient.Add(catalogUri, dataset);
+            sparqlClient.Add(dataset.Uri, distribution);
+
+            HttpContextValueAccessor httpContextValueAccessor = new HttpContextValueAccessor();
+
+            HarvestedDataImport import = new HarvestedDataImport(
+                sparqlClient,
+                new TestDocumentStorageClient(storage, new DefaultFileAccessPolicy(httpContextValueAccessor)),
+                p =>
+                {
+                    httpContextValueAccessor.Publisher = p;
+                    return Task.CompletedTask;
+                },
+                s => { }); ;
+
+            await import.Import();
+
+            AssertExpectedState(storage, publisherId, catalogUri, dataset, distribution);
+
+            FileState state = storage.GetFileState(catalogId, new AllAccessFilePolicy())!;
+            DcatCatalog catalog = DcatCatalog.Parse(state.Content!)!;
+            catalog.EndpointUrl = new Uri("http://example.com/other");
+            storage.InsertFile(catalog.ToString(), catalog.UpdateMetadata(state.Metadata), true, new AllAccessFilePolicy());
+
+            sparqlClient.Clear();
+            await import.Import();
+
+            Assert.Empty(storage.GetFileStates(new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.DatasetRegistration } }, new AllAccessFilePolicy()).Files);
+        }
     }
 }
