@@ -48,7 +48,7 @@ export default function PublicPublisherList() {
                     {publishers?.items.map((c, i) => {
                         const themes: Theme[] = c.themes
                             ? Object.entries(c.themes)
-                                  .filter((_, c) => c > 0)
+                                  .filter((c) => c[1] > 0)
                                   .sort((a, b) => b[1] - a[1])
                                   .slice(0, 5)
                                   .map((v) => ({ name: v[0], count: v[1] }))
