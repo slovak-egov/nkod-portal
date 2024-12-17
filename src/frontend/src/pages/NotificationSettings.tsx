@@ -12,7 +12,9 @@ import Checkbox from '../components/Checkbox';
 type NotificationSetting = {
     email: string;
     isDisabled: boolean;
-}
+};
+
+const auth = window.location.search;
 
 export default function NotificationSettings() {
     const { t } = useTranslation();
@@ -26,8 +28,6 @@ export default function NotificationSettings() {
 
     const errors = saveResult?.errors ?? {};
 
-    const auth = window.location.search;
-
     useEffect(() => {
         async function load() {
             const setting = await sendGet('notification-setting' + auth, headers);
@@ -35,8 +35,8 @@ export default function NotificationSettings() {
         }
 
         load();
-    }, [headers, auth]);
-    
+    }, [headers]);
+
     async function save() {
         setSaving(true);
         try {
@@ -64,12 +64,14 @@ export default function NotificationSettings() {
                             />
                         ) : null}
 
-                        <p>
-                            Nastavenia pre e-mailovú adresu: {setting.email}
-                        </p>
+                        <p className="govuk-body">Nastavenia pre e-mailovú adresu: {setting.email}</p>
 
                         <div style={{ marginBottom: '2em' }}>
-                            <Checkbox label={t('notificationsAreDisabled')} checked={setting.isDisabled} onCheckedChange={(v) => setSetting({ ...setting, isDisabled: v })} />
+                            <Checkbox
+                                label={t('notificationsAreDisabled')}
+                                checked={setting.isDisabled}
+                                onCheckedChange={(v) => setSetting({ ...setting, isDisabled: v })}
+                            />
                         </div>
 
                         <Button style={{ marginRight: '20px' }} onClick={save} disabled={saving}>

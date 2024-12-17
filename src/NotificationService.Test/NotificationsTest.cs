@@ -473,5 +473,38 @@ namespace NotificationService.Test
             Assert.NotNull(current);
             Assert.False(current.IsDisabled);
         }
+
+        [Fact]
+        public async Task NotificationShouldNotBeSentWhenDisabled()
+        {
+            using WebApiApplicationFactory f = new WebApiApplicationFactory();
+            using HttpClient client = f.CreateClient();
+
+            using (IServiceScope scope = f.Services.CreateScope())
+            using (MainDbContext context = scope.ServiceProvider.GetRequiredService<MainDbContext>())
+            {
+                NotificationSetting setting = await context.GetOrCreateNotificationSettings("test@test.sk");
+                setting.IsDisabled = true;
+                await context.SaveChangesAsync();
+            }
+
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "/notification");
+            request.Content = JsonContent.Create(new
+            {
+                Notifications = new[]
+                {
+                    new
+                    {
+                        Email = "test@test.sk",
+                        Url = "http://example.com/url",
+                        Description = "Test description",
+                    }
+                }
+            });
+            using HttpResponseMessage response = await client.SendAsync(request);
+            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+
+            Assert.Empty(f.Sender.Sent);
+        }
     }
 }
