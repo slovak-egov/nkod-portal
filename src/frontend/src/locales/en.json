@@ -436,5 +436,7 @@
     "yes": "yes",
     "datasetUri": "Dataset URI",
     "issuedDate": "Issued",
-    "lastModifiedDate": "Last modified"
+    "lastModifiedDate": "Last modified",
+    "notificationSettings": "Notification settings",
+    "notificationsAreDisabled": "Notifications are disabled"
 }

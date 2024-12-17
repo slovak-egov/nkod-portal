@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MySql.EntityFrameworkCore.Extensions;
 using NotificationService;
@@ -21,9 +22,9 @@ if (emailOptions is not null)
 {
     builder.Services.AddSingleton<ISender>(sp => new Sender(emailOptions));
 }
-builder.Services.AddScoped<SenderAccumulator>();
 builder.Services.AddSingleton<SenderAccumulatorLock>();
 builder.Services.AddSingleton<SenderService>();
+builder.Services.AddScoped(sp => new SenderAccumulator(sp.GetRequiredService<ISender>(), sp.GetRequiredService<MainDbContext>(), sp.GetRequiredService<SenderAccumulatorLock>(), frontendUrl));
 builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, SenderService>());
 
 var app = builder.Build();
@@ -98,6 +99,55 @@ app.MapDelete("/notification/tag", async ([FromQuery] string? tag, [FromServices
 
         return Results.Ok();
     }
+    return Results.BadRequest();
+});
+
+app.MapPost("/notification/get", async ([FromBody] NotificationSetting setting, [FromServices] MainDbContext context) =>
+{
+    NotificationSetting? current = null;
+    if (!string.IsNullOrEmpty(setting.AuthKey))
+    {
+        current = context.NotificationSettings.FirstOrDefault(e => e.AuthKey == setting.AuthKey);
+    }
+
+    if (current is null && !string.IsNullOrEmpty(setting.Email))
+    {
+        current = await context.GetOrCreateNotificationSettings(setting.Email);
+    }
+
+    if (current is not null)
+    {
+        return Results.Ok(new NotificationSetting
+        {
+            Email = current.Email,
+            IsDisabled = current.IsDisabled,
+        });
+    }
+
+    return Results.BadRequest();
+});
+
+app.MapPost("/notification/set", async ([FromBody] NotificationSetting setting, [FromServices] MainDbContext context) =>
+{
+    NotificationSetting? updated = null;
+    if (!string.IsNullOrEmpty(setting.AuthKey))
+    {
+        updated = context.NotificationSettings.FirstOrDefault(e => e.AuthKey == setting.AuthKey);
+    }
+
+    if (updated is null && !string.IsNullOrEmpty(setting.Email))
+    {
+        updated = await context.GetOrCreateNotificationSettings(setting.Email);
+    }
+
+    if (updated is not null)
+    {
+        updated.IsDisabled = setting.IsDisabled;
+        await context.SaveChangesAsync();
+
+        return Results.Ok();
+    }
+
     return Results.BadRequest();
 });
 

@@ -1,42 +1,25 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using WebApi;
-using DocumentStorageClient;
 using NkodSk.Abstractions;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using System.Drawing.Printing;
-using System.IO;
 using Abstractions;
 using Newtonsoft.Json;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.Http.HttpResults;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Authorization;
 using IAMClient;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Security.Cryptography;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
-using VDS.RDF.Query.Algebra;
 using Microsoft.OpenApi.Models;
 using System.Web;
-using CodelistProviderClient;
-using Lucene.Net.Search;
-using VDS.RDF.Query.Expressions.Comparison;
-using System.Security.Policy;
 using System.Data;
-using AngleSharp.Io;
-using System.Reflection.Metadata;
 using UserInfo = NkodSk.Abstractions.UserInfo;
 using Newtonsoft.Json.Serialization;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
-using System;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.DataContracts;
-using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Http.Features;
-using System.Net.Mime;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -84,6 +67,16 @@ builder.Services.AddHttpClient(IdentityAccessManagementClient.HttpClientName, c 
     c.BaseAddress = new Uri(iamClientUrl);
 }).AddHeaderPropagation();
 builder.Services.AddTransient<IIdentityAccessManagementClient, IdentityAccessManagementClient>();
+
+string? notificationServiceUrl = builder.Configuration["NotificationService"];
+if (Uri.IsWellFormedUriString(notificationServiceUrl, UriKind.Absolute))
+{
+    builder.Services.AddHttpClient(NotificationSettingService.HttpClientName, c =>
+    {
+        c.BaseAddress = new Uri(codelistProviderUrl);
+    });
+    builder.Services.AddTransient<INotificationSettingService, NotificationSettingService>();
+}
 
 builder.Services.AddAuthentication(o =>
 {
@@ -2642,6 +2635,66 @@ app.MapGet("/signin-google", async ([FromQuery] string? code, string? state, [Fr
     }
     return Results.Redirect("/");
 }).Produces<SaveResult>();
+
+app.MapGet("/notification-setting", async ([FromQuery] string? auth, [FromServices] INotificationSettingService service, HttpContext httpContext, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        NotificationSetting? setting = null;
+
+        if (httpContext.User.Identity?.IsAuthenticated ?? false)
+        {
+            string? email = httpContext.User.FindFirstValue(ClaimTypes.Email);
+            if (!string.IsNullOrEmpty(email))
+            {
+                setting = await service.GetCurrent(email);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(auth))
+        {
+            setting = await service.GetCurrentWithAuthKey(auth);
+        }
+
+        return setting is not null ? Results.Ok(setting) : Results.NotFound();
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+});
+
+app.MapPost("/notification-setting", async ([FromQuery] string? auth, [FromBody] NotificationSettingInput? setting, [FromServices] INotificationSettingService service, HttpContext httpContext, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    try
+    {
+        if (setting is not null)
+        {
+            if (httpContext.User.Identity?.IsAuthenticated ?? false)
+            {
+                string? email = httpContext.User.FindFirstValue(ClaimTypes.Email);
+                if (!string.IsNullOrEmpty(email))
+                {
+                    await service.UpdateSetting(email, setting.IsDisabled);
+                    return Results.Ok();
+                }
+            }
+
+            if (!string.IsNullOrEmpty(auth))
+            {
+                await service.UpdateSettingWithAuthKey(auth, setting.IsDisabled);
+                return Results.Ok();
+            }
+        }
+        return Results.BadRequest();
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
+});
 
 async Task<string> ServeCached(Uri remoteUri, IMemoryCache cache)
 {

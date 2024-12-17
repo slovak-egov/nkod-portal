@@ -14,11 +14,14 @@ namespace NotificationService
 
         private readonly MainDbContext context;
 
-        public SenderAccumulator(ISender sender, MainDbContext context, SenderAccumulatorLock senderAccumulatorLock)
+        private readonly string? frontendUrl;
+
+        public SenderAccumulator(ISender sender, MainDbContext context, SenderAccumulatorLock senderAccumulatorLock, string? frontendUrl)
         {
             this.sender = sender;
             this.context = context;
             this.senderAccumulatorLock = senderAccumulatorLock; ;
+            this.frontendUrl = frontendUrl;
         }
 
         public async Task<bool> TrySend(string email, IEnumerable<INotification> notifications)
@@ -31,6 +34,12 @@ namespace NotificationService
                     if (await context.SentEmails.AnyAsync(n => n.Email == email && n.Sent >= limit))
                     {
                         return false;
+                    }
+
+                    NotificationSetting? setting = await context.GetOrCreateNotificationSettings(email);
+                    if (setting is not null && setting.IsDisabled)
+                    {
+                        return true;
                     }
 
                     StringBuilder body = new StringBuilder();
@@ -59,6 +68,15 @@ namespace NotificationService
                             body.AppendLine("<br>");
                         }
 
+                        body.AppendLine("<br>");
+                    }
+
+
+                    if (frontendUrl is not null)
+                    {
+                        Uri settingUrl = new Uri(new Uri(frontendUrl), "/sprava-notifikacii?auth=" + HttpUtility.UrlEncode(setting?.AuthKey ?? string.Empty));
+                        body.AppendLine($"Tento e-mail bol odoslaný na adresu {HttpUtility.HtmlEncode(email)}. <a href=\"{HttpUtility.HtmlAttributeEncode(settingUrl.OriginalString)}\">Upraviť nastavenia odosielaných správ môžete na tejto stránke.</a>");
+                        body.AppendLine("<br>");
                         body.AppendLine("<br>");
                     }
 

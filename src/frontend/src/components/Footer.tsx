@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
+import { useUserInfo } from '../client';
 
 export function Footer() {
     const { t } = useTranslation();
+    const [userInfo] = useUserInfo();
 
     return (
         <div data-module="idsk-footer-extended">
@@ -29,6 +31,13 @@ export function Footer() {
                                             {t('technicalSupport')}
                                         </a>
                                     </p>
+                                    {userInfo ? (
+                                        <p>
+                                            <a className="govuk-link" title={t('notificationSettings')} href="/nastavenie-upozorneni">
+                                                {t('notificationSettings')}
+                                            </a>
+                                        </p>
+                                    ) : null}
                                 </div>
                                 <div className="govuk-grid-column-one-third idsk-footer-extended-logo-box">
                                     <p>

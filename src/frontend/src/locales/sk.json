@@ -436,5 +436,7 @@
   "yes": "áno",
   "issuedDate": "Dátum vytvorenia",
   "lastModifiedDate": "Dátum poslednej zmeny",
-  "datasetUri": "URI datasetu"
+  "datasetUri": "URI datasetu",
+  "notificationSettings": "Nastavenie notifikácií",
+  "notificationsAreDisabled": "Notifikácie sú vypnuté"
 }
