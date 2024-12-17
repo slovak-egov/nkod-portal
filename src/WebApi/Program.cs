@@ -73,7 +73,7 @@ if (Uri.IsWellFormedUriString(notificationServiceUrl, UriKind.Absolute))
 {
     builder.Services.AddHttpClient(NotificationSettingService.HttpClientName, c =>
     {
-        c.BaseAddress = new Uri(codelistProviderUrl);
+        c.BaseAddress = new Uri(notificationServiceUrl);
     });
     builder.Services.AddTransient<INotificationSettingService, NotificationSettingService>();
 }

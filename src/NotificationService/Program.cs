@@ -113,6 +113,8 @@ app.MapPost("/notification/get", async ([FromBody] NotificationSetting setting, 
     if (current is null && !string.IsNullOrEmpty(setting.Email))
     {
         current = await context.GetOrCreateNotificationSettings(setting.Email);
+        context.Add(current);
+        await context.SaveChangesAsync();
     }
 
     if (current is not null)
@@ -138,6 +140,7 @@ app.MapPost("/notification/set", async ([FromBody] NotificationSetting setting, 
     if (updated is null && !string.IsNullOrEmpty(setting.Email))
     {
         updated = await context.GetOrCreateNotificationSettings(setting.Email);
+        context.Add(updated);
     }
 
     if (updated is not null)
