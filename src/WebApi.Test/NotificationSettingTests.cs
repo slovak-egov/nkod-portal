@@ -71,6 +71,24 @@ namespace WebApi.Test
         }
 
         [Fact]
+        public async Task NotificationShouldBeDisabledWithAuthKeyEventWithToken()
+        {
+            string path = fixture.GetStoragePath();
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            string email = "test@test.sk";
+            string authKey = applicationFactory.NotificationSettingService.GetAuthKey(email);
+
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("Publisher", email: "test2@test.sk"));
+
+            await Send(client, new { IsDisabled = true }, authKey);
+            Assert.True(applicationFactory.NotificationSettingService.IsDisabled(email));
+        }
+
+        [Fact]
         public async Task NotificationShouldBeEnabledWithAuthKey()
         {
             string path = fixture.GetStoragePath();
@@ -173,6 +191,27 @@ namespace WebApi.Test
             NotificationSetting? current = await GetCurrent(client, null);
             Assert.NotNull(current);
             Assert.True(current.IsDisabled);
+        }
+
+        [Fact]
+        public async Task NotificationWithAuthKeyShouldHavePrecence()
+        {
+            string path = fixture.GetStoragePath();
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            string email = "test@test.sk";
+            string authKey = applicationFactory.NotificationSettingService.GetAuthKey(email);
+            await applicationFactory.NotificationSettingService.UpdateSetting(email, true);
+
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("Publisher", email: "test2@test.sk"));
+
+            NotificationSetting? current = await GetCurrent(client, authKey);
+            Assert.NotNull(current);
+            Assert.True(current.IsDisabled);
+            Assert.Equal(email, current.Email);
         }
     }
 }

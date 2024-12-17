@@ -281,7 +281,7 @@ namespace CMS.Applications
 			{
                 string commentUrl = $"/aplikacia/{post.Id}";
 
-                notificationService.Notify(email, commentUrl, post.Title, $"Nová aplikácia využíva Vás dataset", new List<string> { post.Id.ToString() });
+                notificationService.Notify(email, commentUrl, post.Title, $"Nová aplikácia využíva Váš dataset", new List<string> { post.Id.ToString() });
             }
 
             return Results.Ok<Guid>(post.Id);

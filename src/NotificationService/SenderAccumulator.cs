@@ -75,7 +75,9 @@ namespace NotificationService
                     if (frontendUrl is not null)
                     {
                         Uri settingUrl = new Uri(new Uri(frontendUrl), "/nastavenie-upozorneni?auth=" + HttpUtility.UrlEncode(setting?.AuthKey ?? string.Empty));
-                        body.AppendLine($"Tento e-mail bol odoslaný na adresu {HttpUtility.HtmlEncode(email)}. <a href=\"{HttpUtility.HtmlAttributeEncode(settingUrl.OriginalString)}\">Upraviť nastavenia odosielaných správ môžete na tejto stránke.</a>");
+
+                        body.AppendLine($"Tento e-mail bol odoslaný na adresu {HttpUtility.HtmlEncode(email)}.<br>");
+                        body.AppendLine($"<a href=\"{HttpUtility.HtmlAttributeEncode(settingUrl.OriginalString)}\">Upraviť nastavenia odosielaných správ môžete na tejto stránke.</a>");
                         body.AppendLine("<br>");
                         body.AppendLine("<br>");
                     }

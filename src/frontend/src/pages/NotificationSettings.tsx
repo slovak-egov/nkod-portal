@@ -30,8 +30,10 @@ export default function NotificationSettings() {
 
     useEffect(() => {
         async function load() {
-            const setting = await sendGet('notification-setting' + auth, headers);
-            setSetting({ isDisabled: false, ...setting.data });
+            if (auth || Object.values(headers).length > 0) {
+                const setting = await sendGet('notification-setting' + auth, headers);
+                setSetting({ isDisabled: false, ...setting.data });
+            }
         }
 
         load();

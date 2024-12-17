@@ -2642,18 +2642,18 @@ app.MapGet("/notification-setting", async ([FromQuery] string? auth, [FromServic
     {
         NotificationSetting? setting = null;
 
-        if (httpContext.User.Identity?.IsAuthenticated ?? false)
+        if (!string.IsNullOrEmpty(auth))
+        {
+            setting = await service.GetCurrentWithAuthKey(auth);
+        }
+
+        if (setting is null && (httpContext.User.Identity?.IsAuthenticated ?? false))
         {
             string? email = httpContext.User.FindFirstValue(ClaimTypes.Email);
             if (!string.IsNullOrEmpty(email))
             {
                 setting = await service.GetCurrent(email);
             }
-        }
-
-        if (!string.IsNullOrEmpty(auth))
-        {
-            setting = await service.GetCurrentWithAuthKey(auth);
         }
 
         return setting is not null ? Results.Ok(setting) : Results.NotFound();
@@ -2671,6 +2671,12 @@ app.MapPost("/notification-setting", async ([FromQuery] string? auth, [FromBody]
     {
         if (setting is not null)
         {
+            if (!string.IsNullOrEmpty(auth))
+            {
+                await service.UpdateSettingWithAuthKey(auth, setting.IsDisabled);
+                return Results.Ok();
+            }
+
             if (httpContext.User.Identity?.IsAuthenticated ?? false)
             {
                 string? email = httpContext.User.FindFirstValue(ClaimTypes.Email);
@@ -2679,12 +2685,6 @@ app.MapPost("/notification-setting", async ([FromQuery] string? auth, [FromBody]
                     await service.UpdateSetting(email, setting.IsDisabled);
                     return Results.Ok();
                 }
-            }
-
-            if (!string.IsNullOrEmpty(auth))
-            {
-                await service.UpdateSettingWithAuthKey(auth, setting.IsDisabled);
-                return Results.Ok();
             }
         }
         return Results.BadRequest();
