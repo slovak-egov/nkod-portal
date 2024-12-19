@@ -9,6 +9,9 @@ using Piranha.Extend.Fields;
 using Piranha.Models;
 using CMS.Datasets;
 using System.Security.Claims;
+using DocumentStorageClient;
+using NkodSk.Abstractions;
+using System.Data;
 
 namespace CMS.Applications
 {
@@ -18,9 +21,15 @@ namespace CMS.Applications
     {
         private readonly IApi api;
 
-		public ApplicationController(IApi api)
+        private readonly INotificationService notificationService;
+
+        private readonly IDocumentStorageClient documentStorageClient;
+
+        public ApplicationController(IApi api, INotificationService notificationService, IDocumentStorageClient documentStorageClient)
         {
             this.api = api;
+			this.notificationService = notificationService;
+			this.documentStorageClient = documentStorageClient;
         }
 		
 		[HttpGet]
@@ -253,6 +262,28 @@ namespace CMS.Applications
 				post.Published.Value);
 
 			await api.Posts.SaveAsync(post);
+
+			HashSet<string> emails = new HashSet<string>();
+
+			if (dto.DatasetURIs is not null)
+			{
+				foreach (string uri in dto.DatasetURIs)
+				{
+                    (string publisherEmail, _, _) = await documentStorageClient.GetEmailForDataset(uri);
+                    if (!string.IsNullOrEmpty(publisherEmail))
+                    {
+						emails.Add(publisherEmail);
+                    }
+                }
+            }
+
+			foreach (string email in emails)
+			{
+                string commentUrl = $"/aplikacia/{post.Id}";
+
+                notificationService.Notify(email, commentUrl, post.Title, $"Nová aplikácia využíva Váš dataset", new List<string> { post.Id.ToString() });
+            }
+
             return Results.Ok<Guid>(post.Id);
         }
 
@@ -332,6 +363,9 @@ namespace CMS.Applications
 			}
 
 			await api.Posts.DeleteAsync(id);
+
+			notificationService.Delete(post.Id.ToString());
+
 			return Ok();
 		}
 

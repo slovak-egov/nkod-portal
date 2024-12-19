@@ -34,7 +34,7 @@ namespace WebApi.Test
             this.storage = storage;
         }
 
-        public string CreateToken(string? role, string? publisher = null, string name = "Test User", int lifetimeMinutes = 15, string? companyName = null, string? userId = null)
+        public string CreateToken(string? role, string? publisher = null, string name = "Test User", int lifetimeMinutes = 15, string? companyName = null, string? userId = null, string? email = null)
         {
             List<Claim> claims = new List<Claim>();
             if (!string.IsNullOrEmpty(role))
@@ -52,6 +52,10 @@ namespace WebApi.Test
             if (!string.IsNullOrEmpty(userId))
             {
                 claims.Add(new Claim(ClaimTypes.NameIdentifier, userId));
+            }
+            if (!string.IsNullOrEmpty(email))
+            {
+                claims.Add(new Claim(ClaimTypes.Email, email));
             }
             claims.Add(new Claim(ClaimTypes.Name, name));
 
@@ -79,6 +83,8 @@ namespace WebApi.Test
                 services.AddSingleton<ILanguagesSource, DefaultLanguagesSource>();
                 services.AddSingleton<ICodelistProviderClient, InternalCodelistProvider>();
                 services.AddTransient<IFileStorageAccessPolicy, DefaultFileAccessPolicy>();
+                services.AddSingleton<TestNotificationSettingService>();
+                services.AddSingleton<INotificationSettingService>(sp => sp.GetRequiredService<TestNotificationSettingService>());
                 services.AddTransient(s => testIdentityAccessManagementClient ??= new TestIdentityAccessManagementClient(s.GetRequiredService<IHttpContextValueAccessor>(), this));
                 services.AddTransient<IIdentityAccessManagementClient>(s => s.GetRequiredService<TestIdentityAccessManagementClient>());
                 services.AddSingleton<ISparqlClient, TestSparqlClient>();
@@ -127,5 +133,7 @@ namespace WebApi.Test
                 throw new HttpRequestException("Forbidden", null, System.Net.HttpStatusCode.Forbidden);
             }
         }
+
+        public TestNotificationSettingService NotificationSettingService => Services.GetRequiredService<TestNotificationSettingService>();
     }
 }

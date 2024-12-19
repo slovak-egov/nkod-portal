@@ -66,6 +66,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CMS.Test", "CMS.Test\CMS.Te
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CMS.Frontend.Test", "CMS.Frontend.Test\CMS.Frontend.Test.csproj", "{A25B15D4-FAA6-4BC2-B86C-59E2843ED95B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotificationService", "NotificationService\NotificationService.csproj", "{A5C43D0C-CE91-42F8-BD39-A19201007899}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotificationService.Test", "NotificationService.Test\NotificationService.Test.csproj", "{119ACD37-5ECD-4857-8898-D1DA92A083CA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -190,6 +194,14 @@ Global
 		{A25B15D4-FAA6-4BC2-B86C-59E2843ED95B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A25B15D4-FAA6-4BC2-B86C-59E2843ED95B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A25B15D4-FAA6-4BC2-B86C-59E2843ED95B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5C43D0C-CE91-42F8-BD39-A19201007899}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5C43D0C-CE91-42F8-BD39-A19201007899}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5C43D0C-CE91-42F8-BD39-A19201007899}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5C43D0C-CE91-42F8-BD39-A19201007899}.Release|Any CPU.Build.0 = Release|Any CPU
+		{119ACD37-5ECD-4857-8898-D1DA92A083CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{119ACD37-5ECD-4857-8898-D1DA92A083CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{119ACD37-5ECD-4857-8898-D1DA92A083CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{119ACD37-5ECD-4857-8898-D1DA92A083CA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

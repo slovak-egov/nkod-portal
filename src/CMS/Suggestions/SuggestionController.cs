@@ -2,8 +2,10 @@
 using CMS.Comments;
 using CMS.Datasets;
 using CMS.Likes;
+using DocumentStorageClient;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NkodSk.Abstractions;
 using Piranha;
 using Piranha.Extend.Fields;
 using Piranha.Models;
@@ -20,9 +22,15 @@ namespace CMS.Suggestions
 	{
         private readonly IApi api;
 
-        public SuggestionController(IApi api)
+		private readonly INotificationService notificationService;
+
+        private readonly IDocumentStorageClient documentStorageClient;
+
+        public SuggestionController(IApi api, INotificationService notificationService, IDocumentStorageClient documentStorageClient)
         {
             this.api = api;
+			this.notificationService = notificationService;
+			this.documentStorageClient = documentStorageClient;
         }       
         
 		[HttpGet]
@@ -249,6 +257,15 @@ namespace CMS.Suggestions
 				post.Published.Value);			
 
 			await api.Posts.SaveAsync(post);
+
+            string publisherEmail = await documentStorageClient.GetEmailForPublisher(dto.OrgToUri);
+            if (!string.IsNullOrEmpty(publisherEmail))
+            {
+                string suggestionUrl = $"/podnet/{post.Id}";
+
+                notificationService.Notify(publisherEmail, suggestionUrl, post.Title, $"Bol pridaný nový podnet", new List<string> { post.Id.ToString() });
+            }
+
             return Results.Ok<Guid>(post.Id);
         }
 
@@ -272,6 +289,8 @@ namespace CMS.Suggestions
 			{
 				return NotFound();
 			}
+
+			SuggestionStates originalState = post.Suggestion.Status.Value;
 
 			if (user.IsInRole("Publisher") || user.IsInRole("PublisherAdmin"))
 			{
@@ -339,6 +358,33 @@ namespace CMS.Suggestions
 			post.Suggestion.Updated.Value = DateTime.UtcNow;
 
 			await api.Posts.SaveAsync(post);
+
+
+			if (post.Suggestion.Status.Value != originalState)
+			{
+				string stateAsText = post.Suggestion.Status.Value switch
+				{
+					SuggestionStates.C => "zaevidovaný",
+					SuggestionStates.P => "v riešení",
+					SuggestionStates.R => "vyriešený",
+					_ => "",
+				};
+
+                HashSet<string> usersToNotify = new HashSet<string> { post.Suggestion.UserEmail };
+
+                foreach (Comment c in await api.Posts.GetAllCommentsAsync(postId: post.Id, onlyApproved: false))
+                {
+                    usersToNotify.Add(c.Email);
+                }
+
+                string suggestionUrl = $"/podnet/{post.Id}";
+
+                foreach (string email in usersToNotify)
+				{
+                    notificationService.Notify(email, suggestionUrl, post.Title, $"Stav podnetu bol zmenený na {stateAsText}", new List<string> { post.Id.ToString() });
+                }
+			}
+
 			return Ok();
 		}
 
@@ -372,7 +418,10 @@ namespace CMS.Suggestions
 			}
 
 			await api.Posts.DeleteAsync(id);
-			return Ok();
+
+            notificationService.Delete(post.Id.ToString());
+
+            return Ok();
 		}
 
 		private async Task<Guid> GetBlogGuidAsync()

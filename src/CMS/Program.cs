@@ -11,8 +11,21 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Security.Cryptography;
 using Microsoft.ApplicationInsights.Extensibility;
+using NkodSk.Abstractions;
 
 var builder = WebApplication.CreateBuilder(args);
+
+string documentStorageUrl = builder.Configuration["DocumentStorageUrl"];
+if (Uri.IsWellFormedUriString(documentStorageUrl, UriKind.Absolute))
+{
+    builder.Services.AddHttpClient(DocumentStorageClient.DocumentStorageClient.HttpClientName, c =>
+    {
+        c.BaseAddress = new Uri(documentStorageUrl);
+    });
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddTransient<IHttpContextValueAccessor, EmptyHttpContextValueAccessor>();
+    builder.Services.AddTransient<IDocumentStorageClient, DocumentStorageClient.DocumentStorageClient>();
+}
 
 builder.AddPiranha(options =>
 {
@@ -98,6 +111,8 @@ builder.Services.AddApplicationInsightsTelemetry(options =>
 	options.EnableAdaptiveSampling = false;
 });
 builder.Services.AddSingleton<ITelemetryInitializer, RequestTelementryInitializer>();
+
+builder.Services.AddSingleton<INotificationService>(sp => new NotificationService(builder.Configuration["NotificationService"], builder.Configuration["FrontendUrl"]));
 
 var app = builder.Build();
 

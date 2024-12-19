@@ -48,6 +48,7 @@ import SuggestionForm from './pages/SuggestionForm';
 import SuggestionList from './pages/SuggestionList';
 import UserList from './pages/UserList';
 import Alert from './components/Alert';
+import NotificationSettings from './pages/NotificationSettings';
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -210,6 +211,7 @@ function App(props: Props) {
                                     <Route path="/lokalne-katalogy" element={<PublicLocalCatalogList />} />
                                     <Route path="/sparql" Component={Sparql} />
                                     <Route path="/kvalita-metadat" Component={Quality} />
+                                    <Route path="/nastavenie-upozorneni" Component={NotificationSettings} />
 
                                     <Route path="/pozvanka" Component={Invitation} />
                                     <Route path="/saml/consume" Component={LoginInProgress} />

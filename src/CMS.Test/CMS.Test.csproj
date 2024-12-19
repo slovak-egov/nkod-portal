@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CMS\CMS.csproj" />
+    <ProjectReference Include="..\RdfFileStorage\RdfFileStorage.csproj" />
     <ProjectReference Include="..\TestBase\TestBase.csproj" />
   </ItemGroup>
 

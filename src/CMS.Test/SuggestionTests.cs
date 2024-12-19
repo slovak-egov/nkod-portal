@@ -1,9 +1,12 @@
-﻿using CMS.Likes;
+﻿using AngleSharp.Io;
+using CMS.Comments;
+using CMS.Likes;
 using CMS.Suggestions;
 using Markdig.Extensions.Yaml;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore.Internal;
+using NkodSk.Abstractions;
 using Piranha;
 using System;
 using System.Collections.Generic;
@@ -14,6 +17,7 @@ using System.Security.Cryptography;
 using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
+using TestBase;
 using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
 
 namespace CMS.Test
@@ -3069,6 +3073,223 @@ namespace CMS.Test
                 Assert.NotNull(updated);
                 Assert.Equal(new[] { otherUserId }, updated.Suggestion.Likes.Value);
             }
+        }
+
+        [Fact]
+        public async Task AuthorShouldBeNotifiedOnUpdateState()
+        {
+            using ApiApplicationFactory f = new ApiApplicationFactory();
+            using HttpClient client = f.CreateClient();
+            Guid userId = Guid.NewGuid();
+            string userEmail = "test@test.sk";
+
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(Superadmin, userId: userId.ToString(), userEmail: userEmail));
+
+            Guid assignedUserId = Guid.NewGuid();
+            string assignedUserEmail = "user@test.sk";
+
+            using IApi api = f.CreateApi();
+            SuggestionPost original = await api.CreateSuggestion(assignedUserId, assignedUserEmail, state: SuggestionStates.C);
+
+            SuggestionDto post = CreateInput(assignedUserId);
+            post.Status = SuggestionStates.R;
+            using HttpResponseMessage response = await client.PutAsync($"/cms/suggestions/{original.Id}", JsonContent.Create(post));
+            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+
+            Assert.Single(f.TestNotificationService.Notifications);
+            Assert.Equal(assignedUserEmail, f.TestNotificationService.Notifications[0].Item1);
+        }
+
+        [Fact]
+        public async Task AuthorShouldBeNotifiedOnComment()
+        {
+            using ApiApplicationFactory f = new ApiApplicationFactory();
+            using HttpClient client = f.CreateClient();
+            Guid userId = Guid.NewGuid();
+            string userEmail = "test@test.sk";
+
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(Superadmin, userId: userId.ToString(), userEmail: userEmail));
+
+            Guid assignedUserId = Guid.NewGuid();
+            string assignedUserEmail = "user@test.sk";
+
+            using IApi api = f.CreateApi();
+            SuggestionPost original = await api.CreateSuggestion(assignedUserId, assignedUserEmail, state: SuggestionStates.C);
+
+            CommentDto post = new CommentDto
+            {
+                Id = Guid.NewGuid(),
+                ContentId = original.Id,
+                UserId = userId,
+                Body = "Test body input",
+                Created = DateTime.MinValue,
+                ParentId = Guid.Empty
+            };
+            using HttpResponseMessage response = await client.PostAsync("/cms/comments", JsonContent.Create(post));
+            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+
+            Assert.Single(f.TestNotificationService.Notifications);
+            Assert.Equal(assignedUserEmail, f.TestNotificationService.Notifications[0].Item1);
+        }
+
+        [Fact]
+        public async Task PublisherShouldBeNotifiedOnCreate()
+        {
+            using ApiApplicationFactory f = new ApiApplicationFactory();
+            using HttpClient client = f.CreateClient();
+            Guid userId = Guid.NewGuid();
+            string userEmail = "test@test.sk";
+            string publisher = "http://example.com/publisher";
+            string publisherEmail = "publisher@example.com";
+
+            FoafAgent agent = FoafAgent.Create(new Uri(publisher));
+            agent.EmailAddress = publisherEmail;
+            f.FileStorage.InsertFile(agent.ToString(), agent.UpdateMetadata() with { IsPublic = true }, false, new AllAccessFilePolicy());
+
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(Superadmin, userId: userId.ToString(), userEmail: userEmail));
+
+            using IApi api = f.CreateApi();
+
+            SuggestionDto post = CreateInput(userId, targetPublisher: publisher);
+            using HttpResponseMessage response = await client.PostAsync("/cms/suggestions", JsonContent.Create(post));
+            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+
+            Assert.Single(f.TestNotificationService.Notifications);
+            Assert.Equal(publisherEmail, f.TestNotificationService.Notifications[0].Item1);
+        }
+
+        [Fact]
+        public async Task CommentatorShouldBeNotifiedOnUpdateState()
+        {
+            using ApiApplicationFactory f = new ApiApplicationFactory();
+            using HttpClient client = f.CreateClient();
+            Guid userId = Guid.NewGuid();
+            string userEmail = "test@test.sk";
+
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(Superadmin, userId: userId.ToString(), userEmail: userEmail));
+
+            Guid assignedUserId = Guid.NewGuid();
+            string assignedUserEmail = "user@test.sk";
+
+            using IApi api = f.CreateApi();
+            SuggestionPost original = await api.CreateSuggestion(assignedUserId, assignedUserEmail, state: SuggestionStates.C);
+
+            Guid otherUser = Guid.NewGuid();
+            string otherUserEmail = "other@test.sk";
+
+            await api.CreateComment(otherUser, otherUserEmail, original.Id);
+
+            SuggestionDto post = CreateInput(assignedUserId);
+            post.Status = SuggestionStates.R;
+            using HttpResponseMessage response = await client.PutAsync($"/cms/suggestions/{original.Id}", JsonContent.Create(post));
+            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+
+            Assert.Equal(2, f.TestNotificationService.Notifications.Count);
+            Assert.Equal(otherUserEmail, f.TestNotificationService.Notifications[1].Item1);
+        }
+
+        [Fact]
+        public async Task CommentatorShouldBeNotifiedOnComment()
+        {
+            using ApiApplicationFactory f = new ApiApplicationFactory();
+            using HttpClient client = f.CreateClient();
+            Guid userId = Guid.NewGuid();
+            string userEmail = "test@test.sk";
+
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(Superadmin, userId: userId.ToString(), userEmail: userEmail));
+
+            Guid assignedUserId = Guid.NewGuid();
+            string assignedUserEmail = "user@test.sk";
+
+            using IApi api = f.CreateApi();
+            SuggestionPost original = await api.CreateSuggestion(assignedUserId, assignedUserEmail, state: SuggestionStates.C);
+
+            Guid otherUser = Guid.NewGuid();
+            string otherUserEmail = "other@test.sk";
+
+            await api.CreateComment(otherUser, otherUserEmail, original.Id);
+
+            CommentDto post = new CommentDto
+            {
+                Id = Guid.NewGuid(),
+                ContentId = original.Id,
+                UserId = userId,
+                Body = "Test body input",
+                Created = DateTime.MinValue,
+                ParentId = Guid.Empty
+            };
+            using HttpResponseMessage response = await client.PostAsync("/cms/comments", JsonContent.Create(post));
+            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+
+            Assert.Equal(2, f.TestNotificationService.Notifications.Count);
+            Assert.Equal(otherUserEmail, f.TestNotificationService.Notifications[1].Item1);
+        }
+
+        [Fact]
+        public async Task NotificationShouldBeCanceledOnDelete()
+        {
+            using ApiApplicationFactory f = new ApiApplicationFactory();
+            using HttpClient client = f.CreateClient();
+            Guid userId = Guid.NewGuid();
+            string userEmail = "test@test.sk";
+
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(Superadmin, userId: userId.ToString(), userEmail: userEmail));
+
+            Guid assignedUserId = Guid.NewGuid();
+            string assignedUserEmail = "user@test.sk";
+
+            using IApi api = f.CreateApi();
+            SuggestionPost original = await api.CreateSuggestion(assignedUserId, assignedUserEmail, state: SuggestionStates.C);
+
+            Guid otherUser = Guid.NewGuid();
+            string otherUserEmail = "other@test.sk";
+
+            await api.CreateComment(otherUser, otherUserEmail, original.Id);
+
+            using HttpResponseMessage response = await client.DeleteAsync($"/cms/suggestions/{original.Id}");
+            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+
+            Assert.Empty(f.TestNotificationService.Notifications);
+        }
+
+        [Fact]
+        public async Task NotificationShouldBeCanceledOnCommentDelete()
+        {
+            using ApiApplicationFactory f = new ApiApplicationFactory();
+            using HttpClient client = f.CreateClient();
+            Guid userId = Guid.NewGuid();
+            string userEmail = "test@test.sk";
+
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(Superadmin, userId: userId.ToString(), userEmail: userEmail));
+
+            Guid assignedUserId = Guid.NewGuid();
+            string assignedUserEmail = "user@test.sk";
+
+            using IApi api = f.CreateApi();
+            SuggestionPost original = await api.CreateSuggestion(assignedUserId, assignedUserEmail, state: SuggestionStates.C);
+
+            Guid otherUser = Guid.NewGuid();
+            string otherUserEmail = "other@test.sk";
+
+            await api.CreateComment(otherUser, otherUserEmail, original.Id);
+
+            CommentDto post = new CommentDto
+            {
+                Id = Guid.NewGuid(),
+                ContentId = original.Id,
+                UserId = userId,
+                Body = "Test body input",
+                Created = DateTime.MinValue,
+                ParentId = Guid.Empty
+            };
+            using HttpResponseMessage response = await client.PostAsync("/cms/comments", JsonContent.Create(post));
+            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+            Guid id = await response.Content.ReadFromJsonAsync<Guid>();
+
+            using HttpResponseMessage response2 = await client.DeleteAsync($"/cms/comments/{id}");
+            Assert.Equal(System.Net.HttpStatusCode.OK, response2.StatusCode);
+
+            Assert.Empty(f.TestNotificationService.Notifications);
         }
     }
 }
