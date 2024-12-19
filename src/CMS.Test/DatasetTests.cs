@@ -1110,5 +1110,38 @@ namespace CMS.Test
             Assert.Single(f.TestNotificationService.Notifications);
             Assert.Equal(publisherEmail, f.TestNotificationService.Notifications[0].Item1);
         }
+
+        [Fact]
+        public async Task PublisherShouldBeNotifiedOnCommentTroughContactPoint()
+        {
+            using ApiApplicationFactory f = new ApiApplicationFactory();
+            using HttpClient client = f.CreateClient();
+            Guid userId = Guid.NewGuid();
+            string userEmail = "test@test.sk";
+            string publisher = "http://example.com/publisher";
+            string publisherEmail = "publisher@example.com";
+            string contactPoint = "publisher2@example.com";
+
+            FoafAgent agent = FoafAgent.Create(new Uri(publisher));
+            agent.EmailAddress = publisherEmail;
+            f.FileStorage.InsertFile(agent.ToString(), agent.UpdateMetadata() with { IsPublic = true }, false, new AllAccessFilePolicy());
+
+            DcatDataset dataset = DcatDataset.Create();
+            dataset.Publisher = new Uri(publisher);
+            dataset.SetContactPoint(new LanguageDependedTexts { { "sk", "Contact" } }, contactPoint);
+            f.FileStorage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, agent), false, new AllAccessFilePolicy());
+
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(Superadmin, userId: userId.ToString(), userEmail: userEmail));
+
+            using IApi api = f.CreateApi();
+
+            DatasetCommentDto post = await CreateInput(api, userId);
+            post.DatasetUri = dataset.Uri.OriginalString;
+            using HttpResponseMessage response = await client.PostAsync("/cms/datasets/comments", JsonContent.Create(post));
+            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+
+            Assert.Single(f.TestNotificationService.Notifications);
+            Assert.Equal(contactPoint, f.TestNotificationService.Notifications[0].Item1);
+        }
     }
 }

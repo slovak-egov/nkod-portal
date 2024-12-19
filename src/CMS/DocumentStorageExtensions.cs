@@ -15,6 +15,12 @@ namespace CMS
             if (storageResponse is not null && storageResponse.Files.Count > 0 && storageResponse.Files[0].Content is not null)
             {
                 DcatDataset dataset = DcatDataset.Parse(storageResponse.Files[0].Content);
+
+                if (dataset.ContactPoint?.Email is not null)
+                {
+                    return (dataset.ContactPoint.Email, dataset.GetTitle("sk"), storageResponse.Files[0].Metadata.Id);
+                }
+
                 if (dataset?.Publisher is not null)
                 {
                     return (await documentStorageClient.GetEmailForPublisher(dataset.Publisher.OriginalString), dataset.GetTitle("sk"), storageResponse.Files[0].Metadata.Id);
