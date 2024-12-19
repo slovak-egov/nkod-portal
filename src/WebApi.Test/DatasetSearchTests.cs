@@ -609,7 +609,7 @@ namespace WebApi.Test
             Assert.Equal(new Uri("http://publications.europa.eu/resource/dataset/frequency/1"), view.AccrualPeriodicity);
             Assert.Equal(new[] { "keyword1Sk", "keyword2Sk" }, view.Keywords);
             Assert.Equal(new[] { new Uri("https://data.gov.sk/set/codelist/dataset-type/1") }, view.Type);
-            Assert.Equal(new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") }, view.Spatial);
+            Assert.Equal(new[] { new Uri("https://data.gov.sk/id/nuts1/SK0"), new Uri("http://publications.europa.eu/resource/dataset/country/2") }, view.Spatial);
             Assert.NotNull(view.Temporal);
             Assert.Equal("16. 8. 2023", view.Temporal.StartDate);
             Assert.Equal("10. 9. 2023", view.Temporal.EndDate);
@@ -631,7 +631,7 @@ namespace WebApi.Test
 
             Assert.NotNull(view.SpatialValues);
             Assert.Equal(new[] {
-                new CodelistItemView("http://publications.europa.eu/resource/dataset/country/1", "country1sk"),
+                new CodelistItemView("https://data.gov.sk/id/nuts1/SK0", "country1sk"),
                 new CodelistItemView("http://publications.europa.eu/resource/dataset/country/2", "country2sk")
             }, view.SpatialValues);
 
@@ -712,7 +712,7 @@ namespace WebApi.Test
             Assert.Equal(new Uri("http://publications.europa.eu/resource/dataset/frequency/1"), view.AccrualPeriodicity);
             Assert.Equal(new[] { "keyword1En", "keyword2En" }, view.Keywords);
             Assert.Equal(new[] { new Uri("https://data.gov.sk/set/codelist/dataset-type/1") }, view.Type);
-            Assert.Equal(new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") }, view.Spatial);
+            Assert.Equal(new[] { new Uri("https://data.gov.sk/id/nuts1/SK0"), new Uri("http://publications.europa.eu/resource/dataset/country/2") }, view.Spatial);
             Assert.NotNull(view.Temporal);
             Assert.Equal("16. 8. 2023", view.Temporal.StartDate);
             Assert.Equal("10. 9. 2023", view.Temporal.EndDate);
@@ -734,7 +734,7 @@ namespace WebApi.Test
 
             Assert.NotNull(view.SpatialValues);
             Assert.Equal(new[] {
-                new CodelistItemView("http://publications.europa.eu/resource/dataset/country/1", "country1en"),
+                new CodelistItemView("https://data.gov.sk/id/nuts1/SK0", "country1en"),
                 new CodelistItemView("http://publications.europa.eu/resource/dataset/country/2", "country2en")
             }, view.SpatialValues);
 
@@ -810,7 +810,7 @@ namespace WebApi.Test
             dataset.SetKeywords(new Dictionary<string, List<string>> { { "sk", new List<string> { "keyword1", "keyword2" } } });
             dataset.SetContactPoint(new LanguageDependedTexts { { "sk", "ContactSk" } }, "test@test.sk");
             dataset.AccrualPeriodicity = new Uri("http://publications.europa.eu/resource/dataset/frequency/1");
-            dataset.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") };
+            dataset.Spatial = new[] { new Uri("https://data.gov.sk/id/nuts1/SK0"), new Uri("http://publications.europa.eu/resource/dataset/country/2") };
             dataset.SetTemporal(new DateOnly(2023, 8, 16), new DateOnly(2023, 9, 10));
             dataset.LandingPage = new Uri("http://example.com/documentation");
             dataset.Specification = new Uri("http://example.com/specification");
@@ -866,7 +866,7 @@ namespace WebApi.Test
             Assert.Equal(new Uri("http://publications.europa.eu/resource/dataset/frequency/1"), view.AccrualPeriodicity);
             Assert.Equal(new[] { "keyword1", "keyword2" }, view.Keywords);
             Assert.Equal(new[] { new Uri("https://data.gov.sk/set/codelist/dataset-type/1") }, view.Type);
-            Assert.Equal(new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") }, view.Spatial);
+            Assert.Equal(new[] { new Uri("https://data.gov.sk/id/nuts1/SK0"), new Uri("http://publications.europa.eu/resource/dataset/country/2") }, view.Spatial);
             Assert.NotNull(view.Temporal);
             Assert.Equal("16. 8. 2023", view.Temporal.StartDate);
             Assert.Equal("10. 9. 2023", view.Temporal.EndDate);
@@ -888,7 +888,7 @@ namespace WebApi.Test
 
             Assert.NotNull(view.SpatialValues);
             Assert.Equal(new[] {
-                new CodelistItemView("http://publications.europa.eu/resource/dataset/country/1", "country1en"),
+                new CodelistItemView("https://data.gov.sk/id/nuts1/SK0", "country1en"),
                 new CodelistItemView("http://publications.europa.eu/resource/dataset/country/2", "country2en")
             }, view.SpatialValues);
 

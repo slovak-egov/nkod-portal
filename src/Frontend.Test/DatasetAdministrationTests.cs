@@ -93,6 +93,7 @@ namespace Frontend.Test
             input.Themes = new[] { new Uri("http://publications.europa.eu/resource/dataset/data-theme/1") };
             input.SetKeywords(new Dictionary<string, List<string>> { { "sk", new List<string> { "keyword1" } } });
             input.SetContactPoint(new LanguageDependedTexts { { "sk", string.Empty } }, string.Empty);
+            input.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1") };
             input.ShouldBePublic = true;
             return input;
         }
@@ -100,10 +101,16 @@ namespace Frontend.Test
         private DcatDataset CreateMaximalDataset(int? index = null, bool includeLanguages = false)
         {
             DcatDataset input = CreateMinimalDataset(index);
-            input.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1") };
             input.SetTemporal(new DateOnly(2023, 8, 20), new DateOnly(2023, 9, 12));
             input.SetContactPoint(new LanguageDependedTexts(new Dictionary<string, string> { { "sk", "ContactSk" } }), "test@example.com");
             input.LandingPage = new Uri("http://example.com/documentation");
+            input.Documentation = new Uri("http://example.com/documentation");
+            input.Specification = new Uri("http://example.com/specification");
+            input.ApplicableLegislations = new List<Uri> { 
+                new Uri("https://data.gov.sk/id/eli/sk/zz/2019/95"),
+                new Uri("https://data.gov.sk/id/eli/sk/zz/2007/39/20220101")};
+            input.HvdCategory = new Uri("http://publications.europa.eu/resource/dataset/high-value-dataset-category/1");
+            input.Relation = new Uri("http://example.com/relation");
             input.Specification = new Uri("http://example.com/specification");
             input.Themes = new[] { new Uri("http://publications.europa.eu/resource/dataset/data-theme/1"), new Uri(DcatDataset.EuroVocPrefix + "6409"), new Uri(DcatDataset.EuroVocPrefix + "6410") };
             input.SetEuroVocLabelThemes(new Dictionary<string, List<string>> { 
@@ -386,6 +393,7 @@ namespace Frontend.Test
             input.AccrualPeriodicity = new Uri("http://publications.europa.eu/resource/dataset/frequency/2");
             input.Themes = new[] { new Uri("http://publications.europa.eu/resource/dataset/data-theme/2") };
             input.SetKeywords(new Dictionary<string, List<string>> { { "sk", new List<string> { "keyword2" } } });
+            input.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/2") };
             input.ShouldBePublic = false;
 
             await Page.FillDatasetFields(input);
@@ -435,6 +443,8 @@ namespace Frontend.Test
             input.SetContactPoint(new LanguageDependedTexts(new Dictionary<string, string> { { "sk", "ContactSk2" } }), "test2@example.com");
             input.LandingPage = new Uri("http://example.com/documentation2");
             input.Specification = new Uri("http://example.com/specification2");
+            input.Documentation = new Uri("http://example.com/documentation2");
+            input.Relation = new Uri("http://example.com/relation2");
             input.Themes = new[] { new Uri("http://publications.europa.eu/resource/dataset/data-theme/2"), new Uri(DcatDataset.EuroVocPrefix + "6411") };
             input.SetEuroVocLabelThemes(new Dictionary<string, List<string>> { 
                 { "sk", new List<string> { "elektronický odpad" } },
@@ -443,6 +453,10 @@ namespace Frontend.Test
             input.SetKeywords(new Dictionary<string, List<string>> { { "sk", new List<string> { "keyword3", "keyword4" } } });
             input.SpatialResolutionInMeters = 20;
             input.TemporalResolution = "2d";
+            input.ApplicableLegislations = new List<Uri> {
+                new Uri("https://data.gov.sk/id/eli/sk/zz/2019/95-2"),
+                new Uri("https://data.gov.sk/id/eli/sk/zz/2007/39/20220101-2")};
+            input.HvdCategory = new Uri("http://publications.europa.eu/resource/dataset/high-value-dataset-category/2");
 
             await Page.FillDatasetFields(input);
 
@@ -797,6 +811,8 @@ namespace Frontend.Test
             input.SetContactPoint(new LanguageDependedTexts(new Dictionary<string, string> { { "sk", "ContactSk2" }, { "en", "ContactEn2" } }), "test2@example.com");
             input.LandingPage = new Uri("http://example.com/documentation2");
             input.Specification = new Uri("http://example.com/specification2");
+            input.Documentation = new Uri("http://example.com/documentation2");
+            input.Relation = new Uri("http://example.com/relation2");
             input.Themes = new[] { new Uri("http://publications.europa.eu/resource/dataset/data-theme/2"), new Uri(DcatDataset.EuroVocPrefix + "6411") };
             input.SetEuroVocLabelThemes(new Dictionary<string, List<string>> {
                 { "sk", new List<string> { "elektronický odpad" } },
@@ -805,6 +821,10 @@ namespace Frontend.Test
             input.SetKeywords(new Dictionary<string, List<string>> { { "sk", new List<string> { "keywordnew1", "keywordnew2" } }, { "en", new List<string> { "keywordnew3", "keywordnew4" } } });
             input.SpatialResolutionInMeters = 20;
             input.TemporalResolution = "2d";
+            input.ApplicableLegislations = new List<Uri> {
+                new Uri("https://data.gov.sk/id/eli/sk/zz/2019/95-2"),
+                new Uri("https://data.gov.sk/id/eli/sk/zz/2007/39/20220101-2")};
+            input.HvdCategory = new Uri("http://publications.europa.eu/resource/dataset/high-value-dataset-category/2");
 
             await Page.FillDatasetFields(input);
 

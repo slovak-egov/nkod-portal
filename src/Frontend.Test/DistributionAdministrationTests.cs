@@ -176,6 +176,35 @@ namespace Frontend.Test
             return input;
         }
 
+        private DcatDistribution CreateDataService()
+        {
+            DcatDistribution input = DcatDistribution.Create(Guid.NewGuid());
+            input.SetTermsOfUse(
+                new Uri("http://publications.europa.eu/resource/authority/licence/CC_BY_4_0"),
+                new Uri("http://publications.europa.eu/resource/authority/licence/CC_BY_4_0"),
+                new Uri("http://publications.europa.eu/resource/authority/licence/CC_BY_4_0"),
+                new Uri("https://data.gov.sk/def/personal-data-occurence-type/2"),
+                string.Empty,
+                string.Empty);
+            input.Format = new Uri("http://publications.europa.eu/resource/dataset/file-type/1");
+            input.MediaType = new Uri("http://www.iana.org/assignments/media-types/text/csv");
+            input.CompressFormat = new Uri("http://www.iana.org/assignments/media-types/application/zip");
+            input.PackageFormat = input.CompressFormat;
+            input.AccessUrl = new Uri("http://example.com/endpoint");
+            input.SetTitle(new Dictionary<string, string> { { "sk", "TestSk" } });
+            input.ConformsTo = new Uri("http://example.com/conforms");
+            input.ApplicableLegislations = new List<Uri> { new Uri("http://example.com/eli/1"), new Uri("http://example.com/eli/2") };
+
+            DcatDataService dataService = input.GetOrCreateDataSerice();
+            dataService.EndpointUrl = input.AccessUrl;
+            dataService.Documentation = new Uri("http://example.com/specification");
+            dataService.ConformsTo = input.ConformsTo;
+            dataService.SetTitle(new Dictionary<string, string> { { "sk", "TestSk" } });
+            dataService.ApplicableLegislations = input.ApplicableLegislations;
+
+            return input;
+        }
+
         private DcatDistribution CreateMaximalDistribution(int? index = null, bool includeLanguages = false)
         {
             DcatDistribution input = CreateMinimalDistribution(index);
@@ -663,6 +692,130 @@ namespace Frontend.Test
 
             FileStorageResponse otherPublisherStates = storage.GetFileStates(new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.DistributionRegistration }, OnlyPublishers = new List<string> { otherPublisherId } }, accessPolicy);
             Extensions.AssertAreEqual(otherDistribution, storage.GetFileState(otherDistributionId, accessPolicy)!);
+        }
+
+        [TestMethod]
+        public async Task TestCreateDataServuce()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDistributionCodelists();
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            await Page.Login(f, PublisherId, "Publisher");
+
+            await Page.OpenDistributionsAdmin(0);
+            await Page.RunAndWaitForDistributionCreate(datasetId, async () =>
+            {
+                await Page.GetByText("Nová distribúcia").ClickAsync();
+            });
+
+            DcatDistribution input = CreateDataService();
+            await Page.FillDistributionFields(input);
+
+            await Page.RunAndWaitForDistributionList(datasetId, async () =>
+            {
+                await Page.GetByText("Uložiť", new PageGetByTextOptions { Exact = true }).ClickAsync();
+            });
+
+            await Page.AssertTableRowsCount(1);
+
+            Extensions.AssertAreEqual(input, Extensions.GetLastEntity(storage, FileType.DistributionRegistration)!);
+        }
+
+        [TestMethod]
+        public async Task TestEditDataServiceMinimalWithoutChange()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDistributionCodelists();
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            DcatDistribution distribution = CreateDataService();
+            Guid id = fixture.CreateDistribution(datasetId, PublisherId, distribution);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            await Page.Login(f, PublisherId, "Publisher");
+
+            await Page.OpenDistributionsAdmin(0);
+            await Page.RunAndWaitForDistributionEdit(id, datasetId, async () =>
+            {
+                await Page.ClickOnTableButton(0, "Upraviť");
+            });
+
+            await Page.RunAndWaitForDistributionList(datasetId, async () =>
+            {
+                await Page.GetByText("Uložiť", new PageGetByTextOptions { Exact = true }).ClickAsync();
+            });
+
+            await Page.AssertTableRowsCount(1);
+
+            Assert.AreEqual(1, storage.GetFileStates(new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.DistributionRegistration } }, accessPolicy).TotalCount);
+            Extensions.AssertAreEqual(distribution, storage.GetFileState(id, accessPolicy)!);
+        }
+
+        [TestMethod]
+        public async Task TestEditRecordDataService()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDistributionCodelists();
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            DcatDistribution distribution = CreateDataService();
+            Guid id = fixture.CreateDistribution(datasetId, PublisherId, distribution);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            await Page.Login(f, PublisherId, "Publisher");
+
+            await Page.OpenDistributionsAdmin(0);
+            await Page.RunAndWaitForDistributionEdit(id, datasetId, async () =>
+            {
+                await Page.ClickOnTableButton(0, "Upraviť");
+            });
+
+            await Page.AssertDistributionForm(distribution);
+
+            DcatDistribution input = DcatDistribution.Create(datasetId);
+            input.SetTermsOfUse(
+                new Uri("https://data.gov.sk/def/authors-work-type/1"),
+                new Uri("https://data.gov.sk/def/original-database-type/1"),
+                new Uri("https://data.gov.sk/def/codelist/database-creator-special-rights-type/2"),
+                new Uri("https://data.gov.sk/def/personal-data-occurence-type/1"),
+                string.Empty,
+                string.Empty
+            );
+            input.AccessUrl = new Uri("http://example.com/download/other");
+            input.Format = new Uri("http://publications.europa.eu/resource/dataset/file-type/2");
+            input.MediaType = new Uri("http://www.iana.org/assignments/media-types/text/xml");
+            input.CompressFormat = new Uri("http://www.iana.org/assignments/media-types/application/rar");
+            input.PackageFormat = input.CompressFormat;
+            input.ConformsTo = new Uri("http://example.com/new/conforms");
+            input.SetTitle(new Dictionary<string, string> { { "sk", "TestSkOther New" } });
+            input.ApplicableLegislations = new List<Uri> { new Uri("http://example.com/eli/3"), new Uri("http://example.com/eli/4") };
+
+            DcatDataService dataService = input.GetOrCreateDataSerice();
+            dataService.EndpointUrl = input.AccessUrl;
+            dataService.Documentation = new Uri("http://example.com/new/specification");
+            dataService.ConformsTo = input.ConformsTo;
+            dataService.SetTitle(new Dictionary<string, string> { { "sk", "TestSkOther New" } });
+            dataService.ApplicableLegislations = input.ApplicableLegislations;
+
+            await Page.FillDistributionFields(input);
+
+            await Page.RunAndWaitForDistributionList(datasetId, async () =>
+            {
+                await Page.GetByText("Uložiť", new PageGetByTextOptions { Exact = true }).ClickAsync();
+            });
+
+            await Page.AssertTableRowsCount(1);
+
+            Assert.AreEqual(1, storage.GetFileStates(new FileStorageQuery { OnlyTypes = new List<FileType> { FileType.DistributionRegistration } }, accessPolicy).TotalCount);
+            Extensions.AssertAreEqual(input, storage.GetFileState(id, accessPolicy)!);
         }
     }
 }

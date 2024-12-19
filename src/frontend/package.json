@@ -39,10 +39,8 @@
     },
     "scripts": {
         "start": "react-scripts start",
-        "start:localk8s": "cross-env REACT_APP_API_URL=http://demo.nkod/ REACT_APP_CMS_API_URL=http://localhost:5000/cms/ npm run start",
-        "start:cms": "cross-env REACT_APP_API_URL=https://wpnkod.informo.sk/ REACT_APP_CMS_API_URL=http://localhost:5000/cms/ npm run start",
         "build": "react-scripts build",
-        "build:localk8s": "cross-env REACT_APP_API_URL=http://demo.nkod/ npm run build",
+        "build:development": "env-cmd -f .env.development.local react-scripts build",
         "test": "react-scripts test",
         "eject": "react-scripts eject"
     },

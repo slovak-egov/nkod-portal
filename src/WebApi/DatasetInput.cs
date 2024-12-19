@@ -23,6 +23,10 @@ namespace WebApi
 
         public List<string>? Spatial { get; set; }
 
+        public string? HvdCategory { get; set; }
+
+        public List<string>? ApplicableLegislations { get; set; }
+
         public string? StartDate { get; set; }
 
         public string? EndDate { get; set; }
@@ -34,6 +38,10 @@ namespace WebApi
         public string? LandingPage { get; set; }
 
         public string? Specification { get; set; }
+
+        public string? Documentation { get; set; }
+        
+        public string? Relation { get; set; }
 
         public List<string>? EuroVocThemes { get; set; }
 
@@ -63,14 +71,26 @@ namespace WebApi
             await results.ValidateRequiredCodelistValue(nameof(AccrualPeriodicity), AccrualPeriodicity, DcatDataset.AccrualPeriodicityCodelist, codelistProvider);
             results.ValidateKeywords(nameof(Keywords), Keywords, languages);
             await results.ValidateCodelistValues(nameof(Type), Type, DcatDataset.TypeCodelist, codelistProvider);
-            await results.ValidateCodelistValues(nameof(Spatial), Spatial, DcatDataset.SpatialCodelist, codelistProvider);
+            await results.ValidateRequiredCodelistValues(nameof(Spatial), Spatial, DcatDataset.SpatialCodelist, codelistProvider);
             results.ValidateDate(nameof(StartDate), StartDate);
             results.ValidateDate(nameof(EndDate), EndDate);
             results.ValidateLanguageTexts(nameof(ContactName), ContactName, languages, false);
             results.ValidateEmail(nameof(ContactEmail), ContactEmail, false);
             results.ValidateUrl(nameof(LandingPage), LandingPage, false);
             results.ValidateUrl(nameof(Specification), Specification, false);
+            results.ValidateUrl(nameof(Documentation), Documentation, false);
+            results.ValidateUrl(nameof(Relation), Relation, false);
+            results.ValidateApplicableLegislations(nameof(ApplicableLegislations), ApplicableLegislations);
             
+            if (Type is not null && Type.Any(t => string.Equals(t.ToString(), DcatDataset.HvdType, StringComparison.OrdinalIgnoreCase)))
+            {
+                await results.ValidateRequiredCodelistValue(nameof(HvdCategory), HvdCategory, DcatDataset.HvdCategoryCodelist, codelistProvider);
+            }
+            else
+            {
+                await results.ValidateCodelistValue(nameof(HvdCategory), HvdCategory, DcatDataset.HvdCategoryCodelist, codelistProvider);
+            }
+
             loadedEuroVocLabels ??= new Dictionary<string, List<string>>();
             loadedEuroVocLabels.Clear();
             await results.ValidateEuroVocValues(nameof(EuroVocThemes), EuroVocThemes, loadedEuroVocLabels);
@@ -132,6 +152,8 @@ namespace WebApi
                 ContactEmail);
             dataset.LandingPage = LandingPage.AsUri();
             dataset.Specification = Specification.AsUri();
+            dataset.Documentation = Documentation.AsUri();
+            dataset.Relation = Relation.AsUri();
             dataset.SpatialResolutionInMeters = SpatialResolutionInMeters is not null ? decimal.Parse(SpatialResolutionInMeters, System.Globalization.CultureInfo.CurrentCulture) : null;
             dataset.TemporalResolution = TemporalResolution;
             dataset.IsSerie = IsSerie;
@@ -139,6 +161,28 @@ namespace WebApi
 
             loadedEuroVocLabels ??= new Dictionary<string, List<string>>();
             dataset.SetEuroVocLabelThemes(loadedEuroVocLabels);
+
+            bool isHvd = Type is not null && Type.Any(t => string.Equals(t.ToString(), DcatDataset.HvdType, StringComparison.OrdinalIgnoreCase));
+
+            dataset.HvdCategory = HvdCategory.AsUri();
+
+            List<string> applicableLegislations = ApplicableLegislations ?? new List<string>();
+
+            if (isHvd)
+            {
+                if (!applicableLegislations.Contains(DcatDataset.HvdLegislation, StringComparer.OrdinalIgnoreCase))
+                {
+                    applicableLegislations.Add(DcatDataset.HvdLegislation);
+                }
+            }
+            else
+            {
+                applicableLegislations.RemoveAll(s => string.Equals(s, DcatDataset.HvdLegislation, StringComparison.OrdinalIgnoreCase));
+            }
+
+            dataset.ApplicableLegislations = applicableLegislations.Select(s => new Uri(s));
+
+            dataset.SetRootTypes(new Uri(RdfDocument.DcatPrefix + (IsSerie ? "DatasetSeries" : "Dataset")));
         }
     }
 }

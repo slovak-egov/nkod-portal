@@ -5,6 +5,7 @@ using NkodSk.RdfFileStorage;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
@@ -22,7 +23,7 @@ namespace Frontend.Test
 
         private readonly IFileStorageAccessPolicy accessPolicy = new PublicFileAccessPolicy();
 
-        private Guid CreateDatasetAndDistribution(StorageFixture fixture, string name, bool isPublic = true, int index = 1, string? publisher = null)
+        private Guid CreateDatasetAndDistribution(StorageFixture fixture, string name, bool isPublic = true, int index = 1, bool createDataService = false, string? publisher = null)
         {
             publisher ??= PublisherId;
 
@@ -36,8 +37,10 @@ namespace Frontend.Test
                 new Uri("http://publications.europa.eu/resource/dataset/data-theme/2"), 
                 new Uri(DcatDataset.EuroVocPrefix + "6409"), 
                 new Uri(DcatDataset.EuroVocPrefix + "6410") };
-            dataset.LandingPage = new Uri("http://example.com/documentation");
+            dataset.LandingPage = new Uri("http://example.com/home");
             dataset.Specification = new Uri("http://example.com/specification");
+            dataset.Documentation = new Uri("http://example.com/documentation");
+            dataset.Relation = new Uri("http://example.com/relation");
             dataset.AccrualPeriodicity = new Uri("http://publications.europa.eu/resource/dataset/frequency/1");
             dataset.SetContactPoint(new LanguageDependedTexts { { "sk", "Test Contact Point" } }, "test@example.com");
             dataset.Spatial = new[] { new Uri("http://publications.europa.eu/resource/dataset/country/1"), new Uri("http://publications.europa.eu/resource/dataset/country/2") };
@@ -47,6 +50,12 @@ namespace Frontend.Test
             dataset.Publisher = new Uri(publisher);
             dataset.ShouldBePublic = isPublic;
             dataset.SetEuroVocLabelThemes(new Dictionary<string, List<string>> { { "sk", new List<string> { "nepovolená likvidácia odpadu", "chemický odpad" } } });
+            dataset.ApplicableLegislations = new List<Uri>
+            {
+                new Uri("https://data.gov.sk/id/eli/sk/zz/2019/95"),
+                new Uri("https://data.gov.sk/id/eli/sk/zz/2007/39/20220101"),
+            };
+            dataset.HvdCategory = new Uri("http://publications.europa.eu/resource/dataset/high-value-dataset-category/1");
 
             Guid datasetId = fixture.CreateDataset(dataset);
 
@@ -56,12 +65,38 @@ namespace Frontend.Test
                 new Uri("http://publications.europa.eu/resource/authority/licence/CC_BY_4_0"),
                 new Uri("http://publications.europa.eu/resource/authority/licence/CC_BY_4_0"),
                 new Uri("https://data.gov.sk/def/personal-data-occurence-type/2"),
-                string.Empty,
-                string.Empty);
-            distribution.DownloadUrl = new Uri("http://example.com/distribution");
-            distribution.AccessUrl = distribution.DownloadUrl;
+                "Author",
+                "Author Original");
             distribution.Format = new Uri("http://publications.europa.eu/resource/authority/file-type/CSV");
             distribution.MediaType = new Uri("http://www.iana.org/assignments/media-types/text/csv");
+            distribution.ConformsTo = new Uri("http://example.com/conforms");
+            distribution.CompressFormat = new Uri("http://www.iana.org/assignments/media-types/application/zip");
+            distribution.PackageFormat = new Uri("http://www.iana.org/assignments/media-types/application/zip");
+            distribution.ApplicableLegislations = new List<Uri>
+            {
+                new Uri("https://data.gov.sk/id/eli/sk/zz/2019/95"),
+                new Uri("https://data.gov.sk/id/eli/sk/zz/2007/39/20220101"),
+            };
+
+            if (createDataService)
+            {
+                DcatDataService dataService = distribution.GetOrCreateDataSerice();
+                distribution.SetTitle(new Dictionary<string, string> { { "sk", "Test Service SK" } });
+                dataService.EndpointUrl = new Uri("http://example.com/endpoint");
+                dataService.Documentation = new Uri("http://example.com/new/specification");
+                dataService.ConformsTo = distribution.ConformsTo;
+                dataService.SetTitle(distribution.Title);
+                dataService.ApplicableLegislations = distribution.ApplicableLegislations;
+                dataService.EndpointDescription = new Uri("http://example.com/endpoint-description");
+                dataService.HvdCategory = new Uri("http://publications.europa.eu/resource/dataset/high-value-dataset-category/1");
+                distribution.AccessUrl = dataService.EndpointUrl;
+                dataService.SetContactPoint(new LanguageDependedTexts { { "sk", "Test Kontakt Service" } }, "example@example.com");
+            }
+            else
+            {
+                distribution.DownloadUrl = new Uri("http://example.com/distribution");
+                distribution.AccessUrl = distribution.DownloadUrl;
+            }
             
             fixture.CreateDistribution(datasetId, publisher, distribution);
 
@@ -394,21 +429,17 @@ namespace Frontend.Test
             }
             CollectionAssert.AreEquivalent(new[] { "theme1sk", "theme2sk", "nepovolená likvidácia odpadu", "chemický odpad" }, themeValues);
 
-            IElementHandle? documentationParent = await Page.GetTestElement("landing-page");
-            Assert.IsNotNull(documentationParent);
-            IElementHandle? documentationLink = await documentationParent.QuerySelectorAsync("a");
-            Assert.IsNotNull(documentationLink);
-            Assert.AreEqual("http://example.com/documentation", await documentationLink.GetAttributeAsync("href"));
-            Assert.AreEqual("Zobraziť", await documentationLink.TextContentAsync());
-
-            IElementHandle? specificationParent = await Page.GetTestElement("specification");
-            Assert.IsNotNull(specificationParent);
-            IElementHandle? specificationLink = await specificationParent.QuerySelectorAsync("a");
-            Assert.IsNotNull(specificationLink);
-            Assert.AreEqual("http://example.com/specification", await specificationLink.GetAttributeAsync("href"));
-            Assert.AreEqual("Zobraziť", await specificationLink.TextContentAsync());
+            await Page.CheckTestContentLink("landing-page", "http://example.com/home");
+            await Page.CheckTestContentLink("specification", "http://example.com/specification");
+            await Page.CheckTestContentLink("documentation", "http://example.com/documentation");
+            await Page.CheckTestContentLink("relation", "http://example.com/relation");
 
             await Page.CheckTestContent("update-frequency", "frequency1sk");
+            await Page.CheckTestContent("hvd-category", "HVD 1 sk");
+            await Page.CheckTestContent("applicable-legislations", new List<string> {
+                "https://data.gov.sk/id/eli/sk/zz/2019/95",
+                "https://data.gov.sk/id/eli/sk/zz/2007/39/20220101"
+            });
             await Page.CheckTestContent("contact-name", "Test Contact Point");
             await Page.CheckTestContent("contact-email", "test@example.com");
 
@@ -437,6 +468,150 @@ namespace Frontend.Test
             Assert.IsNotNull(distributionLink);
             Assert.AreEqual("https://example.com/distribution", await distributionLink.GetAttributeAsync("href"));
             Assert.AreEqual("Test dataset", await distributionLink.TextContentAsync());
+
+            await AssertTextPropertyLink(distribution, "Typ autorského diela", "CC sk", "http://publications.europa.eu/resource/authority/licence/CC_BY_4_0");
+            await AssertTextPropertyLink(distribution, "Typ originálnej databázy", "CC sk", "http://publications.europa.eu/resource/authority/licence/CC_BY_4_0");
+            await AssertTextPropertyLink(distribution, "Typ špeciálnej právnej ochrany databázy", "CC sk", "http://publications.europa.eu/resource/authority/licence/CC_BY_4_0");
+            await AssertTextPropertyLink(distribution, "Typ výskytu osobných údajov", "personal2sk", "https://data.gov.sk/def/personal-data-occurence-type/2");
+            await AssertTextProperty(distribution, $"Meno autora diela: Author");
+            await AssertTextProperty(distribution, $"Meno autora originálnej databázy: Author Original");
+            await AssertTextPropertyLink(distribution, "Formát", "csv", "http://publications.europa.eu/resource/authority/file-type/CSV");
+            await AssertTextPropertyLink(distribution, "Typ média", "CSV", "http://www.iana.org/assignments/media-types/text/csv");
+            await AssertTextProperty(distribution, $"Právny predpis: https://data.gov.sk/id/eli/sk/zz/2019/95 https://data.gov.sk/id/eli/sk/zz/2007/39/20220101");
+            await AssertTextPropertyLink(distribution, "Odkaz na strojovo-čitateľnú schému súboru na stiahnutie", "http://example.com/conforms", "http://example.com/conforms", false);
+            await AssertTextPropertyLink(distribution, "Typ média kompresného formátu", "ZIP", "http://www.iana.org/assignments/media-types/application/zip");
+            await AssertTextPropertyLink(distribution, "Typ média balíčkovacieho formátu", "ZIP", "http://www.iana.org/assignments/media-types/application/zip");
+
+            Assert.IsNull(await Page.GetTestElement("related"));
+        }
+
+        private async Task AssertTextProperty(IElementHandle element, string value)
+        {
+            foreach (IElementHandle e in await element.QuerySelectorAllAsync("p"))
+            {
+                string? text = (await e.TextContentAsync())?.Trim();
+                if (text == value)
+                {
+                    return;
+                }
+            }
+            Assert.Fail($"'{value}' was not found in '{await element.TextContentAsync()}'");
+        }
+
+        private async Task AssertTextPropertyLink(IElementHandle element, string header, string value, string link, bool useDereference = true)
+        {
+            if (useDereference)
+            {
+                link = $"https://znalosti.gov.sk/resource?uri={WebUtility.UrlEncode(link)}";
+            }
+            foreach (IElementHandle e in await element.QuerySelectorAllAsync("p"))
+            {
+                string? text = (await e.TextContentAsync())?.Trim();
+                if (text != null && text.StartsWith(header))
+                {
+                    IElementHandle? l = await e.QuerySelectorAsync("a");
+                    Assert.IsNotNull(l);
+                    Assert.AreEqual(link, await l.GetAttributeAsync("href"));
+                    Assert.AreEqual(value, await l.TextContentAsync());
+                    return;
+                }
+            }
+            Assert.Fail($"'{header}' was not found in '{await element.TextContentAsync()}'");
+        }
+
+        [TestMethod]
+        public async Task DetailShouldBeDisplayedWithDataService()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            fixture.CreatePublisher(PublisherId, true);
+            Guid id = CreateDatasetAndDistribution(fixture, "Test dataset", true, createDataService: true);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            f.CreateDefaultClient();
+
+            await Page.OpenDatasetDetail(id);
+
+            Assert.AreEqual("Národný katalóg otvorených dát - Test dataset", await Page.TitleAsync());
+            Assert.AreEqual("Test dataset", await (await Page.QuerySelectorAsync("h1"))!.TextContentAsync());
+
+            await Page.CheckTestContent("publisher-name", "Test Publisher");
+            await Page.CheckTestContent("description", "Test Description");
+            await Page.CheckTestContent("types", "type1sk");
+
+            IElementHandle? keywords = await Page.GetTestElement("keywords");
+            Assert.IsNotNull(keywords);
+            List<string> tags = await Extensions.GetTags(keywords);
+            CollectionAssert.AreEquivalent(new[] { "Test1", "Test2" }, tags);
+
+            IElementHandle? themes = await Page.GetTestElement("themes");
+            Assert.IsNotNull(themes);
+            List<string> themeValues = new List<string>();
+            foreach (IElementHandle theme in await themes.QuerySelectorAllAsync("div"))
+            {
+                themeValues.Add((await theme.TextContentAsync())!);
+            }
+            CollectionAssert.AreEquivalent(new[] { "theme1sk", "theme2sk", "nepovolená likvidácia odpadu", "chemický odpad" }, themeValues);
+
+            await Page.CheckTestContentLink("landing-page", "http://example.com/home");
+            await Page.CheckTestContentLink("specification", "http://example.com/specification");
+            await Page.CheckTestContentLink("documentation", "http://example.com/documentation");
+            await Page.CheckTestContentLink("relation", "http://example.com/relation");
+
+            await Page.CheckTestContent("update-frequency", "frequency1sk");
+            await Page.CheckTestContent("hvd-category", "HVD 1 sk");
+            await Page.CheckTestContent("applicable-legislations", new List<string> {
+                "https://data.gov.sk/id/eli/sk/zz/2019/95",
+                "https://data.gov.sk/id/eli/sk/zz/2007/39/20220101"
+            });
+            await Page.CheckTestContent("contact-name", "Test Contact Point");
+            await Page.CheckTestContent("contact-email", "test@example.com");
+
+            IElementHandle? spatial = await Page.GetTestElement("spatial");
+            Assert.IsNotNull(spatial);
+            List<string> spatialValues = new List<string>();
+            foreach (IElementHandle s in await spatial.QuerySelectorAllAsync("div"))
+            {
+                spatialValues.Add((await s.TextContentAsync())!);
+            }
+            CollectionAssert.AreEquivalent(new[] { "country1sk", "country2sk" }, spatialValues);
+
+            await Page.CheckTestContent("spatial-resolution", "100");
+
+            await Page.CheckTestContent("temporal-start", "17. 8. 2023");
+            await Page.CheckTestContent("temporal-end", "12. 9. 2023");
+            await Page.CheckTestContent("temporal-resolution", "1D");
+
+            await Page.CheckTestContent("distributions-count", "1 distribúcia");
+
+            IReadOnlyList<IElementHandle> distributions = await Page.GetTestElements("distribution");
+            Assert.AreEqual(1, distributions.Count);
+
+            IElementHandle distribution = distributions[0];
+            IElementHandle? distributionLink = await distribution.QuerySelectorAsync("[data-testid='service-name']");
+            Assert.IsNotNull(distributionLink);
+            Assert.AreEqual("Test Service SK (Dátová služba)", await distributionLink.TextContentAsync());
+
+            await AssertTextPropertyLink(distribution, "Typ autorského diela", "CC sk", "http://publications.europa.eu/resource/authority/licence/CC_BY_4_0");
+            await AssertTextPropertyLink(distribution, "Typ originálnej databázy", "CC sk", "http://publications.europa.eu/resource/authority/licence/CC_BY_4_0");
+            await AssertTextPropertyLink(distribution, "Typ špeciálnej právnej ochrany databázy", "CC sk", "http://publications.europa.eu/resource/authority/licence/CC_BY_4_0");
+            await AssertTextPropertyLink(distribution, "Typ výskytu osobných údajov", "personal2sk", "https://data.gov.sk/def/personal-data-occurence-type/2");
+            await AssertTextProperty(distribution, $"Meno autora diela: Author");
+            await AssertTextProperty(distribution, $"Meno autora originálnej databázy: Author Original");
+            await AssertTextPropertyLink(distribution, "Formát", "csv", "http://publications.europa.eu/resource/authority/file-type/CSV");
+            await AssertTextPropertyLink(distribution, "Typ média", "CSV", "http://www.iana.org/assignments/media-types/text/csv");
+            await AssertTextProperty(distribution, $"Právny predpis: https://data.gov.sk/id/eli/sk/zz/2019/95 https://data.gov.sk/id/eli/sk/zz/2007/39/20220101");
+            await AssertTextPropertyLink(distribution, "Odkaz na strojovo-čitateľnú schému súboru na stiahnutie", "http://example.com/conforms", "http://example.com/conforms", false);
+            await AssertTextPropertyLink(distribution, "Typ média kompresného formátu", "ZIP", "http://www.iana.org/assignments/media-types/application/zip");
+            await AssertTextPropertyLink(distribution, "Typ média balíčkovacieho formátu", "ZIP", "http://www.iana.org/assignments/media-types/application/zip");
+            await AssertTextPropertyLink(distribution, "Kategória HVD", "HVD 1 sk", "http://publications.europa.eu/resource/dataset/high-value-dataset-category/1");
+            await AssertTextPropertyLink(distribution, "Prístupový bod", "http://example.com/endpoint", "http://example.com/endpoint", false);
+            await AssertTextProperty(distribution, $"Kontaktný bod: Test Kontakt Service example@example.com");
+            await AssertTextPropertyLink(distribution, "Odkaz na dokumentáciu", "http://example.com/new/specification", "http://example.com/new/specification", false);
+            await AssertTextPropertyLink(distribution, "Popis prístupového bodu", "http://example.com/endpoint-description", "http://example.com/endpoint-description", false);
 
             Assert.IsNull(await Page.GetTestElement("related"));
         }

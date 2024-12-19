@@ -52,6 +52,10 @@ namespace WebApi
 
         public Uri? Specification { get; set; }
 
+        public Uri? Documentation { get; set; }
+
+        public Uri? Relation { get; set; }
+
         public Uri[] EuroVocThemes { get; set; } = Array.Empty<Uri>();
 
         public string[] EuroVocThemeValues { get; set; } = Array.Empty<string>();
@@ -72,6 +76,12 @@ namespace WebApi
 
         public string? LastUpdated { get; set; }
 
+        public Uri[] ApplicableLegislations { get; set; } = Array.Empty<Uri>();
+        
+        public Uri? HvdCategory { get; set; }
+
+        public CodelistItemView? HvdCategoryValue { get; set; } 
+
         public static async Task<DatasetView> MapFromRdf(FileMetadata metadata, DcatDataset datasetRdf, ICodelistProviderClient codelistProviderClient, string language, bool fetchAllLanguages)
         {
             VcardKind? contactPoint = datasetRdf.ContactPoint;
@@ -91,13 +101,18 @@ namespace WebApi
                 KeywordsAll = datasetRdf.Keywords,
                 Type = datasetRdf.Type.ToArray(),
                 Spatial = datasetRdf.Spatial.ToArray(),
+                ApplicableLegislations = datasetRdf.ApplicableLegislations.ToArray(),
+                HvdCategory = datasetRdf.HvdCategory,
                 Temporal = temporal is not null ? new TemporalView { StartDate = temporal.StartDate?.ToString(CultureInfo.CurrentCulture), EndDate = temporal.EndDate?.ToString(CultureInfo.CurrentCulture) } : null,
                 ContactPoint = contactPoint is not null ? CardView.MapFromRdf(contactPoint, language, fetchAllLanguages) : null,
                 LandingPage = datasetRdf.LandingPage,
                 Specification = datasetRdf.Specification,
+                Documentation = datasetRdf.Documentation,
+                Relation = datasetRdf.Relation,
                 EuroVocThemes = datasetRdf.EuroVocThemes.ToArray(),
                 SpatialResolutionInMeters = datasetRdf.SpatialResolutionInMeters,
                 TemporalResolution = datasetRdf.TemporalResolution,
+                
                 IsPartOf = datasetRdf.IsPartOfInternalId,
                 IsSerie = datasetRdf.IsSerie,
                 IsHarvested = datasetRdf.IsHarvested,
@@ -116,6 +131,7 @@ namespace WebApi
             view.TypeValues = await codelistProviderClient.MapCodelistValues(DcatDataset.TypeCodelist, view.Type.Select(u => u.ToString()), language);
             view.SpatialValues = await codelistProviderClient.MapCodelistValues(DcatDataset.SpatialCodelist, view.Spatial.Select(u => u.ToString()), language);
             view.EuroVocThemeValues = datasetRdf.GetEuroVocLabelThemes(language).ToArray();
+            view.HvdCategoryValue = await codelistProviderClient.MapCodelistValue(DcatDataset.HvdCategoryCodelist, view.HvdCategory?.ToString(), language);
 
             return view;
         }

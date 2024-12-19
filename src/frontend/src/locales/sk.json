@@ -441,5 +441,12 @@
   "notificationsAreDisabled": "Notifikácie sú vypnuté",
   "byLikesCount": "podľa obľúbenosti",
   "byCommentsCount": "podľa počtu komentárov",
-  "bySuggestionCount": "podľa počtu podnetov"
+  "bySuggestionCount": "podľa počtu podnetov",
+  "documentationLink": "Odkaz na dokumentáciu",
+  "relatedSource": "Súvisiaci zdroj",
+  "applicableLegislation": "Právny predpis",
+  "hvdCategory": "Kategória HVD",
+  "fileIsAvailableThroughDataService": "Súbor je prístupný cez dátovú službu",
+  "dataService": "Dátová služba",
+  "relation": "Súvisiaci zdroj"
 }

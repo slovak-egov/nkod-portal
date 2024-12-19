@@ -35,8 +35,8 @@ namespace WebApi
 
             results.ValidateLanguageTexts(nameof(Name), Name, languages, true);
             results.ValidateLanguageTexts(nameof(Description), Description, languages, true);
-            results.ValidateLanguageTexts(nameof(ContactName), ContactName, languages, false);
-            results.ValidateEmail(nameof(ContactEmail), ContactEmail, false);
+            results.ValidateLanguageTexts(nameof(ContactName), ContactName, languages, true);
+            results.ValidateEmail(nameof(ContactEmail), ContactEmail, true);
             results.ValidateUrl(nameof(HomePage), HomePage, false);
             results.ValidateUrl(nameof(EndpointUrl), EndpointUrl, true);
             await results.ValidateRequiredCodelistValue(nameof(Type), Type, DcatCatalog.LocalCatalogTypeCodelist, codelistProvider);

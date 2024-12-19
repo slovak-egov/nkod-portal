@@ -27,7 +27,15 @@ export const transformEntityForEdit = (entity: Distribution): DistributionInput 
         packageFormat: entity.packageFormat ?? null,
         conformsTo: entity.conformsTo ?? null,
         title: entity.titleAll ?? {},
-        fileId: null
+        fileId: null,
+        endpointUrl: entity.endpointUrl,
+        documentation: entity.documentation,
+        applicableLegislations: entity.applicableLegislations,
+        isDataService: entity.isDataService,
+        endpointDescription: entity.endpointDescription,
+        hvdCategory: entity.hvdCategory,
+        contactName: entity.contactPoint?.nameAll ?? {},
+        contactEmail: entity.contactPoint?.email ?? ''
     };
 };
 
@@ -80,7 +88,7 @@ export default function EditDistribution() {
 
                     {!loading && inputs ? (
                         <>
-                            <DistributionForm distribution={inputs} setDistribution={setDistribution} errors={errors} saving={saving} />
+                            <DistributionForm distribution={inputs} setDistribution={setDistribution} errors={errors} saving={saving} dataset={dataset} />
 
                             <Button
                                 style={{ marginRight: '20px' }}

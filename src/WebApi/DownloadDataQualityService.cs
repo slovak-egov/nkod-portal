@@ -9,7 +9,7 @@ namespace WebApi
 
         private readonly ISparqlClient client;
 
-        private TelemetryClient telemetryClient;
+        private readonly TelemetryClient telemetryClient;
 
         private Task lastWorkTask = Task.CompletedTask;
 

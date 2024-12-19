@@ -33,8 +33,11 @@ namespace IAM.Test
 
         private readonly SigningCredentials signingCredentials;
 
-        public WebApiApplicationFactory()
+        private readonly Action<IHostBuilder>? hostBuilder;
+
+        public WebApiApplicationFactory(Action<IHostBuilder>? hostBuilder = null)
         {
+            this.hostBuilder = hostBuilder;
             RSA rsa = RSA.Create(2048);
             RsaSecurityKey securityKey = new RsaSecurityKey(rsa);
             signingCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.RsaSha512);
@@ -138,7 +141,8 @@ namespace IAM.Test
                 services.RemoveAll(s => s.ServiceType == typeof(IEmailService));
 
                 services.AddSingleton(signingCredentials);
-                services.AddSingleton<IEmailService, TestEmailService>();
+                services.AddSingleton<TestEmailService>();
+                services.AddSingleton<IEmailService, TestEmailService>(p => p.GetRequiredService<TestEmailService>());
 
                 string name = Guid.NewGuid().ToString();
 
@@ -166,6 +170,8 @@ namespace IAM.Test
                     };
                 });
             });
+
+            hostBuilder?.Invoke(builder);
 
             return base.CreateHost(builder);
         }

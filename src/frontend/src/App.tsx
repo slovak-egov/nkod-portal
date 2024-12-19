@@ -54,6 +54,8 @@ type Props = {
     extenalToken: TokenResult | null;
 };
 
+const matomoUrl = process.env.REACT_APP_MATOMO_URL;
+
 function AppNavigator(props: Props) {
     const ctx = useContext(TokenContext);
     const navigate = useNavigate();
@@ -171,6 +173,21 @@ function App(props: Props) {
         load();
     }, [headers]);
 
+    useEffect(() => {
+        if (matomoUrl) {
+            var _mtm = [];
+            _mtm.push({ 'mtm.startTime': new Date().getTime(), event: 'mtm.Start' });
+            (function () {
+                var d = document,
+                    g = d.createElement('script'),
+                    s = d.getElementsByTagName('script')[0];
+                g.async = true;
+                g.src = matomoUrl;
+                s.parentNode?.insertBefore(g, s);
+            })();
+        }
+    }, []);
+
     return (
         <TokenContext.Provider
             value={{
@@ -188,6 +205,11 @@ function App(props: Props) {
                 }}
             >
                 <BrowserRouter>
+                    {window.location.hostname !== 'data.slovensko.sk' ? (
+                        <Alert type="warning" style={{ margin: 0, padding: '20px 0' }}>
+                            Nachádzate sa na TEST verzii portálu data.slovensko.sk.
+                        </Alert>
+                    ) : null}
                     <Alert style={{ margin: 0, padding: '20px 0' }}>
                         Zúčastnite sa{' '}
                         <a href="https://docs.google.com/forms/d/e/1FAIpQLSfnYVGTOBKyUSBrAvBALwqP8oHJOKlwtsdMTCq-vUKcNdPIzw/viewform?usp=sf_link">

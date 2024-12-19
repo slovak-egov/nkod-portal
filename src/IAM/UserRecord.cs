@@ -53,6 +53,28 @@ namespace IAM
 
         public string? ExternalId { get; set; }
 
+        public string CreateRandomPassword()
+        {
+            const string baseChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+            const string extendedChars = "!@#$%^&*()";
+            List<char> passwordChars = new List<char>();
+            Random rnd = new Random();
+            for (int i = 0; i < 8; i++)
+            {
+                passwordChars.Add(baseChars[rnd.Next(baseChars.Length)]);
+            }
+
+            for (int i = 0; i < 2; i++)
+            {
+                int index = rnd.Next(passwordChars.Count);
+                passwordChars[index] = extendedChars[rnd.Next(extendedChars.Length)];
+            }
+
+            string password = string.Concat(passwordChars);
+            SetPassword(password);
+            return password;
+        }
+
         public void SetPassword(string password)
         {
             byte[] passwordSalt = new byte[16];

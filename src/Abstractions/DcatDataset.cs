@@ -24,6 +24,12 @@ namespace NkodSk.Abstractions
 
         public const string EuroVocPrefix = "http://eurovoc.europa.eu/";
 
+        public const string HvdCategoryCodelist = "http://data.europa.eu/bna/asd487ae75";
+
+        public const string HvdType = "http://publications.europa.eu/resource/authority/dataset-type/HVD";
+
+        public const string HvdLegislation = "http://data.europa.eu/eli/reg_impl/2023/138/oj";
+
         private Guid? createdId;
 
         private DateTimeOffset? issued;
@@ -167,6 +173,18 @@ namespace NkodSk.Abstractions
             set => SetUriNode("dct:conformsTo", value);
         }
 
+        public Uri? Documentation
+        {
+            get => GetUriFromUriNode("foaf:page");
+            set => SetUriNode("foaf:page", value);
+        }
+
+        public Uri? Relation
+        {
+            get => GetUriFromUriNode("dct:relation");
+            set => SetUriNode("dct:relation", value);
+        }
+
         public decimal? SpatialResolutionInMeters
         {
             get => GetDecimalFromUriNode("dcat:spatialResolutionInMeters");
@@ -179,11 +197,24 @@ namespace NkodSk.Abstractions
             set => SetTextToUriNode("dct:temporalResolution", value, new Uri(RdfDocument.XsdPrefix + "duration"));
         }
 
+        public IEnumerable<Uri> ApplicableLegislations
+        {
+            get => GetUrisFromUriNode("dcatap:applicableLegislation");
+            set => SetUriNodes("dcatap:applicableLegislation", value);
+        }
+
+        public Uri? HvdCategory
+        {
+            get => GetUriFromUriNode("dcatap:hvdCategory");
+            set => SetUriNode("dcatap:hvdCategory", value);
+        }
+
+        public bool IsHvd => Type.Any(t => string.Equals(t.ToString(), HvdType, StringComparison.OrdinalIgnoreCase));
 
         public Uri? IsPartOf
         {
-            get => GetUriFromUriNode("dct:isPartOf");
-            set => SetUriNode("dct:isPartOf", value);
+            get => GetUriFromUriNode("dcat:inSeries");
+            set => SetUriNode("dcat:inSeries", value);
         }
 
         public string? IsPartOfInternalId
@@ -251,6 +282,13 @@ namespace NkodSk.Abstractions
         {
             (IGraph graph, IEnumerable<IUriNode> nodes) = Parse(text, "dcat:Dataset");
             IUriNode? node = nodes.FirstOrDefault();
+
+            if (node is null)
+            {
+                nodes = RdfDocument.ParseNode(graph, "dcat:DatasetSeries");
+                node = nodes.FirstOrDefault();
+            }
+
             if (node is not null)
             {
                 return new DcatDataset(graph, node);
@@ -349,7 +387,7 @@ namespace NkodSk.Abstractions
                 Graph.Retract(t);
                 if (t.Object is IUriNode node)
                 {
-                    RemoveTriples(node);
+                    RemoveTriples(node, new HashSet<string> { Graph.CreateUriNode("dcat:accessService").Uri.OriginalString, Graph.CreateUriNode("dcat:contactPoint").Uri.OriginalString });
                 }
             }
         }

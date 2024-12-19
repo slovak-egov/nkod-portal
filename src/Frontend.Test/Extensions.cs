@@ -424,11 +424,16 @@ namespace Frontend.Test
 
             Assert.AreEqual(rdf.LandingPage?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Domovská webová stránka")).GetAttributeAsync("value"));
             Assert.AreEqual(rdf.Specification?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Odkaz na špecifikáciu")).GetAttributeAsync("value"));
+            Assert.AreEqual(rdf.Documentation?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Odkaz na dokumentáciu")).GetAttributeAsync("value"));
+            Assert.AreEqual(rdf.Relation?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Súvisiaci zdroj")).GetAttributeAsync("value"));
 
             CollectionAssert.AreEqual(rdf.EuroVocThemes.Select(e => e.ToString()).ToList(), await test.GetMultiSelectItems("Klasifikácia podľa EuroVoc"));
 
             Assert.AreEqual(rdf.SpatialResolutionInMeters?.ToString("G29") ?? string.Empty, await (await test.GetInputInFormElementGroup("Priestorové rozlíšenie v metroch")).GetAttributeAsync("value"));
             Assert.AreEqual(rdf.TemporalResolution?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Časové rozlíšenie")).GetAttributeAsync("value"));
+
+            CollectionAssert.AreEqual(rdf.ApplicableLegislations.Select(e => e.ToString()).ToList(), await test.GetMultiSelectItems("Právny predpis"));
+            Assert.AreEqual(rdf.HvdCategory?.ToString() ?? string.Empty, await test.GetSelectItemFormElementGroup("Kategória HVD"));
 
             Assert.AreEqual(rdf.IsSerie, await test.GetByLabel("Dataset je séria").IsCheckedAsync());
            
@@ -538,11 +543,16 @@ namespace Frontend.Test
 
             await (await test.GetInputInFormElementGroup("Domovská webová stránka")).FillAsync(rdf.LandingPage?.ToString() ?? string.Empty);
             await (await test.GetInputInFormElementGroup("Odkaz na špecifikáciu")).FillAsync(rdf.Specification?.ToString() ?? string.Empty);
+            await (await test.GetInputInFormElementGroup("Odkaz na dokumentáciu")).FillAsync(rdf.Documentation?.ToString() ?? string.Empty);
+            await (await test.GetInputInFormElementGroup("Súvisiaci zdroj")).FillAsync(rdf.Relation?.ToString() ?? string.Empty);
 
             await FillMultiInput((await test.GetFormElementGroup("Klasifikácia podľa EuroVoc"))!, rdf.EuroVocThemes.Select(t => t.ToString()));
 
             await (await test.GetInputInFormElementGroup("Priestorové rozlíšenie v metroch")).FillAsync(rdf.SpatialResolutionInMeters?.ToString("G29") ?? string.Empty);
             await (await test.GetInputInFormElementGroup("Časové rozlíšenie")).FillAsync(rdf.TemporalResolution?.ToString() ?? string.Empty);
+
+            await FillMultiInput((await test.GetFormElementGroup("Právny predpis"))!, rdf.ApplicableLegislations.Select(t => t.ToString()));
+            await (await test.GetSelectInFormElementGroup("Kategória HVD"))!.SelectOptionAsync(rdf.HvdCategory?.ToString() ?? string.Empty);
 
             await test.GetByLabel("Dataset je séria").SetCheckedAsync(rdf.IsSerie);
 
@@ -720,11 +730,16 @@ namespace Frontend.Test
             Assert.AreEqual(expected.ContactPoint?.Email, actual.ContactPoint?.Email);
             Assert.AreEqual(expected.LandingPage, actual.LandingPage);
             Assert.AreEqual(expected.Specification, actual.Specification);
+            Assert.AreEqual(expected.Documentation, actual.Documentation);
+            Assert.AreEqual(expected.Relation, actual.Relation);
 
             Assert.AreEqual(expected.SpatialResolutionInMeters, actual.SpatialResolutionInMeters);
             Assert.AreEqual(expected.TemporalResolution, actual.TemporalResolution);
 
             AssertAreEqualLanguage(expected.EuroVocThemeLabels, actual.EuroVocThemeLabels);
+
+            CollectionAssert.AreEquivalent(expected.ApplicableLegislations.ToList(), actual.ApplicableLegislations.ToList());
+            Assert.AreEqual(expected.HvdCategory, actual.HvdCategory);
 
             Assert.AreEqual(expected.IsSerie, actual.IsSerie);
             Assert.AreEqual(expected.IsPartOf, actual.IsPartOf);
@@ -744,15 +759,38 @@ namespace Frontend.Test
             Assert.AreEqual(expected.TermsOfUse?.DatabaseProtectedBySpecialRightsType, actual.TermsOfUse?.DatabaseProtectedBySpecialRightsType);
             Assert.AreEqual(expected.TermsOfUse?.PersonalDataContainmentType, actual.TermsOfUse?.PersonalDataContainmentType);
 
-            Assert.AreEqual(expected.DownloadUrl, actual.DownloadUrl);
             Assert.AreEqual(expected.AccessUrl, actual.AccessUrl);
             Assert.AreEqual(expected.Format, actual.Format);
             Assert.AreEqual(expected.MediaType, actual.MediaType);
             Assert.AreEqual(expected.ConformsTo, actual.ConformsTo);
             Assert.AreEqual(expected.CompressFormat, actual.CompressFormat);
             Assert.AreEqual(expected.PackageFormat, actual.PackageFormat);
-            
+
+            CollectionAssert.AreEquivalent(expected.ApplicableLegislations.ToList(), actual.ApplicableLegislations.ToList());
+
             AssertAreEqualLanguage(expected.Title, actual.Title);
+            
+            Assert.AreEqual(expected.DownloadUrl, actual.DownloadUrl);
+
+            DcatDataService? dataService = expected.DataService;
+            if (dataService is not null)
+            {
+                DcatDataService? actualDataService = actual.DataService;
+                Assert.IsNotNull(actualDataService);
+
+                Assert.AreEqual(dataService.EndpointUrl, actualDataService.EndpointUrl);
+                Assert.AreEqual(dataService.Documentation, actualDataService.Documentation);
+                Assert.AreEqual(dataService.ConformsTo, actualDataService.ConformsTo);
+                Assert.AreEqual(dataService.HvdCategory, actualDataService.HvdCategory);
+                Assert.AreEqual(dataService.EndpointDescription, actualDataService.EndpointDescription);
+                AssertAreEqualLanguage(dataService.ContactPoint?.Name, actualDataService.ContactPoint?.Name);
+                Assert.AreEqual(dataService.ContactPoint?.Email, actualDataService.ContactPoint?.Email);
+                CollectionAssert.AreEquivalent(dataService.ApplicableLegislations.ToList(), actualDataService.ApplicableLegislations.ToList());
+            }
+            else
+            {
+                Assert.IsNull(actual.DataService);
+            }
         }
 
         public static void AssertAreEqual(DcatCatalog expected, FileState state)
@@ -920,13 +958,35 @@ namespace Frontend.Test
             Assert.AreEqual(rdf.TermsOfUse?.AuthorName?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Meno autora diela")).GetAttributeAsync("value"));
             Assert.AreEqual(rdf.TermsOfUse?.OriginalDatabaseAuthorName?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Meno autora originálnej databázy")).GetAttributeAsync("value"));
 
-            Assert.AreEqual(rdf.DownloadUrl?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("URL súboru na stiahnutie")).GetAttributeAsync("value"));
             Assert.AreEqual(rdf.Format?.ToString(), await test.GetSelectItemFormElementGroup("Formát súboru na stiahnutie"));
             Assert.AreEqual(rdf.MediaType?.ToString(), await test.GetSelectItemFormElementGroup("Typ média súboru na stiahnutie"));
             Assert.AreEqual(rdf.CompressFormat?.ToString() ?? string.Empty, await test.GetSelectItemFormElementGroup("Typ média kompresného formátu"));
             Assert.AreEqual(rdf.PackageFormat?.ToString() ?? string.Empty, await test.GetSelectItemFormElementGroup("Typ média balíčkovacieho formátu"));
             Assert.AreEqual(rdf.ConformsTo?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Odkaz na strojovo-čitateľnú schému súboru na stiahnutie")).GetAttributeAsync("value"));
             await test.AssertLangaugeValuesInput("Názov distribúcie", rdf.Title);
+
+            DcatDataService? dataService = rdf.DataService;
+            if (dataService is not null)
+            {
+                Assert.IsNull(await test.GetFormElementGroup("URL súboru na stiahnutie"));
+
+                Assert.IsTrue(await test.GetByLabel("Súbor je prístupný cez dátovú službu").IsCheckedAsync());
+
+                Assert.AreEqual(dataService.EndpointUrl?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Prístupový bod")).GetAttributeAsync("value"));
+                Assert.AreEqual(dataService.Documentation?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Dokumentácia")).GetAttributeAsync("value"));
+            }
+            else
+            {
+                Assert.IsNull(await test.GetFormElementGroup("Prístupový bod"));
+                Assert.IsNull(await test.GetFormElementGroup("Odkaz na dokumentáciu"));
+                Assert.IsNull(await test.GetFormElementGroup("Odkaz na špecifikáciu"));
+                Assert.IsNull(await test.GetFormElementGroup("Popis prístupového bodu"));
+
+                Assert.AreEqual(rdf.DownloadUrl?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("URL súboru na stiahnutie")).GetAttributeAsync("value"));
+
+                Assert.IsFalse(await test.GetByLabel("Súbor je prístupný cez dátovú službu").IsCheckedAsync());
+            }
+            CollectionAssert.AreEquivalent(rdf.ApplicableLegislations.Select(e => e.ToString()).ToList(), await test.GetMultiSelectItems("Právny predpis"));
         }
 
         public static async Task FillDistributionFields(this IPage test, DcatDistribution rdf)
@@ -939,13 +999,41 @@ namespace Frontend.Test
             await (await test.GetInputInFormElementGroup("Meno autora diela"))!.FillAsync(rdf.TermsOfUse?.AuthorName?.ToString() ?? string.Empty);
             await (await test.GetInputInFormElementGroup("Meno autora originálnej databázy"))!.FillAsync(rdf.TermsOfUse?.OriginalDatabaseAuthorName?.ToString() ?? string.Empty);
 
-            await (await test.GetInputInFormElementGroup("URL súboru na stiahnutie"))!.FillAsync(rdf.DownloadUrl?.ToString() ?? string.Empty);
             await (await test.GetSelectInFormElementGroup("Formát súboru na stiahnutie"))!.SelectOptionAsync(rdf.Format?.ToString() ?? string.Empty);
             await (await test.GetSelectInFormElementGroup("Typ média súboru na stiahnutie"))!.SelectOptionAsync(rdf.MediaType?.ToString() ?? string.Empty);
             await (await test.GetSelectInFormElementGroup("Typ média kompresného formátu"))!.SelectOptionAsync(rdf.CompressFormat?.ToString() ?? string.Empty);
             await (await test.GetSelectInFormElementGroup("Typ média balíčkovacieho formátu"))!.SelectOptionAsync(rdf.PackageFormat?.ToString() ?? string.Empty);
             await (await test.GetInputInFormElementGroup("Odkaz na strojovo-čitateľnú schému súboru na stiahnutie"))!.FillAsync(rdf.ConformsTo?.ToString() ?? string.Empty);
             await test.FillLangaugeValuesInput("Názov distribúcie", rdf.Title);
+
+            IElementHandle? fieldset = await test.GetByFieldsetLegend("Súbor distribúcie");
+            Assert.IsNotNull(fieldset);
+
+            DcatDataService? dataService = rdf.DataService;
+            if (dataService is not null)
+            {
+                IElementHandle? input = await GetInputByLabel(fieldset, "Súbor je prístupný cez dátovú službu");
+                Assert.IsNotNull(input);
+                await input.CheckAsync();
+
+                await (await test.GetInputInFormElementGroup("Prístupový bod"))!.FillAsync(dataService.EndpointUrl?.ToString() ?? string.Empty);
+                await (await test.GetInputInFormElementGroup("Popis prístupového bodu"))!.FillAsync(dataService.EndpointDescription?.ToString() ?? string.Empty);
+                await (await test.GetInputInFormElementGroup("Dokumentácia"))!.FillAsync(dataService.Documentation?.ToString() ?? string.Empty);
+                await (await test.GetSelectInFormElementGroup("Kategória HVD"))!.SelectOptionAsync(dataService.HvdCategory?.ToString() ?? string.Empty);
+
+                await test.FillLangaugeValuesInput("Kontaktný bod, meno", dataService.ContactPoint?.Name ?? new Dictionary<string, string>());
+                await (await test.GetInputInFormElementGroup("Kontaktný bod, e-mailová adresa")).FillAsync(dataService.ContactPoint?.Email ?? string.Empty);
+            }
+            else
+            {
+                IElementHandle? input = await GetInputByLabel(fieldset, "Súbor je prístupný na adrese");
+                Assert.IsNotNull(input);
+                await input.CheckAsync();
+
+                await (await test.GetInputInFormElementGroup("URL súboru na stiahnutie"))!.FillAsync(rdf.DownloadUrl?.ToString() ?? string.Empty);
+            }
+
+            await FillMultiInput((await test.GetFormElementGroup("Právny predpis"))!, rdf.ApplicableLegislations.Select(t => t.ToString()));
         }
 
         public static async Task UplaodDistributionFile(this IPage test)
@@ -1033,6 +1121,33 @@ namespace Frontend.Test
             {
                 Assert.AreEqual(content, await element.TextContentAsync());
             }
+        }
+
+        public static async Task CheckTestContent(this IPage page, string testId, List<string> values)
+        {
+            IReadOnlyList<IElementHandle> elements = await page.GetTestElements(testId);
+
+            Assert.IsTrue(elements.Count == 1);
+
+            int i = 0;
+            foreach (IElementHandle element in await elements.Single().QuerySelectorAllAsync("div"))
+            {
+                Assert.AreEqual(values[i], await element.TextContentAsync());
+                i++;
+            }
+        }
+
+        public static async Task CheckTestContentLink(this IPage page, string testId, string href)
+        {
+            IReadOnlyList<IElementHandle> elements = await page.GetTestElements(testId);
+
+            Assert.IsTrue(elements.Count == 1);
+            IElementHandle element = elements.Single();
+            Assert.IsNotNull(element);
+            IElementHandle? link = await element.QuerySelectorAsync("a");
+            Assert.IsNotNull(link);
+            Assert.AreEqual(href, await link.GetAttributeAsync("href"));
+            Assert.AreEqual("Zobraziť", await link.TextContentAsync());
         }
 
         public static async Task OpenLocalCatalogDetail(this IPage page, Guid id)

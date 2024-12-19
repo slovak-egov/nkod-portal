@@ -4,11 +4,14 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using VDS.Common.Collections;
 using VDS.RDF;
 using VDS.RDF.Parsing;
 using INode = VDS.RDF.INode;
@@ -118,9 +121,12 @@ namespace NkodSk.Abstractions
             return triples;
         }
 
-        private async Task LoadTriples(IGraph graph, Uri type, IUriNode node, bool trace)
+        private async Task LoadTriples(IGraph graph, Uri? type, IUriNode node, bool trace)
         {            
-            graph.Assert(node, graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType)), graph.CreateUriNode(type));
+            if (type is not null)
+            {
+                graph.Assert(node, graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType)), graph.CreateUriNode(type));
+            }
             graph.Assert(await GetTriples(graph, node.Uri, trace));
         }
 
@@ -144,7 +150,7 @@ namespace NkodSk.Abstractions
             if (contactPointUri is not null)
             {
                 IUriNode contactPointNode = newGraph.CreateUriNode(contactPointUri);
-                await LoadTriples(newGraph, new Uri("http://www.w3.org/2006/vcard/ns##Individual"), contactPointNode, trace);
+                await LoadTriples(newGraph, null, contactPointNode, trace);
             }
 
             return dataset;
@@ -164,6 +170,24 @@ namespace NkodSk.Abstractions
             {
                 IUriNode termsOfUseNode = newGraph.CreateUriNode(termsOfUseUri);
                 await LoadTriples(newGraph, new Uri("https://data.gov.sk/def/ontology/legislation/TermsOfUse"), termsOfUseNode, trace);
+            }
+
+            Uri? accessServiceUri = distribution.GetUriFromUriNode("dcat:accessService");
+            if (accessServiceUri is not null)
+            {
+                IUriNode accessServiceNode = newGraph.CreateUriNode(accessServiceUri);
+                await LoadTriples(newGraph, null, accessServiceNode, trace);
+
+                DcatDataService? dataService = distribution.DataService;
+                if (dataService is not null)
+                {
+                    Uri? contactPointUri = dataService.GetUriFromUriNode("dcat:contactPoint");
+                    if (contactPointUri is not null)
+                    {
+                        IUriNode contactPointNode = newGraph.CreateUriNode(contactPointUri);
+                        await LoadTriples(newGraph, null, contactPointNode, trace);
+                    }
+                }
             }
 
             return distribution;

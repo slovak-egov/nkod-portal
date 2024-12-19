@@ -283,6 +283,21 @@ namespace NkodSk.Abstractions
             return subject;
         }
 
+        public void SetRootTypes(params Uri[] types)
+        {
+            IUriNode rdfTypeNode = Graph.GetUriNode(new Uri(RdfSpecsHelper.RdfType));
+            
+            foreach (Triple t in Graph.GetTriplesWithSubjectPredicate(Node, rdfTypeNode).ToList())
+            {
+                Graph.Retract(t);
+            }
+
+            foreach (Uri uri in types)
+            {
+                Graph.Assert(Node, rdfTypeNode, Graph.CreateUriNode(uri));
+            }
+        }
+
         public bool IsHarvested
         {
             get => GetBooleanFromUriNode("custom:isHarvested") ?? false;
@@ -316,30 +331,30 @@ namespace NkodSk.Abstractions
 
         public virtual IEnumerable<RdfObject> RootObjects => new[] { this };
 
-        public void RemoveTriples(Uri subject)
+        public void RemoveTriples(Uri subject, HashSet<string> allowedPredicates)
         {
             IUriNode? uriNode = Graph.GetUriNode(subject);
             if (uriNode is not null)
             {
-                RemoveTriples(Graph, uriNode, new HashSet<INode>());
+                RemoveTriples(Graph, uriNode, new HashSet<INode>(), allowedPredicates);
             }
         }
 
-        public void RemoveTriples(IUriNode node)
+        public void RemoveTriples(IUriNode node, HashSet<string> allowedPredicates)
         {
-            RemoveTriples(Graph, node, new HashSet<INode>());
+            RemoveTriples(Graph, node, new HashSet<INode>(), allowedPredicates);
         }
 
-        private static void RemoveTriples(IGraph graph, IUriNode node, ISet<INode> visited)
+        private static void RemoveTriples(IGraph graph, IUriNode node, ISet<INode> visited, HashSet<string> allowedPredicates)
         {
             foreach (Triple t in graph.GetTriplesWithSubject(node).ToList())
             {
                 graph.Retract(t);
-                if (t.Object is IUriNode uriNode)
+                if (t.Predicate is IUriNode predicateNode && allowedPredicates.Contains(predicateNode.Uri.OriginalString) && t.Object is IUriNode uriNode)
                 {
                     if (visited.Add(uriNode))
                     {
-                        RemoveTriples(graph, uriNode, visited);
+                        RemoveTriples(graph, uriNode, visited, allowedPredicates);
                     }
                 }
             }
