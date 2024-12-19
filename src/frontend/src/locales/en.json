@@ -438,5 +438,9 @@
     "issuedDate": "Issued",
     "lastModifiedDate": "Last modified",
     "notificationSettings": "Notification settings",
-    "notificationsAreDisabled": "Notifications are disabled"
+    "notificationsAreDisabled": "Notifications are disabled",
+    "lastModifiedDate": "Last modified",
+    "byLikesCount": "by count of likes",
+    "byCommentsCount": "by count of comments",
+    "bySuggestionCount": "by count of suggestions"
 }

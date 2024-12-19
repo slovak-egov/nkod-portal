@@ -50,6 +50,8 @@ namespace NkodSk.RdfFileStorage
 
         private readonly ReadOnlyDictionary<FileType, string> fileTypeFolders;
 
+        private readonly Dictionary<FileStorageOrderProperty, IOrderProvider> orderProviders = new Dictionary<FileStorageOrderProperty, IOrderProvider>();
+
         private int disposed;
 
         private int defaultCapacity;
@@ -598,7 +600,15 @@ namespace NkodSk.RdfFileStorage
                                 compare = StringComparer.CurrentCultureIgnoreCase.Compare(a.Metadata.Name.GetText(query.Language), b.Metadata.Name.GetText(query.Language)) * reverseCoefficient;
                                 break;
                             default:
-                                throw new Exception($"Invalid order type {Enum.GetName(orderDefinition.Property)}");
+                                if (orderProviders.ContainsKey(orderDefinition.Property))
+                                {
+                                    compare = a.Metadata.LastModified.CompareTo(b.Metadata.LastModified) * -reverseCoefficient;
+                                }
+                                else
+                                {
+                                    throw new Exception($"Invalid order type {Enum.GetName(orderDefinition.Property)}");
+                                }
+                                break;
                         }
                         if (compare != 0)
                         {
@@ -702,7 +712,7 @@ namespace NkodSk.RdfFileStorage
                     }
                 }
 
-                if (orderDefinitions.Count >= 1 && orderDefinitions[0].Property == FileStorageOrderProperty.Relevance && !orderDefinitions[0].ReverseOrder && query.OnlyIds is not null && query.OnlyIds.Count > 0)
+                void OrderByList(List<Guid> list)
                 {
                     orderDefinitions.Clear();
                     Dictionary<Guid, Entry> indexedEntries = new Dictionary<Guid, Entry>(results.Count);
@@ -711,13 +721,40 @@ namespace NkodSk.RdfFileStorage
                         indexedEntries[entry.Metadata.Id] = entry;
                     }
                     results.Clear();
-                    foreach (Guid id in query.OnlyIds)
+                    foreach (Guid id in list)
                     {
                         if (indexedEntries.TryGetValue(id, out Entry? entry))
                         {
                             results.Add(entry);
+                            indexedEntries.Remove(id);
                         }
                     }
+                    foreach (Entry entry in indexedEntries.Values)
+                    {
+                        results.Add(entry);
+                    }
+                }
+
+                if (orderDefinitions.Count >= 1 && orderDefinitions[0].Property == FileStorageOrderProperty.Relevance && !orderDefinitions[0].ReverseOrder && query.OnlyIds is not null && query.OnlyIds.Count > 0)
+                {
+                    OrderByList(query.OnlyIds);
+                }
+
+                if (orderDefinitions.Count >= 1 && orderProviders.TryGetValue(orderDefinitions[0].Property, out IOrderProvider? orderProvider))
+                {
+                    List<string> keys = orderProvider.GetOrder(orderDefinitions[0].ReverseOrder);
+                    List<Guid> ids = new List<Guid>(keys.Count);
+                    if (additionalFilters.TryGetValue("key", out Dictionary<string, HashSet<Guid>>? filter))
+                    {
+                        foreach (string key in  keys)
+                        {
+                            if (filter.TryGetValue(key, out HashSet<Guid>? set) && set.Count > 0)
+                            {
+                                ids.Add(set.First());
+                            }
+                        }
+                    }
+                    OrderByList(ids);
                 }
 
                 if (orderDefinitions.Count > 0)
@@ -1238,6 +1275,11 @@ namespace NkodSk.RdfFileStorage
             {
                 rwLock.ExitWriteLock();
             }
+        }
+
+        public void AddOrderProvider(FileStorageOrderProperty orderProperty, IOrderProvider provider)
+        {
+            orderProviders[orderProperty] = provider;
         }
 
         public void Dispose()

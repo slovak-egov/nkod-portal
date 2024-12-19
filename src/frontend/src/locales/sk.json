@@ -438,5 +438,8 @@
   "lastModifiedDate": "Dátum poslednej zmeny",
   "datasetUri": "URI datasetu",
   "notificationSettings": "Nastavenie notifikácií",
-  "notificationsAreDisabled": "Notifikácie sú vypnuté"
+  "notificationsAreDisabled": "Notifikácie sú vypnuté",
+  "byLikesCount": "podľa obľúbenosti",
+  "byCommentsCount": "podľa počtu komentárov",
+  "bySuggestionCount": "podľa počtu podnetov"
 }

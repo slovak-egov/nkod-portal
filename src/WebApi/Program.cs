@@ -273,6 +273,9 @@ FileStorageQuery MapQuery(AbstractQuery query, string language, bool allowAll = 
         "relevance" => new FileStorageOrderDefinition(FileStorageOrderProperty.Relevance, false),
         "created" => new FileStorageOrderDefinition(FileStorageOrderProperty.Created, true),
         "modified" => new FileStorageOrderDefinition(FileStorageOrderProperty.LastModified, true),
+        "likes" => new FileStorageOrderDefinition(FileStorageOrderProperty.LikesCount, true),
+        "comments" => new FileStorageOrderDefinition(FileStorageOrderProperty.CommentsCount, true),
+        "suggestions" => new FileStorageOrderDefinition(FileStorageOrderProperty.SuggestionsCount, true),
         _ => null
     };
 

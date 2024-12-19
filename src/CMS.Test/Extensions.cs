@@ -41,7 +41,7 @@ namespace CMS.Test
             return newPage;
         }
 
-        public static async Task<SuggestionPost> CreateSuggestion(this IApi api, Guid? userId = null, string? userEmail = null, string? userPublisher = null, SuggestionStates state = SuggestionStates.C, string? targetPublisher = null, IEnumerable<Guid>? likeUsers = null, bool refresh = true)
+        public static async Task<SuggestionPost> CreateSuggestion(this IApi api, Guid? userId = null, string? userEmail = null, string? userPublisher = null, SuggestionStates state = SuggestionStates.C, string? targetPublisher = null, IEnumerable<Guid>? likeUsers = null, bool refresh = true, string? datasetUri = null)
         {
             SuggestionPost post = await api.Posts.CreateAsync<SuggestionPost>();
             post.Title = "Test title existing";
@@ -53,7 +53,7 @@ namespace CMS.Test
                 UserOrgUri = userPublisher,
                 OrgToUri = targetPublisher ?? "https://example.com/some-publisher",
                 Type = new Piranha.Extend.Fields.SelectField<ContentTypes> { Value = ContentTypes.PN },
-                DatasetUri = null,
+                DatasetUri = new Piranha.Extend.Fields.StringField { Value = datasetUri },
                 Status = new Piranha.Extend.Fields.SelectField<SuggestionStates> { Value = state },
                 Likes = new MultiSelectField<Guid> { Value = likeUsers ?? Enumerable.Empty<Guid>() },
             };

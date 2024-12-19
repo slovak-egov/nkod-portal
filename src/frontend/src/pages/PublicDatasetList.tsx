@@ -43,7 +43,10 @@ export default function PublicDatasetList() {
         { name: t('byRelevance'), value: 'relevance' },
         { name: t('byDateModified'), value: 'modified' },
         { name: t('byDateCreated'), value: 'created' },
-        { name: t('byName'), value: 'name' }
+        { name: t('byName'), value: 'name' },
+        { name: t('byLikesCount'), value: 'likes' },
+        { name: t('byCommentsCount'), value: 'comments' },
+        { name: t('bySuggestionCount'), value: 'suggestions' }
     ];
 
     return (

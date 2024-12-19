@@ -1847,5 +1847,57 @@ namespace RdfFileStorage.Test
             Assert.Equal(3, response.TotalCount);
             Assert.Equal(new[] { m3.Id, m1.Id, m4.Id }, response.Files.Select(f => f.Metadata.Id).ToArray());
         }
+
+        [Fact]
+        public void TestSortByLikeCount()
+        {
+            Storage storage = new Storage(fixture.GetStoragePath(insertContent: false));
+
+            DateTimeOffset created = DateTimeOffset.UtcNow;
+
+            FileMetadata m1 = new FileMetadata(Guid.NewGuid(), new LanguageDependedTexts { { "sk", "Test" } }, FileType.DatasetRegistration, null, null, true, null, created, created.AddMinutes(-5), new Dictionary<string, string[]> { { "key", new[] { "http://example.com/d1" } } });
+
+            FileMetadata m3 = new FileMetadata(Guid.NewGuid(), new LanguageDependedTexts { { "sk", "Test" } }, FileType.DatasetRegistration, null, null, true, null, created, created.AddMinutes(-10), new Dictionary<string, string[]> { { "key", new[] { "http://example.com/d2" } } });
+
+            FileMetadata m4 = new FileMetadata(Guid.NewGuid(), new LanguageDependedTexts { { "sk", "Test" } }, FileType.DatasetRegistration, null, null, true, null, created, created.AddMinutes(-3), new Dictionary<string, string[]> { { "key", new[] { "http://example.com/d3" } } });
+
+            storage.InsertFile("test", m1, false, StaticAccessPolicy.Allow);
+            storage.InsertFile("test", m3, false, StaticAccessPolicy.Allow);
+            storage.InsertFile("test", m4, false, StaticAccessPolicy.Allow);
+
+            storage.AddOrderProvider(FileStorageOrderProperty.LikesCount, new TestOrderProvider(new List<string> { "http://example.com/d2", "http://example.com/d1" }));
+
+            FileStorageQuery query = new FileStorageQuery { OrderDefinitions = new List<FileStorageOrderDefinition> { new FileStorageOrderDefinition { Property = FileStorageOrderProperty.LikesCount } } };
+            FileStorageResponse response = storage.GetFileStates(query, StaticAccessPolicy.Allow);
+
+            Assert.Equal(3, response.TotalCount);
+            Assert.Equal(new[] { m3.Id, m1.Id, m4.Id }, response.Files.Select(f => f.Metadata.Id).ToArray());
+
+            query.OrderDefinitions = new List<FileStorageOrderDefinition> { new FileStorageOrderDefinition { Property = FileStorageOrderProperty.LikesCount, ReverseOrder = true } };
+            response = storage.GetFileStates(query, StaticAccessPolicy.Allow);
+
+            Assert.Equal(3, response.TotalCount);
+            Assert.Equal(new[] { m1.Id, m3.Id, m4.Id }, response.Files.Select(f => f.Metadata.Id).ToArray());
+        }
+
+        private class TestOrderProvider : IOrderProvider
+        {
+            private readonly List<string> values;
+
+            public TestOrderProvider(List<string> values)
+            {
+                this.values = values;
+            }
+
+            public List<string> GetOrder(bool reverseOrder)
+            {
+                List<string> values = new List<string>(this.values);
+                if (reverseOrder)
+                {
+                    values.Reverse();
+                }
+                return values;
+            }
+        }
     }
 }
