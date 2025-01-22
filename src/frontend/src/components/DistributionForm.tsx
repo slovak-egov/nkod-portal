@@ -397,7 +397,7 @@ export function DistributionForm(props: Props) {
                         <SelectElementItems<CodelistValue>
                             id={id}
                             disabled={saving}
-                            options={formatCodelist.values}
+                            options={[{ id: '', label: t('none') }, ...formatCodelist.values]}
                             selectedValue={distribution.format ?? ''}
                             renderOption={(v) => v.label}
                             getValue={(v) => v.id}
