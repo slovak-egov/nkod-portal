@@ -26,7 +26,7 @@ export function Footer() {
                                         <a
                                             className="govuk-link"
                                             title={t('technicalSupport')}
-                                            href="https://wiki.vicepremier.gov.sk/display/opendata/Podpora+pre+data.slovensko.sk"
+                                            href="https://slovak-egov.atlassian.net/wiki/spaces/opendata/pages/20056044/Podpora+pre+data.slovensko.sk"
                                         >
                                             {t('technicalSupport')}
                                         </a>
