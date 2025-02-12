@@ -160,6 +160,32 @@ namespace WebApi.Test
         }
 
         [Fact]
+        public async Task FilterByKeyTest()
+        {
+            string path = fixture.GetStoragePath();
+
+            Guid id1 = fixture.CreatePublisher("Ministerstvo vnútra SR", "https://data.gov.sk/id/legal-subject/1");
+            Guid id2 = fixture.CreatePublisher("Štatistický úrad SR", "https://data.gov.sk/id/legal-subject/2");
+            Guid id3 = fixture.CreatePublisher("Ministerstvo hospodárstva", "https://data.gov.sk/id/legal-subject/3");
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<PublisherView> result;
+
+            result = await client.SearchPublishers(JsonContent.Create(new { OrderBy = "name" }));
+            Assert.Equal(3, result.TotalCount);
+            Assert.Equal(3, result.Items.Count);
+            Assert.Equal(new[] { id3, id1, id2 }, result.Items.Select(i => i.Id));
+
+            result = await client.SearchPublishers(JsonContent.Create(new { OrderBy = "name", Filters = new { Publishers = new[] { "https://data.gov.sk/id/legal-subject/2" } } } ));
+            Assert.Equal(1, result.TotalCount);
+            Assert.Single(result.Items);
+            Assert.Equal(new[] { id2 }, result.Items.Select(i => i.Id));
+        }
+
+        [Fact]
         public async Task ResultsInAnotherLanguage()
         {
             string path = fixture.GetStoragePath();

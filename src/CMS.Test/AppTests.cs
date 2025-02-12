@@ -308,34 +308,6 @@ namespace CMS.Test
             Assert.Equal(100, r.PaginationMetadata.TotalItemCount);
         }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         private ApplicationDto CreateInput(Guid userId)
         {
             return new ApplicationDto
@@ -366,10 +338,11 @@ namespace CMS.Test
             Guid userId = Guid.NewGuid();
             string publisher = "http://example.com/publisher";
             string userFormattedName = "Meno Priezvisko";
+            string userEmail = "test@non-existing-domain.sk";
 
             if (role is not null)
             {
-                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(role, publisher: publisher, userId: userId.ToString(), userFormattedName: userFormattedName));
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(role, publisher: publisher, userId: userId.ToString(), userEmail: userEmail, userFormattedName: userFormattedName));
             }
 
             using IApi api = f.CreateApi();
@@ -398,6 +371,7 @@ namespace CMS.Test
                 Assert.Equal(post.UserId.ToString(), created.Application.UserId.Value);
                 Assert.NotNull(created.Application.UserEmail.Value);
                 Assert.Equal(userFormattedName, created.Application.UserFormattedName.Value);
+                Assert.Equal(userEmail, created.Application.UserEmail.Value);
                 Assert.Equal(post.Type, created.Application.Type.Value);
                 Assert.Equal(post.Theme, created.Application.Theme.Value);
                 Assert.Equal(post.Url, created.Application.Url.Value);

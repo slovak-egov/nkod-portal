@@ -342,10 +342,11 @@ namespace CMS.Test
             Guid userId = Guid.NewGuid();
             string publisher = "http://example.com/publisher";
             string userFormattedName = "Meno Priezvisko";
+            string userEmail = "test@non-existing-domain.sk";
 
             if (role is not null)
             {
-                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(role, publisher: publisher, userId: userId.ToString(), userFormattedName: userFormattedName));
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(role, publisher: publisher, userId: userId.ToString(), userEmail: userEmail, userFormattedName: userFormattedName));
             }
 
             using IApi api = f.CreateApi();
@@ -374,6 +375,7 @@ namespace CMS.Test
                 Assert.Equal(post.UserId.ToString(), created.Suggestion.UserId.Value);
                 Assert.NotNull(created.Suggestion.UserEmail.Value);
                 Assert.Equal(userFormattedName, created.Suggestion.UserFormattedName.Value);
+                Assert.Equal(userEmail, created.Suggestion.UserEmail.Value);
                 Assert.Equal(post.UserOrgUri, created.Suggestion.UserOrgUri.Value);
                 Assert.Equal(post.OrgToUri, created.Suggestion.OrgToUri.Value);
                 Assert.Equal(post.Type, created.Suggestion.Type.Value);

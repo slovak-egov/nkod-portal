@@ -199,10 +199,11 @@ namespace CMS.Test
             Guid userId = Guid.NewGuid();
             string publisher = "http://example.com/publisher";
             string userFormattedName = "Meno Priezvisko";
+            string userEmail = "test@non-existing-domain.sk";
 
             if (role is not null)
             {
-                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(role, publisher: publisher, userId: userId.ToString(), userFormattedName: userFormattedName));
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(role, publisher: publisher, userId: userId.ToString(), userEmail: userEmail, userFormattedName: userFormattedName));
             }
 
             using IApi api = f.CreateApi();
@@ -228,7 +229,7 @@ namespace CMS.Test
                 Assert.NotNull(created);
                 Assert.Equal(post.ContentId, created.ContentId);
                 Assert.Equal(userId.ToString("D"), created.UserId);
-                Assert.NotNull(created.Email);
+                Assert.Equal(userEmail, created.Email);
                 Assert.Equal(post.Body + "|" + userFormattedName, created.Body);
                 Assert.True((DateTime.UtcNow - created.Created).Duration().TotalMinutes < 1);
                 Assert.Equal(post.ParentId.ToString("D"), created.Author);

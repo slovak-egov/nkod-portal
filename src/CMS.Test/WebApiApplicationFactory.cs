@@ -82,11 +82,19 @@ namespace CMS.Test
             {
                 claims.Add(new Claim(ClaimTypes.NameIdentifier, userId));
             }
+            if (!string.IsNullOrEmpty(userEmail))
+            {
+                claims.Add(new Claim(ClaimTypes.Email, userEmail));
+            }
             if (!string.IsNullOrEmpty(userFormattedName))
             {
                 claims.Add(new Claim(ClaimTypes.Name, userFormattedName));
             }
-            claims.Add(new Claim(ClaimTypes.Name, name));
+            else
+            {
+                claims.Add(new Claim(ClaimTypes.Name, name));
+            }
+            
 
             key ??= defaultKey;
 

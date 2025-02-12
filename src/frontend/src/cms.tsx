@@ -267,7 +267,7 @@ export function useCmsSuggestion(id?: string) {
                 const response: AxiosResponse<Suggestion> = await sendCmsGet(`suggestions/${id}`);
                 const suggestionDetail: SuggestionDetail = { ...response.data } ?? null;
 
-                const publisherItems = await searchPublisher('', { key: [suggestionDetail.orgToUri] }, 1);
+                const publisherItems = await searchPublisher('', { publishers: [suggestionDetail.orgToUri] }, 1);
                 suggestionDetail.orgName = publisherItems?.[0]?.label;
 
                 const datasetItems = await searchDataset('', { key: [suggestionDetail.datasetUri] }, 1);

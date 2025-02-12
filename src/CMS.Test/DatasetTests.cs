@@ -651,14 +651,16 @@ namespace CMS.Test
             using HttpClient client = f.CreateClient();
             Guid userId = Guid.NewGuid();
             string publisher = "http://example.com/publisher";
+            string userFormattedName = "Meno Priezvisko";
+            string userEmail = "test@non-existing-domain.sk";
 
             if (role is not null)
             {
-                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(role, publisher: publisher, userId: userId.ToString()));
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, f.CreateToken(role, publisher: publisher, userId: userId.ToString(), userFormattedName: userFormattedName, userEmail: userEmail));
             }
 
             using IApi api = f.CreateApi();
-            await api.CreateComment();
+            PageComment? otherCommendId = await api.CreateComment();
 
             using QueryExecutionListener listener = new QueryExecutionListener();
 
@@ -676,13 +678,13 @@ namespace CMS.Test
                 Guid id = await response.Content.ReadFromJsonAsync<Guid>();
                 Assert.NotEqual(Guid.Empty, id);
 
-                //Comment? created = await api.FindOneComment(id);
-                //Assert.NotNull(created);
-                //Assert.Equal(userId.ToString("D"), created.UserId);
-                //Assert.Equal(userEmail, created.Email);
-                //Assert.Equal(post.Body, created.Body);
-                //Assert.True((DateTime.UtcNow - created.Published).Duration().TotalMinutes < 1);
-                //Assert.Equal(Guid.Empty.ToString("D"), created.Author);
+                Comment? created = (await api.GetAllComments()).Where(c => c.Id != otherCommendId.Id).Last();
+                Assert.NotNull(created);
+                Assert.Equal(userId.ToString("D"), created.UserId);
+                Assert.Equal(userEmail, created.Email);
+                Assert.Equal(post.Body + "|" + userFormattedName, created.Body);
+                Assert.True((DateTime.UtcNow - created.Created).Duration().TotalMinutes < 1);
+                Assert.Equal(Guid.Empty.ToString("D"), created.Author);
             }
             else
             {

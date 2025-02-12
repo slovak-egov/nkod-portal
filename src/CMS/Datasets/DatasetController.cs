@@ -334,7 +334,11 @@ namespace CMS.Datasets
 		{
 			ClaimsPrincipal user = HttpContext.User;
 			Guid userId = Guid.Parse(user?.Claims.FirstOrDefault(c => c.Type.Contains("nameidentifier"))?.Value);
-            string userEmail = userId + "@data.slovensko.sk";
+            string userEmail = user?.FindFirstValue(ClaimTypes.Email);
+            if (string.IsNullOrEmpty(userEmail))
+            {
+                userEmail = userId + "@data.slovensko.sk";
+            }
             string userFormattedName = user?.FindFirstValue(ClaimTypes.Name);
 
             if (user == null)

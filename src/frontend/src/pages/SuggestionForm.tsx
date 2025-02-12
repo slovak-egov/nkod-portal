@@ -81,7 +81,7 @@ export default function SuggestionForm() {
         form,
         url: `suggestions/${id}`,
         transform: async (data: Suggestion) => {
-            const pubItems = await searchPublisher('', { key: [data.orgToUri] }, 1);
+            const pubItems = await searchPublisher('', { publishers: [data.orgToUri] }, 1);
             const datasetItems = await searchDataset('', { publishers: [data.orgToUri] }, 99999);
             let orgToUri = '';
             let datasetUri = '';

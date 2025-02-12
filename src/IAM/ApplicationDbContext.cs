@@ -82,6 +82,17 @@ namespace IAM
             {
                 user = null;
             }
+            else if (!string.IsNullOrEmpty(invitation) && user.Role == "CommunityUser" && string.IsNullOrEmpty(user.Publisher))
+            {
+                UserRecord? oldUser = await Users.FirstOrDefaultAsync(u => u.FirstName == user.FirstName && u.LastName == user.LastName && !u.IsActive && u.InvitationToken != null && u.InvitationToken == invitation && u.InvitedAt.HasValue && DateTimeOffset.UtcNow <= u.InvitedAt.Value.AddHours(48));
+                if (oldUser != null && !string.IsNullOrEmpty(oldUser.Role) && !string.IsNullOrEmpty(oldUser.Publisher))
+                {
+                    user.Role = oldUser.Role;
+                    user.Publisher = oldUser.Publisher;
+                    Remove(oldUser);
+                    await SaveChangesAsync();
+                }
+            }
 
             if (user is not null && !string.IsNullOrWhiteSpace(formattedName))
             {
