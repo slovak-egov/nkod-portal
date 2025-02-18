@@ -117,7 +117,7 @@ namespace NkodSk.Abstractions
                     foreach (string lang in languages)
                     {
                         string? text = concept.GetLabel(lang);
-                        if (text is not null)
+                        if (!string.IsNullOrWhiteSpace(text))
                         {
                             codelistItem.Labels[lang] = text;
                         }

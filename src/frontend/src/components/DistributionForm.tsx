@@ -87,16 +87,6 @@ export function DistributionForm(props: Props) {
     const hvdCategoryCodelist = codelists.find((c) => c.id === knownCodelists.dataset.hvdCategory);
 
     useEffect(() => {
-        if (formatCodelist && formatCodelist.values.length > 0 && distribution.format === null) {
-            setDistribution({ format: formatCodelist.values[0].id });
-        }
-
-        if (mediaTypeCodelist && mediaTypeCodelist.values.length > 0 && distribution.mediaType === null) {
-            setDistribution({ mediaType: mediaTypeCodelist.values[0].id });
-        }
-    }, [formatCodelist, mediaTypeCodelist, distribution, setDistribution]);
-
-    useEffect(() => {
         if (distribution.isDataService && !uploadSetting.enableDataService) {
             setUploadSettingState(uploadSettings[2]);
         }
@@ -402,7 +392,7 @@ export function DistributionForm(props: Props) {
                             renderOption={(v) => v.label}
                             getValue={(v) => v.id}
                             onChange={(v) => {
-                                setDistribution({ format: v });
+                                setDistribution({ format: v === '' ? null : v });
                             }}
                         />
                     )}
@@ -417,12 +407,12 @@ export function DistributionForm(props: Props) {
                         <SelectElementItems<CodelistValue>
                             id={id}
                             disabled={saving}
-                            options={mediaTypeCodelist.values}
+                            options={[{ id: '', label: t('none') }, ...mediaTypeCodelist.values]}
                             selectedValue={distribution.mediaType ?? ''}
                             renderOption={(v) => v.label}
                             getValue={(v) => v.id}
                             onChange={(v) => {
-                                setDistribution({ mediaType: v });
+                                setDistribution({ mediaType: v === '' ? null : v });
                             }}
                         />
                     )}

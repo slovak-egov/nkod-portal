@@ -41,7 +41,7 @@ namespace WebApi.Test
                 },
                 IsPublic = true,
                 Type = DcatCatalog.LocalCatalogTypeCodelist + "/1",
-                EndpointUrl = "https://data.gov.sk/",
+                EndpointUrl = "https://data.gov.sk/endpoint",
                 ContactName = new Dictionary<string, string>
                 {
                     { "sk", "TestContentName" },
@@ -82,6 +82,7 @@ namespace WebApi.Test
             Extensions.AssertTextsEqual(input.ContactName, catalog.ContactPoint?.Name);
             Assert.Equal(input.ContactEmail, catalog.ContactPoint?.Email);
             Assert.Equal(input.HomePage, catalog.HomePage?.ToString());
+            Assert.Equal(input.EndpointUrl, catalog.EndpointUrl?.ToString());
         }
 
         [Fact]
