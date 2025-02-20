@@ -47,6 +47,20 @@ namespace WebApi.Test
         {
             expected ??= new Dictionary<string, string>();
             actual ??= new Dictionary<string, string>();
+
+            void RemoveEmpty(Dictionary<string, string> d)
+            {
+                foreach ((string key, string value) in d.ToList())
+                {
+                    if (string.IsNullOrEmpty(value))
+                    {
+                        d.Remove(key);
+                    }
+                }
+            }
+
+            RemoveEmpty(expected);
+
             Assert.Equal(expected.Count, actual.Count);
             foreach ((string key, string value) in expected)
             {

@@ -78,7 +78,6 @@ namespace WebApi.Test
                 PersonalDataContainmentType = "https://data.gov.sk/def/ontology/law/personalDataContainmentType/1",
                 AuthorName = "AuthorName",
                 OriginalDatabaseAuthorName = "OriginalDatabaseAuthorName",
-                MediaType = "http://www.iana.org/assignments/media-types/text/csv",
                 EndpointUrl = "http://data.gov.sk/download",
                 IsDataService = true,
                 Title = new Dictionary<string, string>
@@ -125,6 +124,11 @@ namespace WebApi.Test
             DcatDistribution? distribution = DcatDistribution.Parse(state.Content);
             Assert.NotNull(distribution);
 
+            string? NullIfEmpty(string? value)
+            {
+                return !string.IsNullOrEmpty(value) ? value : null;
+            }
+
             Assert.Equal(input.AuthorsWorkType, distribution.TermsOfUse?.AuthorsWorkType?.ToString());
             Assert.Equal(input.OriginalDatabaseType, distribution.TermsOfUse?.OriginalDatabaseType?.ToString());
             Assert.Equal(input.DatabaseProtectedBySpecialRightsType, distribution.TermsOfUse?.DatabaseProtectedBySpecialRightsType?.ToString());
@@ -132,8 +136,8 @@ namespace WebApi.Test
             Assert.Equal(input.AuthorName, distribution.TermsOfUse?.AuthorName);
             Assert.Equal(input.OriginalDatabaseAuthorName, distribution.TermsOfUse?.OriginalDatabaseAuthorName);
             Assert.Equal(input.DownloadUrl, distribution.DownloadUrl?.ToString());
-            Assert.Equal(input.Format, distribution.Format?.ToString());
-            Assert.Equal(input.MediaType, distribution.MediaType?.ToString());
+            Assert.Equal(NullIfEmpty(input.Format), distribution.Format?.ToString());
+            Assert.Equal(NullIfEmpty(input.MediaType), distribution.MediaType?.ToString());
             Assert.Equal(input.ConformsTo, distribution.ConformsTo?.ToString());
             Assert.Equal(input.CompressFormat, distribution.CompressFormat?.ToString());
             Assert.Equal(input.PackageFormat, distribution.PackageFormat?.ToString());
@@ -169,7 +173,7 @@ namespace WebApi.Test
             }
 
             Extensions.AssertTextsEqual(input.ContactName, distribution.DataService?.ContactPoint?.Name);
-            Assert.Equal(input.ContactEmail, distribution.DataService?.ContactPoint?.Email);
+            Assert.Equal(NullIfEmpty(input.ContactEmail), distribution.DataService?.ContactPoint?.Email);
 
             ValidateDatasetModifyChange(storage, datasetId);
         }
@@ -1091,6 +1095,36 @@ namespace WebApi.Test
             using HttpResponseMessage response = await client.PutAsync("/distributions", requestContent);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             string content = await response.Content.ReadAsStringAsync();
+            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
+            Assert.NotNull(result);
+            Assert.False(string.IsNullOrEmpty(result.Id));
+            Assert.True(result.Success);
+            Assert.True(result.Errors is null || result.Errors.Count == 0);
+            ValidateValues(storage, result.Id, input, datasetId, PublisherId);
+        }
+
+        [Fact]
+        public async Task TestModifyDataServiceWithoutFormatMediaTypeContact()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, Guid publisherId, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DistributionInput input = CreateDataServiceInput(datasetId);
+            input.Id = distributions[0].ToString();
+            input.Format = string.Empty;
+            input.MediaType = string.Empty;
+            input.ContactName = new Dictionary<string, string> { { "sk", string.Empty } };
+            input.ContactEmail = string.Empty;
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/distributions", requestContent);
+            string content = await response.Content.ReadAsStringAsync();
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(content);
             Assert.NotNull(result);
             Assert.False(string.IsNullOrEmpty(result.Id));

@@ -82,7 +82,6 @@ namespace WebApi
             await results.ValidateRequiredCodelistValue(nameof(OriginalDatabaseType), OriginalDatabaseType, DcatDistribution.LicenseCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(DatabaseProtectedBySpecialRightsType), DatabaseProtectedBySpecialRightsType, DcatDistribution.LicenseCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(PersonalDataContainmentType), PersonalDataContainmentType, DcatDistribution.PersonalDataContainmentTypeCodelist, codelistProvider);
-            await results.ValidateRequiredCodelistValue(nameof(MediaType), MediaType, DcatDistribution.MediaTypeCodelist, codelistProvider);
             await results.ValidateCodelistValue(nameof(HvdCategory), HvdCategory, DcatDataset.HvdCategoryCodelist, codelistProvider);
             results.ValidateUrl(nameof(ConformsTo), ConformsTo, false);
             await results.ValidateCodelistValue(nameof(CompressFormat), CompressFormat, DcatDistribution.MediaTypeCodelist, codelistProvider);
@@ -113,10 +112,15 @@ namespace WebApi
                 results.ValidateUrl(nameof(EndpointUrl), EndpointUrl, true);
                 results.ValidateUrl(nameof(Documentation), Documentation, isDatasetHvd);
                 results.ValidateUrl(nameof(EndpointDescription), EndpointDescription, false);
+
+                await results.ValidateCodelistValue(nameof(MediaType), MediaType, DcatDistribution.MediaTypeCodelist, codelistProvider);
+                await results.ValidateCodelistValue(nameof(Format), Format, DcatDistribution.FormatCodelist, codelistProvider);
             }
             else
             {
                 results.ValidateUrl(nameof(DownloadUrl), DownloadUrl, true);
+
+                await results.ValidateRequiredCodelistValue(nameof(MediaType), MediaType, DcatDistribution.MediaTypeCodelist, codelistProvider);
                 await results.ValidateRequiredCodelistValue(nameof(Format), Format, DcatDistribution.FormatCodelist, codelistProvider);
             }
 

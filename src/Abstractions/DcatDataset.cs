@@ -153,10 +153,10 @@ namespace NkodSk.Abstractions
         public void SetContactPoint(LanguageDependedTexts? name, string? email)
         {
             RemoveUriNodes("dcat:contactPoint");
-            if (name is not null || email is not null)
+            if (name?.Count > 0 || !string.IsNullOrEmpty(email))
             {
                 VcardKind contactPoint = new VcardKind(Graph, CreateSubject("dcat:contactPoint", "vcard:Individual", "contact-point"));
-                contactPoint.SetNames(name ?? new LanguageDependedTexts());
+                contactPoint.SetNames(name);
                 contactPoint.Email = !string.IsNullOrEmpty(email) ? email : null;
             }
         }
@@ -387,7 +387,7 @@ namespace NkodSk.Abstractions
                 Graph.Retract(t);
                 if (t.Object is IUriNode node)
                 {
-                    RemoveTriples(node, new HashSet<string> { Graph.CreateUriNode("dcat:accessService").Uri.OriginalString, Graph.CreateUriNode("dcat:contactPoint").Uri.OriginalString });
+                    RemoveTriples(node, new HashSet<string> { Graph.CreateUriNode("leg:termsOfUse").Uri.OriginalString, Graph.CreateUriNode("dcat:accessService").Uri.OriginalString, Graph.CreateUriNode("dcat:contactPoint").Uri.OriginalString });
                 }
             }
         }
