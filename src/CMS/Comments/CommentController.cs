@@ -3,6 +3,7 @@ using CMS.Datasets;
 using CMS.Suggestions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NkodSk.Abstractions;
 using Piranha;
 using Piranha.Extend.Fields;
 using Piranha.Models;
@@ -20,10 +21,14 @@ namespace CMS.Comments
 
 		private readonly INotificationService notificationService;
 
-		public CommentController(IApi api, INotificationService notificationService)
+		private readonly IDocumentStorageClient documentStorageClient;
+
+
+        public CommentController(IApi api, INotificationService notificationService, IDocumentStorageClient documentStorageClient)
 		{
 			this.api = api;
 			this.notificationService = notificationService;
+			this.documentStorageClient = documentStorageClient;
 		}
 
 		[HttpGet]
@@ -177,6 +182,23 @@ namespace CMS.Comments
                 foreach (string email in usersToNotify)
                 {
                     notificationService.Notify(email, commentUrl, app.Title, $"K aplikácii bol pridaný komentár {commentText}", new List<string> { comment.Id.ToString(), dto.ContentId.ToString() });
+                }
+            }
+
+			DatasetPost dataset = await api.Posts.GetByIdAsync<DatasetPost>(dto.ContentId);
+			if (dataset?.Title is not null)
+			{
+                (string publisherEmail, string title, Guid? datasetId) = await documentStorageClient.GetEmailForDataset(dataset.Title);
+                if (!string.IsNullOrEmpty(publisherEmail) && datasetId.HasValue)
+                {
+                    string commentText = dto.Body.Trim();
+                    if (commentText.Length > 300)
+                    {
+                        commentText = string.Concat(commentText.AsSpan(0, 300), "...");
+                    }
+                    string commentUrl = $"/datasety/{datasetId.Value}";
+
+                    notificationService.Notify(publisherEmail, commentUrl, title, $"K datasetu bol pridaný komentár {commentText}", new List<string> { comment.Id.ToString(), dataset.Title });
                 }
             }
 

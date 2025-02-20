@@ -668,8 +668,9 @@ namespace WebApi.Test
             using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-            metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
+            FileMetadata newMetadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, newMetadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(metadata.AdditionalValues?["key"], newMetadata.AdditionalValues?["key"]);
         }
 
         [Fact]
@@ -694,8 +695,9 @@ namespace WebApi.Test
             using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-            metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
+            FileMetadata newMetadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, newMetadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(metadata.AdditionalValues?["key"], newMetadata.AdditionalValues?["key"]);
         }
 
         [Fact]
@@ -721,8 +723,9 @@ namespace WebApi.Test
             using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-            metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1", "http://publications.europa.eu/resource/dataset/file-type/2" }, metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
+            FileMetadata newMetadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1", "http://publications.europa.eu/resource/dataset/file-type/2" }, newMetadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(metadata.AdditionalValues?["key"], newMetadata.AdditionalValues?["key"]);
         }
 
         [Fact]
@@ -748,8 +751,9 @@ namespace WebApi.Test
             using HttpResponseMessage response = await client.PutAsync("/distributions", requestContent);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-            metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
+            FileMetadata newMetadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/1" }, newMetadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(metadata.AdditionalValues?["key"], newMetadata.AdditionalValues?["key"]);
         }
 
         [Fact]
@@ -775,8 +779,9 @@ namespace WebApi.Test
             using HttpResponseMessage response = await client.PutAsync("/distributions", requestContent);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-            metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/2" }, metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
+            FileMetadata newMetadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(new[] { "http://publications.europa.eu/resource/dataset/file-type/2" }, newMetadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(metadata.AdditionalValues?["key"], newMetadata.AdditionalValues?["key"]);
         }
 
         [Fact]
@@ -798,8 +803,9 @@ namespace WebApi.Test
             using HttpResponseMessage response = await client.DeleteAsync($"/distributions?id={HttpUtility.UrlEncode(distributions[0].ToString())}");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-            metadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
-            Assert.Equal(Array.Empty<string>(), metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
+            FileMetadata newMetadata = storage.GetFileMetadata(datasetId, accessPolicy)!;
+            Assert.Equal(Array.Empty<string>(), newMetadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.FormatCodelist, Array.Empty<string>()) ?? Array.Empty<string>());
+            Assert.Equal(metadata.AdditionalValues?["key"], newMetadata.AdditionalValues?["key"]);
         }
 
         [Fact]
