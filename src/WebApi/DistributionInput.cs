@@ -82,7 +82,6 @@ namespace WebApi
             await results.ValidateRequiredCodelistValue(nameof(OriginalDatabaseType), OriginalDatabaseType, DcatDistribution.LicenseCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(DatabaseProtectedBySpecialRightsType), DatabaseProtectedBySpecialRightsType, DcatDistribution.LicenseCodelist, codelistProvider);
             await results.ValidateRequiredCodelistValue(nameof(PersonalDataContainmentType), PersonalDataContainmentType, DcatDistribution.PersonalDataContainmentTypeCodelist, codelistProvider);
-            await results.ValidateCodelistValue(nameof(HvdCategory), HvdCategory, DcatDataset.HvdCategoryCodelist, codelistProvider);
             results.ValidateUrl(nameof(ConformsTo), ConformsTo, false);
             await results.ValidateCodelistValue(nameof(CompressFormat), CompressFormat, DcatDistribution.MediaTypeCodelist, codelistProvider);
             await results.ValidateCodelistValue(nameof(PackageFormat), PackageFormat, DcatDistribution.MediaTypeCodelist, codelistProvider);
@@ -98,8 +97,19 @@ namespace WebApi
 
             bool isDatasetHvd = dataset is not null && dataset.IsHvd;
 
+           
+
             if (IsDataService)
             {
+                if (isDatasetHvd)
+                {
+                    await results.ValidateRequiredCodelistValue(nameof(HvdCategory), HvdCategory, DcatDataset.HvdCategoryCodelist, codelistProvider);
+                }
+                else
+                {
+                    await results.ValidateCodelistValue(nameof(HvdCategory), HvdCategory, DcatDataset.HvdCategoryCodelist, codelistProvider);
+                }
+
                 languages = ContactName?.Keys.ToList() ?? new List<string>();
                 if (!languages.Contains("sk"))
                 {
