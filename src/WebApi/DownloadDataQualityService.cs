@@ -3,7 +3,7 @@ using NkodSk.Abstractions;
 
 namespace WebApi
 {
-    public class DownloadDataQualityService
+    public class DownloadDataQualityService : IDisposable
     {
         private Dictionary<string, bool>? status;
 
@@ -13,16 +13,25 @@ namespace WebApi
 
         private Task lastWorkTask = Task.CompletedTask;
 
+        private readonly Timer timer;
+
         public DownloadDataQualityService(ISparqlClient client, TelemetryClient telemetryClient)
         {
             this.client = client;
             this.telemetryClient = telemetryClient;
-            Timer? onceTimer = new Timer(OnTimerTick, null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(30));
+            timer = new Timer(OnTimerTick, null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(30));
         }
 
         private async void OnTimerTick(object? state)
         {
-            await lastWorkTask;
+            try
+            {
+                await lastWorkTask;
+            }
+            catch
+            {
+                //ignore
+            }
             lastWorkTask = Task.Run(Load);
         }
 
@@ -51,6 +60,11 @@ namespace WebApi
                 return isGood;
             }
             return null;
+        }
+
+        public void Dispose()
+        {
+            timer?.Dispose();
         }
     }
 }
