@@ -131,14 +131,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: "eFormulare",
                      policy =>
                      {
-                         policy.WithOrigins(new[] {
-                         "https://app.eformulare.sk",
-                         "https://www.slovensko.sk",
-                         "https://portal.upvsfixnew.gov.sk",
-                         "https://schranka.slovensko.sk",
-                         "https://schranka.upvsfixnew.gov.sk",
-                         "http://localhost:3000",
-                         }).AllowAnyHeader().AllowAnyMethod();
+                         policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
                      });
 
 });
