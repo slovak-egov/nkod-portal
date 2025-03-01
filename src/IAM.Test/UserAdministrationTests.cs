@@ -563,7 +563,7 @@ namespace IAM.Test
             Assert.False(string.IsNullOrEmpty(result.Id));
             Assert.True(result.Success);
             Assert.Null(result.Errors);
-            Assert.False(string.IsNullOrEmpty(result.InvitationToken));
+            Assert.Null(result.InvitationToken);
 
             using (IServiceScope scope = applicationFactory.Services.CreateScope())
             {
@@ -577,11 +577,11 @@ namespace IAM.Test
                 Assert.Equal(input.Role, user.Role);
                 Assert.Null(user.RefreshToken);
                 Assert.Null(user.RefreshTokenExpiryTime);
-                Assert.False(string.IsNullOrEmpty(user.InvitationToken));
+                Assert.Null(user.InvitationToken);
                 Assert.Equal(id, user.InvitedBy);
                 Assert.NotNull(user.InvitedAt);
                 Assert.Null(user.ActivatedAt);
-                Assert.False(user.IsActive);
+                Assert.True(user.IsActive);
                 Assert.NotNull(user.Password);
                 Assert.NotEmpty(user.Password);
             }
