@@ -62,7 +62,7 @@ export default function RegisterUser() {
                 <SuccessErrorPage msg={t('registrationSuccessful')} backButtonLabel={t('common.backToMain')} backButtonClick={() => navigate('/')} />
             ) : (
                 <MainContent>
-                    <PageHeader>{t('registerPage.title')}</PageHeader>
+                    <PageHeader size="l">{t('registerPage.registrationCommunity')}</PageHeader>
 
                     <GridRow>
                         <GridColumn widthUnits={1} totalUnits={2}>
@@ -137,17 +137,17 @@ export default function RegisterUser() {
                                         ))}
                                     </Alert>
                                 )}
+                                <GridRow>
+                                    <GridColumn widthUnits={1} totalUnits={1}>
+                                        <LoginExternalButton method={LoginMethod.GOOGLE} />
+                                    </GridColumn>
+                                </GridRow>
 
-                                <h2 className="govuk-heading-m">{t('loginPage.socialLogin.title')}</h2>
+                                <PageHeader size="l">{t('registerPage.registrationPublisher')}</PageHeader>
 
                                 <GridRow>
                                     <GridColumn widthUnits={1} totalUnits={1}>
                                         <LoginExternalButton method={LoginMethod.EGOV} />
-                                    </GridColumn>
-                                </GridRow>
-                                <GridRow>
-                                    <GridColumn widthUnits={1} totalUnits={1}>
-                                        <LoginExternalButton method={LoginMethod.GOOGLE} />
                                     </GridColumn>
                                 </GridRow>
 
@@ -155,6 +155,17 @@ export default function RegisterUser() {
                                     <GridColumn widthUnits={1} totalUnits={1} className="govuk-!-text-align-centre">
                                         <Link to="/prihlasenie" className="idsk-card-title govuk-link">
                                             {t('registerPage.loginLink')}
+                                        </Link>
+                                    </GridColumn>
+                                </GridRow>
+
+                                <GridRow>
+                                    <GridColumn widthUnits={1} totalUnits={2}>
+                                        <Link
+                                            to="https://slovak-egov.atlassian.net/wiki/spaces/opendata/pages/79331329/N+vod+na+registr+ciu+poskytovate+a+a+lena+komunity"
+                                            className="idsk-card-title govuk-link"
+                                        >
+                                            {t('loginPage.help')}
                                         </Link>
                                     </GridColumn>
                                 </GridRow>

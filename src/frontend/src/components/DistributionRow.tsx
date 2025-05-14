@@ -31,10 +31,15 @@ export default function DistributionRow(props: Props) {
                             {distribution.title && distribution.title.trim().length > 0 ? distribution.title : dataset.name}
                         </a>
                     ) : (
-                        <span data-testid="service-name">
+                        <a
+                            href={distribution.endpointUrl ?? '#'}
+                            className="govuk-link"
+                            id={'distribution-accordion-heading-' + distribution.id}
+                            data-testid="service-name"
+                        >
                             {distribution.title && distribution.title.trim().length > 0 ? distribution.title : dataset.name}{' '}
                             {distribution.isDataService ? <>({t('dataService')})</> : null}
-                        </span>
+                        </a>
                     )}
                     <DataWarningIcon distribution={distribution} />
                 </span>

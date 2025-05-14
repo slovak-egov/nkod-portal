@@ -61,7 +61,7 @@ export default function Login() {
                 />
             ) : (
                 <MainContent>
-                    <PageHeader>{t('login')}</PageHeader>
+                    <PageHeader size="l">{t('loginPage.loginCommunity')}</PageHeader>
                     <GridRow>
                         <GridColumn widthUnits={1} totalUnits={2}>
                             <h2 className="govuk-heading-m ">{t('loginPage.subtitle')}</h2>
@@ -101,16 +101,16 @@ export default function Login() {
                                     </GridColumn>
                                 </GridRow>
                             </form>
-
-                            <h2 className="govuk-heading-m">{t('loginPage.socialLogin.title')}</h2>
-                            <GridRow>
-                                <GridColumn widthUnits={1} totalUnits={1}>
-                                    <LoginExternalButton method={LoginMethod.EGOV} />
-                                </GridColumn>
-                            </GridRow>
                             <GridRow>
                                 <GridColumn widthUnits={1} totalUnits={1}>
                                     <LoginExternalButton method={LoginMethod.GOOGLE} />
+                                </GridColumn>
+                            </GridRow>
+
+                            <PageHeader size="l">{t('loginPage.loginPublisher')}</PageHeader>
+                            <GridRow>
+                                <GridColumn widthUnits={1} totalUnits={1}>
+                                    <LoginExternalButton method={LoginMethod.EGOV} />
                                 </GridColumn>
                             </GridRow>
 
@@ -123,6 +123,17 @@ export default function Login() {
                                 <GridColumn widthUnits={1} totalUnits={2} flexEnd>
                                     <Link to="/registracia" className="idsk-card-title govuk-link">
                                         {t('loginPage.registerLink')}
+                                    </Link>
+                                </GridColumn>
+                            </GridRow>
+
+                            <GridRow style={{ marginTop: '20px' }}>
+                                <GridColumn widthUnits={1} totalUnits={2}>
+                                    <Link
+                                        to="https://slovak-egov.atlassian.net/wiki/spaces/opendata/pages/77103107/N+vod+na+prihl+senie+poskytovate+a+a+lena+komunity"
+                                        className="idsk-card-title govuk-link"
+                                    >
+                                        {t('loginPage.help')}
                                     </Link>
                                 </GridColumn>
                             </GridRow>

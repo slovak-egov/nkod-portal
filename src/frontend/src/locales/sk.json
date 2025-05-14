@@ -292,7 +292,10 @@
             "twitter": "Twitter"
         },
         "problemLink": "Nemôžete sa prihlásiť?",
-        "registerLink": "Zaregistrovať sa"
+        "registerLink": "Zaregistrovať sa",
+        "loginCommunity": "Prihlásenie člena komunity",
+        "loginPublisher": "Prihlásenie poskytovateľa",
+        "help": "Návod"
     },
     "loginPageSubtitle": "Používateľ",
     "loginSuccessful": "Prihlásenie prebehlo úspešne",
@@ -366,7 +369,9 @@
             "passwordConfirm": "Opakovať heslo",
             "passwordMatchError": "Heslá musia byť rovnaké"
         },
-        "loginLink": "Máte už účet? Prihláste sa"
+        "loginLink": "Máte už účet? Prihláste sa",
+        "registrationCommunity": "Registrácia člena komunity",
+        "registrationPublisher": "Registrácia poskytovateľa"
     },
     "registrationSuccessful": "Registrácia prebehla úspešne",
     "relatedSpatial": "Súvisiace geografické územie",
