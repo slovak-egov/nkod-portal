@@ -25,7 +25,7 @@ export default function LoginExternalButton(props: Props) {
         );
     };
 
-    if (window.location.hostname !== 'data.slovensko.sk') {
+    if (window.location.hostname !== 'data.slovensko.sk' && window.location.hostname !== 'wpnkod.informo.sk') {
         return null;
     }
 
