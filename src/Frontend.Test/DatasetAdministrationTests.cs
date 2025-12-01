@@ -109,7 +109,6 @@ namespace Frontend.Test
             input.ApplicableLegislations = new List<Uri> { 
                 new Uri("https://data.gov.sk/id/eli/sk/zz/2019/95"),
                 new Uri("https://data.gov.sk/id/eli/sk/zz/2007/39/20220101")};
-            input.HvdCategory = new Uri("http://publications.europa.eu/resource/dataset/high-value-dataset-category/1");
             input.Relation = new Uri("http://example.com/relation");
             input.Specification = new Uri("http://example.com/specification");
             input.Themes = new[] { new Uri("http://publications.europa.eu/resource/dataset/data-theme/1"), new Uri(DcatDataset.EuroVocPrefix + "6409"), new Uri(DcatDataset.EuroVocPrefix + "6410") };
@@ -456,7 +455,6 @@ namespace Frontend.Test
             input.ApplicableLegislations = new List<Uri> {
                 new Uri("https://data.gov.sk/id/eli/sk/zz/2019/95-2"),
                 new Uri("https://data.gov.sk/id/eli/sk/zz/2007/39/20220101-2")};
-            input.HvdCategory = new Uri("http://publications.europa.eu/resource/dataset/high-value-dataset-category/2");
 
             await Page.FillDatasetFields(input);
 
@@ -824,7 +822,6 @@ namespace Frontend.Test
             input.ApplicableLegislations = new List<Uri> {
                 new Uri("https://data.gov.sk/id/eli/sk/zz/2019/95-2"),
                 new Uri("https://data.gov.sk/id/eli/sk/zz/2007/39/20220101-2")};
-            input.HvdCategory = new Uri("http://publications.europa.eu/resource/dataset/high-value-dataset-category/2");
 
             await Page.FillDatasetFields(input);
 

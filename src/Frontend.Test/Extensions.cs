@@ -433,7 +433,10 @@ namespace Frontend.Test
             Assert.AreEqual(rdf.TemporalResolution?.ToString() ?? string.Empty, await (await test.GetInputInFormElementGroup("Časové rozlíšenie")).GetAttributeAsync("value"));
 
             CollectionAssert.AreEqual(rdf.ApplicableLegislations.Select(e => e.ToString()).ToList(), await test.GetMultiSelectItems("Právny predpis"));
-            Assert.AreEqual(rdf.HvdCategory?.ToString() ?? string.Empty, await test.GetSelectItemFormElementGroup("Kategória HVD"));
+            if (rdf.IsHvd)
+            {
+                Assert.AreEqual(rdf.HvdCategory?.ToString() ?? string.Empty, await test.GetSelectItemFormElementGroup("Kategória HVD"));
+            }
 
             Assert.AreEqual(rdf.IsSerie, await test.GetByLabel("Dataset je séria").IsCheckedAsync());
            
@@ -552,7 +555,10 @@ namespace Frontend.Test
             await (await test.GetInputInFormElementGroup("Časové rozlíšenie")).FillAsync(rdf.TemporalResolution?.ToString() ?? string.Empty);
 
             await FillMultiInput((await test.GetFormElementGroup("Právny predpis"))!, rdf.ApplicableLegislations.Select(t => t.ToString()));
-            await (await test.GetSelectInFormElementGroup("Kategória HVD"))!.SelectOptionAsync(rdf.HvdCategory?.ToString() ?? string.Empty);
+            if (rdf.IsHvd)
+            {
+                await (await test.GetSelectInFormElementGroup("Kategória HVD"))!.SelectOptionAsync(rdf.HvdCategory?.ToString() ?? string.Empty);
+            }
 
             await test.GetByLabel("Dataset je séria").SetCheckedAsync(rdf.IsSerie);
 
@@ -989,7 +995,7 @@ namespace Frontend.Test
             CollectionAssert.AreEquivalent(rdf.ApplicableLegislations.Select(e => e.ToString()).ToList(), await test.GetMultiSelectItems("Právny predpis"));
         }
 
-        public static async Task FillDistributionFields(this IPage test, DcatDistribution rdf)
+        public static async Task FillDistributionFields(this IPage test, DcatDistribution rdf, bool isHvd = false)
         {
             await (await test.GetSelectInFormElementGroup("Typ autorského diela"))!.SelectOptionAsync(rdf.TermsOfUse?.AuthorsWorkType?.ToString() ?? string.Empty);
             await (await test.GetSelectInFormElementGroup("Typ originálnej databázy"))!.SelectOptionAsync(rdf.TermsOfUse?.OriginalDatabaseType?.ToString() ?? string.Empty);
@@ -1019,7 +1025,10 @@ namespace Frontend.Test
                 await (await test.GetInputInFormElementGroup("Prístupový bod"))!.FillAsync(dataService.EndpointUrl?.ToString() ?? string.Empty);
                 await (await test.GetInputInFormElementGroup("Popis prístupového bodu"))!.FillAsync(dataService.EndpointDescription?.ToString() ?? string.Empty);
                 await (await test.GetInputInFormElementGroup("Dokumentácia"))!.FillAsync(dataService.Documentation?.ToString() ?? string.Empty);
-                await (await test.GetSelectInFormElementGroup("Kategória HVD"))!.SelectOptionAsync(dataService.HvdCategory?.ToString() ?? string.Empty);
+                if (isHvd)
+                {
+                    await (await test.GetSelectInFormElementGroup("Kategória HVD"))!.SelectOptionAsync(dataService.HvdCategory?.ToString() ?? string.Empty);
+                }
 
                 await test.FillLangaugeValuesInput("Kontaktný bod, meno", dataService.ContactPoint?.Name ?? new Dictionary<string, string>());
                 await (await test.GetInputInFormElementGroup("Kontaktný bod, e-mailová adresa")).FillAsync(dataService.ContactPoint?.Email ?? string.Empty);

@@ -88,7 +88,7 @@ namespace Frontend.Test
             input.HomePage = new Uri("http://example.com/catalog");
             input.Type = new Uri("https://data.gov.sk/def/local-catalog-type/1");
             input.EndpointUrl = new Uri("http://example.com/endpoint");
-            input.SetContactPoint(new LanguageDependedTexts { { "sk", string.Empty } }, string.Empty);
+            input.SetContactPoint(new LanguageDependedTexts { { "sk", "Test Name" } }, "info@example.com");
             return input;
         }
 
@@ -260,6 +260,7 @@ namespace Frontend.Test
             input.SetDescription(new Dictionary<string, string> { { "sk", "DescriptionSk2" } });
             input.Type = new Uri("https://data.gov.sk/def/local-catalog-type/2");
             input.EndpointUrl = new Uri("http://example.com/endpoint/other");
+            input.SetContactPoint(new LanguageDependedTexts { { "sk", "Test Name 2" } }, "info2@example.com");
 
             await Page.FillLocalCatalogFields(input);
 
