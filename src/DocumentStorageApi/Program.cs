@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using NkodSk.Abstractions;
 using NkodSk.RdfFileStorage;
@@ -84,37 +83,6 @@ builder.Services.AddSingleton<IFileStorage>(_ =>
 builder.Services.AddScoped<IFileStorageAccessPolicy, DefaultFileAccessPolicy>();
 builder.Services.AddSingleton<FulltextStorageMap>();
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "DocumentStorage API",
-        Version = "v1",
-    });
-    options.AddSecurityDefinition("bearer", new OpenApiSecurityScheme
-    {
-        In = ParameterLocation.Header,
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        BearerFormat = "JWT",
-        Scheme = "bearer",
-    });
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
-});
 
 builder.Services.AddApplicationInsightsTelemetry(options =>
 {
@@ -137,17 +105,6 @@ builder.WebHost.ConfigureKestrel(options =>
 });
 
 var app = builder.Build();
-
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
-        options.RoutePrefix = string.Empty;
-    });
-}
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -370,7 +327,7 @@ app.MapPost("/files", [Authorize] (IFileStorage storage, IFileStorageAccessPolic
             {
                 fulltext.Index(new[] { state });
             }
-        } 
+        }
         catch (NkodSk.RdfFileStorage.UnauthorizedAccessException)
         {
             return Results.Forbid();
@@ -441,7 +398,7 @@ app.MapPost("/files/stream", [RequestSizeLimit(int.MaxValue)][RequestFormLimits(
     }
 
     return Results.Ok();
-});
+}).DisableAntiforgery();
 
 app.MapPost("/files/metadata", [Authorize] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] FulltextStorageMap fulltext, [FromBody] FileMetadata metadata) =>
 {

@@ -1930,7 +1930,7 @@ app.MapPost("/codelists", [Authorize] async ([FromServices] ICodelistProviderCli
     {
         return Results.Forbid();
     }
-});
+}).DisableAntiforgery();
 
 app.MapPost("/users/search", [Authorize] async ([FromServices] IIdentityAccessManagementClient client, UserInfoQuery query, [FromServices] TelemetryClient? telemetryClient) =>
 {
@@ -2212,7 +2212,7 @@ app.MapPost("/upload", [Authorize] [RequestSizeLimit(314572800)] async ([FromSer
         telemetryClient?.TrackException(e);
         return Results.Problem();
     }
-}).Produces<FileUploadResult>();
+}).Produces<FileUploadResult>().DisableAntiforgery();
 
 async Task<FileMetadata?> FindAndValidateDownload(IDocumentStorageClient client, Guid id)
 {

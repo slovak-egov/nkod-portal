@@ -1,52 +1,52 @@
-﻿using IAM;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.StaticFiles.Infrastructure;
-using Microsoft.EntityFrameworkCore;
-using System;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Mvc;
-using System.Security.Authentication;
-using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
-using IAMClient;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.OpenApi.Models;
-using NkodSk.Abstractions;
-using System.Drawing.Text;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Text;
-using System.Security.Cryptography;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using ITfoxtec.Identity.Saml2;
-using ITfoxtec.Identity.Saml2.Util;
-using ITfoxtec.Identity.Saml2.Schemas.Metadata;
-using System.Security.Cryptography.X509Certificates;
-using ITfoxtec.Identity.Saml2.MvcCore.Configuration;
-using ITfoxtec.Identity.Saml2.Schemas;
-using Microsoft.AspNetCore.Http;
-using ITfoxtec.Identity.Saml2.MvcCore;
-using Microsoft.IdentityModel.Tokens.Saml2;
-using Newtonsoft.Json;
-using System.Security.Policy;
-using System.Xml.Schema;
-using Microsoft.ApplicationInsights.DataContracts;
-using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.ApplicationInsights;
-using ITfoxtec.Identity.Saml2.Claims;
-using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.AspNetCore.Cryptography.KeyDerivation;
-using Google.Protobuf.WellKnownTypes;
-using System.Text.RegularExpressions;
-using System.Web;
-using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
-using Abstractions;
+﻿using Abstractions;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Oauth2.v2;
 using Google.Apis.Services;
-using System.Net;
+using Google.Protobuf.WellKnownTypes;
+using IAM;
+using IAMClient;
+using ITfoxtec.Identity.Saml2;
+using ITfoxtec.Identity.Saml2.Claims;
+using ITfoxtec.Identity.Saml2.MvcCore;
+using ITfoxtec.Identity.Saml2.MvcCore.Configuration;
+using ITfoxtec.Identity.Saml2.Schemas;
+using ITfoxtec.Identity.Saml2.Schemas.Metadata;
+using ITfoxtec.Identity.Saml2.Util;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.DataContracts;
+using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cryptography.KeyDerivation;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.IdentityModel.Tokens.Saml2;
+using Newtonsoft.Json;
+using NkodSk.Abstractions;
+using System;
+using System.Drawing.Text;
+using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Security.Authentication;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Security.Policy;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Web;
+using System.Xml.Schema;
+using VDS.RDF;
+using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -131,7 +131,7 @@ builder.Services.AddSingleton(services =>
     }
 
     saml2Configuration.SigningCertificate = new X509Certificate2(Convert.FromBase64String(signingKey), signingPassword, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet); 
-    saml2Configuration.DecryptionCertificate = new X509Certificate2(Convert.FromBase64String(decryptionKey), decryptionPassword, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet);
+    saml2Configuration.DecryptionCertificates.Add(new X509Certificate2(Convert.FromBase64String(decryptionKey), decryptionPassword, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet));
 
     saml2Configuration.AudienceRestricted = false;
 
@@ -177,38 +177,6 @@ builder.Services.AddSaml2(slidingExpiration: true);
 
 builder.Services.Configure<MainConfigurationOptions>(builder.Configuration.GetSection("Main"));
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "IAM API",
-        Version = "v1",
-    });
-    options.AddSecurityDefinition("bearer", new OpenApiSecurityScheme
-    {
-        In = ParameterLocation.Header,
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        BearerFormat = "JWT",
-        Scheme = "bearer",
-    });
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
-});
-
 builder.Services.AddApplicationInsightsTelemetry(options =>
 {
     options.ConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
@@ -223,16 +191,6 @@ builder.Services.AddSingleton<IEmailService>(_ => new SmtpEmailService(emailOpti
 builder.Logging.AddConsole();
 
 WebApplication app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
-        options.RoutePrefix = string.Empty;
-    });
-}
 
 app.UseSaml2();
 app.UseAuthentication();

@@ -49,16 +49,16 @@ namespace TestBase
             return Task.CompletedTask;
         }
 
-        public Task<NotificationSetting> GetCurrent(string email)
+        public Task<NotificationSetting?> GetCurrent(string email)
         {
             Setting? setting = GetOrCreateSetting(email);
-            return Task.FromResult(new NotificationSetting { Email = setting?.Email ?? string.Empty, IsDisabled = setting?.IsDisabled ?? false });
+            return Task.FromResult<NotificationSetting?>(new NotificationSetting { Email = setting?.Email ?? string.Empty, IsDisabled = setting?.IsDisabled ?? false });
         }
 
-        public Task<NotificationSetting> GetCurrentWithAuthKey(string authKey)
+        public Task<NotificationSetting?> GetCurrentWithAuthKey(string authKey)
         {
             Setting? setting = settings.FirstOrDefault(e => e.AuthKey == authKey);
-            return Task.FromResult(new NotificationSetting { Email = setting?.Email ?? string.Empty, IsDisabled = setting?.IsDisabled ?? false });
+            return Task.FromResult<NotificationSetting?>(new NotificationSetting { Email = setting?.Email ?? string.Empty, IsDisabled = setting?.IsDisabled ?? false });
         }
 
         private class Setting
