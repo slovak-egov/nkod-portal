@@ -2163,7 +2163,7 @@ app.MapPut("/profile", [Authorize] async ([FromServices] IDocumentStorageClient 
     return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapPost("/upload", [Authorize] [RequestSizeLimit(314572800)] async ([FromServices] IDocumentStorageClient client, ClaimsPrincipal identity, HttpRequest request, IFormFile file, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/upload", [Authorize] [RequestSizeLimit(maxFileSize)] async ([FromServices] IDocumentStorageClient client, ClaimsPrincipal identity, HttpRequest request, IFormFile file, [FromServices] TelemetryClient? telemetryClient) =>
 {
     try
     {
