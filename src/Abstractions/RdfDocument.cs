@@ -19,15 +19,14 @@ namespace NkodSk.Abstractions
             IUriNode rdfTypeNode = graph.GetUriNode(new Uri(RdfSpecsHelper.RdfType));
             if (rdfTypeNode is not null)
             {
-                IUriNode datasetTypeNode = graph.GetUriNode("dcat:Dataset");
-                if (datasetTypeNode is not null)
+                IUriNode datasetTypeNode = graph.CreateUriNode("dcat:Dataset");
+                IUriNode datasetSeriesTypeNode = graph.CreateUriNode("dcat:DatasetSeries");
+
+                foreach (Triple t in graph.GetTriplesWithPredicate(rdfTypeNode))
                 {
-                    foreach (IUriNode? datasetNode in graph.GetTriplesWithPredicateObject(rdfTypeNode, datasetTypeNode).Select(x => x.Subject).OfType<IUriNode>())
+                    if ((t.Object.Equals(datasetTypeNode) || t.Object.Equals(datasetSeriesTypeNode)) && t.Subject is IUriNode subjectNode)
                     {
-                        if (datasetNode is not null)
-                        {
-                            rdfDocument.Datasets.Add(new DcatDataset(graph, datasetNode));
-                        }
+                        rdfDocument.Datasets.Add(new DcatDataset(graph, subjectNode));
                     }
                 }
 
