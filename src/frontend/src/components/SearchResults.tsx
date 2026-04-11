@@ -1,4 +1,4 @@
-import { PropsWithChildren, useState } from 'react';
+import { PropsWithChildren } from 'react';
 import { Codelist, Facet, RequestQuery, useCodelists, usePublishers } from '../client';
 import FormElementGroup from './FormElementGroup';
 import GridColumn from './GridColumn';
@@ -8,7 +8,6 @@ import Loading from './Loading';
 import PageHeader from './PageHeader';
 import ResultsCount from './ResultsCount';
 import SearchBar from './SearchBar';
-import SearchFilter from './SearchFilter';
 import SelectElementItems from './SelectElementItems';
 import { useTranslation } from 'react-i18next';
 import SearchFilterWithQuery from './SearchFilterWithQuery';
@@ -231,7 +230,7 @@ export default function SearchResults(props: Props) {
                                     <PublisherFilter
                                         key={codelistId}
                                         facet={props.facets.find((f) => f.id === codelistId)}
-                                        selectedValues={props.query.filters ? props.query.filters[codelistId] ?? [] : []}
+                                        selectedValues={props.query.filters ? (props.query.filters[codelistId] ?? []) : []}
                                         onChange={(v) =>
                                             props.setQueryParameters({
                                                 filters: {
@@ -248,7 +247,7 @@ export default function SearchResults(props: Props) {
                                     <KeywordFilter
                                         key={codelistId}
                                         facet={props.facets.find((f) => f.id === codelistId)}
-                                        selectedValues={props.query.filters ? props.query.filters[codelistId] ?? [] : []}
+                                        selectedValues={props.query.filters ? (props.query.filters[codelistId] ?? []) : []}
                                         onChange={(v) =>
                                             props.setQueryParameters({
                                                 filters: {
@@ -268,7 +267,7 @@ export default function SearchResults(props: Props) {
                                             codelist={codelist}
                                             facet={props.facets.find((f) => f.id === codelistId)}
                                             key={codelistId}
-                                            selectedValues={props.query.filters ? props.query.filters[codelistId] ?? [] : []}
+                                            selectedValues={props.query.filters ? (props.query.filters[codelistId] ?? []) : []}
                                             onChange={(v) =>
                                                 props.setQueryParameters({
                                                     filters: {
@@ -368,7 +367,7 @@ export default function SearchResults(props: Props) {
                                 {props.filters.map((codelistId) => {
                                     const codelist = codelists.find((c) => c.id === codelistId);
                                     if (codelist) {
-                                        const values = codelist && props.query.filters ? props.query.filters[codelist.id] ?? [] : [];
+                                        const values = codelist && props.query.filters ? (props.query.filters[codelist.id] ?? []) : [];
                                         if (values.length > 0) {
                                             return (
                                                 <div

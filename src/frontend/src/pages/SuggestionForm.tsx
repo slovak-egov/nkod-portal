@@ -38,11 +38,11 @@ export default function SuggestionForm() {
 
     useDocumentTitle(t('addApplicationPage.headerTitle'));
 
-    const [publisherList, loadingPublisherList, errorPublisherList, searchPublisher, publishersTotalCount] = useSearchPublisher({
+    const [publisherList, loadingPublisherList, , searchPublisher, publishersTotalCount] = useSearchPublisher({
         language: 'sk',
         query: ''
     });
-    const [datasetList, loadingDatasetList, errorDatasetList, searchDataset] = useSearchDataset({
+    const [datasetList, loadingDatasetList, , searchDataset] = useSearchDataset({
         language: 'sk',
         query: ''
     });

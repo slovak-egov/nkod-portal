@@ -14,7 +14,6 @@ import { removeDistribution, useDataset, useDefaultHeaders, useDistributions, us
 import Loading from '../components/Loading';
 import ErrorAlert from '../components/ErrorAlert';
 import { useTranslation } from 'react-i18next';
-import AlertPublisher from '../components/AlertPublisher';
 import DataWarningIcon from '../components/DataWarningIcon';
 
 export default function DistributionList() {

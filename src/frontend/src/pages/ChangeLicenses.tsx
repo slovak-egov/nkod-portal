@@ -18,7 +18,6 @@ import {
 import Loading from '../components/Loading';
 import ErrorAlert from '../components/ErrorAlert';
 import { useTranslation } from 'react-i18next';
-import AlertPublisher from '../components/AlertPublisher';
 import FormElementGroup from '../components/FormElementGroup';
 import SelectElementItems from '../components/SelectElementItems';
 import { useState } from 'react';

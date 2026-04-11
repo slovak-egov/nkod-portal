@@ -13,7 +13,7 @@ type Props = {
 export default function LikeButton(props: Props) {
     const { count, url, contentId, datasetUri } = props;
     const { isLogged } = useUserPermissions();
-    const [likeLoading, likeError, like] = useCmsLike();
+    const [, , like] = useCmsLike();
     const [likeCount, setLikeCount] = useState(count);
 
     return (

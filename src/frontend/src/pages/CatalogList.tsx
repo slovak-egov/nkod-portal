@@ -15,7 +15,6 @@ import { useEffect } from 'react';
 import Loading from '../components/Loading';
 import ErrorAlert from '../components/ErrorAlert';
 import { useTranslation } from 'react-i18next';
-import AlertPublisher from '../components/AlertPublisher';
 
 export default function CatalogList() {
     const [catalogs, query, setQueryParameters, loading, error, refresh] = useLocalCatalogs({ pageSize: 20, page: 0 });

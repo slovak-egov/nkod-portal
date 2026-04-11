@@ -451,9 +451,7 @@ export function useEntities<T>(url: string, initialQuery?: Partial<RequestQuery>
     const refresh = useCallback(
         async (abortController: AbortController | null = null) => {
             setLoading(true);
-            if (error !== null) {
-                setError(null);
-            }
+            setError(null);
             if (query.page > 0) {
                 try {
                     const response: AxiosResponse<Response<T>> = await sendPost(url, query, headers, abortController);

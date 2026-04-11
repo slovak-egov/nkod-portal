@@ -43,7 +43,7 @@ export default function DetailDataset(props: Props) {
     const [applications, loadingApplications, errorApplications, loadApps] = useCmsApplications(false, dataset?.key);
     const [suggestions, loadingSuggestions, errorSuggestions, loadSuggestions] = useCmsSuggestions(false, dataset?.key);
 
-    const [cmsDataset, loadingCmsDatasets, errorCmsDatasets, loadCmsDatasets] = useCmsDatasets(false, dataset?.key);
+    const [cmsDataset, loadingCmsDatasets, , loadCmsDatasets] = useCmsDatasets(false, dataset?.key);
 
     useEffect(() => {
         if (dataset?.key) {
@@ -355,8 +355,8 @@ export default function DetailDataset(props: Props) {
                                             {dataset.distributions.length === 1
                                                 ? t('distribution')
                                                 : dataset.distributions.length < 5
-                                                ? t('distribution2-4')
-                                                : t('distribution5')}
+                                                  ? t('distribution2-4')
+                                                  : t('distribution5')}
                                         </div>
                                         <hr className="govuk-line" aria-hidden="true" />
                                         {dataset.distributions.map((distribution) => (

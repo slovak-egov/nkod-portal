@@ -250,12 +250,12 @@ export function useCmsSuggestion(id?: string) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
-    const [publishers, loadingPublishers, errorPublishers, searchPublisher] = useSearchPublisher({
+    const [, , , searchPublisher] = useSearchPublisher({
         language: 'sk',
         query: ''
     });
 
-    const [datasets, loadingDatasetList, errorDatasetList, searchDataset] = useSearchDataset({
+    const [, , , searchDataset] = useSearchDataset({
         language: 'sk',
         query: ''
     });
@@ -265,7 +265,7 @@ export function useCmsSuggestion(id?: string) {
         if (id) {
             try {
                 const response: AxiosResponse<Suggestion> = await sendCmsGet(`suggestions/${id}`);
-                const suggestionDetail: SuggestionDetail = { ...response.data } ?? null;
+                const suggestionDetail: SuggestionDetail = { ...response.data };
 
                 const publisherItems = await searchPublisher('', { publishers: [suggestionDetail.orgToUri] }, 1);
                 suggestionDetail.orgName = publisherItems?.[0]?.label;
