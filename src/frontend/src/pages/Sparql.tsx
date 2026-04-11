@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 import PageHeader from '../components/PageHeader';
 import Breadcrumbs from '../components/Breadcrumbs';
@@ -33,7 +33,10 @@ export default function Sparql() {
                         method: 'GET'
                     },
                     copyEndpointOnNewTab: true,
-                    autofocus: false
+                    autofocus: false,
+                    yasqe: {
+                        prefixCcApi: '/all.file.json'
+                    }
                 });
                 yasgui.getTab()?.setQuery(defaultSparqlQuery);
                 return () => {};
