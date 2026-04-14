@@ -115,7 +115,7 @@ app.MapPut("/codelists", async (InternalCodelistProvider provider, [FromServices
     {
         return Results.BadRequest();
     }
-});
+}).DisableAntiforgery();
 
 app.Use(async (context, next) =>
 {
