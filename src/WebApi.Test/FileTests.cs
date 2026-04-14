@@ -21,19 +21,45 @@ namespace WebApi.Test
 
         private const string PublisherId = "http://example.com/publisher";
 
+        private static readonly Uri CsvMediaType = new Uri("http://www.iana.org/assignments/media-types/text/csv");
+
+        private static readonly Uri ZipMediaType = new Uri("http://www.iana.org/assignments/media-types/application/zip");
+
+        private static readonly Uri TarMediaType = new Uri("http://www.iana.org/assignments/media-types/application/x-tar");
+
         public FileTests(StorageFixture fixture)
         {
             this.fixture = fixture;
         }
 
-        [Fact]
-        public async Task PublicDownloadFileTest()
+        public static IEnumerable<object?[]> FileFormats() => new List<object?[]>
+        {
+            new object?[] { null, null, null, "application/octet-stream" },
+            new object?[] { CsvMediaType, null, null, "text/csv" },
+            new object?[] { CsvMediaType, ZipMediaType, null, "application/zip" },
+            new object?[] { CsvMediaType, ZipMediaType, ZipMediaType, "application/zip" },
+            new object?[] { CsvMediaType, ZipMediaType, TarMediaType, "application/x-tar" },
+            new object?[] { CsvMediaType, null, TarMediaType, "application/x-tar" },
+            new object?[] { CsvMediaType, null, TarMediaType, "application/x-tar" },
+        };
+
+        [Theory]
+        [MemberData(nameof(FileFormats))]
+        public async Task PublicDownloadFileTest(Uri? mediaType, Uri? compressFormat, Uri? packageFormat, string expectedMediaType)
         {
             string path = fixture.GetStoragePath();
 
             (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
             Guid id = fixture.CreateDistributionFile("test.txt", "content", true, distributions[0]);
             using Storage storage = new Storage(path);
+
+            FileState distributionState = storage.GetFileState(distributions[0], new AllAccessFilePolicy())!;
+            DcatDistribution distribution = DcatDistribution.Parse(distributionState.Content!)!;
+            distribution.MediaType = mediaType;
+            distribution.CompressFormat = compressFormat;
+            distribution.PackageFormat = packageFormat;
+            storage.InsertFile(distribution.ToString(), distributionState.Metadata, true, new AllAccessFilePolicy());
+
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
             using HttpResponseMessage response = await client.GetAsync($"/download?id={HttpUtility.UrlEncode(id.ToString())}");
@@ -41,17 +67,27 @@ namespace WebApi.Test
             Assert.Equal("test.txt", response.Content.Headers.ContentDisposition?.FileName);
             Assert.Equal(Encoding.UTF8.GetByteCount("content"), response.Content.Headers.ContentLength);
             string content = await response.Content.ReadAsStringAsync();
+            Assert.Equal(expectedMediaType, response.Content.Headers.ContentType?.MediaType);
             Assert.Equal("content", content);
         }
 
-        [Fact]
-        public async Task PublicHeadFileTest()
+        [Theory]
+        [MemberData(nameof(FileFormats))]
+        public async Task PublicHeadFileTest(Uri? mediaType, Uri? compressFormat, Uri? packageFormat, string expectedMediaType)
         {
             string path = fixture.GetStoragePath();
 
             (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
             Guid id = fixture.CreateDistributionFile("test.txt", "content", true, distributions[0]);
             using Storage storage = new Storage(path);
+
+            FileState distributionState = storage.GetFileState(distributions[0], new AllAccessFilePolicy())!;
+            DcatDistribution distribution = DcatDistribution.Parse(distributionState.Content!)!;
+            distribution.MediaType = mediaType;
+            distribution.CompressFormat = compressFormat;
+            distribution.PackageFormat = packageFormat;
+            storage.InsertFile(distribution.ToString(), distributionState.Metadata, true, new AllAccessFilePolicy());
+
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
             using HttpClient client = applicationFactory.CreateClient();
             using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Head, $"/download?id={HttpUtility.UrlEncode(id.ToString())}");
@@ -59,6 +95,7 @@ namespace WebApi.Test
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal("test.txt", response.Content.Headers.ContentDisposition?.FileName);
             Assert.Equal(Encoding.UTF8.GetByteCount("content"), response.Content.Headers.ContentLength);
+            Assert.Equal(expectedMediaType, response.Content.Headers.ContentType?.MediaType);
         }
 
         [Fact]

@@ -2214,25 +2214,35 @@ app.MapPost("/upload", [Authorize] [RequestSizeLimit(maxFileSize)] async ([FromS
     }
 }).Produces<FileUploadResult>().DisableAntiforgery();
 
-async Task<FileMetadata?> FindAndValidateDownload(IDocumentStorageClient client, Guid id)
+async Task<(FileMetadata?, string?)> FindAndValidateDownload(IDocumentStorageClient client, Guid id)
 {
     FileMetadata? metadata = await client.GetFileMetadata(id).ConfigureAwait(false);
     if (metadata is not null)
     {
         if (metadata.Type == FileType.DistributionFile && metadata.ParentFile.HasValue)
         {
-            FileMetadata? distributionMetadata = await client.GetFileMetadata(metadata.ParentFile.Value).ConfigureAwait(false);
+            FileState? distributionState = await client.GetFileState(metadata.ParentFile.Value).ConfigureAwait(false);
+            FileMetadata? distributionMetadata = distributionState?.Metadata;
+            DcatDistribution? distributionRdf = distributionState?.Content is not null ? DcatDistribution.Parse(distributionState.Content) : null;
             if (distributionMetadata is not null && distributionMetadata.Type == FileType.DistributionRegistration && distributionMetadata.ParentFile.HasValue)
             {
+                string? mediaType = null;
+                Uri? contentTypeUri = distributionRdf?.PackageFormat ?? distributionRdf?.CompressFormat ?? distributionRdf?.MediaType;
+                string mediaTypePrefix = "/assignments/media-types/";
+                if (contentTypeUri is not null && contentTypeUri.Host == "www.iana.org" && contentTypeUri.LocalPath.Length > mediaTypePrefix.Length && contentTypeUri.LocalPath.StartsWith(mediaTypePrefix))
+                {
+                    mediaType = contentTypeUri.LocalPath[mediaTypePrefix.Length..];
+                }
+
                 FileMetadata? datasetMetadata = await client.GetFileMetadata(distributionMetadata.ParentFile.Value).ConfigureAwait(false);
                 if (datasetMetadata is not null && datasetMetadata.Type == FileType.DatasetRegistration)
                 {
-                    return metadata;
+                    return (metadata, mediaType);
                 }
             }
         }
     }
-    return null;
+    return (null, null);
 }
 
 app.MapMethods("/download", new[] { "HEAD" }, async ([FromServices] IDocumentStorageClient client, [FromQuery] string? id, HttpResponse response, [FromServices] TelemetryClient? telemetryClient) =>
@@ -2242,7 +2252,7 @@ app.MapMethods("/download", new[] { "HEAD" }, async ([FromServices] IDocumentSto
         string language = "sk";
         if (Guid.TryParse(id, out Guid key))
         {
-            FileMetadata? metadata = await FindAndValidateDownload(client, key).ConfigureAwait(false);
+            (FileMetadata? metadata, string? mediaType) = await FindAndValidateDownload(client, key).ConfigureAwait(false);
             if (metadata is not null)
             {
                 response.Headers.ContentDisposition = metadata.CreateAttachmentHeader(language).ToString();
@@ -2251,6 +2261,7 @@ app.MapMethods("/download", new[] { "HEAD" }, async ([FromServices] IDocumentSto
                 {
                     response.ContentLength = size;
                 }
+                response.Headers.ContentType = mediaType ?? "application/octet-stream";
                 return Results.Ok();
             }
         }
@@ -2280,13 +2291,13 @@ app.MapGet("/download", async ([FromServices] IDocumentStorageClient client, [Fr
         string language = "sk";
         if (Guid.TryParse(id, out Guid key))
         {
-            FileMetadata? metadata = await FindAndValidateDownload(client, key).ConfigureAwait(false);
+            (FileMetadata? metadata, string? mediaType) = await FindAndValidateDownload(client, key).ConfigureAwait(false);
             if (metadata is not null)
             {
                 Stream? stream = await client.DownloadStream(key).ConfigureAwait(false);
                 if (stream is not null)
                 {
-                    FileStreamHttpResult r = TypedResults.File(stream, fileDownloadName: metadata.OriginalFileName ?? metadata.Name.GetText(language) ?? metadata.Id.ToString());
+                    FileStreamHttpResult r = TypedResults.File(stream, mediaType, fileDownloadName: metadata.OriginalFileName ?? metadata.Name.GetText(language) ?? metadata.Id.ToString());
                     return r;
                 }
             }
