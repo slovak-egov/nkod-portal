@@ -1,6 +1,8 @@
 ﻿using Abstractions;
 using CodelistProviderClient;
 using DocumentStorageClient;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using NkodSk.Abstractions;
 using System.Security.Policy;
 using static Lucene.Net.Queries.Function.ValueSources.MultiFunction;
@@ -82,5 +84,11 @@ namespace WebApi
         }
 
         public static Uri? AsUri(this string? value) => !string.IsNullOrEmpty(value) ? new Uri(value, UriKind.Absolute) : null;
+
+        public static void SetAccessToken(this HttpResponse response, TokenResult token)
+        {
+            string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+            response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true, Secure = true, SameSite = SameSiteMode.Strict });
+        }
     }
 }

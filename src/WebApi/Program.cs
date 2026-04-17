@@ -1829,8 +1829,7 @@ app.MapPost("publishers/impersonate", [Authorize] async ([FromQuery] string? id,
                 if (state?.Metadata.Publisher is not null)
                 {
                     TokenResult token = await client.DelegatePublisher(state.Metadata.Publisher).ConfigureAwait(false);
-                    string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
-                    response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+                    response.SetAccessToken(token);
                     return Results.Ok(token);
                 }
                 else
@@ -2330,8 +2329,7 @@ app.MapPost("/refresh", async ([FromServices] IIdentityAccessManagementClient cl
             TokenResult token = await client.RefreshToken(request.AccessToken, request.RefreshToken);
             if (!string.IsNullOrEmpty(token.Token))
             {
-                string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
-                response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+                response.SetAccessToken(token);
             }
 
             return Results.Ok(token);
@@ -2425,8 +2423,7 @@ app.MapPost("/saml/consume", async ([FromServices] IIdentityAccessManagementClie
         using StreamReader reader = new StreamReader(request.Body);
         TokenResult token = await client.Consume(await reader.ReadToEndAsync()).ConfigureAwait(false);
         string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
-
-        response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+        response.SetAccessToken(token);
 
         string mainPage = Path.Combine(environment.WebRootPath, "index.html");
         string content = string.Empty;
@@ -2487,8 +2484,7 @@ app.MapPost("/users/login", async ([FromBody] LoginInput? input, HttpResponse re
     try
     {
         TokenResult token = await client.Login(input).ConfigureAwait(false);
-        string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
-        response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+        response.SetAccessToken(token);
 
         return Results.Ok(token);
     }
@@ -2634,8 +2630,7 @@ app.MapGet("/signin-google", async ([FromQuery] string? code, string? state, [Fr
         TokenResult? token = await client.SignGoogle(code, state).ConfigureAwait(false);
         if (token is not null)
         {
-            string serializedToken = JsonConvert.SerializeObject(token, new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver() });
-            response.Cookies.Append("accessToken", serializedToken, new CookieOptions { HttpOnly = true });
+            response.SetAccessToken(token);
         }
     }
     catch (HttpRequestException e)
