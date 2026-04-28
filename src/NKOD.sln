@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.6.33829.357
+# Visual Studio Version 18
+VisualStudioVersion = 18.5.11716.220
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebApi", "WebApi\WebApi.csproj", "{BB363508-4937-4879-9DCD-EA3667C75080}"
 EndProject
@@ -69,6 +69,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotificationService", "NotificationService\NotificationService.csproj", "{A5C43D0C-CE91-42F8-BD39-A19201007899}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NotificationService.Test", "NotificationService.Test\NotificationService.Test.csproj", "{119ACD37-5ECD-4857-8898-D1DA92A083CA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonitoringSettings", "MonitoringSettings\MonitoringSettings.csproj", "{AC385AA7-EAB7-4C1B-995B-7D2842FAE83B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ValidationCore", "ValidationCore\ValidationCore.csproj", "{A2E2527D-A684-4EB3-8118-A41C4E132DC7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonitoringCheck", "MonitoringCheck\MonitoringCheck.csproj", "{0E2CC40B-EBF2-4BFD-8BAC-984C696C2198}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -202,6 +208,18 @@ Global
 		{119ACD37-5ECD-4857-8898-D1DA92A083CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{119ACD37-5ECD-4857-8898-D1DA92A083CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{119ACD37-5ECD-4857-8898-D1DA92A083CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AC385AA7-EAB7-4C1B-995B-7D2842FAE83B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC385AA7-EAB7-4C1B-995B-7D2842FAE83B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC385AA7-EAB7-4C1B-995B-7D2842FAE83B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC385AA7-EAB7-4C1B-995B-7D2842FAE83B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2E2527D-A684-4EB3-8118-A41C4E132DC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2E2527D-A684-4EB3-8118-A41C4E132DC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2E2527D-A684-4EB3-8118-A41C4E132DC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2E2527D-A684-4EB3-8118-A41C4E132DC7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E2CC40B-EBF2-4BFD-8BAC-984C696C2198}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E2CC40B-EBF2-4BFD-8BAC-984C696C2198}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E2CC40B-EBF2-4BFD-8BAC-984C696C2198}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E2CC40B-EBF2-4BFD-8BAC-984C696C2198}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

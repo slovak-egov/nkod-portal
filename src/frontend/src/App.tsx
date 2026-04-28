@@ -49,6 +49,11 @@ import SuggestionList from './pages/SuggestionList';
 import UserList from './pages/UserList';
 import Alert from './components/Alert';
 import NotificationSettings from './pages/NotificationSettings';
+import HarvestationDetail from './pages/monitoring/HarvestationDetail';
+import CatalogHarvestationDetail from './pages/monitoring/CatalogHarvestationDetail';
+import Harvestations from './pages/monitoring/Harvestations';
+import CatalogHarvestations from './pages/monitoring/CatalogHarvestations';
+import PublisherHarvestationDetail from './pages/monitoring/PublisherHarvestationDetail';
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -303,6 +308,12 @@ function App(props: Props) {
                                     <Route path="/potvrdenie-registracie" Component={ActivateUser} />
                                     <Route path="/zabudnute-heslo" Component={ForgottenPassword} />
                                     <Route path="/obnova-hesla" Component={ForgottenPasswordActivation} />
+
+                                    <Route path="/harvestacie" Component={Harvestations} />
+                                    <Route path="/harvestacie/detail/:id" Component={HarvestationDetail} />
+                                    <Route path="/harvestacie/katalog/:id" Component={CatalogHarvestations} />
+                                    <Route path="/harvestacie/katalog/detail/:id" Component={CatalogHarvestationDetail} />
+                                    <Route path="/harvestacie/poskytovatel/detail/:id" Component={PublisherHarvestationDetail} />
 
                                     <Route path="*" Component={NotFound} />
                                 </Routes>
