@@ -27,6 +27,7 @@
     <ProjectReference Include="..\CodelistProviderClient\CodelistProviderClient.csproj" />
     <ProjectReference Include="..\DocumentStorageClient\DocumentStorageClient.csproj" />
     <ProjectReference Include="..\IAMClient\IAMClient.csproj" />
+    <ProjectReference Include="..\MonitoringSettingsClient\MonitoringSettingsClient.csproj" />
   </ItemGroup>
 
   <ItemGroup>

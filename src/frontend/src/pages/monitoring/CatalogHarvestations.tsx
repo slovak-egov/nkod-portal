@@ -185,7 +185,7 @@ export default function CatalogHarvestations() {
                             sortProperty: '?duration'
                         },
                         {
-                            header: 'Datasety',
+                            header: 'Harvestované datasety',
                             value: (row) => formatNumber(row.datasetsCount?.value),
                             sortProperty: '?datasetsCount'
                         },
@@ -217,7 +217,7 @@ export default function CatalogHarvestations() {
                         columns: [
                             { header: 'Začiatok', value: (row) => formatDateTime(row.started?.value) },
                             { header: 'Trvanie', value: (row) => formatSecondsToHms(convertXsdDurationToSeconds(row.duration?.value)) },
-                            { header: 'Datasety', value: (row) => row.datasetsCount?.value ?? '' },
+                            { header: 'Harvestované datasety', value: (row) => row.datasetsCount?.value ?? '' },
                             { header: 'Nedostupné zdroje', value: (row) => row.invalidSourcesCount?.value ?? '' },
                             { header: 'Identifikované problémy', value: (row) => row.problemsCount?.value ?? '' }
                         ]

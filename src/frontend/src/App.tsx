@@ -54,6 +54,7 @@ import CatalogHarvestationDetail from './pages/monitoring/CatalogHarvestationDet
 import Harvestations from './pages/monitoring/Harvestations';
 import CatalogHarvestations from './pages/monitoring/CatalogHarvestations';
 import PublisherHarvestationDetail from './pages/monitoring/PublisherHarvestationDetail';
+import MonitoringSettingsUser from './pages/MonitoringSettingsUser';
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -314,6 +315,7 @@ function App(props: Props) {
                                     <Route path="/harvestacie/katalog/:id" Component={CatalogHarvestations} />
                                     <Route path="/harvestacie/katalog/detail/:id" Component={CatalogHarvestationDetail} />
                                     <Route path="/harvestacie/poskytovatel/detail/:id" Component={PublisherHarvestationDetail} />
+                                    <Route path="/nastavenia-notifikacie" Component={MonitoringSettingsUser} />
 
                                     <Route path="*" Component={NotFound} />
                                 </Routes>

@@ -214,7 +214,7 @@ export type LocalCatalogInput = {
     homePage: string | null;
     type: string | null;
     endpointUrl: string | null;
-};
+} & MonitoringSettings;
 
 export type Dataset = {
     id: string;
@@ -316,6 +316,17 @@ export type LocalCatalog = {
     type: string | null;
     typeValue: CodelistValue | null;
     endpointUrl: string | null;
+};
+
+export type MonitoringSettings = {
+    notifyIfLocalCatalogIsUnavaiable?: boolean | null | undefined;
+    harvestationFailed?: boolean | null | undefined;
+    successRatioIsLow?: boolean | null | undefined;
+    problemsDetected?: boolean | null | undefined;
+    always?: boolean | null | undefined;
+    emailAddresses?: string | null | undefined;
+    useForLocalCatalog?: string | null | undefined;
+    ignoreLocalCatalogs?: string[] | null | undefined;
 };
 
 export type Codelist = {

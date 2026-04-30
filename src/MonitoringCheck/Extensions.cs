@@ -255,6 +255,10 @@ namespace MonitoringCheck
 
         public static string? GetString(this ITripleIndexForSubject triples, INode predicateNode) => triples.GetLiteralNode(predicateNode)?.Value;
 
+        public static string? GetString(this ITripleIndexForSubject triples, Uri predicate, string language) => triples.GetString(triples.Graph.CreateUriNode(predicate), language);
+
+        public static string? GetString(this ITripleIndexForSubject triples, INode predicateNode, string language) => triples.GetObjectNodes<ILiteralNode>(predicateNode).FirstOrDefault(n => string.Equals(n.Language, language))?.Value;
+
         public static long? GetLong(this ITripleIndexForSubject triples, Uri predicate) => triples.GetLong(triples.Graph.CreateUriNode(predicate));
 
         public static long? GetLong(this ITripleIndexForSubject triples, INode predicateNode) => triples.GetLiteralNode(predicateNode) is ILiteralNode literalNode && long.TryParse(literalNode.Value, out long result) ? result : null;

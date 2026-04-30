@@ -34,6 +34,25 @@ namespace MonitoringCheck
 
         public List<HarvestationProblem> Problems { get; } = [];
 
+        public IEnumerable<HarvestationProblem> AllDetectedProblems
+        {
+            get
+            {
+                foreach (HarvestationProblem problem in Problems)
+                {
+                    yield return problem;
+                }
+
+                foreach (IExternalSourceHarvestionResult result in ExternalSources)
+                {
+                    if (!result.Success)
+                    {
+                        yield return new HarvestationProblem(result.Name, result.Note);
+                    }
+                }
+            }
+        }
+
         //public void Add(HarvestationResultValues result)
         //{
         //    ExternalSources.AddRange(result.ExternalSources);

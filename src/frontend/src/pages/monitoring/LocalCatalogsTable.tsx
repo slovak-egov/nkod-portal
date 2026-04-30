@@ -103,7 +103,7 @@ export default function LocalCatalogsTable(props: Props) {
                     value: (row) => <ExternalLink href={row.endpoint?.value} />
                 },
                 {
-                    header: 'Datasety',
+                    header: 'Harvestované datasety',
                     value: (row) => <div style={{ textAlign: 'center' }}>{formatNumber(row.datasetsCount?.value)}</div>,
                     sortProperty: '?datasetsCount'
                 },

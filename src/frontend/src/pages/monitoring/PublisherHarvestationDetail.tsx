@@ -125,7 +125,7 @@ export default function PublisherHarvestationDetail() {
                         </GridRow>
                         <DatasetsCountPanel {...row} />
                         <ExternalSourcesPanel
-                            title="Externé zdroje"
+                            title="Zdroje"
                             count={row.externalSourcesCount}
                             totalDuration={row.duration}
                             averageDuration={row.averageDuration}

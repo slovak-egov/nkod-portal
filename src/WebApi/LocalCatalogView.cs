@@ -3,7 +3,7 @@ using NkodSk.Abstractions;
 
 namespace WebApi
 {
-    public class LocalCatalogView
+    public class LocalCatalogView : MonitoringNotificationSettings
     {
         public Guid Id { get; set; }
 

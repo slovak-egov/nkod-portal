@@ -1,4 +1,3 @@
-using AngleSharp.Html.Dom;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -82,11 +81,11 @@ app.MapGet("/settings", ([FromQuery] string? name, ClaimsPrincipal? principal) =
 
         if (string.IsNullOrEmpty(name) && isSuperAdmin)
         {
-            name = principal.Claims.FirstOrDefault(c => c.ValueType == ClaimTypes.NameIdentifier)?.Value;
+            name = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
         }
 
         string? path = GetSettingsFilePath(name);
-        if (!string.IsNullOrEmpty(path))
+        if (!string.IsNullOrEmpty(path) && File.Exists(path))
         {
             MonitoringNotificationSettings? setting = System.Text.Json.JsonSerializer.Deserialize<MonitoringNotificationSettings>(File.ReadAllText(path));
             return Results.Ok(setting);
@@ -97,11 +96,6 @@ app.MapGet("/settings", ([FromQuery] string? name, ClaimsPrincipal? principal) =
 
 app.MapPut("/settings", async ([FromBody] MonitoringNotificationSettings? settings, ClaimsPrincipal? principal) =>
 {
-    if (settings is null)
-    {
-        return Results.BadRequest();
-    }
-
     if (principal?.Identity?.IsAuthenticated ?? false)
     {
         bool isSuperAdmin = principal.IsInRole("Superadmin");
@@ -112,18 +106,18 @@ app.MapPut("/settings", async ([FromBody] MonitoringNotificationSettings? settin
 
         if (isSuperAdmin)
         {
-            if (!string.IsNullOrEmpty(settings.UseForLocalCatalog))
+            if (!string.IsNullOrEmpty(settings?.UseForLocalCatalog))
             {
                 name = settings.UseForLocalCatalog;
             }
             else
             {
-                name = principal.Claims.FirstOrDefault(c => c.ValueType == ClaimTypes.NameIdentifier)?.Value;
+                name = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
             }
         }
         else if (isPublisher || isPublisherAdmin)
         {
-            if (!string.IsNullOrEmpty(settings.UseForLocalCatalog))
+            if (!string.IsNullOrEmpty(settings?.UseForLocalCatalog))
             {
                 name = settings.UseForLocalCatalog;
             }
@@ -132,7 +126,14 @@ app.MapPut("/settings", async ([FromBody] MonitoringNotificationSettings? settin
         string? path = GetSettingsFilePath(name);
         if (!string.IsNullOrEmpty(path))
         {
-            File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(settings));
+            if (settings is not null)
+            {
+                File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(settings));
+            }
+            else if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
             return Results.Ok();
         }
         else
@@ -146,7 +147,7 @@ app.MapPut("/settings", async ([FromBody] MonitoringNotificationSettings? settin
 
 app.MapGet("/all", (ClaimsPrincipal? principal) =>
 {
-    if (principal?.IsInRole("Harveseter") ?? false)
+    if (principal?.IsInRole("Harvester") ?? false)
     {
         List<MonitoringNotificationSettings> list = [];
 

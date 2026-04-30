@@ -76,6 +76,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ValidationCore", "Validatio
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonitoringCheck", "MonitoringCheck\MonitoringCheck.csproj", "{0E2CC40B-EBF2-4BFD-8BAC-984C696C2198}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonitoringSettingsClient", "MonitoringSettingsClient\MonitoringSettingsClient.csproj", "{729D9F1A-CA09-4331-9696-EB0708DDE476}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -220,6 +222,10 @@ Global
 		{0E2CC40B-EBF2-4BFD-8BAC-984C696C2198}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0E2CC40B-EBF2-4BFD-8BAC-984C696C2198}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0E2CC40B-EBF2-4BFD-8BAC-984C696C2198}.Release|Any CPU.Build.0 = Release|Any CPU
+		{729D9F1A-CA09-4331-9696-EB0708DDE476}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{729D9F1A-CA09-4331-9696-EB0708DDE476}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{729D9F1A-CA09-4331-9696-EB0708DDE476}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{729D9F1A-CA09-4331-9696-EB0708DDE476}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

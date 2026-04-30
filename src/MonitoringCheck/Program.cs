@@ -1,10 +1,12 @@
 ﻿using Abstractions;
 using Microsoft.Extensions.Configuration;
 using MonitoringCheck;
+using NkodSk.Abstractions;
 using System.Data;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Web;
 using System.Xml;
 using ValidationCore;
 using VDS.RDF;
@@ -14,11 +16,53 @@ using VDS.RDF.Query;
 using VDS.RDF.Query.Paths;
 using VDS.RDF.Storage;
 using VDS.RDF.Writing;
+using RdfObject = MonitoringCheck.RdfObject;
+using ValidationResults = ValidationCore.ValidationResults;
 
 IConfigurationRoot config = new ConfigurationBuilder()
     .AddEnvironmentVariables(prefix: "APP_")
     .AddCommandLine(args)
     .Build();
+
+string? iamClientUrl = config["IAMUrl"];
+if (!Uri.IsWellFormedUriString(iamClientUrl, UriKind.Absolute))
+{
+    throw new Exception("Unable to get IAMUrl");
+}
+
+string? monitoringSettingsUrl = config["MonitoringSettingsUrl"];
+if (!Uri.IsWellFormedUriString(monitoringSettingsUrl, UriKind.Absolute))
+{
+    throw new Exception("Unable to get MonitoringSettingsUrl");
+}
+
+StaticHttpContextAccessor httpContextAccessor = new StaticHttpContextAccessor(null);
+StaticHttpClientFactory iamClientHttpClientFactory = new StaticHttpClientFactory(_ => new HttpClient { BaseAddress = new Uri(iamClientUrl) });
+IAMClient.IdentityAccessManagementClient iamClient = new IAMClient.IdentityAccessManagementClient(iamClientHttpClientFactory, httpContextAccessor);
+
+string? harvesterAuth = config["HarvesterAuth"];
+if (string.IsNullOrWhiteSpace(harvesterAuth))
+{
+    throw new Exception("HarvesterAuth is not defined");
+}
+string? token = await iamClient.LoginHarvester(harvesterAuth, null);
+if (string.IsNullOrEmpty(token))
+{
+    throw new Exception("Unable to obtain token");
+}
+
+httpContextAccessor = new StaticHttpContextAccessor(token, ["Harvester"]);
+StaticHttpClientFactory monitoringSettingsHttpClientFactory = new StaticHttpClientFactory(_ => new HttpClient { BaseAddress = new Uri(monitoringSettingsUrl) });
+MonitoringSettingsClient.MonitoringSettingsClient monitoringSettingsClient = new MonitoringSettingsClient.MonitoringSettingsClient(monitoringSettingsHttpClientFactory, httpContextAccessor);
+
+List<MonitoringNotificationSettings> notificationSettings = await monitoringSettingsClient.GetSettings();
+
+Console.WriteLine($"Monitoring settings count: {notificationSettings.Count}");
+foreach (MonitoringNotificationSettings setting in notificationSettings)
+{
+    Console.WriteLine(JsonSerializer.Serialize(setting));
+}
+Console.WriteLine();
 
 MonitoringOptions? options = config.Get<MonitoringOptions>();
 
@@ -115,7 +159,7 @@ foreach (PipelineLog firstLog in harvestationStartups)
         {
             if (!resultByPublishers.TryGetValue(publisher, out HarvestationResult? publisherResult))
             {
-                publisherResult = new HarvestationResult(harvestation, publisher, "publisher");
+                publisherResult = new HarvestationResult(harvestation, publisher, "publisher", publisher.OriginalString);
                 resultByPublishers[publisher] = publisherResult;
             }
             return publisherResult;
@@ -296,11 +340,12 @@ foreach (PipelineLog firstLog in harvestationStartups)
                 RdfObject catalog = new RdfObject(registrations, catalogNode);
                 Uri catalogId = catalogNode.Uri;
                 Uri? endpointUrl = catalog.GetUri(KnownPredicates.DcatEndpointUrl);
-                bool catalogCorrectlyHarvested = true;
+                bool catalogPartiallyHarvested = false;
+                string catalogName = catalog.GetString(KnownPredicates.DctTitle, "sk") ?? catalog.GetString(KnownPredicates.DctTitle, string.Empty) ?? catalogId.OriginalString;
 
                 if (endpointUrl is not null && catalogId is not null)
                 {
-                    HarvestationResult result = new HarvestationResult(harvestation, catalogId, "catalog");
+                    HarvestationResult result = new HarvestationResult(harvestation, catalogId, "catalog", catalogName);
                     HashSet<INode> previousDatasets = new HashSet<INode>(previousHarvestedGraph.GetTriplesWithSubjectPredicate(previousHarvestedGraph.CreateUriNode(catalogNode.Uri), previousHarvestedGraph.CreateUriNode(KnownPredicates.DcatDataset)).Select(t => t.Object));
 
                     void AddHarvestationProblem(string datasetId, string message)
@@ -450,8 +495,10 @@ foreach (PipelineLog firstLog in harvestationStartups)
                         {
                             TimeSpan duration = report.Duration ?? TimeSpan.Zero;
                             bool isSuccess = report.IsSuccess;
-                            catalogCorrectlyHarvested &= isSuccess;
+                            catalogPartiallyHarvested = isSuccess;
                             result.ExternalSources.Add(report.CreateResult(endpointUrl.OriginalString));
+
+                            result.MainSourceIsAvailable = isSuccess;
                         }
 
                         string? componentDir = localCatalogDocDatasetComponent.GetAbsolutePath(harvestationPipelineLog, "FilesOutput");
@@ -465,8 +512,6 @@ foreach (PipelineLog firstLog in harvestationStartups)
                             if (report is not null)
                             {
                                 TimeSpan duration = report.Duration ?? TimeSpan.Zero;
-                                bool isSuccess = report.IsSuccess;
-                                catalogCorrectlyHarvested &= isSuccess;
                                 result.ExternalSources.Add(report.CreateResult(datasetNode.Uri.OriginalString));
                             }
 
@@ -492,8 +537,10 @@ foreach (PipelineLog firstLog in harvestationStartups)
                         {
                             TimeSpan duration = report.Duration ?? TimeSpan.Zero;
                             bool isSuccess = report.IsSuccess;
-                            catalogCorrectlyHarvested &= isSuccess;
+                            catalogPartiallyHarvested = isSuccess;
                             result.ExternalSources.Add(report.CreateResult($"SPARQL (zoznam datasetov) {endpointUrl.OriginalString}"));
+
+                            result.MainSourceIsAvailable = isSuccess;
                         }
 
                         foreach (IUriNode datasetNode in catalog.GetUriNodes(KnownPredicates.DcatDataset))
@@ -514,7 +561,7 @@ foreach (PipelineLog firstLog in harvestationStartups)
                     harvestation.ExternalSources.AddRange(result.ExternalSources);
                     harvestation.CatalogSources.AddRange(result.ExternalSources);
                     harvestation.CatalogCount++;
-                    if (catalogCorrectlyHarvested)
+                    if (catalogPartiallyHarvested)
                     {
                         harvestation.CorrectlyHarvestedCatalogCount++;
                     }
@@ -693,6 +740,124 @@ WHERE {
             }
             sparql.Timeout = (int)TimeSpan.FromHours(1).TotalMilliseconds;
             sparql.UpdateGraph(Harvestation.GetPredicate(string.Empty).OriginalString, outputGraph.Triples, []);
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("Notifikácie");
+
+        foreach (MonitoringNotificationSettings notificationSetting in notificationSettings)
+        {
+            Dictionary<string, HarvestationResult> resultsToNotify = [];
+            
+            if (notificationSetting.UseForLocalCatalog is not null)
+            {
+                if (Uri.TryCreate(notificationSetting.UseForLocalCatalog, UriKind.Absolute, out Uri? catalogUri) && resultByCatalogs.TryGetValue(catalogUri, out HarvestationResult? result))
+                {
+                    resultsToNotify[catalogUri.OriginalString] = result;
+                }
+            }
+            else
+            {
+                foreach ((Uri catalogUri, HarvestationResult? result) in resultByCatalogs)
+                {
+                    if (notificationSetting.IgnoreLocalCatalogs is null || notificationSetting.IgnoreLocalCatalogs.Contains(catalogUri.OriginalString))
+                    {
+                        resultsToNotify[catalogUri.OriginalString] = result;
+                    }
+                }
+            }
+
+            foreach (string key in resultsToNotify.Keys.ToList())
+            {
+                HarvestationResult result = resultsToNotify[key];
+
+                bool shouldBeIncluded = notificationSetting.Always ||
+                    (result.AllDetectedProblems.Any() && notificationSetting.NotifyIfLocalCatalogIsUnavaiable) ||
+                    (result.SuccessRatio < .9f && notificationSetting.SuccessRatioIsLow) ||
+                    (!result.MainSourceIsAvailable && notificationSetting.NotifyIfLocalCatalogIsUnavaiable) ||
+                    (harvestationFailed && notificationSetting.HarvestationFailed);
+
+                if (!shouldBeIncluded)
+                {
+                    resultsToNotify.Remove(key);
+                }
+            }
+
+            Dictionary<string, List<HarvestationProblem>> allProblems = [];
+            List<string> names = [];
+            List<string> errors = [];
+
+            if (resultsToNotify.Count > 0)
+            {
+                if (harvestationFailed)
+                {
+                    errors.Add("Harvestácia neprebehla");
+                }
+
+                foreach (HarvestationResult result in resultsToNotify.Values)
+                {
+                    string name = result.Name;
+                    names.Add(name);
+                    List<HarvestationProblem> problems = result.AllDetectedProblems.ToList();
+                    if (problems.Count > 0)
+                    {
+                        allProblems[name] = problems;
+                    }
+
+                    int percentage = (int)Math.Floor(result.SuccessRatio * 100);
+                    if (percentage < 100)
+                    {
+                        errors.Add($"{name}: úspešnosť získania zdrojov bola {percentage}%");
+                    }
+
+                    if (problems.Count > 0)
+                    {
+                        errors.Add($"{name}: boli objavené problémy (podrobnosti v prílohe)");
+                    }
+
+                    if (!result.MainSourceIsAvailable)
+                    {
+                        errors.Add($"{name}: katalóg nebol dostupný");
+                    }
+                }
+            }
+
+            if (notificationSetting.Always || errors.Count > 0)
+            {
+                string message = errors.Count > 0 ? "Počas harvestácie bolo objevené toto:<br>" + string.Join("<br>", errors.Select(HttpUtility.HtmlEncode)) : "Harvestácia prebehla";
+                string? attachment = null;
+
+                if (allProblems.Count > 0)
+                {
+                    using System.IO.StringWriter attachmentWriter = new System.IO.StringWriter();
+                    using CsvHelper.CsvWriter csv = new CsvHelper.CsvWriter(attachmentWriter, new CsvHelper.Configuration.CsvConfiguration(new System.Globalization.CultureInfo("sk-SK")) { Delimiter = ";" });
+
+                    csv.WriteField("Katalóg");
+                    csv.WriteField("Názov");
+                    csv.WriteField("Poznámka");
+
+                    foreach ((string name, List<HarvestationProblem> problems) in allProblems)
+                    {
+                        foreach (HarvestationProblem problem in problems)
+                        {
+                            csv.NextRecord();
+                            csv.WriteField(name);
+                            csv.WriteField(problem.Name);
+                            csv.WriteField(problem.Note);
+                        }
+                    }
+
+                    attachment = attachmentWriter.ToString();
+                }
+
+                Console.WriteLine();
+                Console.WriteLine("Settings:");
+                Console.WriteLine(JsonSerializer.Serialize(notificationSetting));
+                Console.WriteLine("Message:");
+                Console.WriteLine(message);
+                Console.WriteLine("Attachment:");
+                Console.WriteLine(attachment ?? "NONE");
+            }
         }
     }
 }

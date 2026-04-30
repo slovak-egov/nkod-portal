@@ -19,6 +19,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Abstractions\Abstractions.csproj" />
+    <ProjectReference Include="..\IAMClient\IAMClient.csproj" />
+    <ProjectReference Include="..\MonitoringSettingsClient\MonitoringSettingsClient.csproj" />
     <ProjectReference Include="..\ValidationCore\ValidationCore.csproj" />
   </ItemGroup>
 

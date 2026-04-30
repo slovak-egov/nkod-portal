@@ -48,6 +48,7 @@ export default function Harvestations() {
                 <PageHeader>{title}</PageHeader>
                 <SparqlEnabledTable<Row>
                     query={query}
+                    header="História"
                     columns={[
                         {
                             header: 'Začiatok',
@@ -64,12 +65,12 @@ export default function Harvestations() {
                             sortProperty: '?duration'
                         },
                         {
-                            header: 'Datasety',
+                            header: 'Harvestované datasety',
                             value: (row) => <div style={{ textAlign: 'center' }}>{formatNumber(row.datasetsCount?.value)}</div>,
                             sortProperty: '?datasetsCount'
                         },
                         {
-                            header: 'LKODy',
+                            header: 'Harvestované LKODy',
                             value: (row) => (
                                 <div style={{ textAlign: 'center' }}>
                                     {formatNumber(row.correctlyHarvestedCatalogsCount?.value)} / {formatNumber(row.catalogsCount?.value)}
@@ -78,7 +79,7 @@ export default function Harvestations() {
                             sortProperty: '?catalogsCount'
                         },
                         {
-                            header: 'Nedostupné zdroje LKOD',
+                            header: 'Nedostupné zdroje',
                             value: (row) => (
                                 <div style={{ textAlign: 'center' }}>
                                     {((getNumber(row.unavailableCatalogSourcesCount?.value) ?? 0) > 0 ? '🔴' : '🟢') +
@@ -98,9 +99,9 @@ export default function Harvestations() {
                         columns: [
                             { header: 'Začiatok', value: (row) => formatDateTime(row.started?.value) },
                             { header: 'Trvanie', value: (row) => formatSecondsToHms(convertXsdDurationToSeconds(row.duration?.value)) },
-                            { header: 'Datasety', value: (row) => row.datasetsCount?.value ?? '' },
-                            { header: 'Harvestovaných LKODov', value: (row) => row.correctlyHarvestedCatalogsCount?.value ?? '' },
-                            { header: 'Nedostupné zdroje LKOD', value: (row) => row.unavailableCatalogSourcesCount?.value ?? '' },
+                            { header: 'Harvestované datasety', value: (row) => row.datasetsCount?.value ?? '' },
+                            { header: 'Harvestované LKODy', value: (row) => row.correctlyHarvestedCatalogsCount?.value ?? '' },
+                            { header: 'Nedostupné zdroje', value: (row) => row.unavailableCatalogSourcesCount?.value ?? '' },
                             { header: 'Počet poskytovateľov', value: (row) => row.publishersCount?.value ?? '' }
                         ]
                     }}

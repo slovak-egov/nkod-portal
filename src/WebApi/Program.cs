@@ -1,29 +1,34 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using WebApi;
-using NkodSk.Abstractions;
-using Abstractions;
-using Newtonsoft.Json;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Authorization;
+﻿using Abstractions;
+using CodelistProviderClient;
+using DocumentStorageClient;
 using IAMClient;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using System.Security.Cryptography;
-using Microsoft.IdentityModel.Tokens;
-using System.Security.Claims;
-using Microsoft.OpenApi.Models;
-using System.Web;
-using System.Data;
-using UserInfo = NkodSk.Abstractions.UserInfo;
-using Newtonsoft.Json.Serialization;
+using J2N.Text;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
-using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.DataContracts;
+using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
-using J2N.Text;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.IdentityModel.Abstractions;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using MonitoringSettingsClient;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
+using NkodSk.Abstractions;
+using System.ComponentModel.DataAnnotations;
+using System.Data;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
+using System.Web;
+using WebApi;
+using UserInfo = NkodSk.Abstractions.UserInfo;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,6 +48,12 @@ string? iamClientUrl = builder.Configuration["IAMUrl"];
 if (!Uri.IsWellFormedUriString(iamClientUrl, UriKind.Absolute))
 {
     throw new Exception("Unable to get IAMUrl");
+}
+
+string? monitoringSettingsUrl = builder.Configuration["MonitoringSettingsUrl"];
+if (!Uri.IsWellFormedUriString(monitoringSettingsUrl, UriKind.Absolute))
+{
+    throw new Exception("Unable to get MonitoringSettingsUrl");
 }
 
 builder.Services.AddHeaderPropagation(options =>
@@ -69,6 +80,12 @@ builder.Services.AddHttpClient(IdentityAccessManagementClient.HttpClientName, c 
     c.BaseAddress = new Uri(iamClientUrl);
 }).AddHeaderPropagation();
 builder.Services.AddTransient<IIdentityAccessManagementClient, IdentityAccessManagementClient>();
+
+builder.Services.AddHttpClient(MonitoringSettingsClient.MonitoringSettingsClient.HttpClientName, c =>
+{
+    c.BaseAddress = new Uri(monitoringSettingsUrl);
+}).AddHeaderPropagation();
+builder.Services.AddTransient<MonitoringSettingsClient.MonitoringSettingsClient>();
 
 string? notificationServiceUrl = builder.Configuration["NotificationService"];
 if (Uri.IsWellFormedUriString(notificationServiceUrl, UriKind.Absolute))
@@ -614,11 +631,12 @@ app.MapPost("/distributions/search", async ([FromBody] DatasetQuery query, [From
     }
 }).Produces<AbstractResponse<DistributionView>>();
 
-app.MapPost("/local-catalogs/search", async ([FromBody] LocalCatalogsQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/local-catalogs/search", async ([FromBody] LocalCatalogsQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient, [FromServices] MonitoringSettingsClient.MonitoringSettingsClient monitoringSettingsClient) =>
 {
     try
     {
         bool isAuthenticated = user?.Identity?.IsAuthenticated ?? false;
+        string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
 
         string language = query.Language ?? "sk";
         FileStorageResponse storageResponse = await GetStorageResponse(query, language, q => {
@@ -641,6 +659,15 @@ app.MapPost("/local-catalogs/search", async ([FromBody] LocalCatalogsQuery query
                 if (catalogRdf is not null)
                 {
                     LocalCatalogView view = await LocalCatalogView.MapFromRdf(fileState.Metadata, catalogRdf, codelistProviderClient, language, isAuthenticated);
+
+                    if (fileState.Metadata.Publisher is not null && publisherId == fileState.Metadata.Publisher)
+                    {
+                        MonitoringNotificationSettings? monitoringNotificationSettings = await monitoringSettingsClient.GetSettingsForLocalCatalog(catalogRdf.Uri.OriginalString);
+                        if (monitoringNotificationSettings is not null)
+                        {
+                            monitoringNotificationSettings.CopyTo(view);
+                        }
+                    }
 
                     response.Items.Add(view);
                     if (fileState.Metadata.Publisher is not null)
@@ -1410,7 +1437,7 @@ app.MapDelete("/distributions", [Authorize] async ([FromQuery] string? id, [From
     }
 });
 
-app.MapPost("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? catalog, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? catalog, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient, [FromServices] MonitoringSettingsClient.MonitoringSettingsClient monitoringSettingsClient) =>
 {
     string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
     if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
@@ -1436,6 +1463,12 @@ app.MapPost("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? 
                 catalog.MapToRdf(publisher, catalogRdf);
                 FileMetadata metadata = catalogRdf.UpdateMetadata();
                 await client.InsertFile(catalogRdf.ToString(), false, metadata).ConfigureAwait(false);
+                
+                MonitoringNotificationSettings notificationSettings = new MonitoringNotificationSettings();
+                catalog.CopyTo(notificationSettings);
+                notificationSettings.UseForLocalCatalog = catalogRdf.Uri.OriginalString;
+                await monitoringSettingsClient.SaveSettigs(notificationSettings);
+                
                 result.Id = metadata.Id.ToString();
                 result.Success = true;
             }
@@ -1459,7 +1492,7 @@ app.MapPost("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? 
     return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapPut("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? catalog, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPut("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? catalog, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient, [FromServices] MonitoringSettingsClient.MonitoringSettingsClient monitoringSettingsClient) =>
 {
     string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
     if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
@@ -1492,6 +1525,12 @@ app.MapPut("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? c
                             catalog.MapToRdf(publisher, catalogRdf);
                             FileMetadata metadata = catalogRdf.UpdateMetadata(state.Metadata);
                             await client.InsertFile(catalogRdf.ToString(), true, metadata).ConfigureAwait(false);
+
+                            MonitoringNotificationSettings notificationSettings = new MonitoringNotificationSettings();
+                            catalog.CopyTo(notificationSettings);
+                            notificationSettings.UseForLocalCatalog = catalogRdf.Uri.OriginalString;
+                            await monitoringSettingsClient.SaveSettigs(notificationSettings);
+
                             result.Id = metadata.Id.ToString();
                             result.Success = true;
                         }
@@ -2756,6 +2795,36 @@ app.MapGet("/fetch-harvested", async ([FromServices] ImportHarvestedHostedServic
             semaphore.Release();
         }
     });
+});
+
+app.MapGet("/monitoring-settings", async ([FromServices] MonitoringSettingsClient.MonitoringSettingsClient client) =>
+{
+    return Results.Ok(await client.GetSettingsForUser());
+});
+
+app.MapPost("/monitoring-settings", async ([FromBody] MonitoringNotificationSettings? input, [FromServices] MonitoringSettingsClient.MonitoringSettingsClient client, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    SaveResult result = new SaveResult();
+    try
+    {
+        ValidationResults validationResults = input is not null ? input.Validate() : [];
+        if (validationResults.IsValid)
+        {
+            await client.SaveSettigs(input);
+            result.Success = true;
+        }
+        else
+        {
+            result.Errors = validationResults;
+        }
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        result.Errors ??= new Dictionary<string, string>();
+        result.Errors["generic"] = "Generic error";
+    }
+    return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
 });
 
 app.Use(async (context, next) =>

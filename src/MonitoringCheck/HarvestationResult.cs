@@ -14,19 +14,26 @@ namespace MonitoringCheck
 
         private readonly string contextType;
 
-        public HarvestationResult(Harvestation harvestation, Uri context, string contextType)
+        public HarvestationResult(Harvestation harvestation, Uri context, string contextType, string name)
         {
             this.harvestation = harvestation;
             this.context = context;
             this.contextType = contextType;
             IdentifierNode = Harvestation.DefaultGraph.CreateUriNode(new Uri(harvestation.IdentifierNode.Uri.OriginalString + "/" + Guid.NewGuid().ToString()));
+            Name = name;
         }
 
         public IUriNode IdentifierNode { get; }
 
+        public bool MainSourceIsAvailable { get; set; }
+
+        public string Name { get; set; }
+
         public void WriteTriples(IGraph triples)
         {
             WriteTriples(triples, IdentifierNode, context, contextType);
+
+            triples.Assert(IdentifierNode, triples.CreateUriNode(Harvestation.GetPredicate("mainSourceIsAvailable")), MainSourceIsAvailable.ToLiteral(triples));
         }
     }
 }

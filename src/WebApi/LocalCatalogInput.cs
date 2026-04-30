@@ -3,7 +3,7 @@ using System.Data;
 
 namespace WebApi
 {
-    public class LocalCatalogInput
+    public class LocalCatalogInput : MonitoringNotificationSettings
     {
         public string? Id { get; set; }
 
@@ -25,7 +25,7 @@ namespace WebApi
 
         public async Task<ValidationResults> Validate(ICodelistProviderClient codelistProvider)
         {
-            ValidationResults results = new ValidationResults();
+            ValidationResults results = Validate();
 
             List<string> languages = Name?.Keys.ToList() ?? new List<string>();
             if (!languages.Contains("sk"))
