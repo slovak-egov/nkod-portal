@@ -53,14 +53,15 @@ namespace MonitoringCheck
             }
         }
 
-        //public void Add(HarvestationResultValues result)
-        //{
-        //    ExternalSources.AddRange(result.ExternalSources);
-        //    DatasetsCount += result.DatasetsCount;
-        //    NewDatasets += result.NewDatasets;
-        //    ModifiedDatasets += result.ModifiedDatasets;
-        //    RemovedDatasets += result.RemovedDatasets;
-        //}
+        public void Add(HarvestationResultValues result)
+        {
+            ExternalSources.AddRange(result.ExternalSources);
+            Problems.AddRange(result.Problems);
+            DatasetsCount += result.DatasetsCount;
+            NewDatasets += result.NewDatasets;
+            ModifiedDatasets += result.ModifiedDatasets;
+            RemovedDatasets += result.RemovedDatasets;
+        }
 
         public void AddDatasetStatus(DatasetModificationStatus status)
         {

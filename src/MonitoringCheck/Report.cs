@@ -43,6 +43,8 @@ namespace MonitoringCheck
 
         public Uri? Task => this.GetUri(TaskPredicate);
 
+        public DateTimeOffset? Started => this.GetDateTimeOffset(GetPredicate("start"));
+
         public bool IsSuccess => UriEqualityComparer.Instance.Equals(Status, StatusSuccess);
 
         public RdfObject? Error

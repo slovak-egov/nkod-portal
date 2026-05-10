@@ -5,6 +5,7 @@ using System.Data;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml;
 using VDS.RDF;
 using VDS.RDF.Parsing;
@@ -373,6 +374,33 @@ namespace MonitoringCheck
                 }
             }
             return map;
+        }
+
+        private static readonly Regex InvalidXmlChars = new Regex(@"[\x00-\x08\x0B\x0C\x0E-\x1F\uFFFE\uFFFF]", RegexOptions.Compiled);
+
+        private static string? SanitizeForXml(string? s) => string.IsNullOrEmpty(s) ? s : InvalidXmlChars.Replace(s, string.Empty);
+
+        public static int SanitizeGraph(IGraph g)
+        {
+            int replaced = 0;
+            foreach (Triple t in g.Triples.ToList())
+            {
+                if (t.Object is ILiteralNode lit &&
+                    InvalidXmlChars.IsMatch(lit.Value))
+                {
+                    string? cleanValue = SanitizeForXml(lit.Value);
+                    ILiteralNode cleanLiteralValue = lit.DataType != null
+                        ? g.CreateLiteralNode(cleanValue, lit.DataType)
+                        : !string.IsNullOrEmpty(lit.Language)
+                            ? g.CreateLiteralNode(cleanValue, lit.Language)
+                            : g.CreateLiteralNode(cleanValue);
+
+                    g.Retract(t);
+                    g.Assert(t.Subject, t.Predicate, cleanLiteralValue);
+                    replaced++;
+                }
+            }
+            return replaced;
         }
     }
 }

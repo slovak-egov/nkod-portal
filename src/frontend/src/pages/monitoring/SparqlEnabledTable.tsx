@@ -138,6 +138,7 @@ export default function SparqlEnabledTable<T>(props: Props<T>) {
                                                 console.log([currentDirection, newDirection]);
                                                 setSorting(newDirection !== undefined ? [{ propertyName: c.sortProperty!, ascending: newDirection }] : []);
                                             }}
+                                            style={{ overflowWrap: 'normal' }}
                                         >
                                             {c.header}
                                         </TableHeaderCell>

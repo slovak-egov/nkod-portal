@@ -67,8 +67,8 @@ const genericQuery: SparqlQuery = {
         FILTER(LANG(?publisher) = "sk")`
     ],
     defaultOrderBy: [
-        { propertyName: '?invalidSourcesCount', ascending: false },
-        { propertyName: '?datasetsCount', ascending: false }
+        { propertyName: '?datasetsCount', ascending: true },
+        { propertyName: '?invalidSourcesCount', ascending: false }
     ]
 };
 

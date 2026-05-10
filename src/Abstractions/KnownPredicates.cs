@@ -132,9 +132,17 @@ namespace Abstractions
 
         public static readonly Uri DctPeriodOfTime = DctPredicate("PeriodOfTime");
 
+        public static readonly Uri DcatCatalogRecord = DcatPredicate("CatalogRecord");
+
+        public static readonly Uri FoafPrimaryTopic = FoafPredicate("primaryTopic");
+
+        public static readonly Uri DctSource = DctPredicate("source");
+
         public static readonly Uri LocalCatalogTypeDcatDocuments = new Uri("https://data.gov.sk/def/local-catalog-type/1");
 
         public static readonly Uri LocalCatalogTypeSparql = new Uri("https://data.gov.sk/def/local-catalog-type/2");
+
+        public static readonly Uri LocalCatalogTypeCkan = new Uri("https://data.gov.sk/def/local-catalog-type/3");
 
         public static readonly Uri ThemeCodelist = new Uri("http://publications.europa.eu/resource/authority/data-theme");
 

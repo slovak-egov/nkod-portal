@@ -29,6 +29,8 @@ namespace MonitoringCheck
 
         public string Name { get; set; }
 
+        public DateTimeOffset? ExplicitlyStarted { get; set; }
+
         public void WriteTriples(IGraph triples)
         {
             WriteTriples(triples, IdentifierNode, context, contextType);

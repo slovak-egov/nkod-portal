@@ -34,14 +34,14 @@ export default function MonitoringNotificationSettingsControl(props: Props) {
                 </div>
                 <div style={{ marginBottom: '1em' }}>
                     <Checkbox
-                        label="je úspešnosť získavania menej ako 90%"
+                        label="je úspešnosť získavania zdrojov menej ako 90%"
                         checked={settings?.successRatioIsLow ?? false}
                         onCheckedChange={(v) => setSettings({ ...settings, successRatioIsLow: v })}
                     />
                 </div>
                 <div style={{ marginBottom: '1em' }}>
                     <Checkbox
-                        label="boli objevené problémy"
+                        label="boli objavené problémy"
                         checked={settings?.problemsDetected ?? false}
                         onCheckedChange={(v) => setSettings({ ...settings, problemsDetected: v })}
                     />
@@ -52,7 +52,7 @@ export default function MonitoringNotificationSettingsControl(props: Props) {
             </div>
             <div>
                 <FormElementGroup
-                    label="Emailové adresy, každý na nový riadok"
+                    label="Emailové adresy, každá na nový riadok"
                     errorMessage={errors['emailaddresses']}
                     element={(id) => (
                         <TextArea

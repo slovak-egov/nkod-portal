@@ -1,5 +1,7 @@
 ﻿using Abstractions;
+using MailKit.Net.Smtp;
 using Microsoft.Extensions.Configuration;
+using MimeKit;
 using MonitoringCheck;
 using NkodSk.Abstractions;
 using System.Data;
@@ -64,6 +66,8 @@ foreach (MonitoringNotificationSettings setting in notificationSettings)
 }
 Console.WriteLine();
 
+EmailOptions? emailOptions = config.GetSection("EmailOptions").Get<EmailOptions>();
+
 MonitoringOptions? options = config.Get<MonitoringOptions>();
 
 Console.WriteLine("Configured options:");
@@ -73,6 +77,33 @@ Console.WriteLine();
 string? logDir = options?.ExecutorLogsPath;
 string? pipelinesDir = options?.PipelinesPath;
 string? outputDir = options?.OutputPath;
+
+if (config["RemoveLast"] == "1" && Directory.Exists(outputDir))
+{
+    DateTimeOffset timeLimit = DateTimeOffset.UtcNow.AddDays(-1);
+    foreach (string? path in Directory.GetFiles(outputDir, "*.trig", SearchOption.TopDirectoryOnly))
+    {
+        FileInfo fileInfo = new FileInfo(path);
+        if (fileInfo.Exists && fileInfo.LastWriteTimeUtc >= timeLimit)
+        {
+            try
+            {
+                string dir = Path.Combine(outputDir, "old");
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                File.Move(path, Path.Combine(dir, Guid.NewGuid().ToString() + Path.GetExtension(path)), true);
+                Console.WriteLine($"Deleted file: {path}");
+            }
+            catch
+            {
+                Console.WriteLine($"Unable to delete file: {path}");
+            }
+        }
+    }
+}
 
 if (!Directory.Exists(logDir))
 {
@@ -167,7 +198,8 @@ foreach (PipelineLog firstLog in harvestationStartups)
 
         void AddResultForPublisher(Uri publisher, HarvestationResult result)
         {
-            GetOrAddResultForPublisher(publisher).ExternalSources.AddRange(result.ExternalSources);
+            HarvestationResult publisherResult = GetOrAddResultForPublisher(publisher);
+            publisherResult.Add(result);
         }
 
         DateTimeOffset? lastHarvestationStarted = null;
@@ -272,6 +304,14 @@ foreach (PipelineLog firstLog in harvestationStartups)
             registrations.Merge(harvestedDatasetsUsingSparql);
             registrations.Merge(harvestationPipelineLog.GetComponentByDescription(harvestationPipeline, "Harvestace LKODů řešených SPARQL endpointem")!.GetGraph(harvestationPipelineLog, "ErrorOutputRdf"));
 
+            registrations.Merge(harvestationPipelineLog.GetComponentByDescription(harvestationPipeline, "Konfigurace stažení LKOD package_list")!.GetGraph(harvestationPipelineLog, "OutputRdf"));
+            registrations.Merge(harvestationPipelineLog.GetComponentByDescription(harvestationPipeline, "Stažení LKOD package_list")!.GetGraph(harvestationPipelineLog, "ReportRdf"));
+            registrations.Merge(harvestationPipelineLog.GetComponentByDescription(harvestationPipeline, "Konfigurace stažení package_show")!.GetGraph(harvestationPipelineLog, "OutputRdf"));
+            Component localCatalogCkanDatasetComponent = harvestationPipelineLog.GetComponentByDescription(harvestationPipeline, "Stažení LKOD package_show")!;
+            registrations.Merge(localCatalogCkanDatasetComponent.GetGraph(harvestationPipelineLog, "ReportRdf"));
+            
+            registrations.Merge(harvestationPipelineLog.GetComponentByDescription(harvestationPipeline, "Vytvořit záznamy datových sad z LKODů tvořených CKAN API")!.GetGraph(harvestationPipelineLog, "OutputRdf"));
+
             using Graph previousHarvestedGraph = new Graph();
             string previousHarvestedFilePath = Path.Combine(outputDir, "harvested.ttl");
             if (File.Exists(previousHarvestedFilePath))
@@ -287,12 +327,15 @@ foreach (PipelineLog firstLog in harvestationStartups)
             HashSet<Triple> previousTriples = [];
             HashSet<Triple> harvestedTriples = [];
 
+            HashSet<Uri> checkDatasets = new HashSet<Uri>();
+
             DatasetModificationStatus GetDatasetStatus(string datasetId, ISet<INode> previousDatasets)
             {
                 previousTriples.Clear();
                 harvestedTriples.Clear();
 
                 Uri datasetUri = new Uri(datasetId);
+                checkDatasets.Add(datasetUri);
 
                 if (previousIdentifiers.TryGetValue(datasetId, out INode? previousDatasetSubject))
                 {
@@ -306,6 +349,11 @@ foreach (PipelineLog firstLog in harvestationStartups)
                 if (harvestedIdentifiers.TryGetValue(datasetId, out INode? datasetSubject))
                 {
                     harvestedGraph.LoadDatasetTriples(datasetSubject, harvestedTriples);
+                    
+                    if (datasetSubject is IUriNode datasetSubjectUriNode)
+                    {
+                        checkDatasets.Add(datasetSubjectUriNode.Uri);
+                    }
                 }
                 harvestedGraph.LoadDatasetTriples(harvestedGraph.CreateUriNode(datasetUri), harvestedTriples);
 
@@ -340,7 +388,8 @@ foreach (PipelineLog firstLog in harvestationStartups)
                 RdfObject catalog = new RdfObject(registrations, catalogNode);
                 Uri catalogId = catalogNode.Uri;
                 Uri? endpointUrl = catalog.GetUri(KnownPredicates.DcatEndpointUrl);
-                bool catalogPartiallyHarvested = false;
+                bool catalogMainSourceHarvested = false;
+                bool catalogAtLeastOneDatasetHarvested = false;
                 string catalogName = catalog.GetString(KnownPredicates.DctTitle, "sk") ?? catalog.GetString(KnownPredicates.DctTitle, string.Empty) ?? catalogId.OriginalString;
 
                 if (endpointUrl is not null && catalogId is not null)
@@ -495,7 +544,7 @@ foreach (PipelineLog firstLog in harvestationStartups)
                         {
                             TimeSpan duration = report.Duration ?? TimeSpan.Zero;
                             bool isSuccess = report.IsSuccess;
-                            catalogPartiallyHarvested = isSuccess;
+                            catalogMainSourceHarvested = isSuccess;
                             result.ExternalSources.Add(report.CreateResult(endpointUrl.OriginalString));
 
                             result.MainSourceIsAvailable = isSuccess;
@@ -513,6 +562,12 @@ foreach (PipelineLog firstLog in harvestationStartups)
                             {
                                 TimeSpan duration = report.Duration ?? TimeSpan.Zero;
                                 result.ExternalSources.Add(report.CreateResult(datasetNode.Uri.OriginalString));
+                                result.ExplicitlyStarted = report.Started;
+
+                                if (report.IsSuccess)
+                                {
+                                    catalogAtLeastOneDatasetHarvested = true;
+                                }
                             }
 
                             result.AddDatasetStatus(GetDatasetStatus(datasetNode.Uri.OriginalString, previousDatasets));
@@ -537,16 +592,73 @@ foreach (PipelineLog firstLog in harvestationStartups)
                         {
                             TimeSpan duration = report.Duration ?? TimeSpan.Zero;
                             bool isSuccess = report.IsSuccess;
-                            catalogPartiallyHarvested = isSuccess;
+                            catalogMainSourceHarvested = isSuccess;
                             result.ExternalSources.Add(report.CreateResult($"SPARQL (zoznam datasetov) {endpointUrl.OriginalString}"));
 
                             result.MainSourceIsAvailable = isSuccess;
+                            result.ExplicitlyStarted = report.Started;
                         }
 
                         foreach (IUriNode datasetNode in catalog.GetUriNodes(KnownPredicates.DcatDataset))
                         {
                             result.AddDatasetStatus(GetDatasetStatus(datasetNode.Uri.OriginalString, previousDatasets));
                             await ValidateDatasetFromLocalCatalog(harvestedDatasetsUsingSparql, datasetNode.Uri);
+
+                            catalogAtLeastOneDatasetHarvested = true;
+                        }
+                    }
+                    else if (catalog.HasType(KnownPredicates.LocalCatalogTypeCkan))
+                    {
+                        (Report? report, HttpTask? httpTask) = registrations.GetReportAndHttpTask(catalogNode);
+                        if (report is not null)
+                        {
+                            TimeSpan duration = report.Duration ?? TimeSpan.Zero;
+                            bool isSuccess = report.IsSuccess;
+                            catalogMainSourceHarvested = isSuccess;
+                            result.ExternalSources.Add(report.CreateResult(endpointUrl.OriginalString));
+
+                            result.MainSourceIsAvailable = isSuccess;
+                            result.ExplicitlyStarted = report.Started;
+                        }
+
+                        IUriNode registrationCatalogPredicate = registrations.CreateUriNode(new Uri("https://data.gov.sk/slovník/nkod/catalog"));
+                        IUriNode sourceNode = registrations.CreateUriNode(KnownPredicates.DctSource);
+
+                        foreach (IUriNode datasetReportNode in registrations.GetTriplesWithPredicateObject(registrationCatalogPredicate, catalogNode).Select(t => t.Subject).OfType<IUriNode>())
+                        {
+                            if (datasetReportNode.Uri.OriginalString != catalogNode.Uri.OriginalString)
+                            {
+                                (report, httpTask) = registrations.GetReportAndHttpTask(datasetReportNode);
+                                if (report is not null && httpTask is not null)
+                                {
+                                    Uri? sourceUrl = httpTask?.FileUri;
+                                    if (sourceUrl is not null)
+                                    {
+                                        if (report.IsSuccess)
+                                        {
+                                            catalogAtLeastOneDatasetHarvested = true;
+                                        }
+
+                                        TimeSpan duration = report.Duration ?? TimeSpan.Zero;
+                                        result.ExternalSources.Add(report.CreateResult(datasetReportNode.Uri.OriginalString));
+                                        IUriNode sourceUrlNode = registrations.CreateUriNode(sourceUrl);
+                                        foreach (IUriNode catalogRecordNode in registrations.GetTriplesWithPredicateObject(sourceNode, sourceUrlNode).Select(t => t.Subject))
+                                        {
+                                            RdfObject catalogRecord = new RdfObject(registrations, catalogRecordNode);
+                                            if (catalogRecord.HasType(KnownPredicates.DcatCatalogRecord))
+                                            {
+                                                IUriNode? datasetNode = catalogRecord.GetUriNode(KnownPredicates.FoafPrimaryTopic);
+                                                if (datasetNode is not null)
+                                                { 
+                                                    result.AddDatasetStatus(GetDatasetStatus(datasetNode.Uri.OriginalString, previousDatasets)); 
+                                                }
+
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }                                
+                            }
                         }
                     }
 
@@ -557,11 +669,12 @@ foreach (PipelineLog firstLog in harvestationStartups)
                     if (catalog.GetUri(KnownPredicates.DctPublisher) is Uri publisher)
                     {
                         AddResultForPublisher(publisher, result);
+                        harvestation.Add(result);
                     }
                     harvestation.ExternalSources.AddRange(result.ExternalSources);
                     harvestation.CatalogSources.AddRange(result.ExternalSources);
                     harvestation.CatalogCount++;
-                    if (catalogPartiallyHarvested)
+                    if (catalogMainSourceHarvested && catalogAtLeastOneDatasetHarvested)
                     {
                         harvestation.CorrectlyHarvestedCatalogCount++;
                     }
@@ -586,39 +699,43 @@ WHERE {
             {
                 Uri publisher = ((IUriNode)result["publisher"]).Uri;
                 Uri dataset = ((IUriNode)result["dataset"]).Uri;
-                string? distribution = result.TryGetBoundValue("download", out INode? downloadNode) ? downloadNode.AsValuedNode().AsString() : null;
-
-                if (distribution is not null)
+                
+                if (checkDatasets.Contains(dataset))
                 {
-                    downloadQualityExternalSources[distribution] = new DownloadQualityExternalSource
+                    string? distribution = result.TryGetBoundValue("download", out INode? downloadNode) ? downloadNode.AsValuedNode().AsString() : null;
+
+                    if (distribution is not null)
                     {
-                        Publisher = publisher,
-                        Dataset = dataset,
-                        Distribution = distribution
-                    };
-                }
+                        downloadQualityExternalSources[distribution] = new DownloadQualityExternalSource
+                        {
+                            Publisher = publisher,
+                            Dataset = dataset,
+                            Distribution = distribution
+                        };
+                    }
 
-                if (!datasetsByPublisher.TryGetValue(publisher, out HashSet<Uri>? datasets))
-                {
-                    datasets = [];
-                    datasetsByPublisher[publisher] = datasets;
+                    if (!datasetsByPublisher.TryGetValue(publisher, out HashSet<Uri>? datasets))
+                    {
+                        datasets = [];
+                        datasetsByPublisher[publisher] = datasets;
+                    }
+                    datasets.Add(dataset);
                 }
-                datasets.Add(dataset);
             }
 
-            foreach ((Uri publisher, HashSet<Uri> datasets) in datasetsByPublisher)
-            {
-                HarvestationResult publisherResult = GetOrAddResultForPublisher(publisher);
-                HashSet<INode> previousDatasets = new HashSet<INode>(previousHarvestedGraph.GetTriplesWithPredicateObject(previousHarvestedGraph.CreateUriNode(KnownPredicates.DctPublisher), previousHarvestedGraph.CreateUriNode(publisher)).Select(t => t.Subject));
-                foreach (Uri dataset in datasets)
-                {
-                    DatasetModificationStatus status = GetDatasetStatus(dataset.OriginalString, previousDatasets);
-                    publisherResult.AddDatasetStatus(status);
-                    harvestation.AddDatasetStatus(status);
-                }
-                publisherResult.RemovedDatasets += previousDatasets.Count;
-                harvestation.RemovedDatasets += previousDatasets.Count;
-            }
+            //foreach ((Uri publisher, HashSet<Uri> datasets) in datasetsByPublisher)
+            //{
+            //    HarvestationResult publisherResult = GetOrAddResultForPublisher(publisher);
+            //    HashSet<INode> previousDatasets = new HashSet<INode>(previousHarvestedGraph.GetTriplesWithPredicateObject(previousHarvestedGraph.CreateUriNode(KnownPredicates.DctPublisher), previousHarvestedGraph.CreateUriNode(publisher)).Select(t => t.Subject));
+            //    foreach (Uri dataset in datasets)
+            //    {
+            //        DatasetModificationStatus status = GetDatasetStatus(dataset.OriginalString, previousDatasets);
+            //        publisherResult.AddDatasetStatus(status);
+            //        harvestation.AddDatasetStatus(status);
+            //    }
+            //    publisherResult.RemovedDatasets += previousDatasets.Count;
+            //    harvestation.RemovedDatasets += previousDatasets.Count;
+            //}
 
             Pipeline? headQualityPipeline = pipelines.GetPipeline("04 - Statistika dostupnosti distribucí, schémat, podmínek užití a dokumentace - HEAD");
             Debug.Assert(headQualityPipeline is not null);
@@ -663,9 +780,12 @@ WHERE {
 
             foreach (DownloadQualityExternalSource source in downloadQualityExternalSources.Values)
             {
-                GetOrAddResultForPublisher(source.Publisher).ExternalSources.Add(source);
-                harvestation.ExternalSources.Add(source);
-                harvestation.DistributionSources.Add(source);
+                if (!source.Success)
+                {
+                    GetOrAddResultForPublisher(source.Publisher).ExternalSources.Add(source);
+                    harvestation.ExternalSources.Add(source);
+                    harvestation.DistributionSources.Add(source);
+                }
             }
 
             harvestation.PublisherCount = resultByPublishers.Count;
@@ -720,6 +840,7 @@ WHERE {
             }
 
             harvestedGraph.Assert(harvestedLocalCatalogGraph.Triples);
+
             harvestedGraph.SaveToFile(previousHarvestedFilePath, new CompressingTurtleWriter());
 
         }
@@ -760,7 +881,7 @@ WHERE {
             {
                 foreach ((Uri catalogUri, HarvestationResult? result) in resultByCatalogs)
                 {
-                    if (notificationSetting.IgnoreLocalCatalogs is null || notificationSetting.IgnoreLocalCatalogs.Contains(catalogUri.OriginalString))
+                    if (notificationSetting.IgnoreLocalCatalogs is null || !notificationSetting.IgnoreLocalCatalogs.Contains(catalogUri.OriginalString))
                     {
                         resultsToNotify[catalogUri.OriginalString] = result;
                     }
@@ -784,7 +905,6 @@ WHERE {
             }
 
             Dictionary<string, List<HarvestationProblem>> allProblems = [];
-            List<string> names = [];
             List<string> errors = [];
 
             if (resultsToNotify.Count > 0)
@@ -797,7 +917,6 @@ WHERE {
                 foreach (HarvestationResult result in resultsToNotify.Values)
                 {
                     string name = result.Name;
-                    names.Add(name);
                     List<HarvestationProblem> problems = result.AllDetectedProblems.ToList();
                     if (problems.Count > 0)
                     {
@@ -824,7 +943,51 @@ WHERE {
 
             if (notificationSetting.Always || errors.Count > 0)
             {
-                string message = errors.Count > 0 ? "Počas harvestácie bolo objevené toto:<br>" + string.Join("<br>", errors.Select(HttpUtility.HtmlEncode)) : "Harvestácia prebehla";
+                StringBuilder messageBuilder = new StringBuilder("Dobrý deň,<br><br>");
+
+                if (resultsToNotify.Count == 1)
+                {
+                    HarvestationResult? oneResult = resultsToNotify.Values.FirstOrDefault();
+                    DateTimeOffset? started = oneResult?.ExplicitlyStarted ?? harvestation.Started;
+                    messageBuilder.Append($"harvestácia lokálneho katalógu {HttpUtility.HtmlEncode(oneResult?.Name)}");
+                    if (started.HasValue)
+                    {
+                        messageBuilder.Append($" v čase od {started.Value.ToString("dd. MM. yyyy HH:mm")}");
+                    }
+                } 
+                else
+                {
+                    messageBuilder.Append("harvestácia lokálnych katalógov");
+                    if (harvestation.Started.HasValue)
+                    {
+                        messageBuilder.Append($" v čase od {harvestation.Started.Value.ToString("dd. MM. yyyy HH:mm")}");
+                    }
+                }
+
+                messageBuilder.Append(' ');
+                
+                if (errors.Count > 0)
+                {
+                    messageBuilder.Append("- problémy:");
+                    foreach (string error in errors)
+                    {
+                        messageBuilder.AppendLine("<br>");
+                        messageBuilder.Append(HttpUtility.HtmlEncode(error));
+                    }
+                }
+                else
+                {                   
+                    messageBuilder.AppendLine("prebehla úspešne.");
+                }
+
+                messageBuilder.AppendLine("<br>");
+                messageBuilder.AppendLine("<br>");
+                messageBuilder.AppendLine("Zasielanie e-mailov môžete zrušiť v nastaveniach lokálneho katalógu.");
+                messageBuilder.AppendLine("<br>");
+                messageBuilder.AppendLine("<br>");
+                messageBuilder.AppendLine("Tím centrálneho portálu otvorených dát data.slovensko.sk");
+
+                string message = messageBuilder.ToString();
                 string? attachment = null;
 
                 if (allProblems.Count > 0)
@@ -836,6 +999,8 @@ WHERE {
                     csv.WriteField("Názov");
                     csv.WriteField("Poznámka");
 
+                    int count = 0;
+
                     foreach ((string name, List<HarvestationProblem> problems) in allProblems)
                     {
                         foreach (HarvestationProblem problem in problems)
@@ -844,8 +1009,20 @@ WHERE {
                             csv.WriteField(name);
                             csv.WriteField(problem.Name);
                             csv.WriteField(problem.Note);
+
+                            count++;
+                            if (count >= 1000)
+                            {
+                                break;
+                            }
+                        }
+
+                        if (count >= 1000)
+                        {
+                            break;
                         }
                     }
+                    csv.Flush();
 
                     attachment = attachmentWriter.ToString();
                 }
@@ -857,6 +1034,55 @@ WHERE {
                 Console.WriteLine(message);
                 Console.WriteLine("Attachment:");
                 Console.WriteLine(attachment ?? "NONE");
+
+                string[] recipients = notificationSetting.EmailAddresses?.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
+
+                if (!string.IsNullOrEmpty(emailOptions?.Host) && !string.IsNullOrEmpty(emailOptions?.FromAddress) && recipients.Length > 0)
+                {
+                    foreach (string recipient in recipients)
+                    {
+                        try
+                        {
+                            Console.WriteLine($"Odosielam email na adresu {recipient}");
+
+                            using SmtpClient client = new SmtpClient();
+                            await client.ConnectAsync(emailOptions.Host, emailOptions.Port ?? 25, emailOptions.UseSsl);
+                            if (!string.IsNullOrEmpty(emailOptions.Username) && !string.IsNullOrEmpty(emailOptions.Password))
+                            {
+                                await client.AuthenticateAsync(emailOptions.Username, emailOptions.Password);
+                            }
+
+                            using MimeMessage emailMessage = new MimeMessage();
+                            emailMessage.From.Add(new MailboxAddress(emailOptions.FromName, emailOptions.FromAddress));
+                            emailMessage.To.Add(new MailboxAddress(string.Empty, recipient));
+                            emailMessage.Subject = "Harvestácia LKOD na data.slovensko.sk";
+
+                            if (!string.IsNullOrEmpty(attachment))
+                            {
+                                emailMessage.Body = new Multipart("mixed")
+                                {
+                                    new TextPart("html") { Text = message },
+                                    new MimePart("text", "csv")
+                                    {
+                                        Content = new MimeContent(new MemoryStream(Encoding.UTF8.GetBytes(attachment))),
+                                        ContentDisposition = new ContentDisposition(ContentDisposition.Attachment) { FileName = "export.csv" },
+                                        ContentTransferEncoding = ContentEncoding.Base64
+                                    }
+                                };
+                            }
+                            else
+                            {
+                                emailMessage.Body = new TextPart("html") { Text = message };
+                            }
+
+                            await client.SendAsync(emailMessage);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine($"Exception: {e.Message}");
+                        }
+                    }
+                }
             }
         }
     }
