@@ -847,6 +847,13 @@ WHERE {
 
         harvestation.WriteTriples(outputGraph);
 
+
+        int replaced = MonitoringCheck.Extensions.SanitizeGraph(outputGraph);
+        if (replaced > 0)
+        {
+            Console.WriteLine($"Replaced {replaced} literals with sanitized versions");
+        }
+
         TripleStore outputStore = new TripleStore();
         outputStore.Add(outputGraph);
         outputStore.SaveToFile(outputFilePath, new TriGWriter());
@@ -860,7 +867,7 @@ WHERE {
                 sparql.HttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{options.GraphDbUserName}:{options.GraphdbPassword}")));
             }
             sparql.Timeout = (int)TimeSpan.FromHours(1).TotalMilliseconds;
-            sparql.UpdateGraph(Harvestation.GetPredicate(string.Empty).OriginalString, outputGraph.Triples, []);
+            sparql.UpdateGraph(harvestation.IdentifierNode.Uri.OriginalString, outputGraph.Triples, []);
         }
 
         Console.WriteLine();
