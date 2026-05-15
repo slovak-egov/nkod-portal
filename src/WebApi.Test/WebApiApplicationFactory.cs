@@ -89,6 +89,7 @@ namespace WebApi.Test
                 services.AddTransient<IIdentityAccessManagementClient>(s => s.GetRequiredService<TestIdentityAccessManagementClient>());
                 services.AddSingleton<ISparqlClient, TestSparqlClient>();
                 services.AddSingleton<DownloadDataQualityService>();
+                services.AddSingleton<IMonitoringSettingsClient, TestMonitoringSettingsClient>();
 
                 services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
                 {

@@ -134,6 +134,7 @@ namespace Frontend.Test
                 services.AddSingleton<ICodelistProviderClient, InternalCodelistProvider>();
                 services.AddTransient(s => testIdentityAccessManagementClient ??= new TestIdentityAccessManagementClient(s.GetRequiredService<IHttpContextValueAccessor>(), this));
                 services.AddTransient<IIdentityAccessManagementClient>(s => s.GetRequiredService<TestIdentityAccessManagementClient>());
+                services.AddSingleton<IMonitoringSettingsClient, TestMonitoringSettingsClient>();
 
                 services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
                 {

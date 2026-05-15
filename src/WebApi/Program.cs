@@ -85,7 +85,7 @@ builder.Services.AddHttpClient(MonitoringSettingsClient.MonitoringSettingsClient
 {
     c.BaseAddress = new Uri(monitoringSettingsUrl);
 }).AddHeaderPropagation();
-builder.Services.AddTransient<MonitoringSettingsClient.MonitoringSettingsClient>();
+builder.Services.AddTransient<IMonitoringSettingsClient, MonitoringSettingsClient.MonitoringSettingsClient>();
 
 string? notificationServiceUrl = builder.Configuration["NotificationService"];
 if (Uri.IsWellFormedUriString(notificationServiceUrl, UriKind.Absolute))
@@ -631,7 +631,7 @@ app.MapPost("/distributions/search", async ([FromBody] DatasetQuery query, [From
     }
 }).Produces<AbstractResponse<DistributionView>>();
 
-app.MapPost("/local-catalogs/search", async ([FromBody] LocalCatalogsQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient, [FromServices] MonitoringSettingsClient.MonitoringSettingsClient monitoringSettingsClient) =>
+app.MapPost("/local-catalogs/search", async ([FromBody] LocalCatalogsQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient, [FromServices] IMonitoringSettingsClient monitoringSettingsClient) =>
 {
     try
     {
@@ -1437,7 +1437,7 @@ app.MapDelete("/distributions", [Authorize] async ([FromQuery] string? id, [From
     }
 });
 
-app.MapPost("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? catalog, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient, [FromServices] MonitoringSettingsClient.MonitoringSettingsClient monitoringSettingsClient) =>
+app.MapPost("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? catalog, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient, [FromServices] IMonitoringSettingsClient monitoringSettingsClient) =>
 {
     string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
     if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
@@ -1492,7 +1492,7 @@ app.MapPost("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? 
     return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
 });
 
-app.MapPut("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? catalog, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient, [FromServices] MonitoringSettingsClient.MonitoringSettingsClient monitoringSettingsClient) =>
+app.MapPut("/local-catalogs", [Authorize] async ([FromBody] LocalCatalogInput? catalog, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient, [FromServices] IMonitoringSettingsClient monitoringSettingsClient) =>
 {
     string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
     if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
@@ -2777,32 +2777,35 @@ app.MapGet("/dcat2.jsonld", async ([FromServices] IMemoryCache cache, HttpRespon
         new Microsoft.Net.Http.Headers.MediaTypeHeaderValue("application/ld+json"));
 });
 
-app.MapGet("/fetch-harvested", async ([FromServices] ImportHarvestedHostedService service, HttpResponse response) =>
+app.MapGet("/fetch-harvested", [Authorize] async ([FromServices] ImportHarvestedHostedService service, HttpResponse response, ClaimsPrincipal user) =>
 {
-    response.ContentType = "text/plain";
-    response.Headers["Cache-Control"] = "no-cache";
-    SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
-    await service.ExecuteAsync(CancellationToken.None, async l => {
-        await semaphore.WaitAsync();
-        try
-        {
-            await response.WriteAsync(l);
-            await response.WriteAsync(Environment.NewLine);
-            await response.Body.FlushAsync();
-        }
-        finally
-        {
-            semaphore.Release();
-        }
-    });
+    if (user.IsInRole("Superadmin"))
+    {
+        response.ContentType = "text/plain";
+        response.Headers["Cache-Control"] = "no-cache";
+        SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
+        await service.ExecuteAsync(CancellationToken.None, async l => {
+            await semaphore.WaitAsync();
+            try
+            {
+                await response.WriteAsync(l);
+                await response.WriteAsync(Environment.NewLine);
+                await response.Body.FlushAsync();
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        });
+    }
 });
 
-app.MapGet("/monitoring-settings", async ([FromServices] MonitoringSettingsClient.MonitoringSettingsClient client) =>
+app.MapGet("/monitoring-settings", async ([FromServices] IMonitoringSettingsClient client) =>
 {
     return Results.Ok(await client.GetSettingsForUser());
 });
 
-app.MapPost("/monitoring-settings", async ([FromBody] MonitoringNotificationSettings? input, [FromServices] MonitoringSettingsClient.MonitoringSettingsClient client, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/monitoring-settings", async ([FromBody] MonitoringNotificationSettings? input, [FromServices] IMonitoringSettingsClient client, [FromServices] TelemetryClient? telemetryClient) =>
 {
     SaveResult result = new SaveResult();
     try

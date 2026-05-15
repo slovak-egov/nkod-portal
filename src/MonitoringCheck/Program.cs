@@ -1039,8 +1039,7 @@ WHERE {
                 Console.WriteLine(JsonSerializer.Serialize(notificationSetting));
                 Console.WriteLine("Message:");
                 Console.WriteLine(message);
-                Console.WriteLine("Attachment:");
-                Console.WriteLine(attachment ?? "NONE");
+                Console.WriteLine($"Attachment size: {attachment?.Length ?? 0}");
 
                 string[] recipients = notificationSetting.EmailAddresses?.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
 

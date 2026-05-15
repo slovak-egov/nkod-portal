@@ -302,6 +302,12 @@ function App(props: Props) {
                                             <Route path="/sprava/poskytovatelia/upravit/:id" Component={EditPublisher} />
                                             <Route path="/sprava/ciselniky" Component={Codelists} />
                                             <Route path="/nastavenia-notifikacie" Component={MonitoringSettingsUser} />
+
+                                            <Route path="/harvestacie" Component={Harvestations} />
+                                            <Route path="/harvestacie/detail/:id" Component={HarvestationDetail} />
+                                            <Route path="/harvestacie/katalog/:id" Component={CatalogHarvestations} />
+                                            <Route path="/harvestacie/katalog/detail/:id" Component={CatalogHarvestationDetail} />
+                                            <Route path="/harvestacie/poskytovatel/detail/:id" Component={PublisherHarvestationDetail} />
                                         </>
                                     ) : null}
 
@@ -310,12 +316,6 @@ function App(props: Props) {
                                     <Route path="/potvrdenie-registracie" Component={ActivateUser} />
                                     <Route path="/zabudnute-heslo" Component={ForgottenPassword} />
                                     <Route path="/obnova-hesla" Component={ForgottenPasswordActivation} />
-
-                                    <Route path="/harvestacie" Component={Harvestations} />
-                                    <Route path="/harvestacie/detail/:id" Component={HarvestationDetail} />
-                                    <Route path="/harvestacie/katalog/:id" Component={CatalogHarvestations} />
-                                    <Route path="/harvestacie/katalog/detail/:id" Component={CatalogHarvestationDetail} />
-                                    <Route path="/harvestacie/poskytovatel/detail/:id" Component={PublisherHarvestationDetail} />
 
                                     <Route path="*" Component={NotFound} />
                                 </Routes>

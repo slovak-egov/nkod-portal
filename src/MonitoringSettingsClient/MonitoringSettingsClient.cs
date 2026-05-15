@@ -11,7 +11,7 @@ using System.Web;
 
 namespace MonitoringSettingsClient
 {
-    public class MonitoringSettingsClient
+    public class MonitoringSettingsClient : IMonitoringSettingsClient
     {
         private readonly IHttpClientFactory httpClientFactory;
 

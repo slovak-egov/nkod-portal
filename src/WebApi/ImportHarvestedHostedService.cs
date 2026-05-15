@@ -90,7 +90,6 @@ namespace WebApi
             HarvestedDataImport dataImport = new HarvestedDataImport(sparqlClient, documentStorageClient, async p =>
             {
                 string token = await iamClient.LoginHarvester(authToken, p);
-                logger($"Token: {token}");
                 httpContextValueAccessor.Token = token;
                 httpContextValueAccessor.Publisher = p;
             }, logger);
