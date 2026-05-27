@@ -19,11 +19,11 @@ namespace MonitoringCheck
             triples.Assert(identifierNode, triples.CreateRdfTypeNode(), triples.CreateUriNode(Harvestation.GetPredicate("HarvestationSource")));
             triples.Assert(parentNode, triples.CreateUriNode(Harvestation.GetPredicate(parentPredicateName)), identifierNode);
 
-            if (!Success)
-            {
-                triples.Assert(identifierNode, triples.CreateRdfTypeNode(), triples.CreateUriNode(Harvestation.GetPredicate("HarvestationProblem")));
-                triples.Assert(parentNode, triples.CreateUriNode(Harvestation.GetPredicate("hasProblem")), identifierNode);
-            }
+            //if (!Success)
+            //{
+            //    triples.Assert(identifierNode, triples.CreateRdfTypeNode(), triples.CreateUriNode(Harvestation.GetPredicate("HarvestationProblem")));
+            //    triples.Assert(parentNode, triples.CreateUriNode(Harvestation.GetPredicate("hasProblem")), identifierNode);
+            //}
 
             Assert("isSourceFor", parentNode);
             Assert("name", Name.ToLiteral(triples));

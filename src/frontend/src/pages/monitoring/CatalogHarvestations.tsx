@@ -20,6 +20,7 @@ import GridColumn from '../../components/GridColumn';
 import { useEffect, useState } from 'react';
 import ExternalLink from './ExternalLink';
 import { useEndpointUrl } from '../../client';
+import DatasetsChart from './DatasetsChart';
 
 const title = 'Harvestácie lokálneho katalógu';
 
@@ -138,6 +139,7 @@ export default function CatalogHarvestations() {
             <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title: 'Harvestácie', link: '/harvestacie' }, { title }]} />
             <MainContent>
                 <PageHeader>{title}</PageHeader>
+                <DatasetsChart parent={id} />
                 {row ? (
                     <GridRow>
                         <GridColumn widthUnits={1} totalUnits={4}>

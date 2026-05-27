@@ -6,6 +6,7 @@ import SparqlEnabledTable from './SparqlEnabledTable';
 import { convertXsdDurationToSeconds, formatDateTime, formatNumber, formatSecondsToHms, getNumber, SparqlQuery } from './tools';
 import { Link } from 'react-router-dom';
 import { HarvestationResult, UriColumn } from './types';
+import DatasetsChart from './DatasetsChart';
 
 const title = 'Harvestácie';
 
@@ -46,6 +47,7 @@ export default function Harvestations() {
             <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title }]} />
             <MainContent>
                 <PageHeader>{title}</PageHeader>
+                <DatasetsChart />
                 <SparqlEnabledTable<Row>
                     query={query}
                     header="História"
@@ -100,7 +102,10 @@ export default function Harvestations() {
                             { header: 'Začiatok', value: (row) => formatDateTime(row.started?.value) },
                             { header: 'Trvanie', value: (row) => formatSecondsToHms(convertXsdDurationToSeconds(row.duration?.value)) },
                             { header: 'Harvestované datasety', value: (row) => row.datasetsCount?.value ?? '' },
-                            { header: 'Harvestované LKODy', value: (row) => row.correctlyHarvestedCatalogsCount?.value ?? '' },
+                            {
+                                header: 'Harvestované LKODy',
+                                value: (row) => (row.correctlyHarvestedCatalogsCount?.value ?? '') + ' / ' + (row.catalogsCount?.value ?? '')
+                            },
                             { header: 'Nedostupné zdroje', value: (row) => row.unavailableCatalogSourcesCount?.value ?? '' },
                             { header: 'Počet poskytovateľov', value: (row) => row.publishersCount?.value ?? '' }
                         ]

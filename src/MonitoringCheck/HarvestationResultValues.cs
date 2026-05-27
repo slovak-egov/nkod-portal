@@ -111,7 +111,7 @@ namespace MonitoringCheck
             Assert("modifiedDatasetsCount", ModifiedDatasets.ToLiteral(triples));
             Assert("removedDatasetsCount", RemovedDatasets.ToLiteral(triples));
 
-            int problemsCount = Problems.Count + ExternalSources.Count(e => !e.Success);
+            int problemsCount = Problems.Count;
             Assert("problemsCount", problemsCount.ToLiteral(triples));
 
             foreach (IExternalSourceHarvestionResult externalSourceResult in ExternalSources)

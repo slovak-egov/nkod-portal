@@ -12,6 +12,7 @@ import { DecimalColumn, DurationColumn, HarvestationResult, LiteralColumn, UriCo
 import ExternalSourcesPanel from './ExternalSourcesPanel';
 import IdentifiedProblems from './IdentifiedProblems';
 import { useEndpointUrl } from '../../client';
+import UnavailableSources from './UnavailableSources';
 
 const title = 'Harvestácia datasetov poskytovateľa';
 
@@ -131,6 +132,7 @@ export default function PublisherHarvestationDetail() {
                             averageDuration={row.averageDuration}
                             successRate={row.successRatio}
                         />
+                        <UnavailableSources parent={id} />
                         <IdentifiedProblems parent={id} />
                     </>
                 ) : null}

@@ -13,6 +13,7 @@ import ExternalSourcesPanel from './ExternalSourcesPanel';
 import IdentifiedProblems from './IdentifiedProblems';
 import ExternalLink from './ExternalLink';
 import { useEndpointUrl } from '../../client';
+import UnavailableSources from './UnavailableSources';
 
 const title = 'Harvestácia lokálneho katalógu';
 
@@ -154,6 +155,7 @@ export default function CatalogHarvestationDetail() {
                             averageDuration={row.averageDuration}
                             successRate={row.successRatio}
                         />
+                        <UnavailableSources parent={id} />
                         <IdentifiedProblems parent={id} />
                     </>
                 ) : null}

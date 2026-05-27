@@ -112,6 +112,11 @@ export function formatDateTime(dateTime: string | null | undefined): string {
     return moment(dateTime).local().format('DD. MM. YYYY HH:mm:ss');
 }
 
+export function formatDate(dateTime: string | null | undefined): string {
+    if (!dateTime) return '';
+    return moment(dateTime).local().format('DD. MM. YYYY');
+}
+
 export function getNumber(value: number | string | null | undefined): number | null {
     if (value === null || value === undefined) return null;
     return typeof value === 'number' ? value : parseFloat(value);

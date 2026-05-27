@@ -26,7 +26,9 @@ const genericQuery: SparqlQuery = {
 
          ?id a m:HarvestationProblem ;
               m:name ?name ;
-              m:note ?note .`
+              m:note ?note .
+              
+        FILTER NOT EXISTS { ?id a m:HarvestationSource }`
     ],
     defaultOrderBy: [{ propertyName: '?name', ascending: true }]
 };

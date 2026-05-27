@@ -35,7 +35,8 @@ const genericQuery: SparqlQuery = {
         ?p a foaf:Agent;
              foaf:name ?publisher .
              
-        FILTER(LANG(?publisher) = "sk")`
+        FILTER(LANG(?publisher) = "sk")
+        FILTER(?datasetsCount > 0 || ?newDatasetsCount > 0 || ?modifiedDatasetsCount > 0 || ?removedDatasetsCount > 0)`
     ],
     defaultOrderBy: [{ propertyName: '?datasetsCount', ascending: false }]
 };
