@@ -29,6 +29,20 @@ export function Footer() {
                                             href="https://slovak-egov.atlassian.net/wiki/spaces/opendata/pages/20056044/Podpora+pre+data.slovensko.sk"
                                         >
                                             {t('technicalSupport')}
+                                        </a>{' '}
+                                        <a
+                                            className="govuk-link"
+                                            style={{ marginLeft: '1em' }}
+                                            href="https://slovak-egov.atlassian.net/wiki/spaces/opendata/pages/20056044/Podpora+pre+data.slovensko.sk"
+                                        >
+                                            Spracúvanie cookies
+                                        </a>
+                                        <a
+                                            className="govuk-link"
+                                            style={{ marginLeft: '1em' }}
+                                            href="https://slovak-egov.atlassian.net/wiki/spaces/opendata/pages/20056044/Podpora+pre+data.slovensko.sk"
+                                        >
+                                            Nastavenia cookies
                                         </a>
                                     </p>
                                     {userInfo ? (

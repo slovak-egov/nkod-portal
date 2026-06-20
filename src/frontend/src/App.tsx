@@ -55,6 +55,10 @@ import Harvestations from './pages/monitoring/Harvestations';
 import CatalogHarvestations from './pages/monitoring/CatalogHarvestations';
 import PublisherHarvestationDetail from './pages/monitoring/PublisherHarvestationDetail';
 import MonitoringSettingsUser from './pages/MonitoringSettingsUser';
+import Cookies from './pages/Cookies';
+import CookiesAccepted from './components/CookiesAccepted';
+import CookiesAccept from './components/CookiesAccept';
+import CookiesNotAccepted from './components/CookiesNotAccepted';
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -211,6 +215,7 @@ function App(props: Props) {
                 }}
             >
                 <BrowserRouter>
+                    <CookiesNotAccepted />
                     {window.location.hostname !== 'data.slovensko.sk' ? (
                         <Alert type="warning" style={{ margin: 0, padding: '20px 0' }}>
                             Nachádzate sa na TEST verzii portálu data.slovensko.sk.
@@ -316,6 +321,7 @@ function App(props: Props) {
                                     <Route path="/potvrdenie-registracie" Component={ActivateUser} />
                                     <Route path="/zabudnute-heslo" Component={ForgottenPassword} />
                                     <Route path="/obnova-hesla" Component={ForgottenPasswordActivation} />
+                                    <Route path="/cookies" Component={Cookies} />
 
                                     <Route path="*" Component={NotFound} />
                                 </Routes>
