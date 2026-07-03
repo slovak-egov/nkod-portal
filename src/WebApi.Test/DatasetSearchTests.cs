@@ -1142,5 +1142,32 @@ namespace WebApi.Test
             Assert.Equal(0, result.TotalCount);
             Assert.Empty(result.Items);
         }
+
+        [Fact]
+        public async Task OneResultDates()
+        {
+            string path = fixture.GetStoragePath();
+            Guid id = fixture.CreateDataset("Test", PublisherId);
+            using Storage storage = new Storage(path);
+
+            FileState state = storage.GetFileState(id, new AllAccessFilePolicy())!;
+            DcatDataset dataset = DcatDataset.Parse(state.Content!)!;
+            dataset.Issued = new DateTimeOffset(2023, 8, 16, 12, 30, 12, TimeSpan.Zero);
+            dataset.Modified = new DateTimeOffset(2023, 9, 17, 7, 12, 36, TimeSpan.Zero);
+            storage.InsertFile(dataset.ToString(), state.Metadata, true, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView>? result = await client.SearchDatasets(JsonContent.Create(new { }));
+            Assert.NotNull(result);
+            Assert.Single(result.Items);
+            Assert.Equal(1, result.TotalCount);
+            DatasetView view = result.Items[0];
+            Assert.Equal(id, view.Id);
+            Assert.Equal("Test", view.Name);
+            Assert.Equal("16. 8. 2023 14:30", view.Issued);
+            Assert.Equal("17. 9. 2023 9:12", view.LastUpdated);
+        }
     }
 }

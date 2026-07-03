@@ -122,6 +122,8 @@ export function LocalCatalogForm(props: Props) {
                     <BaseInput id={id} disabled={saving} value={catalog.endpointUrl ?? ''} onChange={(e) => setCatalog({ endpointUrl: e.target.value })} />
                 )}
             />
+
+            <MonitoringNotificationSettingsControl errors={errors} settings={catalog} setSettings={setCatalog} disabled={saving} />
         </>
     );
 }

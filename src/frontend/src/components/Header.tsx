@@ -101,6 +101,11 @@ export default function Header() {
                 title: t('codelists.title'),
                 link: '/sprava/ciselniky',
                 submenu: []
+            },
+            {
+                title: 'Nastavenia notifikácií',
+                link: '/nastavenia-notifikacie',
+                submenu: []
             }
         );
     }
@@ -246,7 +251,7 @@ export default function Header() {
                                                                     >
                                                                         {t('logout')}
                                                                     </a>
-                                                                    {userInfo?.publisherActive ?? false ? (
+                                                                    {(userInfo?.publisherActive ?? false) ? (
                                                                         <>
                                                                             <span> | </span>
                                                                             <a

@@ -1,5 +1,6 @@
 ﻿using Lucene.Net.Queries.Function.ValueSources;
 using Lucene.Net.Search;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -90,9 +91,15 @@ namespace NkodSk.Abstractions
                                 }
                             case "literal":
                                 string? lang = obj["xml:lang"]?.ToString();
+                                string? dataTypeAsString = obj["datatype"]?.ToString();
+                                Uri? dataType = !string.IsNullOrEmpty(dataTypeAsString) && Uri.IsWellFormedUriString(dataTypeAsString, UriKind.Absolute) ? new Uri(dataTypeAsString) : null;
                                 if (!string.IsNullOrEmpty(lang))
                                 {
                                     return newGraph.CreateLiteralNode(value, lang);
+                                }
+                                else if (dataType is not null)
+                                {
+                                    return newGraph.CreateLiteralNode(value, dataType);
                                 }
                                 else
                                 {
@@ -109,7 +116,12 @@ namespace NkodSk.Abstractions
 
             List<Triple> triples = new List<Triple>();
 
-            foreach (JToken token in JObject.Parse(content)?["results"]?["bindings"] ?? Enumerable.Empty<JToken>())
+            JsonTextReader reader = new JsonTextReader(new StringReader(content))
+            {
+                DateParseHandling = DateParseHandling.None
+            };
+
+            foreach (JToken token in JObject.Load(reader)?["results"]?["bindings"] ?? Enumerable.Empty<JToken>())
             {
                 INode a = CreateNode(token["a"]);
                 INode b = CreateNode(token["b"]);
@@ -122,7 +134,7 @@ namespace NkodSk.Abstractions
         }
 
         private async Task LoadTriples(IGraph graph, Uri? type, IUriNode node, bool trace)
-        {            
+        {
             if (type is not null)
             {
                 graph.Assert(node, graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType)), graph.CreateUriNode(type));

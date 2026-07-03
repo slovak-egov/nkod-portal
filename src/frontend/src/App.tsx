@@ -295,6 +295,12 @@ function App(props: Props) {
                                     <Route path="/podnet/:id" element={<SuggestionDetail />} />
                                     <Route path="/podnet/pridat" Component={SuggestionForm} />
 
+                                    <Route path="/harvestacie" Component={Harvestations} />
+                                    <Route path="/harvestacie/detail/:id" Component={HarvestationDetail} />
+                                    <Route path="/harvestacie/katalog/:id" Component={CatalogHarvestations} />
+                                    <Route path="/harvestacie/katalog/detail/:id" Component={CatalogHarvestationDetail} />
+                                    <Route path="/harvestacie/poskytovatel/detail/:id" Component={PublisherHarvestationDetail} />
+
                                     {userInfo?.role === 'Superadmin' ? (
                                         <>
                                             <Route path="/sprava/poskytovatelia" Component={PublisherList} />
@@ -302,12 +308,6 @@ function App(props: Props) {
                                             <Route path="/sprava/poskytovatelia/upravit/:id" Component={EditPublisher} />
                                             <Route path="/sprava/ciselniky" Component={Codelists} />
                                             <Route path="/nastavenia-notifikacie" Component={MonitoringSettingsUser} />
-
-                                            <Route path="/harvestacie" Component={Harvestations} />
-                                            <Route path="/harvestacie/detail/:id" Component={HarvestationDetail} />
-                                            <Route path="/harvestacie/katalog/:id" Component={CatalogHarvestations} />
-                                            <Route path="/harvestacie/katalog/detail/:id" Component={CatalogHarvestationDetail} />
-                                            <Route path="/harvestacie/poskytovatel/detail/:id" Component={PublisherHarvestationDetail} />
                                         </>
                                     ) : null}
 
