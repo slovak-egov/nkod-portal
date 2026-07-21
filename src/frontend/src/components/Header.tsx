@@ -103,6 +103,11 @@ export default function Header() {
                 submenu: []
             },
             {
+                title: 'Harvestácie',
+                link: '/harvestacie',
+                submenu: []
+            },
+            {
                 title: 'Nastavenia notifikácií',
                 link: '/nastavenia-notifikacie',
                 submenu: []

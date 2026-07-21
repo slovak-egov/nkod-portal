@@ -79,6 +79,7 @@ export default function CatalogList() {
                                             </Button>
                                             <Button
                                                 className="idsk-button idsk-button--secondary"
+                                                style={{ marginRight: '10px' }}
                                                 onClick={async () => {
                                                     if (await removeLocalCatalog(t('removePrompt'), c.id, headers)) {
                                                         refresh();
@@ -86,6 +87,12 @@ export default function CatalogList() {
                                                 }}
                                             >
                                                 {t('remove')}
+                                            </Button>
+                                            <Button
+                                                className="idsk-button idsk-button--secondary"
+                                                onClick={() => navigate('/harvestacie/katalog/' + encodeURIComponent(c.key))}
+                                            >
+                                                Monitoring
                                             </Button>
                                         </TableCell>
                                     </TableRow>
