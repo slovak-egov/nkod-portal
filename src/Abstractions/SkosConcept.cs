@@ -22,6 +22,12 @@ namespace NkodSk.Abstractions
 
         public bool IsDeprecated => false;
 
+        public decimal Priority
+        {
+            get => GetDecimalFromUriNode("custom:priority") ?? 0;
+            set => SetDecimalToUriNode("custom:priority", value);
+        }
+
         public static SkosConcept? ParseXml(Stream stream)
         {
             IGraph graph = new Graph();

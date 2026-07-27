@@ -72,6 +72,7 @@ namespace NkodSk.Abstractions
             graph.NamespaceMap.AddNamespace("skos", SkosUri);
             graph.NamespaceMap.AddNamespace("ns0", OntologyAuthorityTable);
             graph.NamespaceMap.AddNamespace("ns1", OntologyAuthority);
+            graph.NamespaceMap.AddNamespace("custom", RdfDocument.CustomPrefix);
         }
 
         public static SkosConceptScheme? Parse(string text)
@@ -105,6 +106,7 @@ namespace NkodSk.Abstractions
         public static SkosConceptScheme Create(Uri uri)
         {
             IGraph graph = new Graph();
+            RdfDocument.AddDefaultNamespaces(graph);
             AddDefaultNamespaces(graph);
             IUriNode subject = graph.CreateUriNode(uri);
             IUriNode rdfTypeNode = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));

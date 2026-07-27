@@ -113,6 +113,7 @@ namespace NkodSk.Abstractions
                 {
                     CodelistItem codelistItem = new CodelistItem(concept.Id);
                     codelistItem.IsDeprecated = concept.IsDeprecated;
+                    codelistItem.Priority = concept.Priority;
 
                     foreach (string lang in languages)
                     {

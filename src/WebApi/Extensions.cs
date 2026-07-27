@@ -20,11 +20,13 @@ namespace WebApi
                 foreach (string key in keys)
                 {
                     string? label = null;
+                    decimal priority = 0;
                     if (codelist.Items.TryGetValue(key, out CodelistItem? codelistItem))
                     {
                         label = codelistItem.GetCodelistValueLabel(language);
+                        priority = codelistItem.Priority;
                     }
-                    values.Add(new CodelistItemView(key, label ?? key));
+                    values.Add(new CodelistItemView(key, label ?? key, priority));
                 }
                 return values.ToArray();
             }
@@ -70,15 +72,17 @@ namespace WebApi
             if (key is not null)
             {
                 string? label = null;
+                decimal priority = 0;
                 Codelist? codelist = await codelistProviderClient.GetCodelist(codelistId);
                 if (codelist is not null)
                 {
                     if (codelist.Items.TryGetValue(key, out CodelistItem? codelistItem))
                     {
                         label = codelistItem.GetCodelistValueLabel(language);
+                        priority = codelistItem.Priority;
                     }
                 }
-                return new CodelistItemView(key, label ?? key);
+                return new CodelistItemView(key, label ?? key, priority);
             }
             return null;
         }
