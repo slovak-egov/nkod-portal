@@ -109,7 +109,7 @@ namespace WebApi
                 }
             }
 
-            if (!string.IsNullOrEmpty(LandingPage))
+            if (!string.IsNullOrEmpty(LandingPage) && Uri.TryCreate(LandingPage, UriKind.Absolute, out Uri? landingPageUri) && string.Equals(landingPageUri.Host, "data.gov.sk"))
             {
                 FileStorageQuery query = new FileStorageQuery
                 {
