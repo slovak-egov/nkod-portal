@@ -1182,6 +1182,30 @@ namespace WebApi.Test
         }
 
         [Fact]
+        public async Task TestDatasetShouldNotBeCreatedWithExistingLandingPageForNewHost()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreatePublisher("Test", PublisherId);
+            Guid id = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+            FileState state = storage.GetFileState(id, accessPolicy)!;
+            DcatDataset dataset = DcatDataset.Parse(state.Content!)!;
+            dataset.LandingPage = new Uri("https://data.slovensko.sk/123");
+            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, null, state.Metadata), true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DatasetInput input = CreateInput();
+            input.LandingPage = "https://data.slovensko.sk/123";
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/datasets", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
         public async Task TestDatasetShouldNotBeCreatedWithExistingLandingPageUpperCaseForOldHost()
         {
             string path = fixture.GetStoragePath();
@@ -1200,6 +1224,30 @@ namespace WebApi.Test
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
             DatasetInput input = CreateInput();
             input.LandingPage = "https://data.gov.sk/abc";
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PostAsync("/datasets", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task TestDatasetShouldNotBeCreatedWithExistingLandingPageUpperCaseForNewHost()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreatePublisher("Test", PublisherId);
+            Guid id = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+            FileState state = storage.GetFileState(id, accessPolicy)!;
+            DcatDataset dataset = DcatDataset.Parse(state.Content!)!;
+            dataset.LandingPage = new Uri("https://data.slovensko.sk/ABC");
+            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, null, state.Metadata), true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DatasetInput input = CreateInput();
+            input.LandingPage = "https://data.slovensko.sk/abc";
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PostAsync("/datasets", requestContent);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -1348,6 +1396,37 @@ namespace WebApi.Test
             DatasetInput input = CreateInput(true);
             input.Id = datasetId.ToString();
             input.LandingPage = "https://data.gov.sk/123";
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = await client.PutAsync("/datasets", requestContent);
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task TestDatasetShouldBeNotModifiedWithExistingLandingPageForNewHost()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreatePublisher("Test", PublisherId);
+            Guid id = fixture.CreateDataset("Test", PublisherId);
+
+            (Guid datasetId, Guid publisherId, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+            using Storage storage = new Storage(path);
+            foreach (Guid distributionId in distributions)
+            {
+                storage.DeleteFile(distributionId, accessPolicy);
+            }
+
+            FileState state = storage.GetFileState(id, accessPolicy)!;
+            DcatDataset dataset = DcatDataset.Parse(state.Content!)!;
+            dataset.LandingPage = new Uri("https://data.slovensko.sk/123");
+            storage.InsertFile(dataset.ToString(), dataset.UpdateMetadata(true, null, state.Metadata), true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            DatasetInput input = CreateInput(true);
+            input.Id = datasetId.ToString();
+            input.LandingPage = "https://data.slovensko.sk/123";
             using JsonContent requestContent = JsonContent.Create(input);
             using HttpResponseMessage response = await client.PutAsync("/datasets", requestContent);
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

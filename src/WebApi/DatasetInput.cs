@@ -109,7 +109,8 @@ namespace WebApi
                 }
             }
 
-            if (!string.IsNullOrEmpty(LandingPage) && Uri.TryCreate(LandingPage, UriKind.Absolute, out Uri? landingPageUri) && string.Equals(landingPageUri.Host, "data.gov.sk"))
+            if (!string.IsNullOrEmpty(LandingPage) && Uri.TryCreate(LandingPage, UriKind.Absolute, out Uri? landingPageUri) && 
+                (string.Equals(landingPageUri.Host, "data.gov.sk", StringComparison.OrdinalIgnoreCase) || string.Equals(landingPageUri.Host, "data.slovensko.sk", StringComparison.OrdinalIgnoreCase)))
             {
                 FileStorageQuery query = new FileStorageQuery
                 {
