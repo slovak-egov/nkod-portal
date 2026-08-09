@@ -1,16 +1,18 @@
-﻿using NkodSk.RdfFileStorage;
+﻿using Abstractions;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using NkodSk.Abstractions;
+using NkodSk.RdfFileStorage;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http.Json;
 using System.Net;
+using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
-using NkodSk.Abstractions;
-using TestBase;
 using System.Web;
-using Abstractions;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using TestBase;
+using VDS.RDF;
+using VDS.RDF.Writing;
 
 namespace WebApi.Test
 {
@@ -42,7 +44,21 @@ namespace WebApi.Test
             concept = scheme.CreateConcept(new Uri("http://example.com/test/4"));
             concept.SetLabel(new LanguageDependedTexts { { "sk", "Test4Sk" }, { "en", "Test4En" } });
 
-            string content = scheme.ToString();
+            Graph newGraph = new Graph();
+            newGraph.NamespaceMap.AddNamespace("unp1", SkosConceptScheme.SkosUri);
+            newGraph.NamespaceMap.AddNamespace("unp2", SkosConceptScheme.OntologyAuthorityTable);
+            newGraph.NamespaceMap.AddNamespace("unp3", SkosConceptScheme.OntologyAuthority);
+            foreach (RdfObject obj in scheme.RootObjects)
+            {
+                foreach (Triple t in obj.Triples)
+                {
+                    newGraph.Assert(t);
+                }
+            }
+            using System.IO.StringWriter writer = new System.IO.StringWriter();
+            newGraph.SaveToStream(writer, new CompressingTurtleWriter());
+
+            string content = writer.ToString();
             byte[] bytes = Encoding.UTF8.GetBytes(content);
 
             return bytes;

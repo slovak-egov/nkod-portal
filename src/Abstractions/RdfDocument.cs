@@ -165,6 +165,6 @@ namespace NkodSk.Abstractions
 
         private static Uri LegPrefix { get; } = new Uri(@"https://data.gov.sk/def/ontology/legislation/");
 
-        private static Uri CustomPrefix { get; } = new Uri(@"https://data.gov.sk/custom/");
+        public static Uri CustomPrefix { get; } = new Uri(@"https://data.gov.sk/custom/");
     }
 }

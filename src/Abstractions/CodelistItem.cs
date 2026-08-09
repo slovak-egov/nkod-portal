@@ -12,5 +12,7 @@
         public Dictionary<string, string> Labels { get; } = new Dictionary<string, string>();
 
         public bool IsDeprecated { get; set; }
+
+        public decimal Priority { get; set; }
     }
 }

@@ -234,12 +234,25 @@ namespace WebApi.Test
 
         public void CreateCodelistFile(string id, Dictionary<string, LanguageDependedTexts> values)
         {
-            SkosConceptScheme conceptScheme = SkosConceptScheme.Create(new Uri(id));
+            Dictionary<string, (LanguageDependedTexts, decimal)> valuesWithPriority = new Dictionary<string, (LanguageDependedTexts, decimal)>();
+
             foreach ((string conceptId, LanguageDependedTexts texts) in values)
+            {
+                valuesWithPriority[conceptId] = (texts, 0);
+            }
+
+            CreateCodelistFile(id, valuesWithPriority);
+        }
+
+        public void CreateCodelistFile(string id, Dictionary<string, (LanguageDependedTexts, decimal)> values)
+        {
+            SkosConceptScheme conceptScheme = SkosConceptScheme.Create(new Uri(id));
+            foreach ((string conceptId, (LanguageDependedTexts texts, decimal priority)) in values)
             {
                 IUriNode subject = conceptScheme.CreateSubject("skos:Concept", "skos:Concept", new Uri(conceptId));
                 SkosConcept concept = new SkosConcept(conceptScheme.Graph, subject);
                 concept.SetTexts("skos:prefLabel", texts);
+                concept.Priority = priority;
             }
 
             FileMetadata metadata = new FileMetadata(Guid.NewGuid(), id, FileType.Codelist, null, null, true, id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
