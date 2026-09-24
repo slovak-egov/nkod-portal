@@ -1,4 +1,5 @@
 ﻿
+using Microsoft.Extensions.ObjectPool;
 using NkodSk.Abstractions;
 
 namespace WebApi
@@ -15,9 +16,11 @@ namespace WebApi
 
         private Task lastWorkTask = Task.CompletedTask;
 
-        private Timer? onceTimer;
+        private DateOnly lastStarted;
 
-        private Timer? periodicTimer;
+        private readonly TimeSpan scheduledTime = new TimeSpan(6, 0, 0);
+
+        private Timer? timer;
 
         public ImportHarvestedHostedService(string documentStorageUrl, string iamUrl, string authToken, string sparqlEndpointUrl)
         {
@@ -25,47 +28,52 @@ namespace WebApi
             this.iamUrl = iamUrl;
             this.authToken = authToken;
             this.sparqlEndpointUrl = sparqlEndpointUrl;
+
+            DateTime now = DateTime.Now;
+            lastStarted = DateOnly.FromDateTime(now);
+            if (now.TimeOfDay < scheduledTime)
+            {
+                lastStarted = lastStarted.AddDays(-1);
+            }
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            onceTimer = new Timer(OnTimerTick, null, TimeSpan.FromSeconds(10), Timeout.InfiniteTimeSpan);
-            
-            DateTime now = DateTime.Now;
-            DateTime firstRun = now.Date.AddDays(now.Hour >= 6 ? 1 : 0).AddHours(6);
-            TimeSpan delay = firstRun - now;
-            if (delay.TotalMinutes < 10)
-            {
-                delay = TimeSpan.FromMinutes(10);
-            }
-            
-            periodicTimer = new Timer(OnTimerTick, null, delay, TimeSpan.FromDays(1));
+            timer = new Timer(OnTimerTick, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
             return Task.CompletedTask;
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
+            timer?.Change(Timeout.Infinite, Timeout.Infinite);
             await lastWorkTask;
-            onceTimer?.Dispose();
-            periodicTimer?.Dispose();
         }
 
-        private async void OnTimerTick(object? state)
+        private void OnTimerTick(object? state)
         {
-            await lastWorkTask;
-            lastWorkTask = Task.Run(() => ExecuteAsync(CancellationToken.None, Console.WriteLine));
+            DateTime now = DateTime.Now;
+            DateOnly today = DateOnly.FromDateTime(now);
+            if (today > lastStarted && now.TimeOfDay >= scheduledTime)
+            {
+                lastStarted = today;
+                lastWorkTask = ExecuteAsync(CancellationToken.None, Console.WriteLine);
+            }
         }
 
         public async Task ExecuteAsync(CancellationToken stoppingToken, Action<string> logger)
         {
             HttpContextValueAccessor httpContextValueAccessor = new HttpContextValueAccessor();
 
+            HttpClient storageHttpClient = new HttpClient
+            {
+                BaseAddress = new Uri(documentStorageUrl)
+            };
+
             DocumentStorageClient.DocumentStorageClient documentStorageClient = new DocumentStorageClient.DocumentStorageClient(
                 new DefaultHttpClientFactory(() =>
                 {
-                    HttpClient httpClient = new HttpClient();
-                    httpClient.BaseAddress = new Uri(documentStorageUrl);
-                    return httpClient;
+                    storageHttpClient.DefaultRequestHeaders.Authorization = null;
+                    return storageHttpClient;
                 }),
                 httpContextValueAccessor);
 
@@ -77,11 +85,14 @@ namespace WebApi
                     return httpClient;
                 }), httpContextValueAccessor);
 
-            HttpClientHandler httpClientHandler = new HttpClientHandler
+            SocketsHttpHandler httpHandler = new SocketsHttpHandler
             {
-                SslProtocols = System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12
+                PooledConnectionIdleTimeout = TimeSpan.FromHours(1),
+                PooledConnectionLifetime = TimeSpan.FromHours(1),
+                MaxConnectionsPerServer = 10
             };
-            HttpClient httpClient = new HttpClient(httpClientHandler);
+            httpHandler.SslOptions.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls13 | System.Security.Authentication.SslProtocols.Tls12;
+            HttpClient httpClient = new HttpClient(httpHandler);
             httpClient.BaseAddress = new Uri(sparqlEndpointUrl);
             httpClient.Timeout = TimeSpan.FromSeconds(300);
 

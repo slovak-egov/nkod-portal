@@ -240,6 +240,9 @@ namespace NkodSk.Abstractions
                         continue;
                     }
 
+                    string publisherName = publisher.GetName("sk") ?? "(null)";
+                    logger($"Publisher name: {publisherName}");
+
                     await loginProvider(state.Metadata.Publisher);
 
                     DcatCatalog? catalog = state.Content is not null ? DcatCatalog.Parse(state.Content) : null;
@@ -254,7 +257,7 @@ namespace NkodSk.Abstractions
                         catalog?.Uri,
                         catalog is null,
                         DcatDataset.Parse,
-                        () => catalog?.Uri is not null ? sparqlClient.GetDatasets(catalog.Uri, true) : Task.FromResult(new List<DcatDataset>()),
+                        () => catalog?.Uri is not null ? sparqlClient.GetDatasets(catalog.Uri, false) : Task.FromResult(new List<DcatDataset>()),
                         (d, m) =>
                         {
                             m = d.UpdateMetadata(true, publisher, m);
@@ -276,7 +279,7 @@ namespace NkodSk.Abstractions
                                 catalog?.Uri,
                                 false,
                                 DcatDistribution.Parse,
-                                () => sparqlClient.GetDistributions(dataset.Uri, true),
+                                () => sparqlClient.GetDistributions(dataset.Uri, false),
                                 (d, m) => d.UpdateMetadata(datasetMetadata, m),
                                 () => documentStorageClient.UpdateDatasetMetadata(datasetMetadata.Id, false),
                                 (_, _) => Task.CompletedTask

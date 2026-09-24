@@ -64,5 +64,10 @@ httpClient.BaseAddress = new Uri(sparqlEndpointUrl);
 
 SparqlClient sparqlClient = new SparqlClient(httpClient);
 
-HarvestedDataImport dataImport = new HarvestedDataImport(sparqlClient, documentStorageClient, p => iamClient.LoginHarvester(authToken, p), Console.WriteLine);
+HarvestedDataImport dataImport = new HarvestedDataImport(sparqlClient, documentStorageClient, async p =>
+{
+    string token = await iamClient.LoginHarvester(authToken, p);
+    httpContextValueAccessor.Token = token;
+    httpContextValueAccessor.Publisher = p;
+}, Console.WriteLine);
 await dataImport.Import();
