@@ -17,7 +17,9 @@ type Props<T> = {
     columns: Column<T>[];
     header?: string | undefined | null;
     exportDefintion?: ExportDefintion<T> | null | undefined;
+    alwaysShowTable?: boolean;
     pageSize?: number;
+    filter?: React.ReactNode;
 };
 
 type Column<T> = {
@@ -123,8 +125,8 @@ export default function SparqlEnabledTable<T>(props: Props<T>) {
                             ) : null}
                         </PageSubheader>
                     ) : null}
-                    {data.length > 0 ? (
-                        <Table>
+                    {data.length > 0 || props.alwaysShowTable ? (
+                        <Table filter={props.filter}>
                             <TableHead>
                                 <TableRow>
                                     {props.columns.map((c, i) => (

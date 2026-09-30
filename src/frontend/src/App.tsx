@@ -55,6 +55,8 @@ import Harvestations from './pages/monitoring/Harvestations';
 import CatalogHarvestations from './pages/monitoring/CatalogHarvestations';
 import PublisherHarvestationDetail from './pages/monitoring/PublisherHarvestationDetail';
 import MonitoringSettingsUser from './pages/MonitoringSettingsUser';
+import PublisherDataQualityDetail from './pages/quality/PublisherDataQualityDetail';
+import PublishersDataQuality from './pages/quality/PublishersDataQuality';
 
 type Props = {
     extenalToken: TokenResult | null;
@@ -180,7 +182,7 @@ function App(props: Props) {
     }, [headers]);
 
     useEffect(() => {
-        if (matomoUrl) {
+        if (matomoUrl && window.location.hostname !== 'localhost') {
             var _mtm = [];
             _mtm.push({ 'mtm.startTime': new Date().getTime(), event: 'mtm.Start' });
             (function () {
@@ -316,6 +318,9 @@ function App(props: Props) {
                                     <Route path="/potvrdenie-registracie" Component={ActivateUser} />
                                     <Route path="/zabudnute-heslo" Component={ForgottenPassword} />
                                     <Route path="/obnova-hesla" Component={ForgottenPasswordActivation} />
+
+                                    <Route path="/kvalita-metadat-new" Component={PublishersDataQuality} />
+                                    <Route path="/kvalita-metadat-new/:id" Component={PublisherDataQualityDetail} />
 
                                     <Route path="*" Component={NotFound} />
                                 </Routes>

@@ -19,6 +19,7 @@ import ApplicationListItem from './ApplicationListItem';
 import CommentSection from './CommentSection';
 import NotFound from './NotFound';
 import SuggestionListItem from './SuggestionListItem';
+import { MapEmbed } from '../components/MapEmbed';
 
 type Props = {
     scrollToComments?: boolean;
@@ -276,6 +277,18 @@ export default function DetailDataset(props: Props) {
                                             </div>
                                         </div>
                                     </GridColumn>
+                                ) : null}{' '}
+                                {dataset.mapPage ? (
+                                    <GridColumn widthUnits={1} totalUnits={4}>
+                                        <div className="nkod-detail-attribute">
+                                            <div className="govuk-body nkod-detail-attribute-name">Zobrazenie na mape</div>
+                                            <div className="govuk-body nkod-detail-attribute-value" data-testid="map-page" style={{ wordBreak: 'break-word' }}>
+                                                <a href={dataset.mapPage} className="govuk-link">
+                                                    {t('show')}
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </GridColumn>
                                 ) : null}
                             </GridRow>
                             <GridRow>
@@ -365,6 +378,12 @@ export default function DetailDataset(props: Props) {
                                     </GridColumn>
                                 ) : null}
                             </GridRow>
+                            {dataset.mapEmbedUrl ? (
+                                <div>
+                                    <h2 className="govuk-heading-m suggestion-subtitle">Zobrazenie na mape</h2>
+                                    <MapEmbed {...dataset} />
+                                </div>
+                            ) : null}
                             {datasetsAsParent && datasetsAsParent.items.length > 0 ? (
                                 <GridRow>
                                     <GridColumn widthUnits={1} totalUnits={1} data-testid="related">

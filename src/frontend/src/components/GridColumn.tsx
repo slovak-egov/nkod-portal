@@ -5,6 +5,7 @@ type Props = {
     widthUnits: number;
     totalUnits: number;
     flexEnd?: boolean;
+    from?: string;
 } & HTMLAttributes<HTMLDivElement>;
 
 export default function GridColumn(props: Props) {
@@ -42,6 +43,10 @@ export default function GridColumn(props: Props) {
         if (props.widthUnits > 1) {
             autoClassName += 's';
         }
+    }
+
+    if (props.from) {
+        autoClassName += '-from-' + props.from;
     }
 
     return (

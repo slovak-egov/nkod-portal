@@ -115,6 +115,25 @@ namespace NkodSk.Abstractions
             SetTexts("dct:title", values);
         }
 
+        public string? Language
+        {
+            get
+            {
+                Uri? uri = GetUriFromUriNode("dct:language");
+                const string pathPrefix = "/resource/authority/language/";
+                if (uri is not null && uri.Host == "publications.europa.eu" && uri.LocalPath.StartsWith(pathPrefix) && uri.LocalPath.Length > pathPrefix.Length)
+                {
+                    return uri.LocalPath.Substring(pathPrefix.Length) switch
+                    {
+                        "SLK" => "sk",
+                        "ENG" => "en",
+                        _ => null
+                    };
+                }
+                return null;
+            }
+        }
+
         public Uri? AccessService
         {
             get => GetUriFromUriNode("dcat:accessService");

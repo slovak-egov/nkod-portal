@@ -539,7 +539,7 @@ app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServi
                     foreach (FileState dependedState in fileState.DependentFiles.Where(f => f.Metadata.Type == FileType.DistributionRegistration))
                     {
                         DcatDistribution? distributionRdf = dependedState.Content is not null ? DcatDistribution.Parse(dependedState.Content) : null;
-                        if (distributionRdf is not null)
+                        if (distributionRdf is not null && (string.IsNullOrEmpty(distributionRdf.Language) || string.Equals(distributionRdf.Language, language, StringComparison.OrdinalIgnoreCase)))
                         {
                             DistributionView distributionView = await DistributionView.MapFromRdf(dependedState.Metadata.Id, fileState.Metadata.Id, distributionRdf, codelistProviderClient, language, isAuthenticated, qualityServiuce);
                             datasetView.Distributions.Add(distributionView);
@@ -604,7 +604,7 @@ app.MapPost("/distributions/search", async ([FromBody] DatasetQuery query, [From
         foreach (FileState fileState in storageResponse.Files)
         {
             DcatDistribution? distributionRdf = fileState.Content is not null ? DcatDistribution.Parse(fileState.Content) : null;
-            if (distributionRdf is not null)
+            if (distributionRdf is not null && (string.IsNullOrEmpty(distributionRdf.Language) || string.Equals(distributionRdf.Language, language, StringComparison.OrdinalIgnoreCase)))
             {
                 DistributionView view = await DistributionView.MapFromRdf(fileState.Metadata.Id, fileState.Metadata.ParentFile, distributionRdf, codelistProviderClient, language, isAuthenticated, qualityServiuce).ConfigureAwait(false);
 

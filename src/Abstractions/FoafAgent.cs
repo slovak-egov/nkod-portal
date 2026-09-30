@@ -47,8 +47,8 @@ namespace NkodSk.Abstractions
 
         public Uri? LegalForm
         {
-            get => GetUriFromUriNode("ls:legalForm");
-            set => SetUriNode("ls:legalForm", value);
+            get => GetUriFromUriNode("ls:legalFormType");
+            set => SetUriNode("ls:legalFormType", value);
         }
 
         public static FoafAgent? Parse(string text)

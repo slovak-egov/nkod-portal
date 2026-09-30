@@ -255,6 +255,19 @@ export type Dataset = {
     applicableLegislations: string[];
     hvdCategory: string | null;
     hvdCategoryValue: CodelistValue | null;
+
+    mapPage?: string | null;
+} & MapEmbedProps;
+
+export type MapEmbedProps = {
+    mapEmbedUrl?: string | null;
+    minWidth?: number | null;
+    minHeight?: number | null;
+    maxWidth?: number | null;
+    maxHeight?: number | null;
+    recommendedWidth?: number | null;
+    recommendedHeight?: number | null;
+    recommendedAspectRatio?: string | null;
 };
 
 type TermsOfUse = {

@@ -82,6 +82,24 @@ namespace WebApi
 
         public CodelistItemView? HvdCategoryValue { get; set; } 
 
+        public Uri? MapPage { get; set; }
+
+        public Uri? MapEmbedUrl { get; set; }
+
+        public int? MinWidth { get; set; }
+
+        public int? MinHeight { get; set; }
+
+        public int? MaxWidth { get; set; }
+
+        public int? MaxHeight { get; set; }
+
+        public int? RecommendedWidth { get; set; }
+
+        public int? RecommendedHeight { get; set; }
+
+        public string? RecommendedAspectRatio { get; set; }
+
         public static async Task<DatasetView> MapFromRdf(FileMetadata metadata, DcatDataset datasetRdf, ICodelistProviderClient codelistProviderClient, string language, bool fetchAllLanguages)
         {
             VcardKind? contactPoint = datasetRdf.ContactPoint;
@@ -112,12 +130,22 @@ namespace WebApi
                 EuroVocThemes = datasetRdf.EuroVocThemes.ToArray(),
                 SpatialResolutionInMeters = datasetRdf.SpatialResolutionInMeters,
                 TemporalResolution = datasetRdf.TemporalResolution,
-                
+
                 IsPartOf = datasetRdf.IsPartOfInternalId,
                 IsSerie = datasetRdf.IsSerie,
                 IsHarvested = datasetRdf.IsHarvested,
                 Issued = datasetRdf.Issued?.LocalDateTime.ToString("g"),
                 LastUpdated = datasetRdf.Modified?.LocalDateTime.ToString("g"),
+
+                MapPage = datasetRdf.MapPage,
+                MapEmbedUrl = datasetRdf.MapEmbedUrl,
+                MinWidth = datasetRdf.MinWidth,
+                MinHeight = datasetRdf.MinHeight,
+                MaxWidth = datasetRdf.MaxWidth,
+                MaxHeight = datasetRdf.MaxHeight,
+                RecommendedWidth = datasetRdf.RecommendedWidth,
+                RecommendedHeight = datasetRdf.RecommendedHeight,
+                RecommendedAspectRatio = datasetRdf.RecommendedAspectRatio,
             };
 
             if (fetchAllLanguages)

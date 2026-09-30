@@ -100,7 +100,9 @@ export async function runSparqlQuery<T>(
         q += `OFFSET ${offset}\n`;
     }
 
-    const response = await fetch(endpointUrl + '?query=' + encodeURIComponent(q), {
+    const response = await fetch(endpointUrl, {
+        method: 'POST',
+        body: new URLSearchParams({ query: q }),
         headers: { Accept: 'application/sparql-results+json' }
     });
     const result: SparqlResult<T> = await response.json();
@@ -126,4 +128,21 @@ export function formatNumber(value: number | string | null | undefined): string 
     const n = getNumber(value);
     if (n === null) return '';
     return n.toLocaleString('sk', { useGrouping: true });
+}
+
+export function escapeSparqlText(nonEscapedText: string): string {
+    const escapeMap: Readonly<Record<string, string>> = {
+        '\\': '\\\\',
+        '"': '\\"',
+        "'": "\\'",
+        '\n': '\\n',
+        '\r': '\\r',
+        '\t': '\\t',
+        '\b': '\\b',
+        '\f': '\\f'
+    };
+
+    const needsEscape = /[\\"'\u0000-\u001F\u007F]/g;
+
+    return nonEscapedText.replace(needsEscape, (ch) => escapeMap[ch] ?? '\\u' + ch.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0'));
 }

@@ -1,5 +1,4 @@
 ﻿using Abstractions;
-using AngleSharp.Dom;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
@@ -1168,6 +1167,121 @@ namespace WebApi.Test
             Assert.Equal("Test", view.Name);
             Assert.Equal("16. 8. 2023 14:30", view.Issued);
             Assert.Equal("17. 9. 2023 9:12", view.LastUpdated);
+        }
+
+        private void AddLanguageDependentDistribution(string path, Guid datasetId, Uri downloadUrl, Uri langauge)
+        {
+            using Storage storage = new Storage(path);
+            IFileStorageAccessPolicy accessPolicy = new AllAccessFilePolicy();
+
+            FileState datasetState = storage.GetFileState(datasetId, accessPolicy)!;
+
+            fixture.CreateDistrbution(datasetState,
+              new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
+              new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
+              new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
+              new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"),
+              downloadUrl,
+              new Uri("http://data.gov.sk/"),
+              new Uri("http://publications.europa.eu/resource/dataset/file-type/1"),
+              new Uri("http://www.iana.org/assignments/media-types/text/csv"), 
+              language: langauge);
+
+        }
+
+        [Fact]
+        public async Task DistributionsInDefaultLanguageOnly()
+        {
+            string path = fixture.GetStoragePath();
+            Guid id = fixture.CreateDataset("Test", PublisherId);
+
+            AddLanguageDependentDistribution(path, id, new Uri("https://example.com/download-sk"), new Uri("http://publications.europa.eu/resource/authority/language/SLK"));
+            AddLanguageDependentDistribution(path, id, new Uri("https://example.com/download-en"), new Uri("http://publications.europa.eu/resource/authority/language/ENG"));
+
+            using Storage storage = new Storage(path);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView>? result = await client.SearchDatasets(JsonContent.Create(new { Language = "sk" }));
+            Assert.NotNull(result);
+            Assert.Single(result.Items);
+            Assert.Equal(1, result.TotalCount);
+            DatasetView view = result.Items[0];
+            Assert.Equal(id, view.Id);
+            Assert.Single(view.Distributions);
+            DistributionView distributionView = view.Distributions[0];
+            Assert.Equal("https://example.com/download-sk", distributionView.DownloadUrl?.OriginalString);
+        }
+
+        [Fact]
+        public async Task DistributionsInEnLanguageOnly()
+        {
+            string path = fixture.GetStoragePath();
+            Guid id = fixture.CreateDataset("Test", PublisherId);
+
+            AddLanguageDependentDistribution(path, id, new Uri("https://example.com/download-sk"), new Uri("http://publications.europa.eu/resource/authority/language/SLK"));
+            AddLanguageDependentDistribution(path, id, new Uri("https://example.com/download-en"), new Uri("http://publications.europa.eu/resource/authority/language/ENG"));
+
+            using Storage storage = new Storage(path);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView>? result = await client.SearchDatasets(JsonContent.Create(new { Language = "en" }));
+            Assert.NotNull(result);
+            Assert.Single(result.Items);
+            Assert.Equal(1, result.TotalCount);
+            DatasetView view = result.Items[0];
+            Assert.Equal(id, view.Id);
+            Assert.Single(view.Distributions);
+            DistributionView distributionView = view.Distributions[0];
+            Assert.Equal("https://example.com/download-en", distributionView.DownloadUrl?.OriginalString);
+        }
+
+        [Fact]
+        public async Task DatasetWithMapData()
+        {
+            string path = fixture.GetStoragePath();
+            Guid id = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+            IFileStorageAccessPolicy accessPolicy = new AllAccessFilePolicy();
+
+            FileState datasetState = storage.GetFileState(id, accessPolicy)!;
+            DcatDataset dataset = DcatDataset.Parse(datasetState.Content!)!;
+            dataset.Graph.Assert(dataset.Node, dataset.Graph.CreateUriNode(new Uri("https://data.gov.sk/def/ontology/dataset/mapPage")), dataset.Graph.CreateUriNode(new Uri("https://example.com/map-link")));
+            INode embedNode = dataset.Graph.CreateUriNode(new Uri(dataset.Uri + "/map"));
+            dataset.Graph.Assert(dataset.Node, dataset.Graph.CreateUriNode(new Uri("https://data.gov.sk/def/ontology/dataset/embedMap")), embedNode);
+            dataset.Graph.Assert(embedNode, dataset.Graph.CreateUriNode(new Uri("https://data.gov.sk/def/ontology/dataset/embedURL")), dataset.Graph.CreateUriNode(new Uri("https://example.com/map-embed")));
+            dataset.Graph.Assert(embedNode, dataset.Graph.CreateUriNode(new Uri("https://data.gov.sk/def/ontology/dataset/minWidth")), 200.ToLiteral(dataset.Graph));
+            dataset.Graph.Assert(embedNode, dataset.Graph.CreateUriNode(new Uri("https://data.gov.sk/def/ontology/dataset/maxWidth")), 800.ToLiteral(dataset.Graph));
+            dataset.Graph.Assert(embedNode, dataset.Graph.CreateUriNode(new Uri("https://data.gov.sk/def/ontology/dataset/minHeight")), 150.ToLiteral(dataset.Graph));
+            dataset.Graph.Assert(embedNode, dataset.Graph.CreateUriNode(new Uri("https://data.gov.sk/def/ontology/dataset/maxHeight")), 600.ToLiteral(dataset.Graph));
+            dataset.Graph.Assert(embedNode, dataset.Graph.CreateUriNode(new Uri("https://data.gov.sk/def/ontology/dataset/recommendedWidth")), 350.ToLiteral(dataset.Graph));
+            dataset.Graph.Assert(embedNode, dataset.Graph.CreateUriNode(new Uri("https://data.gov.sk/def/ontology/dataset/recommendedHeight")), 300.ToLiteral(dataset.Graph));
+            dataset.Graph.Assert(embedNode, dataset.Graph.CreateUriNode(new Uri("https://data.gov.sk/def/ontology/dataset/recommendedAspectRatio")), "2:1".ToLiteral(dataset.Graph));
+            storage.InsertFile(dataset.ToString(), datasetState.Metadata, true, accessPolicy);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView>? result = await client.SearchDatasets(JsonContent.Create(new { }));
+            Assert.NotNull(result);
+            Assert.Single(result.Items);
+            Assert.Equal(1, result.TotalCount);
+            DatasetView view = result.Items[0];
+            Assert.Equal(id, view.Id);
+
+            Assert.Equal("https://example.com/map-link", view.MapPage?.OriginalString);
+            Assert.Equal("https://example.com/map-embed", view.MapEmbedUrl?.OriginalString);
+            Assert.Equal(200, view.MinWidth);
+            Assert.Equal(800, view.MaxWidth);
+            Assert.Equal(150, view.MinHeight);
+            Assert.Equal(600, view.MaxHeight);
+            Assert.Equal(350, view.RecommendedWidth);
+            Assert.Equal(300, view.RecommendedHeight);
+            Assert.Equal("2:1", view.RecommendedAspectRatio);
         }
     }
 }

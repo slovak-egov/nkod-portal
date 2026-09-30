@@ -118,7 +118,7 @@ namespace WebApi.Test
         }
 
         public Guid CreateDistrbution(FileState datasetState, Uri? authorsWorkType, Uri? originalDatabaseType, Uri? databaseProtectedBySpecialRightsType, Uri? personalDataContainmentType,
-            Uri? downloadUri, Uri? accessUri, Uri? format, Uri? mediaType, Uri? conformsTo = null, Uri? compressFormat = null, Uri? packageFormat = null, string? title = null, string? titleEn = null, Uri? accessService = null)
+            Uri? downloadUri, Uri? accessUri, Uri? format, Uri? mediaType, Uri? conformsTo = null, Uri? compressFormat = null, Uri? packageFormat = null, string? title = null, string? titleEn = null, Uri? accessService = null, Uri? language = null)
         {
             DcatDistribution distribution = DcatDistribution.Create(datasetState.Metadata.Id);
 
@@ -141,6 +141,11 @@ namespace WebApi.Test
                 titles["en"] = titleEn;
             }
             distribution.SetTitle(titles);
+
+            if (language is not null)
+            {
+                distribution.Graph.Assert(distribution.Node, distribution.Graph.CreateUriNode("dct:language"), distribution.Graph.CreateUriNode(language));
+            }
 
             FileMetadata datasetMetadata = distribution.UpdateDatasetMetadata(datasetState.Metadata);
             DcatDataset dataset = DcatDataset.Parse(datasetState.Content!)!;

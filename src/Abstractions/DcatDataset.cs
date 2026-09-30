@@ -1,5 +1,4 @@
-﻿using AngleSharp.Dom;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -256,6 +255,46 @@ namespace NkodSk.Abstractions
         }
 
         public IEnumerable<Uri> Distributions => GetUrisFromUriNode("dcat:distribution");
+
+        public Uri? MapPage => GetUriFromUriNode("sk-ds:mapPage");
+
+        public INode? MapEmbedNode => Graph.GetTriplesWithSubjectPredicate(Node, Graph.CreateUriNode("sk-ds:embedMap")).Select(t => t.Object).FirstOrDefault();
+
+        public INode? GetMapEmbedPropertyNode(string name)
+        {
+            INode? embedNode = MapEmbedNode;
+            if (embedNode is not null)
+            {
+                return Graph.GetTriplesWithSubjectPredicate(embedNode, Graph.CreateUriNode(name)).Select(t => t.Object).FirstOrDefault();
+            }
+            return null;
+        }
+
+        private int? GetIntFromEmbedNode(string name)
+        {
+            ILiteralNode? node = GetMapEmbedPropertyNode(name) as ILiteralNode;
+            if (int.TryParse(node?.Value, System.Globalization.CultureInfo.InvariantCulture, out int value))
+            {
+                return value;
+            }
+            return null;
+        }
+
+        public Uri? MapEmbedUrl => (GetMapEmbedPropertyNode("sk-ds:embedURL") as IUriNode)?.Uri;
+
+        public int? MinWidth => GetIntFromEmbedNode("sk-ds:minWidth");
+
+        public int? MinHeight => GetIntFromEmbedNode("sk-ds:minHeight");
+
+        public int? MaxWidth => GetIntFromEmbedNode("sk-ds:maxWidth");
+
+        public int? MaxHeight => GetIntFromEmbedNode("sk-ds:maxHeight");
+
+        public int? RecommendedWidth => GetIntFromEmbedNode("sk-ds:recommendedWidth");
+
+        public int? RecommendedHeight => GetIntFromEmbedNode("sk-ds:recommendedHeight");
+
+        public string? RecommendedAspectRatio => (GetMapEmbedPropertyNode("sk-ds:recommendedAspectRatio") as ILiteralNode)?.Value;
 
         public bool UpdateModifiedDate { get; set; }
 
