@@ -281,7 +281,7 @@ export default function DetailDataset(props: Props) {
                                 {dataset.mapPage ? (
                                     <GridColumn widthUnits={1} totalUnits={4}>
                                         <div className="nkod-detail-attribute">
-                                            <div className="govuk-body nkod-detail-attribute-name">Zobrazenie na mape</div>
+                                            <div className="govuk-body nkod-detail-attribute-name">{t('mapView')}</div>
                                             <div className="govuk-body nkod-detail-attribute-value" data-testid="map-page" style={{ wordBreak: 'break-word' }}>
                                                 <a href={dataset.mapPage} className="govuk-link">
                                                     {t('show')}
@@ -380,7 +380,7 @@ export default function DetailDataset(props: Props) {
                             </GridRow>
                             {dataset.mapEmbedUrl ? (
                                 <div>
-                                    <h2 className="govuk-heading-m suggestion-subtitle">Zobrazenie na mape</h2>
+                                    <h2 className="govuk-heading-m suggestion-subtitle">{t('mapView')}</h2>
                                     <MapEmbed {...dataset} />
                                 </div>
                             ) : null}

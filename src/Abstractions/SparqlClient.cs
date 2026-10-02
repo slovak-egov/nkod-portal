@@ -165,6 +165,11 @@ namespace NkodSk.Abstractions
                 await LoadTriples(newGraph, null, contactPointNode, trace);
             }
 
+            if (dataset.MapEmbedNode is IUriNode mapEmbedNode)
+            {
+                await LoadTriples(newGraph, null, mapEmbedNode, trace);
+            }
+
             return dataset;
         }
 

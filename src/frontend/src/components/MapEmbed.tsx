@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MapEmbedProps } from '../client';
 
 function clamp(value: number, min?: number | null, max?: number | null): number {
@@ -13,6 +14,7 @@ function clamp(value: number, min?: number | null, max?: number | null): number 
 }
 
 export function MapEmbed(props: MapEmbedProps) {
+    const { t } = useTranslation();
     const containerRef = useRef<HTMLDivElement>(null);
     const [size, setSize] = useState({ width: 0, height: 0 });
 
@@ -79,7 +81,7 @@ export function MapEmbed(props: MapEmbedProps) {
             {size.width > 0 && size.height > 0 ? (
                 <iframe
                     src={props.mapEmbedUrl}
-                    title="Map"
+                    title={t('map')}
                     width={size.width}
                     height={size.height}
                     loading="lazy"

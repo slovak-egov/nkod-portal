@@ -446,12 +446,14 @@
     "byLikesCount": "by count of likes",
     "byCommentsCount": "by count of comments",
     "bySuggestionCount": "by count of suggestions",
-    "documentationLink": "Odkaz na dokumentáciu",
+    "documentationLink": "Documentation link",
     "relatedSource": "Súvisiaci zdroj",
     "applicableLegislation": "Právny predpis",
     "hvdCategory": "HVD Category",
     "logoutSuccessful": "Log out was successful",
     "mainNavigation": "Main navigation",
     "maximumFileUploadSize": "Maximum file size for upload",
-    "relation": "Related source"
+    "relation": "Related source",
+    "mapView": "Map view",
+    "map": "Map"
 }

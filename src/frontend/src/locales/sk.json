@@ -453,5 +453,7 @@
     "hvdCategory": "Kategória HVD",
     "fileIsAvailableThroughDataService": "Súbor je prístupný cez dátovú službu",
     "dataService": "Dátová služba",
-    "relation": "Súvisiaci zdroj"
+    "relation": "Súvisiaci zdroj",
+    "mapView": "Zobrazenie na mape",
+    "map": "Mapa"
 }
