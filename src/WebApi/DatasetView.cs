@@ -100,10 +100,19 @@ namespace WebApi
 
         public string? RecommendedAspectRatio { get; set; }
 
-        public static async Task<DatasetView> MapFromRdf(FileMetadata metadata, DcatDataset datasetRdf, ICodelistProviderClient codelistProviderClient, string language, bool fetchAllLanguages)
+        public static async Task<DatasetView> MapFromRdf(FileMetadata metadata, DcatDataset datasetRdf, ICodelistProviderClient codelistProviderClient, string language, bool fetchAllLanguages, IAppSettingsService? appSettingsService)
         {
             VcardKind? contactPoint = datasetRdf.ContactPoint;
             DctTemporal? temporal = datasetRdf.Temporal;
+
+            Uri? mapEmbedUrl = datasetRdf.MapEmbedUrl;
+            if (mapEmbedUrl is not null && appSettingsService is not null)
+            {
+                if (!mapEmbedUrl.IsAbsoluteUri || string.IsNullOrEmpty(mapEmbedUrl.Host) || !appSettingsService.IsIframeHostAllowed(mapEmbedUrl.Host))
+                {
+                    mapEmbedUrl = null;
+                }
+            }
 
             DatasetView view = new DatasetView
             {
@@ -138,7 +147,7 @@ namespace WebApi
                 LastUpdated = datasetRdf.Modified?.LocalDateTime.ToString("g"),
 
                 MapPage = datasetRdf.MapPage,
-                MapEmbedUrl = datasetRdf.MapEmbedUrl,
+                MapEmbedUrl = mapEmbedUrl,
                 MinWidth = datasetRdf.MinWidth,
                 MinHeight = datasetRdf.MinHeight,
                 MaxWidth = datasetRdf.MaxWidth,

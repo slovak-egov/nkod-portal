@@ -15,6 +15,7 @@ import ApplicationForm from './pages/ApplicationForm';
 import ApplicationList from './pages/ApplicationList';
 import CatalogList from './pages/CatalogList';
 import ChangeLicenses from './pages/ChangeLicenses';
+import AppSettingsPage from './pages/AppSettings';
 import Codelists from './pages/Codelists';
 import DatasetList from './pages/DatasetList';
 import DetailDataset from './pages/DetailDataset';
@@ -309,6 +310,7 @@ function App(props: Props) {
                                             <Route path="/sprava/poskytovatelia/pridat" Component={AddPublisher} />
                                             <Route path="/sprava/poskytovatelia/upravit/:id" Component={EditPublisher} />
                                             <Route path="/sprava/ciselniky" Component={Codelists} />
+                                            <Route path="/sprava/nastavenia-aplikacie" Component={AppSettingsPage} />
                                             <Route path="/nastavenia-notifikacie" Component={MonitoringSettingsUser} />
                                         </>
                                     ) : null}

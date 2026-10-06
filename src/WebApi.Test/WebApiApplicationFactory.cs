@@ -85,6 +85,8 @@ namespace WebApi.Test
                 services.AddTransient<IFileStorageAccessPolicy, DefaultFileAccessPolicy>();
                 services.AddSingleton<TestNotificationSettingService>();
                 services.AddSingleton<INotificationSettingService>(sp => sp.GetRequiredService<TestNotificationSettingService>());
+                services.AddSingleton<TestAppSettingsService>();
+                services.AddSingleton<IAppSettingsService>(sp => sp.GetRequiredService<TestAppSettingsService>());
                 services.AddTransient(s => testIdentityAccessManagementClient ??= new TestIdentityAccessManagementClient(s.GetRequiredService<IHttpContextValueAccessor>(), this));
                 services.AddTransient<IIdentityAccessManagementClient>(s => s.GetRequiredService<TestIdentityAccessManagementClient>());
                 services.AddSingleton<ISparqlClient, TestSparqlClient>();
@@ -136,5 +138,7 @@ namespace WebApi.Test
         }
 
         public TestNotificationSettingService NotificationSettingService => Services.GetRequiredService<TestNotificationSettingService>();
+
+        public TestAppSettingsService AppSettingsService => Services.GetRequiredService<TestAppSettingsService>();
     }
 }

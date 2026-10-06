@@ -111,6 +111,11 @@ export default function Header() {
                 title: 'Nastavenia notifikácií',
                 link: '/nastavenia-notifikacie',
                 submenu: []
+            },
+            {
+                title: 'Nastavenia aplikácie',
+                link: '/sprava/nastavenia-aplikacie',
+                submenu: []
             }
         );
     }

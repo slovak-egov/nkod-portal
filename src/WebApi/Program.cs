@@ -97,6 +97,12 @@ if (Uri.IsWellFormedUriString(notificationServiceUrl, UriKind.Absolute))
     builder.Services.AddTransient<INotificationSettingService, NotificationSettingService>();
 }
 
+string? appSettingsFilePath = builder.Configuration["AppSettingsFilePath"];
+if (!string.IsNullOrEmpty(appSettingsFilePath))
+{
+    builder.Services.AddSingleton<IAppSettingsService>(sp => new AppSettingsService(appSettingsFilePath, sp.GetService<TelemetryClient>()));
+}
+
 builder.Services.AddAuthentication(o =>
 {
     o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -495,7 +501,7 @@ app.MapPost("/publishers/search", async ([FromBody] PublisherQuery query, [FromS
     }
 }).Produces<AbstractResponse<PublisherView>>();
 
-app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient, [FromServices] DownloadDataQualityService qualityServiuce) =>
+app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, ClaimsPrincipal? user, [FromServices] TelemetryClient? telemetryClient, [FromServices] DownloadDataQualityService qualityServiuce, [FromServices] IAppSettingsService? appSettingsService) =>
 {
     try
     {
@@ -532,7 +538,7 @@ app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServi
             DcatDataset? datasetRdf = fileState.Content is not null ? DcatDataset.Parse(fileState.Content) : null;
             if (datasetRdf is not null)
             {
-                DatasetView datasetView = await DatasetView.MapFromRdf(fileState.Metadata, datasetRdf, codelistProviderClient, language, isAuthenticated).ConfigureAwait(false);
+                DatasetView datasetView = await DatasetView.MapFromRdf(fileState.Metadata, datasetRdf, codelistProviderClient, language, isAuthenticated, appSettingsService).ConfigureAwait(false);
 
                 if (fileState.DependentFiles is not null)
                 {
@@ -2836,6 +2842,45 @@ app.MapPost("/monitoring-settings", async ([FromBody] MonitoringNotificationSett
         result.Errors["generic"] = "Generic error";
     }
     return result.Errors is null ? Results.Ok(result) : Results.BadRequest(result);
+});
+
+app.MapGet("/app-settings", [Authorize] ([FromServices] IAppSettingsService? appSettingsService, ClaimsPrincipal user) =>
+{
+    if (!user.IsInRole("Superadmin"))
+    {
+        return Results.Forbid();
+    }
+
+    if (appSettingsService is null)
+    {
+        return Results.Problem("App settings service is not configured");
+    }
+
+    return Results.Ok(appSettingsService.GetSettings());
+}).Produces<AppSettings>();
+
+app.MapPut("/app-settings", [Authorize] ([FromBody] AppSettings? input, [FromServices] IAppSettingsService? appSettingsService, ClaimsPrincipal user, [FromServices] TelemetryClient? telemetryClient) =>
+{
+    if (!user.IsInRole("Superadmin"))
+    {
+        return Results.Forbid();
+    }
+
+    if (appSettingsService is null)
+    {
+        return Results.Problem("App settings service is not configured");
+    }
+
+    try
+    {
+        appSettingsService.SaveSettings(input ?? new AppSettings());
+        return Results.Ok();
+    }
+    catch (Exception e)
+    {
+        telemetryClient?.TrackException(e);
+        return Results.Problem();
+    }
 });
 
 app.Use(async (context, next) =>

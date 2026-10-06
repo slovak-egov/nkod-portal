@@ -1264,6 +1264,7 @@ namespace WebApi.Test
             storage.InsertFile(dataset.ToString(), datasetState.Metadata, true, accessPolicy);
 
             using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            applicationFactory.AppSettingsService.SaveSettings(new NkodSk.Abstractions.AppSettings { AllowedIframeHosts = "example.com" });
             using HttpClient client = applicationFactory.CreateClient();
 
             AbstractResponse<DatasetView>? result = await client.SearchDatasets(JsonContent.Create(new { }));
@@ -1282,6 +1283,163 @@ namespace WebApi.Test
             Assert.Equal(350, view.RecommendedWidth);
             Assert.Equal(300, view.RecommendedHeight);
             Assert.Equal("2:1", view.RecommendedAspectRatio);
+        }
+
+        private void AddEmbedUrlToDataset(Storage storage, IFileStorageAccessPolicy accessPolicy, Guid id, Uri embedUrl)
+        {
+            FileState datasetState = storage.GetFileState(id, accessPolicy)!;
+            DcatDataset dataset = DcatDataset.Parse(datasetState.Content!)!;
+            INode embedNode = dataset.Graph.CreateUriNode(new Uri(dataset.Uri + "/map"));
+            dataset.Graph.Assert(dataset.Node, dataset.Graph.CreateUriNode(new Uri("https://data.gov.sk/def/ontology/dataset/embedMap")), embedNode);
+            dataset.Graph.Assert(embedNode, dataset.Graph.CreateUriNode(new Uri("https://data.gov.sk/def/ontology/dataset/embedURL")), dataset.Graph.CreateUriNode(embedUrl));
+            storage.InsertFile(dataset.ToString(), datasetState.Metadata, true, accessPolicy);
+        }
+
+        [Fact]
+        public async Task DatasetEmbedUrlShouldBeReturnedForAllowedHost()
+        {
+            string path = fixture.GetStoragePath();
+            Guid id = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+            IFileStorageAccessPolicy accessPolicy = new AllAccessFilePolicy();
+
+            AddEmbedUrlToDataset(storage, accessPolicy, id, new Uri("https://example.com/map-embed"));
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            applicationFactory.AppSettingsService.SaveSettings(new NkodSk.Abstractions.AppSettings { AllowedIframeHosts = "example.com" });
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView>? result = await client.SearchDatasets(JsonContent.Create(new { }));
+            Assert.NotNull(result);
+            DatasetView view = result.Items[0];
+            Assert.Equal("https://example.com/map-embed", view.MapEmbedUrl?.OriginalString);
+        }
+
+        [Fact]
+        public async Task DatasetEmbedUrlShouldBeNullWhenAllowedHostsIsNull()
+        {
+            string path = fixture.GetStoragePath();
+            Guid id = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+            IFileStorageAccessPolicy accessPolicy = new AllAccessFilePolicy();
+
+            AddEmbedUrlToDataset(storage, accessPolicy, id, new Uri("https://example.com/map-embed"));
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            applicationFactory.AppSettingsService.SaveSettings(new NkodSk.Abstractions.AppSettings { AllowedIframeHosts = null });
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView>? result = await client.SearchDatasets(JsonContent.Create(new { }));
+            Assert.NotNull(result);
+            DatasetView view = result.Items[0];
+            Assert.Null(view.MapEmbedUrl);
+        }
+
+        [Fact]
+        public async Task DatasetEmbedUrlShouldBeNullForDisallowedHost()
+        {
+            string path = fixture.GetStoragePath();
+            Guid id = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+            IFileStorageAccessPolicy accessPolicy = new AllAccessFilePolicy();
+
+            AddEmbedUrlToDataset(storage, accessPolicy, id, new Uri("https://notallowed.com/map-embed"));
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            applicationFactory.AppSettingsService.SaveSettings(new NkodSk.Abstractions.AppSettings { AllowedIframeHosts = "example.com" });
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView>? result = await client.SearchDatasets(JsonContent.Create(new { }));
+            Assert.NotNull(result);
+            DatasetView view = result.Items[0];
+            Assert.Null(view.MapEmbedUrl);
+        }
+
+        [Fact]
+        public async Task DatasetEmbedUrlShouldBeReturnedWhenAllHostsAllowed()
+        {
+            string path = fixture.GetStoragePath();
+            Guid id = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+            IFileStorageAccessPolicy accessPolicy = new AllAccessFilePolicy();
+
+            AddEmbedUrlToDataset(storage, accessPolicy, id, new Uri("https://any-host.com/map-embed"));
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            applicationFactory.AppSettingsService.SaveSettings(new NkodSk.Abstractions.AppSettings { AllowedIframeHosts = "*" });
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView>? result = await client.SearchDatasets(JsonContent.Create(new { }));
+            Assert.NotNull(result);
+            DatasetView view = result.Items[0];
+            Assert.Equal("https://any-host.com/map-embed", view.MapEmbedUrl?.OriginalString);
+        }
+
+        [Fact]
+        public async Task DatasetEmbedUrlShouldBeReturnedForAllowedHostAmongMultipleWithEmptyLines()
+        {
+            string path = fixture.GetStoragePath();
+            Guid id = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+            IFileStorageAccessPolicy accessPolicy = new AllAccessFilePolicy();
+
+            AddEmbedUrlToDataset(storage, accessPolicy, id, new Uri("https://second.com/map-embed"));
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            applicationFactory.AppSettingsService.SaveSettings(new NkodSk.Abstractions.AppSettings { AllowedIframeHosts = "first.com\n\nsecond.com\n\nthird.com\n" });
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView>? result = await client.SearchDatasets(JsonContent.Create(new { }));
+            Assert.NotNull(result);
+            DatasetView view = result.Items[0];
+            Assert.Equal("https://second.com/map-embed", view.MapEmbedUrl?.OriginalString);
+        }
+
+        [Fact]
+        public async Task DatasetEmbedUrlShouldBeReturnedForWildcardHost()
+        {
+            string path = fixture.GetStoragePath();
+            Guid id = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+            IFileStorageAccessPolicy accessPolicy = new AllAccessFilePolicy();
+
+            AddEmbedUrlToDataset(storage, accessPolicy, id, new Uri("https://maps.example.com/map-embed"));
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            applicationFactory.AppSettingsService.SaveSettings(new NkodSk.Abstractions.AppSettings { AllowedIframeHosts = "*.example.com" });
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView>? result = await client.SearchDatasets(JsonContent.Create(new { }));
+            Assert.NotNull(result);
+            DatasetView view = result.Items[0];
+            Assert.Equal("https://maps.example.com/map-embed", view.MapEmbedUrl?.OriginalString);
+        }
+
+        [Fact]
+        public async Task DatasetEmbedUrlShouldBeNullForHostNotMatchingWildcard()
+        {
+            string path = fixture.GetStoragePath();
+            Guid id = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+            IFileStorageAccessPolicy accessPolicy = new AllAccessFilePolicy();
+
+            AddEmbedUrlToDataset(storage, accessPolicy, id, new Uri("https://maps.other.com/map-embed"));
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            applicationFactory.AppSettingsService.SaveSettings(new NkodSk.Abstractions.AppSettings { AllowedIframeHosts = "*.example.com" });
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView>? result = await client.SearchDatasets(JsonContent.Create(new { }));
+            Assert.NotNull(result);
+            DatasetView view = result.Items[0];
+            Assert.Null(view.MapEmbedUrl);
         }
     }
 }
