@@ -118,7 +118,8 @@ export default function PublisherDatasets({ publisherId }: Props) {
                 columns={[
                     {
                         header: 'Názov datasetu',
-                        value: (row) => <span>{row.name?.value}</span>
+                        value: (row) => <span>{row.name?.value}</span>,
+                        sortProperty: '?name'
                     },
                     {
                         header: 'Vyplnenie povinných metadát',

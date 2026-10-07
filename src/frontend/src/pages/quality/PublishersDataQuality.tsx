@@ -215,11 +215,14 @@ export default function PublishersDataQuality() {
                             columns={[
                                 {
                                     header: 'Názov poskytovateľa',
+                                    headerStyle: { width: '100px' },
+                                    cellStyle: { width: '100px' },
                                     value: (r) => (
                                         <Link to={'/kvalita-metadat-new/' + encodeURIComponent(r.id?.value ?? '')} className="idsk-card-title govuk-link">
                                             {r?.name?.value ?? ''}
                                         </Link>
-                                    )
+                                    ),
+                                    sortProperty: '?name'
                                 },
                                 { header: 'Vyplnenie povinných metadát', value: (r) => <SparqlIndicator property="requiredMetadata" source={r} /> },
                                 { header: 'Vyplnenie odporúčaných metadát', value: (r) => <SparqlIndicator property="optionalMetadata" source={r} /> },
@@ -279,7 +282,11 @@ export default function PublishersDataQuality() {
                                         return <Indicator numerator={asNumber(r?.datasetLicenseOpenCount)} denominator={pureDatasetCount} />;
                                     }
                                 },
-                                { header: 'Počet datasetov Publikačného minima', value: (r) => asNumber(r?.datasetsPublicationMinimumCount) }
+                                {
+                                    header: 'Počet datasetov Publikačného minima',
+                                    value: (r) => asNumber(r?.datasetsPublicationMinimumCount),
+                                    sortProperty: '?datasetsPublicationMinimumCount'
+                                }
                             ]}
                         />
                     </>

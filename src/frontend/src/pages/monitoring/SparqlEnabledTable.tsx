@@ -26,6 +26,8 @@ type Column<T> = {
     header: string;
     value: (row: T) => ReactNode;
     sortProperty?: string | null | undefined;
+    headerStyle?: React.CSSProperties | null | undefined;
+    cellStyle?: React.CSSProperties | null | undefined;
 };
 
 function translateSorting(ascending: boolean | undefined | null): 'asc' | 'desc' | undefined {
@@ -137,10 +139,10 @@ export default function SparqlEnabledTable<T>(props: Props<T>) {
                                             toggleSortingDirection={() => {
                                                 const currentDirection = sorting.find((s) => s.propertyName === c.sortProperty)?.ascending;
                                                 const newDirection = currentDirection === undefined ? true : currentDirection ? false : undefined;
-                                                console.log([currentDirection, newDirection]);
                                                 setSorting(newDirection !== undefined ? [{ propertyName: c.sortProperty!, ascending: newDirection }] : []);
+                                                setPage(1);
                                             }}
-                                            style={{ overflowWrap: 'normal' }}
+                                            style={{ overflowWrap: 'normal', ...(c.headerStyle ?? {}) }}
                                         >
                                             {c.header}
                                         </TableHeaderCell>
@@ -151,7 +153,9 @@ export default function SparqlEnabledTable<T>(props: Props<T>) {
                                 {data.map((r, i) => (
                                     <TableRow key={i}>
                                         {props.columns.map((c, j) => (
-                                            <TableCell key={j}>{c.value(r)}</TableCell>
+                                            <TableCell key={j} style={c.cellStyle ?? {}}>
+                                                {c.value(r)}
+                                            </TableCell>
                                         ))}
                                     </TableRow>
                                 ))}
