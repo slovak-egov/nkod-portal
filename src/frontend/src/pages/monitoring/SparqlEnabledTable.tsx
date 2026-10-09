@@ -62,7 +62,9 @@ export default function SparqlEnabledTable<T>(props: Props<T>) {
             if (query.where) {
                 q += `WHERE {\n${query.where.map((w) => `${w}`).join('\n')}\n}\n`;
             }
-            const response = await fetch(endpointUrl + '?query=' + encodeURIComponent(q), {
+            const response = await fetch(endpointUrl, {
+                method: 'POST',
+                body: new URLSearchParams({ query: q }),
                 headers: { Accept: 'application/sparql-results+json' }
             });
             const result: SparqlResult<{ count: IntColumn }> = await response.json();
