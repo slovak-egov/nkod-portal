@@ -560,6 +560,114 @@ namespace WebApi.Test
         }
 
         [Fact]
+        public async Task FilterByDistributionTypeTest()
+        {
+            string path = fixture.GetStoragePath();
+
+            Guid id1 = fixture.CreateDataset("Cestovné poriadky 1", PublisherId);
+            Guid id2 = fixture.CreateDataset("Cestovné poriadky 2", PublisherId);
+            Guid id3 = fixture.CreateDataset("Cestovné poriadky 3", PublisherId);
+            Guid id4 = fixture.CreateDataset("Cestovné poriadky 4", PublisherId);
+
+            IFileStorageAccessPolicy accessPolicy = new AllAccessFilePolicy();
+
+            FileState GetDatasetState(Guid datasetId)
+            {
+                using Storage storage = new Storage(path);
+                return storage.GetFileState(datasetId, accessPolicy)!;
+            }
+
+            void CreateDownloadFile(Guid datasetId)
+            {
+                fixture.CreateDistrbution(GetDatasetState(datasetId),
+                    new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
+                    new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
+                    new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
+                    new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"),
+                    new Uri("http://data.gov.sk/download"),
+                    new Uri("http://data.gov.sk/download"),
+                    new Uri("http://publications.europa.eu/resource/dataset/file-type/1"),
+                    new Uri("http://www.iana.org/assignments/media-types/text/csv"));
+            }
+
+            void CreateDataService(Guid datasetId)
+            {
+                fixture.CreateDistrbution(GetDatasetState(datasetId),
+                    new Uri("https://data.gov.sk/def/ontology/law/authorsWorkType/1"),
+                    new Uri("https://data.gov.sk/def/ontology/law/originalDatabaseType/1"),
+                    new Uri("https://data.gov.sk/def/ontology/law/databaseProtectedBySpecialRightsType/1"),
+                    new Uri("https://data.gov.sk/def/ontology/law/personalDataContainmentType/1"),
+                    null,
+                    new Uri("http://data.gov.sk/endpoint"),
+                    null,
+                    null,
+                    title: "Služba",
+                    dataServiceEndpoint: new Uri("http://data.gov.sk/endpoint"));
+            }
+
+            CreateDownloadFile(id1);
+            CreateDataService(id2);
+            CreateDownloadFile(id3);
+            CreateDataService(id3);
+
+            using Storage storage = new Storage(path);
+
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDownloadFile }, storage.GetFileMetadata(id1, accessPolicy)!.AdditionalValues![DcatDistribution.DistributionTypeKey]);
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDataService }, storage.GetFileMetadata(id2, accessPolicy)!.AdditionalValues![DcatDistribution.DistributionTypeKey]);
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDataService, DcatDistribution.DistributionTypeDownloadFile }, storage.GetFileMetadata(id3, accessPolicy)!.AdditionalValues![DcatDistribution.DistributionTypeKey]);
+            Assert.False(storage.GetFileMetadata(id4, accessPolicy)!.AdditionalValues!.ContainsKey(DcatDistribution.DistributionTypeKey));
+
+            void AssertFacets(List<Facet>? facets)
+            {
+                Assert.NotNull(facets);
+                Facet facet = Assert.Single(facets);
+                Assert.Equal(DcatDistribution.DistributionTypeKey, facet.Id);
+                Assert.Equal(new Dictionary<string, int> {
+                    { DcatDistribution.DistributionTypeDownloadFile, 2 },
+                    { DcatDistribution.DistributionTypeDataService, 2 }
+                }, facet.Values);
+            }
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            async Task<AbstractResponse<DatasetView>> Search(params string[] values)
+            {
+                return await client.SearchDatasets(JsonContent.Create(new
+                {
+                    OrderBy = "name",
+                    Filters = new Dictionary<string, string[]> { { DcatDistribution.DistributionTypeKey, values } },
+                    RequiredFacets = new[] { DcatDistribution.DistributionTypeKey }
+                }));
+            }
+
+            AbstractResponse<DatasetView> result = await Search();
+            Assert.Equal(4, result.TotalCount);
+            Assert.Equal(new[] { id1, id2, id3, id4 }, result.Items.Select(i => i.Id));
+            AssertFacets(result.Facets);
+
+            result = await Search(DcatDistribution.DistributionTypeDownloadFile);
+            Assert.Equal(2, result.TotalCount);
+            Assert.Equal(new[] { id1, id3 }, result.Items.Select(i => i.Id));
+            AssertFacets(result.Facets);
+
+            result = await Search(DcatDistribution.DistributionTypeDataService);
+            Assert.Equal(2, result.TotalCount);
+            Assert.Equal(new[] { id2, id3 }, result.Items.Select(i => i.Id));
+            AssertFacets(result.Facets);
+
+            result = await Search(DcatDistribution.DistributionTypeDataService, DcatDistribution.DistributionTypeDownloadFile);
+            Assert.Equal(3, result.TotalCount);
+            Assert.Equal(new[] { id1, id2, id3 }, result.Items.Select(i => i.Id));
+            AssertFacets(result.Facets);
+
+            result = await Search("unknown");
+            Assert.Equal(0, result.TotalCount);
+            Assert.Empty(result.Items);
+            AssertFacets(result.Facets);
+        }
+
+        [Fact]
         public async Task ResultsInAnotherLanguage()
         {
             string path = fixture.GetStoragePath();

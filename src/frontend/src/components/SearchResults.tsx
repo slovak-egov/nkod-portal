@@ -11,6 +11,7 @@ import SearchBar from './SearchBar';
 import SelectElementItems from './SelectElementItems';
 import { useTranslation } from 'react-i18next';
 import SearchFilterWithQuery from './SearchFilterWithQuery';
+import SearchFilter from './SearchFilter';
 
 type OrderOption = {
     name: string;
@@ -124,6 +125,30 @@ function CodelistFilter(props: { codelist: Codelist; facet?: Facet; selectedValu
         );
     }
     return <></>;
+}
+
+function DistributionTypeFilter(props: { facet?: Facet; selectedValues: string[]; onChange: (values: string[]) => void }) {
+    const { t } = useTranslation();
+    const facet = props.facet;
+
+    const options: FilterValue[] = [
+        { id: 'dataService', label: t('distributionTypeDataService') },
+        { id: 'downloadFile', label: t('distributionTypeDownloadFile') }
+    ].map((o) => (facet ? { ...o, label: o.label + ' (' + (facet.values[o.id] ?? 0) + ')' } : o));
+
+    return (
+        <SearchFilter<FilterValue>
+            key="distributionType"
+            dataTestId="sr-filter-distributionType"
+            title={t('distributionType')}
+            searchElementTitle={t('distributionType')}
+            items={options}
+            getLabel={(e) => e.label}
+            getValue={(e) => e.id}
+            selectedItems={options.filter((o) => props.selectedValues.includes(o.id))}
+            onSelectionChange={(e) => props.onChange(e.map((o) => o.id))}
+        />
+    );
 }
 
 function KeywordFilter(props: { facet?: Facet; selectedValues: string[]; onChange: (values: string[]) => void }) {
@@ -245,6 +270,23 @@ export default function SearchResults(props: Props) {
                             case 'keywords':
                                 return (
                                     <KeywordFilter
+                                        key={codelistId}
+                                        facet={props.facets.find((f) => f.id === codelistId)}
+                                        selectedValues={props.query.filters ? (props.query.filters[codelistId] ?? []) : []}
+                                        onChange={(v) =>
+                                            props.setQueryParameters({
+                                                filters: {
+                                                    ...props.query.filters,
+                                                    [codelistId]: v
+                                                },
+                                                page: 1
+                                            })
+                                        }
+                                    />
+                                );
+                            case 'distributionType':
+                                return (
+                                    <DistributionTypeFilter
                                         key={codelistId}
                                         facet={props.facets.find((f) => f.id === codelistId)}
                                         selectedValues={props.query.filters ? (props.query.filters[codelistId] ?? []) : []}

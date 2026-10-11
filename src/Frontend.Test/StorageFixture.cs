@@ -78,6 +78,13 @@ namespace Frontend.Test
         {
             FileMetadata metadata = distribution.UpdateMetadata(datasetId, publisher);
             CreateFile(new FileState(metadata, distribution.ToString()));
+
+            string datasetMetadataPath = Path.Combine(path, "protected", datasetId.ToString("N") + ".metadata");
+            if (File.Exists(datasetMetadataPath))
+            {
+                distribution.UpdateDatasetMetadata(FileMetadata.LoadFrom(datasetMetadataPath)).SaveTo(datasetMetadataPath);
+            }
+
             return metadata.Id;
         }
 

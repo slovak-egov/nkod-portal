@@ -455,5 +455,8 @@
     "maximumFileUploadSize": "Maximum file size for upload",
     "relation": "Related source",
     "mapView": "Map view",
-    "map": "Map"
+    "map": "Map",
+    "distributionType": "Distribution type",
+    "distributionTypeDataService": "Data service",
+    "distributionTypeDownloadFile": "Downloadable file"
 }
