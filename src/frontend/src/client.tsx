@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse, RawAxiosRequestHeaders } from 'axios';
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { useSearchParams } from 'react-router-dom';
@@ -440,33 +440,101 @@ export function useDelay<T>(initialValue: T, delay: number, callback: (value: T)
     return [value, setValue] as const;
 }
 
-export function useEntities<T>(url: string, initialQuery?: Partial<RequestQuery>) {
-    const [searchParams] = useSearchParams();
+const urlQueryTextParam = 'query';
+const urlPageParam = 'page';
+const urlPageSizeParam = 'pageSize';
+const urlOrderByParam = 'sort';
+const urlFilterPrefix = 'f.';
+
+const urlFilterAliases: { [filterKey: string]: string } = {
+    publishers: 'publisher',
+    keywords: 'keyword',
+    [knownCodelists.dataset.type]: 'type',
+    [knownCodelists.dataset.theme]: 'theme',
+    [knownCodelists.dataset.accrualPeriodicity]: 'frequency',
+    [knownCodelists.distribution.format]: 'format',
+    [knownCodelists.distribution.license]: 'license',
+    [knownCodelists.distribution.personalDataContainmentType]: 'personalData',
+    [knownCodelists.publisher.legalForm]: 'legalForm',
+    [knownCodelists.catalog.type]: 'catalogType'
+};
+
+const urlFilterKeysByAlias: { [alias: string]: string } = Object.fromEntries(Object.entries(urlFilterAliases).map(([key, alias]) => [alias, key]));
+
+function parsePositiveInt(value: string | null, defaultValue: number) {
+    const parsed = value !== null ? Number(value) : NaN;
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : defaultValue;
+}
+
+export function readQueryFromUrl(searchParams: URLSearchParams, defaultQuery: RequestQuery): RequestQuery {
+    const filters: { [id: string]: string[] } = {};
+    let hasFilters = false;
+    searchParams.forEach((_, param) => {
+        const key = urlFilterKeysByAlias[param] ?? (param.startsWith(urlFilterPrefix) ? param.substring(urlFilterPrefix.length) : null);
+        if (key && !filters[key]) {
+            filters[key] = searchParams.getAll(param);
+            hasFilters = true;
+        }
+    });
+
+    return {
+        ...defaultQuery,
+        queryText: searchParams.get(urlQueryTextParam) ?? defaultQuery.queryText,
+        orderBy: searchParams.get(urlOrderByParam) ?? defaultQuery.orderBy,
+        page: parsePositiveInt(searchParams.get(urlPageParam), defaultQuery.page),
+        pageSize: parsePositiveInt(searchParams.get(urlPageSizeParam), defaultQuery.pageSize),
+        filters: hasFilters ? filters : defaultQuery.filters
+    };
+}
+
+export function writeQueryToUrl(query: RequestQuery, defaultQuery: RequestQuery): URLSearchParams {
+    const searchParams = new URLSearchParams();
+    if (query.queryText) {
+        searchParams.set(urlQueryTextParam, query.queryText);
+    }
+    if (query.orderBy && query.orderBy !== defaultQuery.orderBy) {
+        searchParams.set(urlOrderByParam, query.orderBy);
+    }
+    if (query.page !== defaultQuery.page) {
+        searchParams.set(urlPageParam, query.page.toString());
+    }
+    if (query.pageSize !== defaultQuery.pageSize) {
+        searchParams.set(urlPageSizeParam, query.pageSize.toString());
+    }
+    Object.entries(query.filters ?? {}).forEach(([key, values]) => {
+        const param = urlFilterAliases[key] ?? urlFilterPrefix + key;
+        values.forEach((value) => searchParams.append(param, value));
+    });
+    return searchParams;
+}
+
+export function useEntities<T>(url: string, initialQuery?: Partial<RequestQuery>, syncWithUrl: boolean = false) {
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const l = useContext(LanguageOptionsContext);
     const language = l?.language ?? supportedLanguages[0];
 
-    let defaultParams: RequestQuery = {
+    const [defaultQuery] = useState<RequestQuery>(() => ({
         pageSize: 10,
         page: 1,
         queryText: '',
         language: language.id,
         orderBy: 'name',
         filters: {},
-        requiredFacets: []
-    };
-
-    if (searchParams.has('query')) {
-        defaultParams = {
-            ...defaultParams,
-            queryText: searchParams.get('query')!
-        };
-    }
-
-    const [query, setQuery] = useState<RequestQuery>({
-        ...defaultParams,
+        requiredFacets: [],
         ...initialQuery
-    });
+    }));
+
+    const [localQuery, setLocalQuery] = useState<RequestQuery>(() =>
+        searchParams.has(urlQueryTextParam) ? { ...defaultQuery, queryText: searchParams.get(urlQueryTextParam)! } : defaultQuery
+    );
+
+    const urlQuery = useMemo(
+        () => (syncWithUrl ? { ...readQueryFromUrl(searchParams, defaultQuery), language: language.id } : null),
+        [syncWithUrl, searchParams, defaultQuery, language.id]
+    );
+
+    const query = urlQuery ?? localQuery;
     const [items, setItems] = useState<Response<T> | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
@@ -504,15 +572,24 @@ export function useEntities<T>(url: string, initialQuery?: Partial<RequestQuery>
         };
     }, [refresh]);
 
-    const setQueryParameters = useCallback((query: Partial<RequestQuery>) => {
-        setQuery((q) => ({ ...q, ...query }));
-    }, []);
+    const setQueryParameters = useCallback(
+        (changes: Partial<RequestQuery>) => {
+            if (urlQuery) {
+                // Typing into the search box should not create a history entry for every keystroke
+                const onlyQueryTextChanged = 'queryText' in changes && Object.keys(changes).every((k) => k === 'queryText' || k === 'page');
+                setSearchParams(writeQueryToUrl({ ...urlQuery, ...changes }, defaultQuery), { replace: onlyQueryTextChanged });
+            } else {
+                setLocalQuery((q) => ({ ...q, ...changes }));
+            }
+        },
+        [urlQuery, defaultQuery, setSearchParams]
+    );
 
     useEffect(() => {
-        if (language.id !== query.language) {
-            setQueryParameters({ language: language.id });
+        if (!syncWithUrl && language.id !== localQuery.language) {
+            setLocalQuery((q) => ({ ...q, language: language.id }));
         }
-    }, [language, setQueryParameters, query]);
+    }, [syncWithUrl, language, localQuery]);
 
     return [items, query, setQueryParameters, loading, error, refresh] as const;
 }
@@ -574,11 +651,11 @@ export function useLocalCatalog() {
     return useEntity<LocalCatalog>('local-catalogs/search');
 }
 
-export function useDatasets(initialQuery?: Partial<RequestQuery>) {
+export function useDatasets(initialQuery?: Partial<RequestQuery>, syncWithUrl: boolean = false) {
     let defaultParams: Partial<RequestQuery> = { ...initialQuery };
 
     const [searchParams] = useSearchParams();
-    if (searchParams.has('publisher')) {
+    if (!syncWithUrl && searchParams.has('publisher')) {
         defaultParams = {
             ...defaultParams,
             filters: {
@@ -588,15 +665,15 @@ export function useDatasets(initialQuery?: Partial<RequestQuery>) {
         };
     }
 
-    return useEntities<Dataset>('datasets/search', { orderBy: 'modified', ...defaultParams });
+    return useEntities<Dataset>('datasets/search', { orderBy: 'modified', ...defaultParams }, syncWithUrl);
 }
 
-export function useLocalCatalogs(initialQuery?: Partial<RequestQuery>) {
-    return useEntities<LocalCatalog>('local-catalogs/search', initialQuery);
+export function useLocalCatalogs(initialQuery?: Partial<RequestQuery>, syncWithUrl: boolean = false) {
+    return useEntities<LocalCatalog>('local-catalogs/search', initialQuery, syncWithUrl);
 }
 
-export function usePublishers(initialQuery?: Partial<RequestQuery>) {
-    return useEntities<Publisher>('publishers/search', { orderBy: 'relevance', ...initialQuery });
+export function usePublishers(initialQuery?: Partial<RequestQuery>, syncWithUrl: boolean = false) {
+    return useEntities<Publisher>('publishers/search', { orderBy: 'relevance', ...initialQuery }, syncWithUrl);
 }
 
 export function useDistributions(initialQuery?: Partial<RequestQuery>) {

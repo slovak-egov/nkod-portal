@@ -21,7 +21,7 @@ type Theme = {
 const codelistsKeys: [] = [];
 
 export default function PublicPublisherList() {
-    const [publishers, query, setQueryParameters, loading, error] = usePublishers();
+    const [publishers, query, setQueryParameters, loading, error] = usePublishers({}, true);
     const { t } = useTranslation();
     useDocumentTitle(t('publishers'));
 

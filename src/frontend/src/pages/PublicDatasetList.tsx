@@ -29,7 +29,7 @@ export default function PublicDatasetList() {
     const [datasets, query, setQueryParameters, loading, error] = useDatasets({
         requiredFacets: codelistsKeys,
         orderBy: 'relevance'
-    });
+    }, true);
 
     const [datasetsCms] = useCmsDatasets();
     const cmsCounts = (datasetUri: string) => {

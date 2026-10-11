@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
+using TestBase;
 
 namespace DocumentStorageApi.Test
 {
@@ -143,6 +144,84 @@ namespace DocumentStorageApi.Test
             Assert.Equal(expected.TotalCount, storageResponse.TotalCount);
             Assert.Equal(expected.Files, storageResponse.Files);
             Assert.All(expected.Files, f => Assert.True(f.Metadata.IsPublic));
+        }
+
+        [Fact]
+        public async Task PublishersWithQueryTextShouldBeOrderedAndPaged()
+        {
+            using Storage storage = new Storage(fixture.GetStoragePath(true, false));
+
+            Dictionary<string, Guid> idsByName = new Dictionary<string, Guid>();
+            void CreatePublisher(int index, string name)
+            {
+                FoafAgent publisher = FoafAgent.Create(new Uri($"http://data.gov.sk/publisher/{index}"));
+                publisher.SetNames(new Dictionary<string, string> { { "sk", name } });
+                FileMetadata metadata = publisher.UpdateMetadata() with { IsPublic = true };
+                storage.InsertFile(publisher.ToString(), metadata, true, new AllAccessFilePolicy());
+                idsByName[name] = metadata.Id;
+            }
+
+            for (int i = 0; i <= 10; i++)
+            {
+                CreatePublisher(i, $"Test {i:00}");
+            }
+            CreatePublisher(11, "Ministerstvo");
+
+            using DocumentStorageApplicationFactory applicationFactory = new DocumentStorageApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            async Task<FileStorageGroupResponse> Search(string queryText, int skip, int? max, bool reverseOrder = false, List<Guid>? onlyIds = null)
+            {
+                FileStorageQuery query = new FileStorageQuery
+                {
+                    QueryText = queryText,
+                    Language = "sk",
+                    SkipResults = skip,
+                    MaxResults = max,
+                    OnlyIds = onlyIds,
+                    OrderDefinitions = new List<FileStorageOrderDefinition> { new FileStorageOrderDefinition(FileStorageOrderProperty.Name, reverseOrder) }
+                };
+
+                using HttpResponseMessage response = await client.PostAsync("/files/by-publisher", JsonContent.Create(query));
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                FileStorageGroupResponse? groupResponse = JsonConvert.DeserializeObject<FileStorageGroupResponse>(await response.Content.ReadAsStringAsync());
+                Assert.NotNull(groupResponse);
+                return groupResponse;
+            }
+
+            static IEnumerable<string> Names(FileStorageGroupResponse response) => response.Groups.Select(g => g.PublisherFileState!.Metadata.Name.GetText("sk")!);
+
+            FileStorageGroupResponse result = await Search("Test", 0, 10);
+            Assert.Equal(11, result.TotalCount);
+            Assert.Equal(Enumerable.Range(0, 10).Select(i => $"Test {i:00}"), Names(result));
+
+            result = await Search("Test", 10, 10);
+            Assert.Equal(11, result.TotalCount);
+            Assert.Equal(new[] { "Test 10" }, Names(result));
+
+            result = await Search("Test", 0, 3, reverseOrder: true);
+            Assert.Equal(11, result.TotalCount);
+            Assert.Equal(new[] { "Test 10", "Test 09", "Test 08" }, Names(result));
+
+            result = await Search(" Test ", 0, null);
+            Assert.Equal(11, result.TotalCount);
+            Assert.Equal(11, result.Groups.Count);
+
+            result = await Search("Ministerstvo", 0, 10);
+            Assert.Equal(1, result.TotalCount);
+            Assert.Equal(new[] { "Ministerstvo" }, Names(result));
+
+            result = await Search("Neexistuje", 0, 10);
+            Assert.Equal(0, result.TotalCount);
+            Assert.Empty(result.Groups);
+
+            result = await Search("Test", 0, 10, onlyIds: new List<Guid> { idsByName["Test 05"], idsByName["Ministerstvo"] });
+            Assert.Equal(1, result.TotalCount);
+            Assert.Equal(new[] { "Test 05" }, Names(result));
+
+            result = await Search("Test", 0, 10, onlyIds: new List<Guid> { idsByName["Ministerstvo"] });
+            Assert.Equal(0, result.TotalCount);
+            Assert.Empty(result.Groups);
         }
     }
 }

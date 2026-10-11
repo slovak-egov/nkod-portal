@@ -77,17 +77,27 @@ namespace TestBase
             query.OnlyTypes = new List<FileType> { FileType.PublisherRegistration };
             if (!string.IsNullOrWhiteSpace(query.QueryText))
             {
-                FulltextResponse fulltextResponse = fulltextIndex.Search(query);
-                if (fulltextResponse.Documents.Count > 0)
+                FulltextResponse fulltextResponse = fulltextIndex.Search(new FileStorageQuery { QueryText = query.QueryText, Language = query.Language });
+                List<Guid> ids = fulltextResponse.Documents.Select(d => d.Id).ToList();
+                if (query.OnlyIds is not null && query.OnlyIds.Count > 0)
+                {
+                    ids = ids.Intersect(query.OnlyIds).ToList();
+                }
+
+                if (ids.Count > 0)
                 {
                     FileStorageQuery internalQuery = new FileStorageQuery
                     {
-                        OnlyIds = fulltextResponse.Documents.Select(d => d.Id).ToList(),
+                        OnlyIds = ids,
                         QueryText = null,
                         OnlyPublishers = query.OnlyPublishers,
                         OnlyPublished = query.OnlyPublished,
                         RequiredFacets = query.RequiredFacets,
                         OrderDefinitions = query.OrderDefinitions,
+                        AdditionalFilters = query.AdditionalFilters,
+                        MaxResults = query.MaxResults,
+                        SkipResults = query.SkipResults,
+                        Language = query.Language,
                     };
                     return Task.FromResult(fileStorage.GetFileStatesByPublisher(internalQuery, accessPolicy));
                 }

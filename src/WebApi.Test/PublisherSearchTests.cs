@@ -129,6 +129,47 @@ namespace WebApi.Test
         }
 
         [Fact]
+        public async Task QueryTextWithPageAndSizeTest()
+        {
+            string path = fixture.GetStoragePath();
+            List<Guid> ids = new List<Guid>(11);
+            for (int i = 0; i < ids.Capacity; i++)
+            {
+                ids.Add(fixture.CreatePublisher($"Test {i.ToString().PadLeft(2, '0')}"));
+            }
+            Guid otherId = fixture.CreatePublisher("Ministerstvo vnútra SR");
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<PublisherView> result;
+            result = await client.SearchPublishers(JsonContent.Create(new { OrderBy = "name", QueryText = "test", PageSize = 10 }));
+            Assert.Equal(11, result.TotalCount);
+            Assert.Equal(ids.Take(10), result.Items.Select(i => i.Id));
+
+            result = await client.SearchPublishers(JsonContent.Create(new { OrderBy = "name", QueryText = "test", PageSize = 10, Page = 2 }));
+            Assert.Equal(11, result.TotalCount);
+            Assert.Equal(ids.Skip(10), result.Items.Select(i => i.Id));
+
+            result = await client.SearchPublishers(JsonContent.Create(new { OrderBy = "name", QueryText = "test", PageSize = 5, Page = 2 }));
+            Assert.Equal(11, result.TotalCount);
+            Assert.Equal(ids.Skip(5).Take(5), result.Items.Select(i => i.Id));
+
+            result = await client.SearchPublishers(JsonContent.Create(new { OrderBy = "name", QueryText = "test", PageSize = 10, Page = 3 }));
+            Assert.Equal(11, result.TotalCount);
+            Assert.Empty(result.Items);
+
+            result = await client.SearchPublishers(JsonContent.Create(new { OrderBy = "name", QueryText = "test", PageSize = 10, Filters = new Dictionary<string, string[]> { { "id", new[] { ids[3].ToString(), otherId.ToString() } } } }));
+            Assert.Equal(1, result.TotalCount);
+            Assert.Equal(new[] { ids[3] }, result.Items.Select(i => i.Id));
+
+            result = await client.SearchPublishers(JsonContent.Create(new { OrderBy = "name", QueryText = "test", PageSize = 10, Filters = new Dictionary<string, string[]> { { "id", new[] { otherId.ToString() } } } }));
+            Assert.Equal(0, result.TotalCount);
+            Assert.Empty(result.Items);
+        }
+
+        [Fact]
         public async Task FilterByIdTest()
         {
             string path = fixture.GetStoragePath();

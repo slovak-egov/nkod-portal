@@ -178,5 +178,100 @@ namespace Frontend.Test
             Assert.IsNotNull(homePageLink);
             Assert.AreEqual("http://example.com/", await homePageLink.GetAttributeAsync("href"));
         }
+
+        [TestMethod]
+        public async Task SearchStateShouldBeStoredInUrlAndRestoredOnBack()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreatePublisher(PublisherId, true);
+            for (int i = 0; i <= 10; i++)
+            {
+                CreateCatalog(fixture, $"Test {i:00}");
+            }
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            f.CreateDefaultClient();
+
+            await Page.OpenLocalCatalogSearch();
+
+            async Task AssertState(string orderBy, int page, bool publisherChecked, string firstResult)
+            {
+                Assert.AreEqual(orderBy, await Page.GetByTestId("sr-order").InputValueAsync());
+                StringAssert.Contains(await (await Page.GetTestElement("sr-current-page"))!.TextContentAsync(), $"Strana {page} z");
+                IElementHandle? filter = await Page.GetTestElement("sr-filter-publishers");
+                Assert.IsNotNull(filter);
+                Assert.AreEqual(publisherChecked, await (await filter.QuerySelectorAsync("input[type='checkbox']"))!.IsCheckedAsync());
+                IElementHandle? link = await Page.QuerySelectorAsync("[data-testid='sr-result'] a");
+                Assert.IsNotNull(link);
+                Assert.AreEqual(firstResult, await link.TextContentAsync());
+            }
+
+            await Page.RunAndWaitForLocalCatalogSearch(async () =>
+            {
+                await Page.GetByTestId("sr-order").SelectOptionAsync("name");
+            });
+            await Page.RunAndWaitForLocalCatalogSearch(async () =>
+            {
+                IElementHandle? filter = await Page.GetTestElement("sr-filter-publishers");
+                await (await filter!.QuerySelectorAsync("input[type='checkbox']"))!.CheckAsync();
+            });
+            await Page.RunAndWaitForLocalCatalogSearch(async () =>
+            {
+                await (await Page.GetTestElement("sr-next-page"))!.ClickAsync();
+            });
+
+            Dictionary<string, string[]> parameters = Page.GetUrlParameters();
+            CollectionAssert.AreEquivalent(new[] { "sort", "publisher", "page" }, parameters.Keys);
+            CollectionAssert.AreEqual(new[] { PublisherId }, parameters["publisher"]);
+            await AssertState("name", 2, true, "Test 10");
+            string searchUrl = Page.Url;
+
+            await (await Page.QuerySelectorAsync("[data-testid='sr-result'] a"))!.ClickAsync();
+            await Page.WaitForURLAsync(new System.Text.RegularExpressions.Regex("^http://localhost:6001/lokalne-katalogy/[0-9a-f-]+$"));
+
+            await Page.RunAndWaitForLocalCatalogSearch(async () => await Page.GoBackAsync());
+            Assert.AreEqual(searchUrl, Page.Url);
+            await AssertState("name", 2, true, "Test 10");
+
+            await Page.RunAndWaitForLocalCatalogSearch(async () => await Page.GoBackAsync());
+            await AssertState("name", 1, true, "Test 00");
+
+            await Page.RunAndWaitForLocalCatalogSearch(async () => await Page.GoBackAsync());
+            CollectionAssert.AreEquivalent(new[] { "sort" }, Page.GetUrlParameters().Keys);
+            await AssertState("name", 1, false, "Test 00");
+
+            await Page.RunAndWaitForLocalCatalogSearch(async () => await Page.GoBackAsync());
+            Assert.AreEqual(0, Page.GetUrlParameters().Count);
+            Assert.AreEqual("relevance", await Page.GetByTestId("sr-order").InputValueAsync());
+        }
+
+        [TestMethod]
+        public async Task SearchStateShouldBeLoadedFromUrl()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreatePublisher(PublisherId, true);
+            for (int i = 0; i <= 10; i++)
+            {
+                CreateCatalog(fixture, $"Test {i:00}");
+            }
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            f.CreateDefaultClient();
+
+            await Page.RunAndWaitForRequests(async () =>
+            {
+                await Page.GotoAsync($"http://localhost:6001/lokalne-katalogy?sort=name&page=2&publisher={Uri.EscapeDataString(PublisherId)}");
+            }, new List<string> { "local-catalogs/search" });
+
+            Assert.AreEqual("11 výsledkov", await Page.GetSearchResultsCount());
+            Assert.AreEqual("name", await Page.GetByTestId("sr-order").InputValueAsync());
+            IReadOnlyList<IElementHandle> results = await Page.QuerySelectorAllAsync("[data-testid='sr-result']");
+            Assert.AreEqual(1, results.Count);
+            Assert.AreEqual("Test 10", await (await results[0].QuerySelectorAsync("a"))!.TextContentAsync());
+        }
     }
 }

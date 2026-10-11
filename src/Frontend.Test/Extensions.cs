@@ -11,8 +11,11 @@ using System.Linq;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Security.Policy;
+using System.Collections.Specialized;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Web;
 using TestBase;
 
 namespace Frontend.Test
@@ -1088,7 +1091,18 @@ namespace Frontend.Test
                 "local-catalogs/search",
             });
 
-            await page.WaitForURLAsync($"http://localhost:6001/lokalne-katalogy");
+            await page.WaitForSearchUrl("lokalne-katalogy");
+        }
+
+        public static async Task WaitForSearchUrl(this IPage page, string path)
+        {
+            await page.WaitForURLAsync(new Regex($"^http://localhost:6001/{Regex.Escape(path)}(\\?.*)?$"));
+        }
+
+        public static Dictionary<string, string[]> GetUrlParameters(this IPage page)
+        {
+            NameValueCollection values = HttpUtility.ParseQueryString(new Uri(page.Url).Query);
+            return values.AllKeys.Where(k => k is not null).ToDictionary(k => k!, k => values.GetValues(k) ?? Array.Empty<string>());
         }
 
         public static async Task<string> GetSearchResultsCount(this IPage page)
@@ -1177,7 +1191,7 @@ namespace Frontend.Test
                 "publishers/search",
             });
 
-            await page.WaitForURLAsync($"http://localhost:6001/poskytovatelia");
+            await page.WaitForSearchUrl("poskytovatelia");
         }
 
         public static async Task OpenPublisherSearch(this IPage test)
@@ -1224,7 +1238,7 @@ namespace Frontend.Test
                 "datasets/search",
             });
 
-            await page.WaitForURLAsync($"http://localhost:6001/datasety");
+            await page.WaitForSearchUrl("datasety");
         }
 
         public static async Task RunAndWaitForHomePage(this IPage page, Func<Task> action)

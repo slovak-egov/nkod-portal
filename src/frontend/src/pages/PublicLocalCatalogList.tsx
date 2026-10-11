@@ -20,7 +20,7 @@ export default function PublicDatasetList() {
     const [catalogs, query, setQueryParameters, loading, error] = useLocalCatalogs({
         requiredFacets: codelistsKeys,
         orderBy: 'relevance'
-    });
+    }, true);
     const {t} = useTranslation();
     useDocumentTitle(t('localCatalogs'));
 

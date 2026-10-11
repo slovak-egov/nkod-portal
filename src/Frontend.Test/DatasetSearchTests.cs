@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using TestBase;
@@ -315,6 +316,179 @@ namespace Frontend.Test
             });
 
             await AssertAllResults();
+        }
+
+        private async Task<IElementHandle> GetPublisherCheckBox(int index)
+        {
+            IElementHandle? filter = await Page.GetTestElement("sr-filter-publishers");
+            Assert.IsNotNull(filter);
+            IReadOnlyList<IElementHandle> checkBoxes = await filter.QuerySelectorAllAsync("input[type='checkbox']");
+            return checkBoxes[index];
+        }
+
+        private async Task AssertSearchState(string queryText, string orderBy, int page, bool publisherChecked)
+        {
+            Assert.AreEqual(queryText, await Page.GetByTestId("sr-query").InputValueAsync());
+            Assert.AreEqual(orderBy, await Page.GetByTestId("sr-order").InputValueAsync());
+            StringAssert.Contains(await (await Page.GetTestElement("sr-current-page"))!.TextContentAsync(), $"Strana {page} z");
+            Assert.AreEqual(publisherChecked, await (await GetPublisherCheckBox(0)).IsCheckedAsync());
+        }
+
+        [TestMethod]
+        public async Task SearchStateShouldBeStoredInUrlAndRestoredOnBack()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreatePublisher(PublisherId, true);
+            for (int i = 0; i <= 10; i++)
+            {
+                CreateDatasetAndDistribution(fixture, $"Test {i}", true);
+            }
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            f.CreateDefaultClient();
+
+            await Page.OpenDatasetSearch();
+            Assert.AreEqual(0, Page.GetUrlParameters().Count);
+
+            await Page.RunAndWaitForDatasetSearch(async () =>
+            {
+                await Page.GetByTestId("sr-query").FillAsync("Test");
+            });
+            CollectionAssert.AreEqual(new[] { "Test" }, Page.GetUrlParameters()["query"]);
+
+            await Page.RunAndWaitForDatasetSearch(async () =>
+            {
+                await Page.GetByTestId("sr-order").SelectOptionAsync("name");
+            });
+            CollectionAssert.AreEqual(new[] { "name" }, Page.GetUrlParameters()["sort"]);
+
+            await Page.RunAndWaitForDatasetSearch(async () =>
+            {
+                await (await GetPublisherCheckBox(0)).CheckAsync();
+            });
+            CollectionAssert.AreEqual(new[] { PublisherId }, Page.GetUrlParameters()["publisher"]);
+
+            await Page.RunAndWaitForDatasetSearch(async () =>
+            {
+                await (await Page.GetTestElement("sr-next-page"))!.ClickAsync();
+            });
+
+            Dictionary<string, string[]> parameters = Page.GetUrlParameters();
+            CollectionAssert.AreEquivalent(new[] { "query", "sort", "publisher", "page" }, parameters.Keys);
+            CollectionAssert.AreEqual(new[] { "2" }, parameters["page"]);
+            await AssertSearchState("Test", "name", 2, true);
+            Assert.AreEqual(1, await Page.GetByTestId("sr-result").CountAsync());
+
+            await Page.RunAndWaitForDatasetSearch(async () => await Page.GoBackAsync());
+            Assert.IsFalse(Page.GetUrlParameters().ContainsKey("page"));
+            await AssertSearchState("Test", "name", 1, true);
+            Assert.AreEqual(10, await Page.GetByTestId("sr-result").CountAsync());
+
+            await Page.RunAndWaitForDatasetSearch(async () => await Page.GoBackAsync());
+            Assert.IsFalse(Page.GetUrlParameters().ContainsKey("publisher"));
+            await AssertSearchState("Test", "name", 1, false);
+
+            await Page.RunAndWaitForDatasetSearch(async () => await Page.GoBackAsync());
+            CollectionAssert.AreEquivalent(new[] { "query" }, Page.GetUrlParameters().Keys);
+            await AssertSearchState("Test", "relevance", 1, false);
+
+            await Page.RunAndWaitForDatasetSearch(async () => await Page.GoForwardAsync());
+            await AssertSearchState("Test", "name", 1, false);
+
+            // Typing into the search box replaces the history entry, so going back leaves the search page
+            await Page.RunAndWaitForDatasetSearch(async () => await Page.GoBackAsync());
+            await Page.GoBackAsync();
+            await Page.WaitForURLAsync("http://localhost:6001/");
+        }
+
+        [TestMethod]
+        public async Task SearchStateShouldBeLoadedFromUrl()
+        {
+            string path = fixture.GetStoragePath();
+
+            string publisher2 = PublisherId + "2";
+            fixture.CreatePublisher(PublisherId, true, "Test Publisher 1");
+            fixture.CreatePublisher(publisher2, true, "Test Publisher 2");
+            for (int i = 0; i <= 10; i++)
+            {
+                CreateDatasetAndDistribution(fixture, $"Test {i:00}", true, publisher: PublisherId);
+            }
+            CreateDatasetAndDistribution(fixture, "Test other", true, publisher: publisher2);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            f.CreateDefaultClient();
+
+            await Page.RunAndWaitForRequests(async () =>
+            {
+                await Page.GotoAsync($"http://localhost:6001/datasety?query=Test&sort=name&page=2&publisher={HttpUtility.UrlEncode(PublisherId)}");
+            }, new List<string> { "datasets/search" });
+
+            Assert.AreEqual("11 výsledkov", await Page.GetSearchResultsCount());
+            await AssertSearchState("Test", "name", 2, true);
+            Assert.IsFalse(await (await GetPublisherCheckBox(1)).IsCheckedAsync());
+
+            IReadOnlyList<IElementHandle> results = await Page.QuerySelectorAllAsync("[data-testid='sr-result']");
+            Assert.AreEqual(1, results.Count);
+            Assert.AreEqual("Test 10", await (await results[0].QuerySelectorAsync("a"))!.TextContentAsync());
+
+            await Page.RunAndWaitForRequests(async () =>
+            {
+                await Page.GotoAsync($"http://localhost:6001/datasety?pageSize=20&publisher={HttpUtility.UrlEncode(PublisherId)}&publisher={HttpUtility.UrlEncode(publisher2)}");
+            }, new List<string> { "datasets/search" });
+
+            Assert.AreEqual("12 výsledkov", await Page.GetSearchResultsCount());
+            Assert.AreEqual(12, await Page.GetByTestId("sr-result").CountAsync());
+            Assert.IsTrue(await (await GetPublisherCheckBox(0)).IsCheckedAsync());
+            Assert.IsTrue(await (await GetPublisherCheckBox(1)).IsCheckedAsync());
+        }
+
+        [TestMethod]
+        public async Task BackFromDetailShouldRestoreSearch()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreatePublisher(PublisherId, true);
+            for (int i = 0; i <= 10; i++)
+            {
+                CreateDatasetAndDistribution(fixture, $"Test {i:00}", true);
+            }
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            f.CreateDefaultClient();
+
+            await Page.OpenDatasetSearch();
+
+            await Page.RunAndWaitForDatasetSearch(async () =>
+            {
+                await Page.GetByTestId("sr-order").SelectOptionAsync("name");
+            });
+            await Page.RunAndWaitForDatasetSearch(async () =>
+            {
+                await (await GetPublisherCheckBox(0)).CheckAsync();
+            });
+            await Page.RunAndWaitForDatasetSearch(async () =>
+            {
+                await (await Page.GetTestElement("sr-next-page"))!.ClickAsync();
+            });
+            string searchUrl = Page.Url;
+
+            IElementHandle? link = await Page.QuerySelectorAsync("[data-testid='sr-result'] a");
+            Assert.IsNotNull(link);
+            Assert.AreEqual("Test 10", await link.TextContentAsync());
+            await link.ClickAsync();
+            await Page.WaitForURLAsync(new Regex("^http://localhost:6001/datasety/[0-9a-f-]+$"));
+
+            await Page.RunAndWaitForDatasetSearch(async () => await Page.GoBackAsync());
+
+            Assert.AreEqual(searchUrl, Page.Url);
+            await AssertSearchState(string.Empty, "name", 2, true);
+            IReadOnlyList<IElementHandle> results = await Page.QuerySelectorAllAsync("[data-testid='sr-result']");
+            Assert.AreEqual(1, results.Count);
+            Assert.AreEqual("Test 10", await (await results[0].QuerySelectorAsync("a"))!.TextContentAsync());
         }
 
         [TestMethod]

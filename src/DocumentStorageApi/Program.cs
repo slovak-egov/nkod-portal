@@ -262,6 +262,7 @@ app.MapPost("/files/query", [AllowAnonymous] ([FromServices] IFileStorage storag
 app.MapPost("/files/by-publisher", [AllowAnonymous] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] FulltextStorageMap fulltextStorage, [FromBody] FileStorageQuery? query) =>
 {
     query ??= new FileStorageQuery();
+    query.QueryText = query.QueryText?.Trim();
 
     FileStorageGroupResponse response = storage.GetFileStatesByPublisher(query, accessPolicy);
 
@@ -271,27 +272,49 @@ app.MapPost("/files/by-publisher", [AllowAnonymous] (IFileStorage storage, IFile
         {
             QueryText = query.QueryText,
             OnlyTypes = new List<FileType> { FileType.PublisherRegistration },
+            Language = query.Language
         });
+
         if (fulltextResponse.Documents.Count > 0)
         {
-            Dictionary<Guid, FileStorageGroup> groupsById = new Dictionary<Guid, FileStorageGroup>(response.Groups.Count);
-            foreach (FileStorageGroup group in response.Groups)
-            {
-                if (group.PublisherFileState?.Metadata is not null)
-                {
-                    groupsById[group.PublisherFileState.Metadata.Id] = group;
-                }
-            }
+            HashSet<Guid> selectedPublishers = fulltextResponse.Documents.Select(d => d.Id).ToHashSet();
 
             List<FileStorageGroup> groups = new List<FileStorageGroup>(response.Groups.Count);
-            foreach (Guid id in fulltextResponse.Documents.Select(d => d.Id))
+            foreach (FileStorageGroup group in response.Groups)
             {
-                if (groupsById.TryGetValue(id, out FileStorageGroup? group))
+                if (group.PublisherFileState is not null && selectedPublishers.Contains(group.PublisherFileState.Metadata.Id))
                 {
                     groups.Add(group);
                 }
             }
-            response = new FileStorageGroupResponse(groups, groups.Count);
+
+            int totalCount = groups.Count;
+
+            if (query.SkipResults >= 0)
+            {
+                if (query.SkipResults > 0)
+                {
+                    groups = groups.Skip(query.SkipResults).ToList();
+                }
+            }
+            else
+            {
+                groups.Clear();
+            }
+
+            if (query.MaxResults.HasValue)
+            {
+                if (query.MaxResults.Value >= 0)
+                {
+                    groups = groups.Take(query.MaxResults.Value).ToList();
+                }
+                else
+                {
+                    groups.Clear();
+                }
+            }
+
+            response = new FileStorageGroupResponse(groups, totalCount);
         }
         else
         {
