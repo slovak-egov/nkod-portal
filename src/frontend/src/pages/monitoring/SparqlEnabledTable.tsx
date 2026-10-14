@@ -23,7 +23,7 @@ type Props<T> = {
 };
 
 type Column<T> = {
-    header: string;
+    header: ReactNode;
     value: (row: T) => ReactNode;
     sortProperty?: string | null | undefined;
     headerStyle?: React.CSSProperties | null | undefined;

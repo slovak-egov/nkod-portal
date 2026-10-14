@@ -254,7 +254,7 @@ export default function PublishersDataQuality() {
                             }
                             columns={[
                                 {
-                                    header: 'Názov poskytovateľa',
+                                    header: <>Názov poskyto&shy;vateľa</>,
                                     headerStyle: { width: '100px' },
                                     cellStyle: { width: '100px' },
                                     value: (r) => (
@@ -265,12 +265,12 @@ export default function PublishersDataQuality() {
                                     sortProperty: '?name'
                                 },
                                 {
-                                    header: 'Vyplnenie povinných metadát',
+                                    header: <>Vyplnenie povinných metadát</>,
                                     value: (r) => <SparqlIndicator property="requiredMetadata" source={r} />,
                                     sortProperty: sortExpressions.requiredMetadata
                                 },
                                 {
-                                    header: 'Vyplnenie odporúčaných metadát',
+                                    header: <>Vyplnenie odporú&shy;čaných metadát</>,
                                     value: (r) => <SparqlIndicator property="optionalMetadata" source={r} />,
                                     sortProperty: sortExpressions.optionalMetadata
                                 },
@@ -334,7 +334,7 @@ export default function PublishersDataQuality() {
                                     }
                                 },
                                 {
-                                    header: 'Počet datasetov Publikačného minima',
+                                    header: <>Počet datasetov Publi&shy;kačného minima</>,
                                     value: (r) => asNumber(r?.datasetsPublicationMinimumCount),
                                     sortProperty: sortExpressions.publicationMinimum
                                 }
