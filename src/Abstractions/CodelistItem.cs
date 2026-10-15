@@ -14,5 +14,7 @@
         public bool IsDeprecated { get; set; }
 
         public decimal Priority { get; set; }
+
+        public string? ShortId { get; set; }
     }
 }

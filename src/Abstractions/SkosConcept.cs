@@ -28,6 +28,12 @@ namespace NkodSk.Abstractions
             set => SetDecimalToUriNode("custom:priority", value);
         }
 
+        public string? ShortId
+        {
+            get => GetTextFromUriNode("custom:shortId");
+            set => SetTextToUriNode("custom:shortId", value);
+        }
+
         public static SkosConcept? ParseXml(Stream stream)
         {
             IGraph graph = new Graph();

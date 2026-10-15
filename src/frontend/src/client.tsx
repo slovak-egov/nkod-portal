@@ -116,6 +116,7 @@ export type UserSaveResult = {
 export type CodelistValue = {
     id: string;
     label: string;
+    shortId?: string | null;
 };
 
 export type LanguageDependentTexts = {
@@ -461,18 +462,41 @@ const urlFilterAliases: { [filterKey: string]: string } = {
 
 const urlFilterKeysByAlias: { [alias: string]: string } = Object.fromEntries(Object.entries(urlFilterAliases).map(([key, alias]) => [alias, key]));
 
+const urlCodelistKeys = Object.keys(urlFilterAliases).filter((key) => key.includes('://'));
+const noCodelistKeys: string[] = [];
+
+export type CodelistShortIds = { [codelistId: string]: { toShortId: Map<string, string>; fromShortId: Map<string, string> } };
+
+export function createCodelistShortIds(codelists: Codelist[]): CodelistShortIds {
+    return Object.fromEntries(
+        codelists.map((codelist) => {
+            const toShortId = new Map<string, string>();
+            const fromShortId = new Map<string, string>();
+            codelist.values.forEach((v) => {
+                if (v.shortId) {
+                    toShortId.set(v.id, v.shortId);
+                    fromShortId.set(v.shortId.toLowerCase(), v.id);
+                }
+            });
+            return [codelist.id, { toShortId, fromShortId }];
+        })
+    );
+}
+
 function parsePositiveInt(value: string | null, defaultValue: number) {
     const parsed = value !== null ? Number(value) : NaN;
     return Number.isInteger(parsed) && parsed > 0 ? parsed : defaultValue;
 }
 
-export function readQueryFromUrl(searchParams: URLSearchParams, defaultQuery: RequestQuery): RequestQuery {
+// Codelist values are stored in URL by their short ids, values which are not known short ids (e.g. full IRIs from older links) are used as they are
+export function readQueryFromUrl(searchParams: URLSearchParams, defaultQuery: RequestQuery, shortIds?: CodelistShortIds): RequestQuery {
     const filters: { [id: string]: string[] } = {};
     let hasFilters = false;
     searchParams.forEach((_, param) => {
         const key = urlFilterKeysByAlias[param] ?? (param.startsWith(urlFilterPrefix) ? param.substring(urlFilterPrefix.length) : null);
         if (key && !filters[key]) {
-            filters[key] = searchParams.getAll(param);
+            const fromShortId = shortIds?.[key]?.fromShortId;
+            filters[key] = searchParams.getAll(param).map((value) => fromShortId?.get(value.toLowerCase()) ?? value);
             hasFilters = true;
         }
     });
@@ -487,7 +511,7 @@ export function readQueryFromUrl(searchParams: URLSearchParams, defaultQuery: Re
     };
 }
 
-export function writeQueryToUrl(query: RequestQuery, defaultQuery: RequestQuery): URLSearchParams {
+export function writeQueryToUrl(query: RequestQuery, defaultQuery: RequestQuery, shortIds?: CodelistShortIds): URLSearchParams {
     const searchParams = new URLSearchParams();
     if (query.queryText) {
         searchParams.set(urlQueryTextParam, query.queryText);
@@ -503,7 +527,8 @@ export function writeQueryToUrl(query: RequestQuery, defaultQuery: RequestQuery)
     }
     Object.entries(query.filters ?? {}).forEach(([key, values]) => {
         const param = urlFilterAliases[key] ?? urlFilterPrefix + key;
-        values.forEach((value) => searchParams.append(param, value));
+        const toShortId = shortIds?.[key]?.toShortId;
+        values.forEach((value) => searchParams.append(param, toShortId?.get(value) ?? value));
     });
     return searchParams;
 }
@@ -529,9 +554,17 @@ export function useEntities<T>(url: string, initialQuery?: Partial<RequestQuery>
         searchParams.has(urlQueryTextParam) ? { ...defaultQuery, queryText: searchParams.get(urlQueryTextParam)! } : defaultQuery
     );
 
+    const [urlCodelists, , , urlCodelistsLoaded] = useCodelists(syncWithUrl ? urlCodelistKeys : noCodelistKeys);
+    const shortIds = useMemo(() => createCodelistShortIds(urlCodelists), [urlCodelists]);
+    // Short ids in URL can be resolved only after codelists are loaded
+    const urlHasCodelistFilter = syncWithUrl && urlCodelistKeys.some((key) => searchParams.has(urlFilterAliases[key]));
+    const waitingForCodelists = urlHasCodelistFilter && !urlCodelistsLoaded;
+    // Avoids repeated search after codelists are loaded when URL does not need them
+    const urlShortIds = urlHasCodelistFilter ? shortIds : undefined;
+
     const urlQuery = useMemo(
-        () => (syncWithUrl ? { ...readQueryFromUrl(searchParams, defaultQuery), language: language.id } : null),
-        [syncWithUrl, searchParams, defaultQuery, language.id]
+        () => (syncWithUrl ? { ...readQueryFromUrl(searchParams, defaultQuery, urlShortIds), language: language.id } : null),
+        [syncWithUrl, searchParams, defaultQuery, urlShortIds, language.id]
     );
 
     const query = urlQuery ?? localQuery;
@@ -544,7 +577,7 @@ export function useEntities<T>(url: string, initialQuery?: Partial<RequestQuery>
         async (abortController: AbortController | null = null) => {
             setLoading(true);
             setError(null);
-            if (query.page > 0) {
+            if (query.page > 0 && !waitingForCodelists) {
                 try {
                     const response: AxiosResponse<Response<T>> = await sendPost(url, query, headers, abortController);
                     setItems(response.data);
@@ -561,7 +594,7 @@ export function useEntities<T>(url: string, initialQuery?: Partial<RequestQuery>
                 }
             }
         },
-        [query, url, headers]
+        [query, url, headers, waitingForCodelists]
     );
 
     useEffect(() => {
@@ -577,12 +610,12 @@ export function useEntities<T>(url: string, initialQuery?: Partial<RequestQuery>
             if (urlQuery) {
                 // Typing into the search box should not create a history entry for every keystroke
                 const onlyQueryTextChanged = 'queryText' in changes && Object.keys(changes).every((k) => k === 'queryText' || k === 'page');
-                setSearchParams(writeQueryToUrl({ ...urlQuery, ...changes }, defaultQuery), { replace: onlyQueryTextChanged });
+                setSearchParams(writeQueryToUrl({ ...urlQuery, ...changes }, defaultQuery, shortIds), { replace: onlyQueryTextChanged });
             } else {
                 setLocalQuery((q) => ({ ...q, ...changes }));
             }
         },
-        [urlQuery, defaultQuery, setSearchParams]
+        [urlQuery, defaultQuery, shortIds, setSearchParams]
     );
 
     useEffect(() => {
@@ -874,12 +907,19 @@ export function useCodelists(keys: string[]) {
     const [codelists, setCodelists] = useState<Codelist[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
+    const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
         async function load() {
             setLoading(true);
+            setLoaded(false);
             setError(null);
             setCodelists([]);
+            if (keys.length === 0) {
+                setLoading(false);
+                setLoaded(true);
+                return;
+            }
             try {
                 const response: AxiosResponse<Codelist[]> = await axios.get(baseUrl + 'codelists', {
                     params: {
@@ -895,13 +935,14 @@ export function useCodelists(keys: string[]) {
                 }
             } finally {
                 setLoading(false);
+                setLoaded(true);
             }
         }
 
         load();
     }, [keys]);
 
-    return [codelists, loading, error] as const;
+    return [codelists, loading, error, loaded] as const;
 }
 
 export async function searchCodelistItem(codelistId: string, query: string) {

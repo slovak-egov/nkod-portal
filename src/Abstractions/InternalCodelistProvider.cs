@@ -72,6 +72,8 @@ namespace NkodSk.Abstractions
 
                                 if (conceptScheme?.Id is not null)
                                 {
+                                    // Codelists stored before short ids were introduced get deterministic ids, which are persisted on the next update
+                                    conceptScheme.AssignShortIds(null);
                                     Codelist codelist = CreateCodelist(conceptScheme, state.Metadata);
                                     newCodelists[codelist.Id] = codelist;
                                 }
@@ -114,6 +116,7 @@ namespace NkodSk.Abstractions
                     CodelistItem codelistItem = new CodelistItem(concept.Id);
                     codelistItem.IsDeprecated = concept.IsDeprecated;
                     codelistItem.Priority = concept.Priority;
+                    codelistItem.ShortId = concept.ShortId;
 
                     foreach (string lang in languages)
                     {
@@ -191,6 +194,18 @@ namespace NkodSk.Abstractions
             return null;
         }
 
+        private async Task<SkosConceptScheme?> LoadConceptScheme(Guid fileId)
+        {
+            FileState? state = await storageClient.GetFileState(fileId).ConfigureAwait(false);
+            if (state?.Content is not null)
+            {
+                return SkosConceptScheme.Parse(state.Content);
+            }
+
+            using Stream? stream = await storageClient.DownloadStream(fileId).ConfigureAwait(false);
+            return stream is not null ? SkosConceptScheme.Parse(stream) : null;
+        }
+
         public async Task<bool> UpdateCodelist(Stream stream)
         {
             string path = Path.GetTempFileName();
@@ -211,12 +226,19 @@ namespace NkodSk.Abstractions
                     conceptScheme = SkosConceptScheme.Parse(fs);
                     if (conceptScheme is not null)
                     {
-                        fs.Seek(0, SeekOrigin.Begin);
-
                         Codelist? existing = await GetCodelist(conceptScheme.Id);
 
+                        SkosConceptScheme? previous = null;
+                        if (existing is not null)
+                        {
+                            // Without the previous version the short ids could not be preserved
+                            previous = await LoadConceptScheme(existing.FileId).ConfigureAwait(false) ?? throw new InvalidOperationException($"Unable to load previous version of codelist {conceptScheme.Id}");
+                            previous.AssignShortIds(null);
+                        }
+                        conceptScheme.AssignShortIds(previous);
+
                         FileMetadata metadata = new FileMetadata(existing?.FileId ?? Guid.NewGuid(), conceptScheme.Id, FileType.Codelist, null, null, true, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
-                        await storageClient.UploadStream(fs, metadata, true);
+                        await storageClient.InsertFile(conceptScheme.ToString(), true, metadata);
 
                         await LoadCodelist(conceptScheme, metadata);
 

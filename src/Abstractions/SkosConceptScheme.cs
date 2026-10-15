@@ -103,6 +103,132 @@ namespace NkodSk.Abstractions
 
         public override IEnumerable<RdfObject> RootObjects => base.RootObjects.Union(concepts.Values);
 
+        private const int MaxShortIdLength = 40;
+
+        private IEnumerable<SkosConcept> RetiredConcepts => GetUrisFromUriNode("custom:retiredConcept").Select(u => new SkosConcept(Graph, Graph.CreateUriNode(u))).ToList();
+
+        // Short ids of current and retired concepts by concept IRI
+        public Dictionary<string, string> GetShortIds()
+        {
+            Dictionary<string, string> shortIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (SkosConcept concept in Concepts.Concat(RetiredConcepts))
+            {
+                string? shortId = concept.ShortId;
+                if (concept.Id is not null && IsValidShortId(shortId))
+                {
+                    shortIds.TryAdd(concept.Id, shortId!);
+                }
+            }
+            return shortIds;
+        }
+
+        // Ensures that every concept has a unique short id. Ids from the previous version of the codelist are always preserved
+        // and ids of concepts which are no longer present are kept as retired, so they are never reused for another concept.
+        public void AssignShortIds(SkosConceptScheme? previous)
+        {
+            Dictionary<string, string> reserved = previous?.GetShortIds() ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (SkosConcept concept in RetiredConcepts)
+            {
+                string? shortId = concept.ShortId;
+                if (concept.Id is not null && IsValidShortId(shortId))
+                {
+                    reserved.TryAdd(concept.Id, shortId!);
+                }
+            }
+
+            HashSet<string> used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            List<SkosConcept> sortedConcepts = Concepts.Where(c => c.Id is not null).OrderBy(c => c.Id, StringComparer.Ordinal).ToList();
+
+            List<SkosConcept> withoutReservedId = new List<SkosConcept>();
+            foreach (SkosConcept concept in sortedConcepts)
+            {
+                if (reserved.TryGetValue(concept.Id!, out string? shortId) && used.Add(shortId))
+                {
+                    concept.ShortId = shortId;
+                }
+                else
+                {
+                    withoutReservedId.Add(concept);
+                }
+            }
+
+            foreach (KeyValuePair<string, string> pair in reserved)
+            {
+                if (!concepts.ContainsKey(pair.Key))
+                {
+                    used.Add(pair.Value);
+                }
+            }
+
+            List<SkosConcept> withoutId = new List<SkosConcept>();
+            foreach (SkosConcept concept in withoutReservedId)
+            {
+                string? shortId = concept.ShortId;
+                if (!IsValidShortId(shortId) || !used.Add(shortId!))
+                {
+                    withoutId.Add(concept);
+                }
+            }
+
+            foreach (SkosConcept concept in withoutId)
+            {
+                string baseId = CreateShortIdBase(concept.Id!);
+                string shortId = baseId;
+                for (int i = 2; !used.Add(shortId); i++)
+                {
+                    shortId = $"{baseId}-{i}";
+                }
+                concept.ShortId = shortId;
+            }
+
+            List<Uri> retired = new List<Uri>();
+            foreach (KeyValuePair<string, string> pair in reserved.OrderBy(p => p.Key, StringComparer.Ordinal))
+            {
+                if (!concepts.ContainsKey(pair.Key) && Uri.TryCreate(pair.Key, UriKind.Absolute, out Uri? uri))
+                {
+                    new SkosConcept(Graph, Graph.CreateUriNode(uri)).ShortId = pair.Value;
+                    retired.Add(uri);
+                }
+            }
+            SetUriNodes("custom:retiredConcept", retired);
+        }
+
+        public static bool IsValidShortId(string? shortId)
+        {
+            return !string.IsNullOrEmpty(shortId) && shortId.Length <= MaxShortIdLength + 8 && shortId.All(c => char.IsAsciiLetterOrDigit(c) || c == '-' || c == '_');
+        }
+
+        private static string CreateShortIdBase(string id)
+        {
+            string text = id.TrimEnd('/', '#');
+            int index = text.LastIndexOfAny(new[] { '/', '#', ':' });
+            if (index >= 0)
+            {
+                text = text.Substring(index + 1);
+            }
+            text = Uri.UnescapeDataString(text).Normalize(NormalizationForm.FormD);
+
+            StringBuilder sb = new StringBuilder();
+            foreach (char c in text)
+            {
+                if (char.IsAsciiLetterOrDigit(c) || c == '_')
+                {
+                    sb.Append(c);
+                }
+                else if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark && sb.Length > 0 && sb[^1] != '-')
+                {
+                    sb.Append('-');
+                }
+            }
+
+            string shortId = sb.ToString().Trim('-');
+            if (shortId.Length > MaxShortIdLength)
+            {
+                shortId = shortId.Substring(0, MaxShortIdLength).Trim('-');
+            }
+            return shortId.Length > 0 ? shortId : "item";
+        }
+
         public static SkosConceptScheme Create(Uri uri)
         {
             IGraph graph = new Graph();

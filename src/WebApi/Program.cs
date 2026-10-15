@@ -728,7 +728,7 @@ app.MapGet("/codelists", async ([FromQuery(Name = "keys[]")] string[] keys, [Fro
                     List<CodelistItemView> values = new List<CodelistItemView>(codelist.Items.Count);
                     foreach (CodelistItem item in codelist.Items.Values)
                     {
-                        values.Add(new CodelistItemView(item.Id, item.GetCodelistValueLabel(language), item.Priority));
+                        values.Add(new CodelistItemView(item.Id, item.GetCodelistValueLabel(language), item.Priority, item.ShortId));
                     }
                     values.Sort((a, b) =>
                     {
@@ -770,7 +770,7 @@ app.MapGet("/codelists/item", async (string key, string id, [FromServices] ICode
         CodelistItem? item = await codelistProviderClient.GetCodelistItem(key, id).ConfigureAwait(false);
         if (item is not null)
         {
-            return Results.Ok(new CodelistItemView(item.Id, item.GetCodelistValueLabel(language), item.Priority));
+            return Results.Ok(new CodelistItemView(item.Id, item.GetCodelistValueLabel(language), item.Priority, item.ShortId));
         }
         return Results.NotFound();
     }
@@ -806,7 +806,7 @@ app.MapPost("/codelists/item", async ([FromQuery] string key, [FromQuery] string
                 string label = item.GetCodelistValueLabel(language);
                 if (label.Contains(query))
                 {
-                    values.Add(new CodelistItemView(item.Id, label, item.Priority));
+                    values.Add(new CodelistItemView(item.Id, label, item.Priority, item.ShortId));
                 }
             }
             values.Sort((a, b) => StringComparer.CurrentCultureIgnoreCase.Compare(a.Label, b.Label));
