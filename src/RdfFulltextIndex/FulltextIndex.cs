@@ -48,6 +48,10 @@ namespace NkodSk.RdfFulltextIndex
 
         private ILanguagesSource languages;
 
+        private readonly object writeLock = new object();
+
+        private readonly object providerLock = new object();
+
         public FulltextIndex(ILanguagesSource languages)
         {
             analyzer = new DefaultAnalyyzer(Version);
@@ -73,6 +77,14 @@ namespace NkodSk.RdfFulltextIndex
         }
 
         public void Index(IEnumerable<FileState> states)
+        {
+            lock (writeLock)
+            {
+                IndexInternal(states);
+            }
+        }
+
+        private void IndexInternal(IEnumerable<FileState> states)
         {
             foreach (FileState state in states)
             {
@@ -174,27 +186,34 @@ namespace NkodSk.RdfFulltextIndex
 
         public void RemoveFromIndex(Guid id)
         {
-            indexWriter.DeleteDocuments(new Term("id", id.ToString()));
-            indexWriter.Commit();
+            lock (writeLock)
+            {
+                indexWriter.DeleteDocuments(new Term("id", id.ToString()));
+                indexWriter.Commit();
 
-            CreateIndexReader();
+                CreateIndexReader();
+            }
         }
 
         private void CreateIndexReader()
         {
-            lock (indexWriter)
+            IndexSeacherProvider newIndexSeacherProvider = new IndexSeacherProvider(indexWriter, taxonomyWriter);
+            IndexSeacherProvider oldIndexSeacherProvider;
+
+            lock (providerLock)
             {
-                IndexSeacherProvider oldIndexSeacherProvider = indexSeacherProvider;
-                indexSeacherProvider = new IndexSeacherProvider(indexWriter, taxonomyWriter);
-                oldIndexSeacherProvider.TryDispose();
+                oldIndexSeacherProvider = indexSeacherProvider;
+                indexSeacherProvider = newIndexSeacherProvider;
             }
+
+            oldIndexSeacherProvider.TryDispose();
         }
 
         public FulltextResponse Search(FileStorageQuery externalQuery)
         {
             IndexSeacherProvider provider;
 
-            lock (indexWriter)
+            lock (providerLock)
             {
                 provider = indexSeacherProvider;
                 provider.IncreaseClientsCount();
