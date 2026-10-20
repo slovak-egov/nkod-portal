@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NkodSk.RdfFileStorage;
 using System;
@@ -104,6 +105,11 @@ namespace WebApi.Test
             Assert.Equal(input.Website, agent.HomePage?.ToString());
             Assert.Equal(input.Email, agent.EmailAddress);
             Assert.Equal(input.Phone, agent.Phone);
+
+            (string subject, string body) = Assert.Single(applicationFactory.Services.GetRequiredService<TestSuperadminNotificationService>().Notifications);
+            Assert.False(string.IsNullOrEmpty(subject));
+            Assert.Contains("Test Company", body);
+            Assert.Contains(PublisherId, body);
         }
 
         [Fact]
@@ -130,6 +136,7 @@ namespace WebApi.Test
             Assert.NotNull(result.Errors);
             Assert.Single(result.Errors);
             Assert.Equal("Zastupovaný poskytovateľ dát už má vytvorenú registráciu", result.Errors["generic"]);
+            Assert.Empty(applicationFactory.Services.GetRequiredService<TestSuperadminNotificationService>().Notifications);
         }
 
         [Fact]

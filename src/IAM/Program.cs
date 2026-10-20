@@ -1205,6 +1205,48 @@ app.MapPost("/harvester-login", (IConfiguration configuration, [FromServices] Si
     }
 });
 
+app.MapPost("/notify-superadmins", [Authorize] async ([FromBody] AdminNotificationInput? input, [FromServices] ApplicationDbContext context, ClaimsPrincipal user, [FromServices] IEmailService emailService, [FromServices] ILogger<Program> logger) =>
+{
+    if (user.IsInRole("Harvester") || user.IsInRole("Superadmin"))
+    {
+        SaveResult result = new SaveResult();
+
+        input ??= new AdminNotificationInput();
+
+        ValidationResults validationResults = input.Validate();
+        if (validationResults.IsValid && !string.IsNullOrEmpty(input.Subject) && !string.IsNullOrEmpty(input.Body))
+        {
+            List<string?> emails = await context.Users.Where(u => u.IsActive && u.Role == "Superadmin" && u.Email != null && u.Email != "").Select(u => u.Email).ToListAsync();
+
+            foreach (string? email in emails.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrEmpty(email))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    await emailService.SendEmail(email, input.Subject, input.Body);
+                }
+                catch (Exception e)
+                {
+                    logger.LogError(e, "Unable to send notification to superadmin {Email}", email);
+                }
+            }
+
+            result.Success = true;
+        }
+
+        result.Errors = validationResults;
+        return Results.Ok(result);
+    }
+    else
+    {
+        return Results.Forbid();
+    }
+});
+
 app.MapPost("/validate-invitation", async (IConfiguration configuration, [FromServices] ApplicationDbContext context, HttpRequest request, [FromServices] ILogger<Program> logger) =>
 {
     CheckInvitationResult result = new CheckInvitationResult();

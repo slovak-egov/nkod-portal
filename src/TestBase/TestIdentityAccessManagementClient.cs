@@ -297,6 +297,11 @@ namespace TestBase
             throw new NotImplementedException();
         }
 
+        public Task<SaveResult> NotifySuperadmins(AdminNotificationInput? input)
+        {
+            throw new NotImplementedException();
+        }
+
         private record Entry(PersistentUserInfo UserInfo, DateTimeOffset Updated) { }
     }
 }
