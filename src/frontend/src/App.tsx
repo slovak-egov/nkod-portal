@@ -310,7 +310,7 @@ function App(props: Props) {
                                             <Route path="/sprava/poskytovatelia/pridat" Component={AddPublisher} />
                                             <Route path="/sprava/poskytovatelia/upravit/:id" Component={EditPublisher} />
                                             <Route path="/sprava/ciselniky" Component={Codelists} />
-                                            <Route path="/sprava/nastavenia-aplikacie" Component={AppSettingsPage} />
+                                            <Route path="/sprava/nastavenia" Component={AppSettingsPage} />
                                             <Route path="/nastavenia-notifikacie" Component={MonitoringSettingsUser} />
                                         </>
                                     ) : null}
