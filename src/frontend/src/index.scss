@@ -187,6 +187,15 @@ body {
             width: auto;
             margin-left: govuk-spacing(3);
             margin-right: govuk-spacing(3);
+            border-bottom: 2px solid govuk-colour('black');
+            padding-bottom: govuk-spacing(3);
+            margin-bottom: govuk-spacing(3);
+        }
+
+        .idsk-search-results__content__picked-filters__topics,
+        .idsk-search-results__content__picked-filters__content-type,
+        .idsk-search-results__content__picked-filters__date {
+            margin-top: govuk-spacing(3);
         }
 
         .idsk-search-results__per-page {

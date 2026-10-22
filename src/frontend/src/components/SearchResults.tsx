@@ -455,38 +455,6 @@ export default function SearchResults(props: Props) {
                                 />
                             </div>
 
-                            <div className="idsk-search-results__page-number--mobile govuk-grid-column-full">
-                                {props.query.page > 1 ? (
-                                    <button
-                                        type="button"
-                                        className="idsk-search-results__button--back__mobile"
-                                        onClick={() => props.setQueryParameters({ page: props.query.page - 1 })}
-                                    >
-                                        <svg width="20" height="15" viewBox="0 0 20 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path
-                                                d="M7.44417 14.6753C7.84229 14.2311 7.84229 13.5134 7.44417 13.0691L3.49368 8.63774H18.9792C19.5406 8.63774 20 8.12512 20 7.49858C20 6.87203 19.5406 6.35941 18.9792 6.35941H3.49368L7.45438 1.93943C7.85249 1.49516 7.85249 0.777482 7.45438 0.333207C7.05627 -0.111069 6.41317 -0.111069 6.01506 0.333207L0.298584 6.70116C-0.0995279 7.14543 -0.0995279 7.86311 0.298584 8.30739L6.00485 14.6753C6.40296 15.1082 7.05627 15.1082 7.44417 14.6753Z"
-                                                fill="#0065B3"
-                                            />
-                                        </svg>
-                                    </button>
-                                ) : null}
-                                <span className="idsk-search-results__page-number__mobile"></span>
-                                {totalPages > props.query.page ? (
-                                    <button
-                                        type="button"
-                                        className="idsk-search-results__button--forward__mobile"
-                                        onClick={() => props.setQueryParameters({ page: props.query.page + 1 })}
-                                    >
-                                        <svg width="20" height="15" viewBox="0 0 20 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path
-                                                d="M12.5558 0.324663C12.1577 0.768939 12.1577 1.48662 12.5558 1.93089L16.5063 6.36226L1.0208 6.36226C0.45936 6.36226 1.90735e-06 6.87488 1.90735e-06 7.50142C1.90735e-06 8.12797 0.45936 8.64059 1.0208 8.64059L16.5063 8.64059L12.5456 13.0606C12.1475 13.5048 12.1475 14.2225 12.5456 14.6668C12.9437 15.1111 13.5868 15.1111 13.9849 14.6668L19.7014 8.29884C20.0995 7.85457 20.0995 7.13689 19.7014 6.69261L13.9952 0.324663C13.597 -0.108221 12.9437 -0.108221 12.5558 0.324663Z"
-                                                fill="#0065B3"
-                                            />
-                                        </svg>
-                                    </button>
-                                ) : null}
-                            </div>
-
                             <PickedFilters
                                 groups={pickedFilterGroups}
                                 onRemove={(filterId, valueId) =>
