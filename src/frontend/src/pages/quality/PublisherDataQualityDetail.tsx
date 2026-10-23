@@ -333,6 +333,7 @@ export default function PublisherDataQualityDetail() {
     }
 
     const datasetQualitySum = datasetQualityCount[2] + datasetQualityCount[3] + datasetQualityCount[4];
+    const datasetQualitySumAll = datasetQualityCount[0] + datasetQualityCount[1] + datasetQualityCount[2] + datasetQualityCount[3] + datasetQualityCount[4];
 
     const availabilityCount =
         asNumber(row?.availableDownloadLinkCount) +
@@ -725,7 +726,7 @@ export default function PublisherDataQualityDetail() {
                                     <TableCell>
                                         <div style={{ display: 'flex', alignItems: 'center' }}>
                                             <span style={{ marginRight: '20px', whiteSpace: 'nowrap' }}>{datasetQualitySum}</span>
-                                            <Indicator numerator={datasetQualitySum} denominator={pureDatasetCount} />
+                                            <Indicator numerator={datasetQualitySum} denominator={datasetQualitySumAll} />
                                         </div>
                                     </TableCell>
                                 </TableRow>

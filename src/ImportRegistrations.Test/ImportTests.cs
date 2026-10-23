@@ -5,6 +5,8 @@ using NkodSk.RdfFileStorage;
 using System.Data;
 using System.Security.Policy;
 using TestBase;
+using VDS.RDF;
+using VDS.RDF.Parsing;
 using VDS.RDF.Query.Algebra;
 using static Lucene.Net.Documents.Field;
 using static Lucene.Net.Util.Packed.PackedInt32s;
@@ -309,7 +311,14 @@ namespace ImportRegistrations.Test
 
             await import.Import();
 
-            datasetSerie.IsSerie = true;
+            IUriNode typeNode = datasetSerie.Graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode seriesClassNode = datasetSerie.Graph.CreateUriNode("dcat:DatasetSeries");
+            foreach (var node in datasetSerie.Graph.GetTriplesWithSubjectPredicate(datasetSerie.Node, typeNode).ToList())
+            {
+                datasetPart.Graph.Retract(node);
+            }
+
+            datasetSerie.Graph.Assert(datasetSerie.Node, typeNode, seriesClassNode);
 
             FileStorageResponse importedDatasets = storage.GetFileStates(new FileStorageQuery
             {

@@ -41,7 +41,6 @@ import PublicLocalCatalogList from './pages/PublicLocalCatalogList';
 import PublicPublisherList from './pages/PublicPublisherList';
 import PublisherList from './pages/PublisherList';
 import PublisherRegistration from './pages/PublisherRegistration';
-import Quality from './pages/Quality';
 import RegisterUser from './pages/RegisterUser';
 import Sparql from './pages/Sparql';
 import SuggestionDetail from './pages/SuggestionDetail';
@@ -241,7 +240,6 @@ function App(props: Props) {
                                     <Route path="/lokalne-katalogy/:id" element={<DetailLocalCatalog />} />
                                     <Route path="/lokalne-katalogy" element={<PublicLocalCatalogList />} />
                                     <Route path="/sparql" Component={Sparql} />
-                                    <Route path="/kvalita-metadat" Component={Quality} />
                                     <Route path="/nastavenie-upozorneni" Component={NotificationSettings} />
 
                                     <Route path="/pozvanka" Component={Invitation} />
@@ -321,8 +319,8 @@ function App(props: Props) {
                                     <Route path="/zabudnute-heslo" Component={ForgottenPassword} />
                                     <Route path="/obnova-hesla" Component={ForgottenPasswordActivation} />
 
-                                    <Route path="/kvalita-metadat-new" Component={PublishersDataQuality} />
-                                    <Route path="/kvalita-metadat-new/:id" Component={PublisherDataQualityDetail} />
+                                    <Route path="/kvalita-metadat" Component={PublishersDataQuality} />
+                                    <Route path="/kvalita-metadat/:id" Component={PublisherDataQualityDetail} />
 
                                     <Route path="*" Component={NotFound} />
                                 </Routes>
