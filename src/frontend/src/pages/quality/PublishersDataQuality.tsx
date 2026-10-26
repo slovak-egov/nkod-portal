@@ -307,10 +307,6 @@ export default function PublishersDataQuality() {
                                     header: 'Kvalita datasetov',
                                     sortProperty: sortExpressions.datasetQuality,
                                     value: (r) => {
-                                        const useDatasetCount = Math.max(asNumber(r?.datasetsCount), 0);
-                                        const useDataseriesCount = Math.max(asNumber(r?.dataSeriesCount), 0);
-                                        const pureDatasetCount = Math.max(useDatasetCount - useDataseriesCount, 0);
-
                                         const datasetQualityCount = [];
                                         for (let i = 1; i <= 5; i++) {
                                             datasetQualityCount.push(
@@ -319,7 +315,14 @@ export default function PublishersDataQuality() {
                                         }
 
                                         const datasetQualitySum = datasetQualityCount[2] + datasetQualityCount[3] + datasetQualityCount[4];
-                                        return <Indicator numerator={datasetQualitySum} denominator={pureDatasetCount} />;
+
+                                        const datasetQualitySumAll =
+                                            datasetQualityCount[0] +
+                                            datasetQualityCount[1] +
+                                            datasetQualityCount[2] +
+                                            datasetQualityCount[3] +
+                                            datasetQualityCount[4];
+                                        return <Indicator numerator={datasetQualitySum} denominator={datasetQualitySumAll} />;
                                     }
                                 },
                                 {
