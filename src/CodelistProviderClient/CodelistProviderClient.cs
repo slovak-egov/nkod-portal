@@ -76,14 +76,7 @@ namespace CodelistProviderClient
         public async Task<CodelistItem?> GetCodelistItem(string codelistId, string itemId)
         {
             Codelist? codelist = await GetCodelist(codelistId).ConfigureAwait(false);
-            if (codelist is not null)
-            {
-                if (codelist.Items.TryGetValue(itemId, out CodelistItem? codelistItem))
-                {
-                    return codelistItem;
-                }
-            }
-            return null;
+            return codelist?.GetItem(itemId);
         }
 
         public async Task<bool> UpdateCodelist(Stream stream)

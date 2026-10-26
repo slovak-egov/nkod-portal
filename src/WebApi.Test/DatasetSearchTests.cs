@@ -254,6 +254,44 @@ namespace WebApi.Test
         }
 
         [Fact]
+        public async Task FilterByCodelistShortId()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreateCodelistFile(DcatDataset.TypeCodelist, new Dictionary<string, LanguageDependedTexts>
+            {
+                { "http://data.gov.sk/1", new LanguageDependedTexts { { "sk", "type1" } } },
+                { "http://data.gov.sk/2", new LanguageDependedTexts { { "sk", "type2" } } }
+            });
+            Guid id1 = fixture.CreateDataset("Cestovné poriadky", PublisherId, type: new Uri("http://data.gov.sk/1"));
+            Guid id2 = fixture.CreateDataset("Zoznam faktúr", "http://example.com/publisher2");
+            Guid id3 = fixture.CreateDataset("Kompletný zoznam objednávok", "http://example.com/publisher2", type: new Uri("http://data.gov.sk/2"));
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+
+            AbstractResponse<DatasetView> result;
+
+            result = await client.SearchDatasets(JsonContent.Create(new { Filters = new Dictionary<string, string[]> { { DcatDataset.TypeCodelist, new[] { "1" } } } }));
+            Assert.Equal(new[] { id1 }, result.Items.Select(i => i.Id));
+
+            // Short ids and IRIs can be combined
+            result = await client.SearchDatasets(JsonContent.Create(new { Filters = new Dictionary<string, string[]> { { DcatDataset.TypeCodelist, new[] { "1", "http://data.gov.sk/2" } } } }));
+            Assert.Equal(new[] { id3, id1 }, result.Items.Select(i => i.Id));
+
+            // Unknown short id gives an empty result
+            result = await client.SearchDatasets(JsonContent.Create(new { Filters = new Dictionary<string, string[]> { { DcatDataset.TypeCodelist, new[] { "1", "not-existing" } } } }));
+            Assert.Equal(0, result.TotalCount);
+            Assert.Empty(result.Items);
+
+            // Value which is neither IRI nor short id is not passed to the storage
+            result = await client.SearchDatasets(JsonContent.Create(new { Filters = new Dictionary<string, string[]> { { DcatDataset.TypeCodelist, new[] { "1", "not a short id" } } } }));
+            Assert.Equal(0, result.TotalCount);
+            Assert.Empty(result.Items);
+        }
+
+        [Fact]
         public async Task FilterByKeywords()
         {
             string path = fixture.GetStoragePath();

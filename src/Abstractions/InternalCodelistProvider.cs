@@ -186,10 +186,7 @@ namespace NkodSk.Abstractions
             ImmutableDictionary<string, Codelist>? codelists = this.codelists;
             if (codelists is not null && codelists.TryGetValue(codelistId, out Codelist? codelist))
             {
-                if (codelist.Items.TryGetValue(itemId, out CodelistItem? codelistItem))
-                {
-                    return codelistItem;
-                }
+                return codelist.GetItem(itemId);
             }
             return null;
         }

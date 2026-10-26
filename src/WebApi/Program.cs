@@ -364,8 +364,13 @@ FileStorageQuery MapQuery(AbstractQuery query, string language, bool allowAll = 
     return storageQuery;
 }
 
-async Task<FileStorageResponse> GetStorageResponse(AbstractQuery query, string language, Func<FileStorageQuery, FileStorageQuery> storageQueryDecorator, IDocumentStorageClient client, bool allowAll = false)
+async Task<FileStorageResponse> GetStorageResponse(AbstractQuery query, string language, Func<FileStorageQuery, FileStorageQuery> storageQueryDecorator, IDocumentStorageClient client, ICodelistProviderClient codelistProviderClient, bool allowAll = false)
 {
+    if (!await CodelistFilterResolver.ResolveShortIds(query.Filters, codelistProviderClient).ConfigureAwait(false))
+    {
+        return new FileStorageResponse(new List<FileState>(), 0, new List<Facet>());
+    }
+
     FileStorageQuery? storageQuery = MapQuery(query, language, allowAll);
 
     if (storageQuery.AdditionalFilters is not null)
@@ -456,10 +461,15 @@ async Task<Dictionary<string, PublisherView>> FetchPublishers(IDocumentStorageCl
     return publishers;
 }
 
-app.MapPost("/publishers/search", async ([FromBody] PublisherQuery query, [FromServices] IDocumentStorageClient client, [FromServices] TelemetryClient? telemetryClient) => {
+app.MapPost("/publishers/search", async ([FromBody] PublisherQuery query, [FromServices] IDocumentStorageClient client, [FromServices] ICodelistProviderClient codelistProviderClient, [FromServices] TelemetryClient? telemetryClient) => {
     try
     {
         string language = query.Language ?? "sk";
+
+        if (!await CodelistFilterResolver.ResolveShortIds(query.Filters, codelistProviderClient).ConfigureAwait(false))
+        {
+            return Results.Ok(new AbstractResponse<PublisherView>());
+        }
 
         FileStorageQuery groupQuery = MapQuery(query, language, true);
 
@@ -518,7 +528,7 @@ app.MapPost("/datasets/search", async ([FromBody] DatasetQuery query, [FromServi
                 q.OnlyTypes = new List<FileType> { FileType.DatasetRegistration };
                 q.IncludeDependentFiles = true;
                 return q;
-            }, client, isAuthenticated).ConfigureAwait(false);
+            }, client, codelistProviderClient, isAuthenticated).ConfigureAwait(false);
         } 
         catch (BadHttpRequestException)
         {
@@ -600,7 +610,7 @@ app.MapPost("/distributions/search", async ([FromBody] DatasetQuery query, [From
         {
             q.OnlyTypes = new List<FileType> { FileType.DistributionRegistration };
             return q;
-        }, client, isAuthenticated).ConfigureAwait(false);
+        }, client, codelistProviderClient, isAuthenticated).ConfigureAwait(false);
         AbstractResponse<DistributionView> response = new AbstractResponse<DistributionView>
         {
             TotalCount = storageResponse.TotalCount,
@@ -648,7 +658,7 @@ app.MapPost("/local-catalogs/search", async ([FromBody] LocalCatalogsQuery query
         FileStorageResponse storageResponse = await GetStorageResponse(query, language, q => {
             q.OnlyTypes = new List<FileType> { FileType.LocalCatalogRegistration };
             return q;
-        }, client, isAuthenticated).ConfigureAwait(false);
+        }, client, codelistProviderClient, isAuthenticated).ConfigureAwait(false);
         AbstractResponse<LocalCatalogView> response = new AbstractResponse<LocalCatalogView>
         {
             TotalCount = storageResponse.TotalCount,

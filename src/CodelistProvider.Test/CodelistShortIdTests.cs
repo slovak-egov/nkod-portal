@@ -88,6 +88,24 @@ namespace CodelistProvider.Test
         }
 
         [Fact]
+        public async Task ItemShouldBeFoundByShortId()
+        {
+            using Storage storage = new Storage(fixture.GetStoragePath());
+            TestDocumentStorageClient storageClient = new TestDocumentStorageClient(storage, AnonymousAccessPolicy.Default);
+            InternalCodelistProvider provider = new InternalCodelistProvider(storageClient, new DefaultLanguagesSource(), null);
+
+            CodelistItem? item = await provider.GetCodelistItem(DcatDataset.AccrualPeriodicityCodelist, "annual");
+            Assert.NotNull(item);
+            Assert.Equal("http://publications.europa.eu/resource/authority/frequency/ANNUAL", item.Id);
+
+            item = await provider.GetCodelistItem(DcatDataset.AccrualPeriodicityCodelist, "http://publications.europa.eu/resource/authority/frequency/ANNUAL");
+            Assert.NotNull(item);
+            Assert.Equal("ANNUAL", item.ShortId);
+
+            Assert.Null(await provider.GetCodelistItem(DcatDataset.AccrualPeriodicityCodelist, "not-existing"));
+        }
+
+        [Fact]
         public async Task ShortIdsShouldBePreservedAcrossUpdates()
         {
             using Storage storage = new Storage(fixture.GetStoragePath(false));

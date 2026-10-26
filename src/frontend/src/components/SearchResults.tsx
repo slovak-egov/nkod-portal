@@ -1,5 +1,5 @@
 import { PropsWithChildren } from 'react';
-import { Codelist, Facet, RequestQuery, useCodelists, usePublishers } from '../client';
+import { Codelist, CodelistValue, Facet, RequestQuery, getCodelistFilterValue, isCodelistValueSelected, useCodelists, usePublishers } from '../client';
 import FormElementGroup from './FormElementGroup';
 import GridColumn from './GridColumn';
 import GridRow from './GridRow';
@@ -87,25 +87,27 @@ function CodelistFilter(props: { codelist: Codelist; facet?: Facet; selectedValu
     const codelist = props.codelist;
     const codelistId = codelist.id;
     const facet = props.facet;
-    const options: FilterValue[] = [];
+    // Facets contain full IRIs, filter values are short ids when available
+    const options: (FilterValue & { value: CodelistValue })[] = [];
     if (facet) {
-        const valuesByKey: { [id: string]: string } = {};
-        codelist.values.forEach((v) => (valuesByKey[v.id] = v.label));
+        const valuesByKey: { [id: string]: CodelistValue } = {};
+        codelist.values.forEach((v) => (valuesByKey[v.id] = v));
 
         const sorted = Object.entries(facet.values)
             .filter(([_, count]) => count > 0)
             .sort((a, b) => b[1] - a[1]);
         sorted.forEach(([id, count]) => {
-            const label = valuesByKey[id];
-            if (label) {
+            const value = valuesByKey[id];
+            if (value?.label) {
                 options.push({
-                    id: id,
-                    label: label + ' (' + count + ')'
+                    id: getCodelistFilterValue(value),
+                    label: value.label + ' (' + count + ')',
+                    value: value
                 });
             }
         });
     } else {
-        options.push(...codelist.values.map((v) => ({ id: v.id, label: v.label })));
+        options.push(...codelist.values.map((v) => ({ id: getCodelistFilterValue(v), label: v.label, value: v })));
     }
 
     if (options.length > 0) {
@@ -118,7 +120,7 @@ function CodelistFilter(props: { codelist: Codelist; facet?: Facet; selectedValu
                 items={options}
                 getLabel={(e) => e.label}
                 getValue={(e) => e.id}
-                selectedItems={options.filter((o) => props.selectedValues.includes(o.id))}
+                selectedItems={options.filter((o) => isCodelistValueSelected(o.value, props.selectedValues))}
                 onSelectionChange={(e) => props.onChange(e.map((o) => o.id))}
             />
         );
