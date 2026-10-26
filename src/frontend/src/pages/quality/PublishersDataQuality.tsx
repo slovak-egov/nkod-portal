@@ -258,7 +258,7 @@ export default function PublishersDataQuality() {
                                     headerStyle: { width: '100px' },
                                     cellStyle: { width: '100px' },
                                     value: (r) => (
-                                        <Link to={'/kvalita-metadat-new/' + encodeURIComponent(r.id?.value ?? '')} className="idsk-card-title govuk-link">
+                                        <Link to={'/kvalita-metadat/' + encodeURIComponent(r.id?.value ?? '')} className="idsk-card-title govuk-link">
                                             {r?.name?.value ?? ''}
                                         </Link>
                                     ),
