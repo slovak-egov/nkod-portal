@@ -404,7 +404,7 @@ export default function PublisherDataQualityDetail() {
                                 <div className="nkod-detail-attribute">
                                     <div className="govuk-body nkod-detail-attribute-name">Kvalita datasetov</div>
                                     <div className="govuk-body nkod-detail-attribute-value" data-testid="themes" style={{ wordBreak: 'break-word' }}>
-                                        <Indicator numerator={datasetQualitySum} denominator={pureDatasetCount} />
+                                        <Indicator numerator={datasetQualitySum} denominator={datasetQualitySumAll} />
                                     </div>
                                 </div>,
                                 <div className="nkod-detail-attribute">
