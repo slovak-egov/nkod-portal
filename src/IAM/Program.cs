@@ -12,9 +12,6 @@ using ITfoxtec.Identity.Saml2.MvcCore.Configuration;
 using ITfoxtec.Identity.Saml2.Schemas;
 using ITfoxtec.Identity.Saml2.Schemas.Metadata;
 using ITfoxtec.Identity.Saml2.Util;
-using Microsoft.ApplicationInsights;
-using Microsoft.ApplicationInsights.DataContracts;
-using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -46,7 +43,6 @@ using System.Text.RegularExpressions;
 using System.Web;
 using System.Xml.Schema;
 using VDS.RDF;
-using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -182,13 +178,13 @@ builder.Services.AddApplicationInsightsTelemetry(options =>
     options.ConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
     options.EnableAdaptiveSampling = false;
 });
-builder.Services.AddSingleton<ITelemetryInitializer, RequestTelementryInitializer>();
 
 string? frontendUrl = builder.Configuration["FrontendUrl"];
 EmailOptions? emailOptions = builder.Configuration.GetSection("EmailOptions").Get<EmailOptions>();
 builder.Services.AddSingleton<IEmailService>(_ => new SmtpEmailService(emailOptions?.Host, emailOptions?.Port ?? 25, emailOptions?.Username, emailOptions?.Password, emailOptions?.UseSsl ?? false, emailOptions?.FromAddress, emailOptions?.FromName));
 
 builder.Logging.AddConsole();
+builder.Services.AddSingleton<AuditLog>();
 
 WebApplication app = builder.Build();
 
@@ -349,7 +345,7 @@ app.MapGet("/users", [Authorize] async ([FromServices] ApplicationDbContext cont
     }
 });
 
-app.MapPost("/users", [Authorize] async ([FromServices] ApplicationDbContext context, ClaimsPrincipal user, [FromBody] NewUserInput? input, IOptions<MainConfigurationOptions> mainConfigurationOptions, [FromServices] IEmailService emailService) =>
+app.MapPost("/users", [Authorize] async ([FromServices] ApplicationDbContext context, ClaimsPrincipal user, [FromBody] NewUserInput? input, IOptions<MainConfigurationOptions> mainConfigurationOptions, [FromServices] IEmailService emailService, [FromServices] AuditLog audit, HttpContext httpContext) =>
 {
     string? publisherId = user.GetAuthorizedPublisherId();
 
@@ -396,6 +392,8 @@ app.MapPost("/users", [Authorize] async ([FromServices] ApplicationDbContext con
                 context.Users.Add(record);
                 await context.SaveChangesAsync();
 
+                audit.Success(httpContext, "UserCreate", record.Id, $"role={record.Role}; publisher={publisherId}");
+
                 if (!string.IsNullOrEmpty(password))
                 {
                     string text = "Vážený používateľ,<br>" +
@@ -426,11 +424,12 @@ app.MapPost("/users", [Authorize] async ([FromServices] ApplicationDbContext con
     }
     else
     {
+        audit.Failure(httpContext, "UserCreate", "NotAuthorized");
         return Results.Forbid();
     }
 });
 
-app.MapPut("/users", [Authorize] async ([FromServices] ApplicationDbContext context, ClaimsPrincipal user, [FromBody] EditUserInput? input) =>
+app.MapPut("/users", [Authorize] async ([FromServices] ApplicationDbContext context, ClaimsPrincipal user, [FromBody] EditUserInput? input, [FromServices] AuditLog audit, HttpContext httpContext) =>
 {
     string? publisherId = user.GetAuthorizedPublisherId();
 
@@ -445,12 +444,17 @@ app.MapPut("/users", [Authorize] async ([FromServices] ApplicationDbContext cont
                 ValidationResults validationResults = input.Validate();
                 if (validationResults.IsValid)
                 {
+                    string? previousRole = record.Role;
+                    bool emailChanged = !string.Equals(record.Email, input.Email ?? string.Empty, StringComparison.Ordinal);
+
                     record.Email = input.Email ?? string.Empty;
                     record.Role = input.Role;
                     record.FirstName = input.FirstName ?? string.Empty;
                     record.LastName = input.LastName ?? string.Empty;
                     record.InvitedAt = DateTimeOffset.Now;
                     await context.SaveChangesAsync();
+
+                    audit.Success(httpContext, "UserUpdate", record.Id, $"role={previousRole}->{record.Role}; emailChanged={emailChanged}; publisher={publisherId}");
                     result.Id = record.Id;
                     result.Success = true;
                     result.InvitationToken = record.InvitationToken;
@@ -470,11 +474,12 @@ app.MapPut("/users", [Authorize] async ([FromServices] ApplicationDbContext cont
     }
     else
     {
+        audit.Failure(httpContext, "UserUpdate", "NotAuthorized", input?.Id);
         return Results.Forbid();
     }
 });
 
-app.MapDelete("/users", [Authorize] async ([FromServices] ApplicationDbContext context, ClaimsPrincipal user, [FromQuery] string? id) =>
+app.MapDelete("/users", [Authorize] async ([FromServices] ApplicationDbContext context, ClaimsPrincipal user, [FromQuery] string? id, [FromServices] AuditLog audit, HttpContext httpContext) =>
 {
     string? publisherId = user.GetAuthorizedPublisherId();
 
@@ -487,10 +492,12 @@ app.MapDelete("/users", [Authorize] async ([FromServices] ApplicationDbContext c
             {
                 context.Users.Remove(record);
                 await context.SaveChangesAsync();
+                audit.Success(httpContext, "UserDelete", record.Id, $"role={record.Role}; publisher={publisherId}");
                 return Results.Ok();
             }
             else
             {
+                audit.Failure(httpContext, "UserDelete", "NotFound", id);
                 return Results.NotFound();
             }
         }
@@ -501,6 +508,7 @@ app.MapDelete("/users", [Authorize] async ([FromServices] ApplicationDbContext c
     }
     else
     {
+        audit.Failure(httpContext, "UserDelete", "NotAuthorized", id);
         return Results.Forbid();
     }
 });
@@ -562,8 +570,11 @@ app.MapGet("/user-info", [Authorize] async ([FromServices] ApplicationDbContext 
     }
 });
 
-app.MapPost("/refresh", async ([FromServices] ApplicationDbContext context, [FromBody] RefreshTokenRequest? request, [FromServices] SigningCredentials signingCredentials, [FromServices] IConfiguration configuration, HttpContext httpContext) =>
+app.MapPost("/refresh", async ([FromServices] ApplicationDbContext context, [FromBody] RefreshTokenRequest? request, [FromServices] SigningCredentials signingCredentials, [FromServices] IConfiguration configuration, HttpContext httpContext, [FromServices] AuditLog audit) =>
 {
+    string failureReason = "MissingTokens";
+    string? failedUserId = null;
+
     if (!string.IsNullOrEmpty(request?.RefreshToken) && !string.IsNullOrEmpty(request.AccessToken))
     {
         TokenValidationParameters tokenValidationParameters = new TokenValidationParameters
@@ -581,14 +592,22 @@ app.MapPost("/refresh", async ([FromServices] ApplicationDbContext context, [Fro
         try
         {
             ClaimsPrincipal principal = tokenHandler.ValidateToken(request.AccessToken, tokenValidationParameters, out SecurityToken securityToken);
+            failureReason = "UnknownUser";
             if (principal is not null)
             {
                 string? id = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                failedUserId = id;
                 if (id is not null)
                 {
                     UserRecord? record = await context.Users.FindAsync(id);
+                    if (record is not null)
+                    {
+                        failureReason = "RefreshTokenExpired";
+                    }
                     if (record is not null && record.RefreshTokenExpiryTime.HasValue && record.RefreshTokenExpiryTime.Value > DateTimeOffset.Now)
                     {
+                        failureReason = "RefreshTokenMismatch";
+
                         int refreshTokenLen = record.RefreshToken?.Length ?? 0;
                         bool areEqual = true;
 
@@ -619,21 +638,24 @@ app.MapPost("/refresh", async ([FromServices] ApplicationDbContext context, [Fro
                 }
             }
         }
-        catch
+        catch (Exception e)
         {
-            //ignore
+            failureReason = e is SecurityTokenException or ArgumentException ? "InvalidAccessToken" : "Error";
         }
     }
 
+    audit.Failure(httpContext, "TokenRefresh", failureReason, failedUserId, actorId: failedUserId);
     return Results.Ok(new TokenResult());
 });
 
-app.MapGet("/logout", [Authorize] async ([FromServices] ApplicationDbContext context, HttpRequest request, ClaimsPrincipal user, [FromServices] Saml2Configuration saml2Configuration, [FromServices] IConfiguration configuration, [FromServices] ILogger<Program> logger) =>
+app.MapGet("/logout", [Authorize] async ([FromServices] ApplicationDbContext context, HttpRequest request, ClaimsPrincipal user, [FromServices] Saml2Configuration saml2Configuration, [FromServices] IConfiguration configuration, [FromServices] ILogger<Program> logger, [FromServices] AuditLog audit) =>
 {
     string? method = user.FindFirstValue(ClaimTypes.AuthenticationMethod);
 
     if (string.Equals(method, "Native") || string.Equals(method, "Google"))
     {
+        audit.Success(request.HttpContext, "Logout", details: $"method={method}");
+
         string? id = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (id is not null)
@@ -665,11 +687,12 @@ app.MapGet("/logout", [Authorize] async ([FromServices] ApplicationDbContext con
         binding.ReadSamlResponse(genericRequest, saml2AuthnResponse);
         if (saml2AuthnResponse.Status != Saml2StatusCodes.Success)
         {
-            logger.LogInformation($"SAML Response status: {saml2AuthnResponse.Status}");
+            audit.Failure(request.HttpContext, "Logout", $"SamlStatus={saml2AuthnResponse.Status}");
             return Results.BadRequest($"SAML Response status: {saml2AuthnResponse.Status}");
         }
         binding.Unbind(genericRequest, saml2AuthnResponse);
-        logger.LogInformation(saml2AuthnResponse.XmlDocument.OuterXml);
+        logger.LogDebug("SAML logout response: {SamlXml}", saml2AuthnResponse.XmlDocument.OuterXml);
+        audit.Success(request.HttpContext, "Logout", details: "method=Saml");
 
         string? id = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
@@ -702,7 +725,8 @@ app.MapGet("/logout", [Authorize] async ([FromServices] ApplicationDbContext con
 
             binding.ReadSamlRequest(genericRequest, logoutRequest);
             binding.Unbind(genericRequest, logoutRequest);
-            logger.LogInformation(logoutRequest.XmlDocument.OuterXml);
+            logger.LogDebug("SAML logout request from IdP: {SamlXml}", logoutRequest.XmlDocument.OuterXml);
+            audit.Success(request.HttpContext, "Logout", details: "method=SamlIdpInitiated");
 
             Saml2RedirectBinding responseBinding = new Saml2RedirectBinding();
             responseBinding.RelayState = binding.RelayState;
@@ -715,7 +739,7 @@ app.MapGet("/logout", [Authorize] async ([FromServices] ApplicationDbContext con
 
             Saml2RedirectBinding redirectBinding = responseBinding.Bind(response);
 
-            logger.LogInformation(redirectBinding.XmlDocument.OuterXml);
+            logger.LogDebug("SAML logout response to IdP: {SamlXml}", redirectBinding.XmlDocument.OuterXml);
 
             return Results.Ok(new DelegationAuthorizationResult
             {
@@ -733,7 +757,7 @@ app.MapGet("/logout", [Authorize] async ([FromServices] ApplicationDbContext con
 
             Saml2RedirectBinding redirectBinding = binding.Bind(logoutRequest);
 
-            logger.LogInformation(logoutRequest.XmlDocument.OuterXml);
+            logger.LogDebug("SAML logout request to IdP: {SamlXml}", logoutRequest.XmlDocument.OuterXml);
 
             return Results.Ok(new DelegationAuthorizationResult
             {
@@ -743,7 +767,7 @@ app.MapGet("/logout", [Authorize] async ([FromServices] ApplicationDbContext con
     }
 });
 
-app.MapPost("/delegate-publisher", [Authorize] async ([FromServices] ApplicationDbContext context, ClaimsPrincipal user, [FromServices] SigningCredentials signingCredentials, [FromServices] IConfiguration configuration, [FromQuery] string? publisher) =>
+app.MapPost("/delegate-publisher", [Authorize] async ([FromServices] ApplicationDbContext context, ClaimsPrincipal user, [FromServices] SigningCredentials signingCredentials, [FromServices] IConfiguration configuration, [FromQuery] string? publisher, [FromServices] AuditLog audit, HttpContext httpContext) =>
 {
     if (user.IsInRole("Superadmin"))
     {
@@ -753,20 +777,24 @@ app.MapPost("/delegate-publisher", [Authorize] async ([FromServices] Application
             UserRecord? record = await context.Users.FindAsync(id);
             if (record is not null)
             {
+                audit.Success(httpContext, "DelegatePublisher", publisher);
                 return Results.Ok(await CreateToken(context, record, configuration, signingCredentials, false, user.Claims, publisher));
             }
             else
             {
+                audit.Failure(httpContext, "DelegatePublisher", "UnknownUser", publisher);
                 return Results.Forbid();
             }
         }
         else
         {
+            audit.Failure(httpContext, "DelegatePublisher", "UnknownUser", publisher);
             return Results.Forbid();
         }
     }
     else
     {
+        audit.Failure(httpContext, "DelegatePublisher", "NotSuperadmin", publisher);
         return Results.Forbid();
     }
 });
@@ -812,27 +840,37 @@ app.MapGet("/login", ([FromServices] Saml2Configuration saml2Configuration, [Fro
 
     Saml2RedirectBinding redirectBinding = binding.Bind(request);
 
-    logger.LogInformation(request.XmlDocument.OuterXml);
-    
+    logger.LogDebug("SAML authn request: {SamlXml}", request.XmlDocument.OuterXml);
+
     return Results.Ok(new DelegationAuthorizationResult
     {
         RedirectUrl = redirectBinding.RedirectLocation.OriginalString
     });
 });
 
-app.MapPost("/login", async ([FromBody] LoginInput? input, [FromServices] ApplicationDbContext context, [FromServices] SigningCredentials signingCredentials, IOptions<MainConfigurationOptions> mainConfigurationOptions, IConfiguration configuration) =>
+app.MapPost("/login", async ([FromBody] LoginInput? input, [FromServices] ApplicationDbContext context, [FromServices] SigningCredentials signingCredentials, IOptions<MainConfigurationOptions> mainConfigurationOptions, IConfiguration configuration, [FromServices] AuditLog audit, HttpContext httpContext) =>
 {
     if (!string.IsNullOrEmpty(input?.Email) && !string.IsNullOrEmpty(input?.Password))
     {
         UserRecord? user = await context.Users.FirstOrDefaultAsync(u => u.Email == input.Email && u.IsActive);
-        if (user is not null && !string.IsNullOrWhiteSpace(user.Password) && user.VerifyPassword(input.Password))
+        if (user is null || string.IsNullOrWhiteSpace(user.Password))
         {
-            if (user.Role == "CommunityUser" || mainConfigurationOptions.Value.UsePasswordForPublisherAccounts)
-            {
-                List<Claim> customClaims = new List<Claim> { new Claim(ClaimTypes.AuthenticationMethod, "Native") };
+            audit.Failure(httpContext, "Login", "UnknownOrInactiveUser", emailHash: audit.HashEmail(input.Email));
+        }
+        else if (!user.VerifyPassword(input.Password))
+        {
+            audit.Failure(httpContext, "Login", "InvalidPassword", user.Id);
+        }
+        else if (user.Role == "CommunityUser" || mainConfigurationOptions.Value.UsePasswordForPublisherAccounts)
+        {
+            List<Claim> customClaims = new List<Claim> { new Claim(ClaimTypes.AuthenticationMethod, "Native") };
 
-                return Results.Ok(await CreateToken(context, user, configuration, signingCredentials, mainConfigurationOptions.Value.UsePasswordForPublisherAccounts, customClaims));
-            }
+            audit.Success(httpContext, "Login", user.Id, "method=Native", actorId: user.Id);
+            return Results.Ok(await CreateToken(context, user, configuration, signingCredentials, mainConfigurationOptions.Value.UsePasswordForPublisherAccounts, customClaims));
+        }
+        else
+        {
+            audit.Failure(httpContext, "Login", "NativeLoginNotAllowedForRole", user.Id);
         }
     }
 
@@ -849,7 +887,7 @@ string CreateRandomString()
     return Convert.ToBase64String(buffer).Trim('=');
 }
 
-app.MapPost("/register", async ([FromBody] UserRegistrationInput? input, [FromServices] ApplicationDbContext context, [FromServices] IEmailService emailService) =>
+app.MapPost("/register", async ([FromBody] UserRegistrationInput? input, [FromServices] ApplicationDbContext context, [FromServices] IEmailService emailService, [FromServices] AuditLog audit, HttpContext httpContext) =>
 {
     SaveResult result = new SaveResult();
 
@@ -890,6 +928,8 @@ app.MapPost("/register", async ([FromBody] UserRegistrationInput? input, [FromSe
                 await context.SaveChangesAsync();
                 tx.Commit();
 
+                audit.Success(httpContext, "Register", user.Id, actorId: user.Id);
+
                 string link = $"{frontendUrl}potvrdenie-registracie?id={HttpUtility.UrlEncode(user.Id)}&token={HttpUtility.UrlEncode(user.ActivationToken)}";
                 string encodedLink = HttpUtility.HtmlEncode(link);
 
@@ -909,6 +949,7 @@ app.MapPost("/register", async ([FromBody] UserRegistrationInput? input, [FromSe
             }
             else
             {
+                audit.Failure(httpContext, "Register", "EmailAlreadyRegistered", emailHash: audit.HashEmail(input.Email));
                 validationResults.AddError(nameof(input.Email), "E-mail je už zaregistrovaný");
             }
         }
@@ -917,7 +958,7 @@ app.MapPost("/register", async ([FromBody] UserRegistrationInput? input, [FromSe
     return Results.Ok(result);
 });
 
-app.MapPost("/activation", async ([FromBody] ActivationInput? input, [FromServices] ApplicationDbContext context) =>
+app.MapPost("/activation", async ([FromBody] ActivationInput? input, [FromServices] ApplicationDbContext context, [FromServices] AuditLog audit, HttpContext httpContext) =>
 {
     SaveResult result = new SaveResult();
     ValidationResults results = new ValidationResults();
@@ -937,17 +978,25 @@ app.MapPost("/activation", async ([FromBody] ActivationInput? input, [FromServic
                     user.ActivatedAt = DateTimeOffset.Now;
                     await context.SaveChangesAsync();
 
+                    audit.Success(httpContext, "Activation", user.Id, actorId: user.Id);
+
                     result.Id = user.Id;
                     result.Success = true;
+                }
+                else
+                {
+                    audit.Failure(httpContext, "Activation", "TokenMismatch", user.Id);
                 }
             }
             else
             {
+                audit.Failure(httpContext, "Activation", "TokenExpired", user.Id);
                 results.AddError(nameof(input.Token), "Overenie aktivácie exspirovalo");
             }
         }
         else
         {
+            audit.Failure(httpContext, "Activation", "NoPendingActivation", input.Id);
             results.AddError(nameof(input.Token), "Overenie aktivácie nie je platné");
         }
     }
@@ -961,7 +1010,7 @@ app.MapPost("/activation", async ([FromBody] ActivationInput? input, [FromServic
     return Results.Ok(result);
 });
 
-app.MapPost("/recovery", async ([FromBody] PasswordRecoveryInput? input, [FromServices] ApplicationDbContext context, [FromServices] IEmailService emailService) =>
+app.MapPost("/recovery", async ([FromBody] PasswordRecoveryInput? input, [FromServices] ApplicationDbContext context, [FromServices] IEmailService emailService, [FromServices] AuditLog audit, HttpContext httpContext) =>
 {
     SaveResult result = new SaveResult();
 
@@ -1004,16 +1053,20 @@ app.MapPost("/recovery", async ([FromBody] PasswordRecoveryInput? input, [FromSe
 
                     await emailService.SendEmail(user.Email, "Aktivácia žiadosti o obnovu hesla", text);
 
+                    audit.Success(httpContext, "PasswordRecoveryRequest", user.Id, $"sentTimes={user.RecoveryTokenSentTimes}");
+
                     result.Id = user.Id;
                     result.Success = true;
                 }
                 else
                 {
+                    audit.Failure(httpContext, "PasswordRecoveryRequest", "TooManyRequests", user.Id);
                     validationResults.AddError(nameof(input.Email), "Pre túto e-mailovú adresu boli odoslané príliš veľa požiadaviek na obnovu hesla");
                 }
             }
             else
             {
+                audit.Failure(httpContext, "PasswordRecoveryRequest", "UnknownOrInactiveUser", emailHash: audit.HashEmail(input.Email));
                 validationResults.AddError(nameof(input.Email), "Konto pre zadanú e-mailovú adresu nebolo nájdené");
             }
         }
@@ -1024,7 +1077,7 @@ app.MapPost("/recovery", async ([FromBody] PasswordRecoveryInput? input, [FromSe
     return Results.Ok(result);
 });
 
-app.MapPost("/recovery-activation", async ([FromBody] PasswordRecoveryConfirmationInput? input, [FromServices] ApplicationDbContext context, [FromServices] IEmailService emailService) =>
+app.MapPost("/recovery-activation", async ([FromBody] PasswordRecoveryConfirmationInput? input, [FromServices] ApplicationDbContext context, [FromServices] IEmailService emailService, [FromServices] AuditLog audit, HttpContext httpContext) =>
 {
     SaveResult result = new SaveResult();
     ValidationResults results = new ValidationResults();
@@ -1044,17 +1097,25 @@ app.MapPost("/recovery-activation", async ([FromBody] PasswordRecoveryConfirmati
                     user.SetPassword(input.Password);
                     await context.SaveChangesAsync();
 
+                    audit.Success(httpContext, "PasswordRecovery", user.Id, actorId: user.Id);
+
                     result.Id = user.Id;
                     result.Success = true;
+                }
+                else
+                {
+                    audit.Failure(httpContext, "PasswordRecovery", "TokenMismatch", user.Id);
                 }
             }
             else
             {
+                audit.Failure(httpContext, "PasswordRecovery", "TokenExpired", user.Id);
                 results.AddError(nameof(input.Token), "Overenie aktivácie exspirovalo");
             }
         }
         else
         {
+            audit.Failure(httpContext, "PasswordRecovery", "NoPendingRecovery", input.Id);
             results.AddError(nameof(input.Token), "Overenie aktivácie nie je platné");
         }
     }
@@ -1068,7 +1129,7 @@ app.MapPost("/recovery-activation", async ([FromBody] PasswordRecoveryConfirmati
     return Results.Ok(result);
 });
 
-app.MapPost("/change-password", [Authorize] async ([FromBody] PasswordChangeInput? input, [FromServices] ApplicationDbContext context, ClaimsPrincipal principal) =>
+app.MapPost("/change-password", [Authorize] async ([FromBody] PasswordChangeInput? input, [FromServices] ApplicationDbContext context, ClaimsPrincipal principal, [FromServices] AuditLog audit, HttpContext httpContext) =>
 {
     SaveResult result = new SaveResult();
     input ??= new PasswordChangeInput();
@@ -1089,11 +1150,14 @@ app.MapPost("/change-password", [Authorize] async ([FromBody] PasswordChangeInpu
                     user.SetPassword(input.NewPassword!);
                     await context.SaveChangesAsync();
 
+                    audit.Success(httpContext, "PasswordChange", user.Id);
+
                     result.Id = user.Id;
                     result.Success = true;
                 }
                 else
                 {
+                    audit.Failure(httpContext, "PasswordChange", "InvalidOldPassword", user.Id);
                     validationResults.AddError(nameof(input.OldPassword), "Pôvodné heslo nie je správne");
                 }
             }
@@ -1113,7 +1177,7 @@ app.MapPost("/change-password", [Authorize] async ([FromBody] PasswordChangeInpu
     return Results.Ok(result);
 });
 
-app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configuration, [FromServices] ApplicationDbContext context, HttpRequest request, [FromServices] SigningCredentials signingCredentials, IConfiguration configuration, [FromServices] ILogger<Program> logger, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configuration, [FromServices] ApplicationDbContext context, HttpRequest request, [FromServices] SigningCredentials signingCredentials, IConfiguration configuration, [FromServices] ILogger<Program> logger, [FromServices] AuditLog audit) =>
 {
     Saml2AuthnResponse saml2AuthnResponse = new Saml2AuthnResponse(saml2Configuration);
 
@@ -1123,10 +1187,11 @@ app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configurat
     binding.ReadSamlResponse(genericRequest, saml2AuthnResponse);
     if (saml2AuthnResponse.Status != Saml2StatusCodes.Success)
     {
+        audit.Failure(request.HttpContext, "Login", $"SamlStatus={saml2AuthnResponse.Status}");
         return Results.BadRequest($"SAML Response status: {saml2AuthnResponse.Status}");
     }
     binding.Unbind(genericRequest, saml2AuthnResponse);
-    logger.LogInformation(saml2AuthnResponse.XmlDocument.OuterXml);
+    logger.LogDebug("SAML authn response: {SamlXml}", saml2AuthnResponse.XmlDocument.OuterXml);
 
     string? id = saml2AuthnResponse.ClaimsIdentity.FindFirst("Actor.UPVSIdentityID")?.Value;
     string? firstName = saml2AuthnResponse.ClaimsIdentity.FindFirst("Actor.FirstName")?.Value;
@@ -1138,13 +1203,6 @@ app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configurat
     string? delegationType = saml2AuthnResponse.ClaimsIdentity.FindFirst("DelegationType")?.Value;
     string? formattedName = saml2AuthnResponse.ClaimsIdentity.FindFirst("Actor.FormattedName")?.Value;
 
-    if (telemetryClient is not null)
-    {
-        foreach (Claim claim in saml2AuthnResponse.ClaimsIdentity.Claims)
-        {
-            telemetryClient.TrackTrace($"Claim: {claim.Type} = {claim.Value}");
-        }
-    }
 
     string? invitation = request.Cookies["invitation"];
 
@@ -1166,10 +1224,12 @@ app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configurat
         UserRecord? user = await context.GetOrCreateUser(id, firstName, lastName, email, publisher, invitation, formattedName).ConfigureAwait(false);
         if (user is not null && user.IsActive)
         {
+            audit.Success(request.HttpContext, "Login", user.Id, $"method=Saml; delegationType={delegationType}; publisher={publisher}; invitation={!string.IsNullOrEmpty(invitation)}", actorId: user.Id);
             return Results.Ok(await CreateToken(context, user, configuration, signingCredentials, hasExplicitDelegation, customClaims, companyName: companyName));
         }
         else
         {
+            audit.Success(request.HttpContext, "Login", id, $"method=Saml; activeUser=false; delegationType={delegationType}", actorId: id);
             customClaims.Add(new Claim(ClaimTypes.NameIdentifier, id));
             customClaims.Add(new Claim(ClaimTypes.GivenName, firstName ?? string.Empty));
             customClaims.Add(new Claim(ClaimTypes.Surname, lastName ?? string.Empty));
@@ -1178,15 +1238,18 @@ app.MapPost("/consume", async ([FromServices] Saml2Configuration saml2Configurat
     }
     else
     {
+        audit.Failure(request.HttpContext, "Login", "SamlMissingIdentity");
         return Results.Forbid();
     }
 });
 
-app.MapPost("/harvester-login", (IConfiguration configuration, [FromServices] SigningCredentials signingCredentials, [FromBody] HarvesterAuthMessage? message) =>
+app.MapPost("/harvester-login", (IConfiguration configuration, [FromServices] SigningCredentials signingCredentials, [FromBody] HarvesterAuthMessage? message, [FromServices] AuditLog audit, HttpContext httpContext) =>
 {
     string? requiredAuth = configuration["HarvesterAuth"];
     if (!string.IsNullOrEmpty(requiredAuth) && string.Equals(requiredAuth, message?.Auth, StringComparison.Ordinal))
     {
+        audit.Success(httpContext, "HarvesterLogin", message?.PublisherId);
+
         List<Claim> claims = new List<Claim>
         {
             new Claim(ClaimTypes.Role, "Harvester"),
@@ -1201,6 +1264,7 @@ app.MapPost("/harvester-login", (IConfiguration configuration, [FromServices] Si
     }
     else
     {
+        audit.Failure(httpContext, "HarvesterLogin", "InvalidSecret", message?.PublisherId);
         return Results.Forbid();
     }
 });
@@ -1227,10 +1291,14 @@ app.MapPost("/validate-invitation", async (IConfiguration configuration, [FromSe
     return Results.Ok(result);
 });
 
-app.MapGet("/signin-google", async ([FromServices] ApplicationDbContext context, [FromServices] SigningCredentials signingCredentials, [FromServices] IConfiguration configuration, [FromServices] ILogger<Program> logger, [FromServices] IHttpClientFactory httpClientFactory, [FromQuery] string? code, [FromQuery] string? state) =>
+app.MapGet("/signin-google", async ([FromServices] ApplicationDbContext context, [FromServices] SigningCredentials signingCredentials, [FromServices] IConfiguration configuration, [FromServices] ILogger<Program> logger, [FromServices] IHttpClientFactory httpClientFactory, [FromQuery] string? code, [FromQuery] string? state, [FromServices] AuditLog audit, HttpContext httpContext) =>
 {
+    string failureReason = "InvalidCallback";
+
     if (!string.IsNullOrEmpty(code) && !string.IsNullOrEmpty(state) && string.Equals("google", state, StringComparison.Ordinal))
     {
+        failureReason = "TokenExchangeFailed";
+
         string? clientId = configuration["Authentication:Google:ClientId"];
         string? clientSecret = configuration["Authentication:Google:ClientSecret"];
 
@@ -1268,7 +1336,8 @@ app.MapGet("/signin-google", async ([FromServices] ApplicationDbContext context,
 
                         if (userInfo is not null)
                         {
-                            logger.LogInformation(JsonConvert.SerializeObject(userInfo));
+                            failureReason = "MissingIdentity";
+                            logger.LogDebug("Google user info: {UserInfo}", JsonConvert.SerializeObject(userInfo));
 
                             string? email = userInfo.Email;
                             string? id = userInfo.Id;
@@ -1285,8 +1354,10 @@ app.MapGet("/signin-google", async ([FromServices] ApplicationDbContext context,
                                 UserRecord? user = await context.GetOrCreateExternalUser(id, firstName, lastName, email, "Google").ConfigureAwait(false);
                                 if (user is not null && user.IsActive)
                                 {
+                                    audit.Success(httpContext, "Login", user.Id, "method=Google", actorId: user.Id);
                                     return Results.Ok(await CreateToken(context, user, configuration, signingCredentials, false, customClaims));
                                 }
+                                failureReason = "InactiveUser";
                             }
                         }
                     }
@@ -1295,34 +1366,8 @@ app.MapGet("/signin-google", async ([FromServices] ApplicationDbContext context,
         }
     }
 
+    audit.Failure(httpContext, "Login", $"Google:{failureReason}");
     return Results.Forbid();
-});
-
-app.Use(async (context, next) =>
-{
-    if (context.Request.Method == HttpMethods.Post || context.Request.Method == HttpMethods.Put)
-    {
-        IConfiguration configuration = context.RequestServices.GetRequiredService<IConfiguration>();
-        string? logPath = configuration["LogPath"];
-        if (!string.IsNullOrEmpty(logPath) && Directory.Exists(logPath))
-        {
-            context.Request.EnableBuffering();
-            string logName = $"{DateTimeOffset.UtcNow:yyyyMMddHHiiss.fffff}_{Guid.NewGuid():N}";
-            string path = Path.Combine(logPath, logName);
-            using (FileStream fs = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-            {
-                await context.Request.Body.CopyToAsync(fs);
-            }
-            context.Request.Body.Seek(0, SeekOrigin.Begin);
-
-            RequestTelemetry? requestTelemetry = context.Features.Get<RequestTelemetry>();
-            if (requestTelemetry is not null)
-            {
-                requestTelemetry.Properties["BodyLogFile"] = logName;
-            }
-        }
-    }
-    await next(context);
 });
 
 app.Run();

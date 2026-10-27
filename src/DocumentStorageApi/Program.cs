@@ -302,10 +302,11 @@ app.MapPost("/files/by-publisher", [AllowAnonymous] (IFileStorage storage, IFile
     return Results.Ok(response);
 });
 
-app.MapPost("/files", [Authorize] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] StorageLogAdapter logAdapter, [FromServices] FulltextStorageMap fulltext, [FromBody] InsertModel insertData) =>
+app.MapPost("/files", [Authorize] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] StorageLogAdapter logAdapter, [FromServices] FulltextStorageMap fulltext, [FromServices] IHttpContextValueAccessor user, [FromServices] ILogger<Program> logger, [FromBody] InsertModel insertData) =>
 {
     if (insertData.Metadata is null)
     {
+        logger.LogWarning("Insert file rejected: metadata is missing (User={UserId}, Publisher={Publisher})", user.UserId, user.Publisher);
         return Results.BadRequest("Metadata is required");
     }
 
@@ -317,6 +318,7 @@ app.MapPost("/files", [Authorize] (IFileStorage storage, IFileStorageAccessPolic
             {
                 if (ContainsExecutableFiles(insertData.Metadata, stream))
                 {
+                    logger.LogWarning("Insert file {FileId} rejected: invalid file content detected (User={UserId}, Publisher={Publisher})", insertData.Metadata.Id, user.UserId, user.Publisher);
                     return Results.BadRequest("Invalid file content detected");
                 }
             }
@@ -327,27 +329,37 @@ app.MapPost("/files", [Authorize] (IFileStorage storage, IFileStorageAccessPolic
             {
                 fulltext.Index(new[] { state });
             }
+
+            logger.LogInformation("File {FileId} inserted (Type={FileType}, FilePublisher={FilePublisher}, Overwrite={EnableOverwrite}, User={UserId}, Publisher={Publisher})", insertData.Metadata.Id, insertData.Metadata.Type, insertData.Metadata.Publisher, insertData.EnableOverwrite, user.UserId, user.Publisher);
         }
         catch (NkodSk.RdfFileStorage.UnauthorizedAccessException)
         {
+            logger.LogWarning("Insert file {FileId} forbidden (Type={FileType}, FilePublisher={FilePublisher}, User={UserId}, Publisher={Publisher})", insertData.Metadata.Id, insertData.Metadata.Type, insertData.Metadata.Publisher, user.UserId, user.Publisher);
             return Results.Forbid();
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Insert file {FileId} failed (Type={FileType}, User={UserId}, Publisher={Publisher})", insertData.Metadata.Id, insertData.Metadata.Type, user.UserId, user.Publisher);
+            throw;
         }
     }
     else
     {
+        logger.LogWarning("Insert file {FileId} rejected: content is missing (User={UserId}, Publisher={Publisher})", insertData.Metadata.Id, user.UserId, user.Publisher);
         return Results.BadRequest("Content is required");
     }
 
     return Results.Ok();
 });
 
-app.MapPost("/files/stream", [RequestSizeLimit(int.MaxValue)][RequestFormLimits(MultipartBodyLengthLimit = int.MaxValue, ValueLengthLimit = int.MaxValue)] [Authorize] async (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] StorageLogAdapter logAdapter, HttpRequest request, IFormFile file) =>
+app.MapPost("/files/stream", [RequestSizeLimit(int.MaxValue)][RequestFormLimits(MultipartBodyLengthLimit = int.MaxValue, ValueLengthLimit = int.MaxValue)] [Authorize] async (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] StorageLogAdapter logAdapter, [FromServices] IHttpContextValueAccessor user, [FromServices] ILogger<Program> logger, HttpRequest request, IFormFile file) =>
 {
     IFormCollection form = await request.ReadFormAsync();
 
     string? metadataEncoded = form.ContainsKey("metadata") ? form["metadata"].FirstOrDefault() : null;
     if (metadataEncoded == null)
     {
+        logger.LogWarning("Insert file stream rejected: metadata is missing (User={UserId}, Publisher={Publisher})", user.UserId, user.Publisher);
         return Results.BadRequest();
     }
 
@@ -367,11 +379,13 @@ app.MapPost("/files/stream", [RequestSizeLimit(int.MaxValue)][RequestFormLimits(
 
             if (metadata == null)
             {
+                logger.LogWarning("Insert file stream rejected: metadata is empty (User={UserId}, Publisher={Publisher})", user.UserId, user.Publisher);
                 return Results.BadRequest();
             }
         }
-        catch
+        catch (Exception e)
         {
+            logger.LogWarning(e, "Insert file stream rejected: metadata cannot be deserialized (User={UserId}, Publisher={Publisher})", user.UserId, user.Publisher);
             return Results.BadRequest();
         }
 
@@ -381,29 +395,42 @@ app.MapPost("/files/stream", [RequestSizeLimit(int.MaxValue)][RequestFormLimits(
 
             if (ContainsExecutableFiles(metadata, sourceStream))
             {
+                logger.LogWarning("Insert file stream {FileId} rejected: invalid file content detected (User={UserId}, Publisher={Publisher})", metadata.Id, user.UserId, user.Publisher);
                 return Results.BadRequest("Invalid file content detected");
             }
 
-            using Stream writeStream = storage.OpenWriteStream(metadata, enableOverwrite, accessPolicy, logAdapter);
-            await sourceStream.CopyToAsync(writeStream).ConfigureAwait(false);
+            using (Stream writeStream = storage.OpenWriteStream(metadata, enableOverwrite, accessPolicy, logAdapter))
+            {
+                await sourceStream.CopyToAsync(writeStream).ConfigureAwait(false);
+            }
+
+            logger.LogInformation("File stream {FileId} inserted (Type={FileType}, FilePublisher={FilePublisher}, OriginalFileName={OriginalFileName}, Length={Length}, Overwrite={EnableOverwrite}, User={UserId}, Publisher={Publisher})", metadata.Id, metadata.Type, metadata.Publisher, metadata.OriginalFileName, file.Length, enableOverwrite, user.UserId, user.Publisher);
         }
         catch (NkodSk.RdfFileStorage.UnauthorizedAccessException)
         {
+            logger.LogWarning("Insert file stream {FileId} forbidden (Type={FileType}, FilePublisher={FilePublisher}, User={UserId}, Publisher={Publisher})", metadata.Id, metadata.Type, metadata.Publisher, user.UserId, user.Publisher);
             return Results.Forbid();
-        }                
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Insert file stream {FileId} failed (Type={FileType}, User={UserId}, Publisher={Publisher})", metadata.Id, metadata.Type, user.UserId, user.Publisher);
+            throw;
+        }
     }
     else
     {
+        logger.LogWarning("Insert file stream rejected: content is missing (User={UserId}, Publisher={Publisher})", user.UserId, user.Publisher);
         return Results.BadRequest("Content is required");
     }
 
     return Results.Ok();
 }).DisableAntiforgery();
 
-app.MapPost("/files/metadata", [Authorize] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] FulltextStorageMap fulltext, [FromBody] FileMetadata metadata) =>
+app.MapPost("/files/metadata", [Authorize] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] FulltextStorageMap fulltext, [FromServices] IHttpContextValueAccessor user, [FromServices] ILogger<Program> logger, [FromBody] FileMetadata metadata) =>
 {
     if (metadata is null)
     {
+        logger.LogWarning("Update metadata rejected: metadata is missing (User={UserId}, Publisher={Publisher})", user.UserId, user.Publisher);
         return Results.BadRequest("Metadata is required");
     }
 
@@ -415,25 +442,41 @@ app.MapPost("/files/metadata", [Authorize] (IFileStorage storage, IFileStorageAc
         {
             fulltext.Index(new[] { state });
         }
+
+        logger.LogInformation("Metadata of file {FileId} updated (Type={FileType}, FilePublisher={FilePublisher}, IsPublic={IsPublic}, User={UserId}, Publisher={Publisher})", metadata.Id, metadata.Type, metadata.Publisher, metadata.IsPublic, user.UserId, user.Publisher);
     }
     catch (NkodSk.RdfFileStorage.UnauthorizedAccessException)
     {
+        logger.LogWarning("Update metadata of file {FileId} forbidden (Type={FileType}, FilePublisher={FilePublisher}, User={UserId}, Publisher={Publisher})", metadata.Id, metadata.Type, metadata.Publisher, user.UserId, user.Publisher);
         return Results.Forbid();
+    }
+    catch (Exception e)
+    {
+        logger.LogError(e, "Update metadata of file {FileId} failed (User={UserId}, Publisher={Publisher})", metadata.Id, user.UserId, user.Publisher);
+        throw;
     }
 
     return Results.Ok();
 });
 
-app.MapDelete("/files/{id}", [Authorize] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] FulltextStorageMap fulltext, Guid id) =>
+app.MapDelete("/files/{id}", [Authorize] (IFileStorage storage, IFileStorageAccessPolicy accessPolicy, [FromServices] FulltextStorageMap fulltext, [FromServices] IHttpContextValueAccessor user, [FromServices] ILogger<Program> logger, Guid id) =>
 {
     try
     {
         storage.DeleteFile(id, accessPolicy);
         fulltext.RemoveFromIndex(id);
+
+        logger.LogInformation("File {FileId} deleted (User={UserId}, Publisher={Publisher})", id, user.UserId, user.Publisher);
     }
     catch (NkodSk.RdfFileStorage.UnauthorizedAccessException)
     {
+        logger.LogWarning("Delete file {FileId} forbidden (User={UserId}, Publisher={Publisher})", id, user.UserId, user.Publisher);
         return Results.Forbid();
+    }
+    catch (Exception e)
+    {
+        logger.LogError(e, "Delete file {FileId} failed (User={UserId}, Publisher={Publisher})", id, user.UserId, user.Publisher);
+        throw;
     }
 
     return Results.Ok();

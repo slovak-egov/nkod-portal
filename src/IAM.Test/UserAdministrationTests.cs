@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Security.Policy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.ApplicationInsights.WindowsServer;
 using Microsoft.Extensions.Configuration;
 
 namespace IAM.Test
