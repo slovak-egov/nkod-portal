@@ -377,6 +377,7 @@
     "relatedSpatial": "Súvisiace geografické územie",
     "remove": "Odstrániť",
     "removeAllFilters": "Vypnúť všetky filtre",
+    "selectedCount": "{{count}} vybraté",
     "removeLanguageVersion": "Odstrániť jazykovú verziu",
     "removePrompt": "Skutočne chcete odstrániť záznam?",
     "result1": "výsledok",

@@ -366,6 +366,7 @@
     "latedSpatial": "Verwandtes geografisches Gebiet",
     "remove": "Entfernen",
     "removeAllFilters": "Alle Filter ausschalten",
+    "selectedCount": "{{count}} ausgewählt",
     "removeLanguageVersion": "Sprachversion entfernen",
     "removePrompt": "Möchten Sie den Datensatz wirklich entfernen?",
     "result1": "Ergebnis",

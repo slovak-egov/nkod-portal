@@ -384,6 +384,7 @@
     "registrationSuccessful": "Registration was successful",
     "remove": "Remove",
     "removeAllFilters": "Turn off all filters",
+    "selectedCount": "{{count}} selected",
     "removeLanguageVersion": "Remove language version",
     "removePrompt": "Do you really want to remove the record?",
     "result1": "result",

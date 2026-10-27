@@ -2,6 +2,7 @@ import { ReactNode, useCallback, useState } from 'react';
 
 import Checkbox from './Checkbox';
 import IdSkModule from './IdSkModule';
+import { useTranslation } from 'react-i18next';
 
 type Props<T> = {
     title: ReactNode;
@@ -16,6 +17,7 @@ type Props<T> = {
 
 export default function SearchFilterWithQuery<T>(props: Props<T>) {
     const [query, setQuery] = useState('');
+    const { t } = useTranslation();
 
     const queryParts = query
         .toLowerCase()
@@ -49,7 +51,9 @@ export default function SearchFilterWithQuery<T>(props: Props<T>) {
                 <div className="idsk-search-results__link-panel idsk-search-results--expand idsk-search-results__content-type-filter">
                     <button className="idsk-search-results__link-panel-button">
                         <span className="idsk-search-results__link-panel__title">{props.title}</span>
-                        <span className="idsk-search-results__link-panel--span"></span>
+                        <span className="idsk-search-results__link-panel--span">
+                            {selectedValues.length > 0 ? t('selectedCount', { count: selectedValues.length }) : ''}
+                        </span>
                     </button>
                     <div className="idsk-search-results__list">
                         <input
