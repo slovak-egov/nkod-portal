@@ -86,7 +86,7 @@ export function MapEmbed(props: MapEmbedProps) {
                     height={size.height}
                     loading="lazy"
                     allow=""
-                    sandbox="allow-scripts allow-forms"
+                    sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
                     referrerPolicy="no-referrer"
                     style={{ border: 0, display: 'block' }}
                 />

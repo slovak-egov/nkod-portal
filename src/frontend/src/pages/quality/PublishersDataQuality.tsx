@@ -72,7 +72,12 @@ type Publisher = {
 };
 
 const defaultQuery: SparqlQuery = {
-    prefixes: ['foaf: <http://xmlns.com/foaf/0.1/>', 'dqv: <http://www.w3.org/ns/dqv#>', ': <https://data.gov.sk/def/observation/data-quality/metrics/>'],
+    prefixes: [
+        'foaf: <http://xmlns.com/foaf/0.1/>',
+        'dqv: <http://www.w3.org/ns/dqv#>',
+        ': <https://data.gov.sk/def/observation/data-quality/metrics/>',
+        'xsd: <http://www.w3.org/2001/XMLSchema#>'
+    ],
     select: ['?id', '?name'],
     where: [
         `?id a foaf:Agent ;
@@ -133,6 +138,41 @@ addMeasurement(defaultQuery, 'corsEnabledDataServiceEndpointTotal', 'pocetKontro
 
 addMeasurement(defaultQuery, 'corsEnabledDataServiceDescriptionCount', 'pocetSplnenychKontrolMetrikaDostupnostiCORSEndpointDescription');
 addMeasurement(defaultQuery, 'corsEnabledDataServiceDescriptionTotal', 'pocetKontrolMetrikaDostupnostiCORSEndpointDescription');
+
+const availabilityProperties = [
+    'availableDownloadLink',
+    'availableSchemaLink',
+    'availableDocumentationLink',
+    'availableDataServiceEndpoint',
+    'availableDataServiceDescription',
+    'corsEnabledDownloadLink',
+    'corsEnabledSchemaLink',
+    'corsEnabledDataServiceEndpoint',
+    'corsEnabledDataServiceDescription'
+];
+
+function sparqlNumber(variable: string): string {
+    return `COALESCE(xsd:decimal(?${variable}), 0)`;
+}
+
+function sparqlSum(variables: string[]): string {
+    return `(${variables.map(sparqlNumber).join(' + ')})`;
+}
+
+function sparqlShare(numerator: string, denominator: string): string {
+    return `(IF(${denominator} > 0, ${numerator} / ${denominator}, -1))`;
+}
+
+const pureDatasetCountExpression = `(${sparqlNumber('datasetsCount')} - ${sparqlNumber('dataSeriesCount')})`;
+
+const sortExpressions = {
+    requiredMetadata: sparqlShare(sparqlNumber('requiredMetadataCount'), sparqlNumber('requiredMetadataTotal')),
+    optionalMetadata: sparqlShare(sparqlNumber('optionalMetadataCount'), sparqlNumber('optionalMetadataTotal')),
+    availability: sparqlShare(sparqlSum(availabilityProperties.map((p) => p + 'Count')), sparqlSum(availabilityProperties.map((p) => p + 'Total'))),
+    datasetQuality: sparqlShare(sparqlSum(['datasetQuality3Count', 'datasetQuality4Count', 'datasetQuality5Count']), pureDatasetCountExpression),
+    licenseOpenness: sparqlShare(sparqlNumber('datasetLicenseOpenCount'), pureDatasetCountExpression),
+    publicationMinimum: `(${sparqlNumber('datasetsPublicationMinimumCount')})`
+};
 
 function SparqlIndicator<T extends Record<string, any>>({ source, property }: { property: string; source: T }) {
     const numeratorText = (source[property + 'Count'] as LiteralColumn)?.value;
@@ -214,20 +254,29 @@ export default function PublishersDataQuality() {
                             }
                             columns={[
                                 {
-                                    header: 'Názov poskytovateľa',
+                                    header: <>Názov poskyto&shy;vateľa</>,
                                     headerStyle: { width: '100px' },
                                     cellStyle: { width: '100px' },
                                     value: (r) => (
-                                        <Link to={'/kvalita-metadat-new/' + encodeURIComponent(r.id?.value ?? '')} className="idsk-card-title govuk-link">
+                                        <Link to={'/kvalita-metadat/' + encodeURIComponent(r.id?.value ?? '')} className="idsk-card-title govuk-link">
                                             {r?.name?.value ?? ''}
                                         </Link>
                                     ),
                                     sortProperty: '?name'
                                 },
-                                { header: 'Vyplnenie povinných metadát', value: (r) => <SparqlIndicator property="requiredMetadata" source={r} /> },
-                                { header: 'Vyplnenie odporúčaných metadát', value: (r) => <SparqlIndicator property="optionalMetadata" source={r} /> },
+                                {
+                                    header: <>Vyplnenie povinných metadát</>,
+                                    value: (r) => <SparqlIndicator property="requiredMetadata" source={r} />,
+                                    sortProperty: sortExpressions.requiredMetadata
+                                },
+                                {
+                                    header: <>Vyplnenie odporú&shy;čaných metadát</>,
+                                    value: (r) => <SparqlIndicator property="optionalMetadata" source={r} />,
+                                    sortProperty: sortExpressions.optionalMetadata
+                                },
                                 {
                                     header: 'Dostupnosť datasetov',
+                                    sortProperty: sortExpressions.availability,
                                     value: (r) => {
                                         const availabilityCount =
                                             asNumber(r?.availableDownloadLinkCount) +
@@ -256,11 +305,8 @@ export default function PublishersDataQuality() {
                                 },
                                 {
                                     header: 'Kvalita datasetov',
+                                    sortProperty: sortExpressions.datasetQuality,
                                     value: (r) => {
-                                        const useDatasetCount = Math.max(asNumber(r?.datasetsCount), 0);
-                                        const useDataseriesCount = Math.max(asNumber(r?.dataSeriesCount), 0);
-                                        const pureDatasetCount = Math.max(useDatasetCount - useDataseriesCount, 0);
-
                                         const datasetQualityCount = [];
                                         for (let i = 1; i <= 5; i++) {
                                             datasetQualityCount.push(
@@ -269,11 +315,19 @@ export default function PublishersDataQuality() {
                                         }
 
                                         const datasetQualitySum = datasetQualityCount[2] + datasetQualityCount[3] + datasetQualityCount[4];
-                                        return <Indicator numerator={datasetQualitySum} denominator={pureDatasetCount} />;
+
+                                        const datasetQualitySumAll =
+                                            datasetQualityCount[0] +
+                                            datasetQualityCount[1] +
+                                            datasetQualityCount[2] +
+                                            datasetQualityCount[3] +
+                                            datasetQualityCount[4];
+                                        return <Indicator numerator={datasetQualitySum} denominator={datasetQualitySumAll} />;
                                     }
                                 },
                                 {
                                     header: 'Otvorenosť licencií',
+                                    sortProperty: sortExpressions.licenseOpenness,
                                     value: (r) => {
                                         const useDatasetCount = Math.max(asNumber(r?.datasetsCount), 0);
                                         const useDataseriesCount = Math.max(asNumber(r?.dataSeriesCount), 0);
@@ -283,9 +337,9 @@ export default function PublishersDataQuality() {
                                     }
                                 },
                                 {
-                                    header: 'Počet datasetov Publikačného minima',
+                                    header: <>Počet datasetov Publi&shy;kačného minima</>,
                                     value: (r) => asNumber(r?.datasetsPublicationMinimumCount),
-                                    sortProperty: '?datasetsPublicationMinimumCount'
+                                    sortProperty: sortExpressions.publicationMinimum
                                 }
                             ]}
                         />

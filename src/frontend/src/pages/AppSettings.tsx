@@ -9,12 +9,14 @@ import Loading from '../components/Loading';
 import MainContent from '../components/MainContent';
 import PageHeader from '../components/PageHeader';
 import TextArea from '../components/TextArea';
+import { useTranslation } from 'react-i18next';
 
 type AppSettings = {
     allowedIframeHosts: string;
 };
 
 export default function AppSettingsPage() {
+    const { t } = useTranslation();
     const [allowedIframeHosts, setAllowedIframeHosts] = useState('');
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -24,7 +26,7 @@ export default function AppSettingsPage() {
     const headers = useDefaultHeaders();
     const initialLoadDone = useRef(false);
 
-    const pageTitle = 'Nastavenia aplikácie';
+    const pageTitle = 'Nastavenia';
     useDocumentTitle(pageTitle);
 
     useEffect(() => {
@@ -70,7 +72,7 @@ export default function AppSettingsPage() {
 
     return (
         <>
-            <Breadcrumbs items={[{ title: 'NKOD', link: '/' }, { title: pageTitle }]} />
+            <Breadcrumbs items={[{ title: t('nkod'), link: '/' }, { title: pageTitle }]} />
             <MainContent>
                 <div className="nkod-form-page">
                     <PageHeader>{pageTitle}</PageHeader>

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Abstractions;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -230,7 +231,17 @@ namespace NkodSk.Abstractions
 
         public bool IsSerie
         {
-            get => GetBooleanFromUriNode("custom:isSerie") ?? false;
+            get 
+            {
+                bool? value = GetBooleanFromUriNode("custom:isSerie");
+                if (value.HasValue)
+                {
+                    return value.Value;
+                }
+                IUriNode nodeType = Graph.GetUriNode(new Uri(RdfSpecsHelper.RdfType));
+                List<Uri> types = Graph.GetTriplesWithSubjectPredicate(Node, nodeType).Select(t => t.Object).OfType<IUriNode>().Select(n => n.Uri).ToList();
+                return types.Any(u => string.Equals(u.OriginalString, KnownPredicates.DcatDatasetSeriesClass.OriginalString, StringComparison.InvariantCultureIgnoreCase));
+            }
             set => SetBooleanToUriNode("custom:isSerie", value);
         }
 

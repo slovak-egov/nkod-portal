@@ -113,8 +113,8 @@ export default function Header() {
                 submenu: []
             },
             {
-                title: 'Nastavenia aplikácie',
-                link: '/sprava/nastavenia-aplikacie',
+                title: 'Nastavenia',
+                link: '/sprava/nastavenia',
                 submenu: []
             }
         );

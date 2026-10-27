@@ -123,6 +123,7 @@ addMeasurement(defaultQuery, 'datasetQuality3Count', 'pocetDatasetovSKvalitou3')
 addMeasurement(defaultQuery, 'datasetQuality4Count', 'pocetDatasetovSKvalitou4');
 addMeasurement(defaultQuery, 'datasetQuality5Count', 'pocetDatasetovSKvalitou5');
 addMeasurement(defaultQuery, 'datasetLicenseOpenCount', 'pocetDatasetovSOtvorenouLicenciou');
+addMeasurement(defaultQuery, 'datasetLicenseTotalCount', 'pocetDatasetovSLicenciou');
 
 addMeasurement(defaultQuery, 'availableDownloadLinkCount', 'pocetSplnenychKontrolMetrikaDostupnostiDownloadURL');
 addMeasurement(defaultQuery, 'availableDownloadLinkTotal', 'pocetKontrolMetrikaDostupnostiDownloadURL');
@@ -279,6 +280,7 @@ type Row = {
     datasetQuality5Count?: LiteralColumn | null | undefined;
 
     datasetLicenseOpenCount?: LiteralColumn | null | undefined;
+    datasetLicenseTotalCount?: LiteralColumn | null | undefined;
 };
 
 function asNumber(column?: LiteralColumn | null | undefined): number {
@@ -331,6 +333,7 @@ export default function PublisherDataQualityDetail() {
     }
 
     const datasetQualitySum = datasetQualityCount[2] + datasetQualityCount[3] + datasetQualityCount[4];
+    const datasetQualitySumAll = datasetQualityCount[0] + datasetQualityCount[1] + datasetQualityCount[2] + datasetQualityCount[3] + datasetQualityCount[4];
 
     const availabilityCount =
         asNumber(row?.availableDownloadLinkCount) +
@@ -401,7 +404,7 @@ export default function PublisherDataQualityDetail() {
                                 <div className="nkod-detail-attribute">
                                     <div className="govuk-body nkod-detail-attribute-name">Kvalita datasetov</div>
                                     <div className="govuk-body nkod-detail-attribute-value" data-testid="themes" style={{ wordBreak: 'break-word' }}>
-                                        <Indicator numerator={datasetQualitySum} denominator={pureDatasetCount} />
+                                        <Indicator numerator={datasetQualitySum} denominator={datasetQualitySumAll} />
                                     </div>
                                 </div>,
                                 <div className="nkod-detail-attribute">
@@ -723,7 +726,7 @@ export default function PublisherDataQualityDetail() {
                                     <TableCell>
                                         <div style={{ display: 'flex', alignItems: 'center' }}>
                                             <span style={{ marginRight: '20px', whiteSpace: 'nowrap' }}>{datasetQualitySum}</span>
-                                            <Indicator numerator={datasetQualitySum} denominator={pureDatasetCount} />
+                                            <Indicator numerator={datasetQualitySum} denominator={datasetQualitySumAll} />
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -733,7 +736,7 @@ export default function PublisherDataQualityDetail() {
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    <TableHeaderCell style={{ overflowWrap: 'normal' }}>Otvorené licencie (CC 0. CC BY)</TableHeaderCell>
+                                    <TableHeaderCell style={{ overflowWrap: 'normal' }}>Otvorené licencie</TableHeaderCell>
                                     <TableHeaderCell style={{ overflowWrap: 'normal' }}>Iné licencie</TableHeaderCell>
                                     <TableHeaderCell style={{ overflowWrap: 'normal' }}>Otvorenosť licencií</TableHeaderCell>
                                 </TableRow>
@@ -741,9 +744,9 @@ export default function PublisherDataQualityDetail() {
                             <TableBody>
                                 <TableRow>
                                     <TableCell>{asNumber(row.datasetLicenseOpenCount)}</TableCell>
-                                    <TableCell>{Math.max(pureDatasetCount - asNumber(row.datasetLicenseOpenCount), 0)}</TableCell>
+                                    <TableCell>{Math.max(asNumber(row.datasetLicenseTotalCount) - asNumber(row.datasetLicenseOpenCount), 0)}</TableCell>
                                     <TableCell>
-                                        <Indicator numerator={asNumber(row.datasetLicenseOpenCount)} denominator={pureDatasetCount} />
+                                        <Indicator numerator={asNumber(row.datasetLicenseOpenCount)} denominator={asNumber(row.datasetLicenseTotalCount)} />
                                     </TableCell>
                                 </TableRow>
                             </TableBody>

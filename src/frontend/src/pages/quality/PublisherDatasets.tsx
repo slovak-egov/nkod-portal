@@ -73,6 +73,23 @@ const conditions = [
 defaultQuery.where ??= [];
 defaultQuery.where.push(`FILTER(${conditions.map((c) => `(${c})`).join(' || ')})`);
 
+function sparqlBoolean(variable: string): string {
+    return `COALESCE(STR(?${variable}) = "true", false)`;
+}
+
+// Vyraz pre zoradenie; splnena podmienka = 1, nesplnena (zobrazene ako varovanie) = 0
+function sparqlSortFlag(condition: string): string {
+    return `(IF(${condition}, 1, 0))`;
+}
+
+const sortExpressions = {
+    requiredMetadata: sparqlSortFlag(sparqlBoolean('requiredMetadata')),
+    recommendedMetadata: sparqlSortFlag(sparqlBoolean('recommendedMetadata')),
+    availablity: sparqlSortFlag(sparqlBoolean('availablity')),
+    datasetQuality: sparqlSortFlag(['datasetQuality3', 'datasetQuality4', 'datasetQuality5'].map(sparqlBoolean).join(' || ')),
+    openLicense: sparqlSortFlag(sparqlBoolean('openLicense'))
+};
+
 function asBoolean(column?: LiteralColumn | null | undefined): boolean {
     if (column !== null && column !== undefined) {
         return column.value === 'true';
@@ -123,12 +140,14 @@ export default function PublisherDatasets({ publisherId }: Props) {
                     },
                     {
                         header: 'Vyplnenie povinných metadát',
+                        sortProperty: sortExpressions.requiredMetadata,
                         value: (row) => (
                             <TableCellWarning isError={!asBoolean(row.requiredMetadata)}>dataset nespĺňa požiadavky pre povinné metadáta</TableCellWarning>
                         )
                     },
                     {
                         header: 'Vyplnenie odporúčaných metadát',
+                        sortProperty: sortExpressions.recommendedMetadata,
                         value: (row) => (
                             <TableCellWarning isError={!asBoolean(row.recommendedMetadata)}>
                                 dataset nespĺňa odporúčania pre nepovinné metadáta
@@ -137,10 +156,12 @@ export default function PublisherDatasets({ publisherId }: Props) {
                     },
                     {
                         header: 'Dostupnosť datasetu',
+                        sortProperty: sortExpressions.availablity,
                         value: (row) => <TableCellWarning isError={!asBoolean(row.availablity)}>dataset nie je plne dostupný</TableCellWarning>
                     },
                     {
                         header: 'Kvalita datasetu',
+                        sortProperty: sortExpressions.datasetQuality,
                         value: (row) => (
                             <TableCellWarning isError={!(asBoolean(row.datasetQuality3) || asBoolean(row.datasetQuality4) || asBoolean(row.datasetQuality5))}>
                                 dataset nespĺňa požiadavky pre kvalitu datasetu
@@ -149,6 +170,7 @@ export default function PublisherDatasets({ publisherId }: Props) {
                     },
                     {
                         header: 'Otvorenosť licencie',
+                        sortProperty: sortExpressions.openLicense,
                         value: (row) => <TableCellWarning isError={!asBoolean(row.openLicense)}>dataset nemá otvorenú licenciu</TableCellWarning>
                     }
                 ]}
