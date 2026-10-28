@@ -167,3 +167,161 @@ body {
     padding-left: 21px;
     padding-right: 21px;
 }
+
+// Search filters: sidebar on tablet/desktop, full-screen overlay opened by the "Filter" button on mobile
+.nkod-search-filters__open,
+.nkod-search-filters__mobile-header,
+.nkod-search-filters__mobile-footer {
+    display: none;
+}
+
+@include govuk-media-query($until: tablet) {
+    // ID-SK pulls the search results module to the screen edges (margin: 0 -15px), keep the page gutter instead
+    .idsk-search-results {
+        margin: 0;
+
+        // full-width blocks in the unpadded results column, ID-SK offsets them only from the left
+        .idsk-search-results__content__picked-filters,
+        .idsk-search-results__content__page-changer {
+            float: none;
+            width: auto;
+            margin-left: govuk-spacing(3);
+            margin-right: govuk-spacing(3);
+            border-bottom: 2px solid govuk-colour('black');
+            padding-bottom: govuk-spacing(3);
+            margin-bottom: govuk-spacing(3);
+        }
+
+        .idsk-search-results__content__picked-filters__topics,
+        .idsk-search-results__content__picked-filters__content-type,
+        .idsk-search-results__content__picked-filters__date {
+            margin-top: govuk-spacing(3);
+        }
+
+        .idsk-search-results__per-page {
+            float: none;
+        }
+
+        .idsk-search-results--order .govuk-form-group {
+            border-bottom: 2px solid govuk-colour('black');
+        }
+
+        .idsk-search-results--empty-filters {
+            display: none;
+        }
+
+        // previous/next links do not fit on one line, give each half of the width and let the text wrap
+        .idsk-search-results__content__page-changer {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            padding-left: 0;
+            padding-right: 0;
+
+            .idsk-search-results__button--back,
+            .idsk-search-results__button--forward {
+                position: static;
+                max-width: 50%;
+                margin: 0;
+            }
+
+            .idsk-search-results__button--back {
+                text-align: left;
+            }
+
+            .idsk-search-results__button--forward {
+                margin-left: auto;
+                text-align: right;
+            }
+
+            .idsk-search-results__page-number {
+                flex: 1 0 100%;
+            }
+        }
+    }
+
+    .nkod-search-filters__open {
+        display: block;
+        padding: 0 govuk-spacing(3);
+
+        .govuk-button {
+            width: 100%;
+            margin-bottom: govuk-spacing(3);
+        }
+    }
+
+    .nkod-search-filters {
+        display: none;
+
+        // on mobile ordering is offered above the results, not in the filters overlay
+        .idsk-search-results--order__dropdown {
+            display: none;
+        }
+    }
+
+    // header and footer are fixed parts of the overlay, only the filters in between scroll,
+    // so the show results button stays visible regardless of sticky support or mobile browser toolbars
+    .nkod-search-filters--open {
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        inset: 0;
+        height: 100%;
+        height: 100dvh;
+        // above the sticky .idsk-header-web (z-index 9999)
+        z-index: 10000;
+        background: govuk-colour('white');
+
+        .nkod-search-filters__mobile-header {
+            display: flex;
+            flex: none;
+            align-items: center;
+            justify-content: space-between;
+            margin: 0 govuk-spacing(3);
+            padding-top: govuk-spacing(3);
+            border-bottom: 2px solid govuk-colour('black');
+
+            .govuk-heading-l {
+                margin: 0 0 govuk-spacing(2);
+
+                &:focus {
+                    outline: none;
+                }
+            }
+        }
+
+        .nkod-search-filters__body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            padding: govuk-spacing(4) govuk-spacing(3) govuk-spacing(3);
+        }
+
+        .nkod-search-filters__mobile-footer {
+            display: block;
+            flex: none;
+            margin: 0 govuk-spacing(3);
+            padding-top: govuk-spacing(3);
+            padding-bottom: env(safe-area-inset-bottom);
+            border-top: 1px solid $govuk-border-colour;
+
+            .govuk-button {
+                width: 100%;
+                margin-bottom: govuk-spacing(3);
+            }
+        }
+    }
+
+    .nkod-search-filters__close {
+        @include govuk-font($size: 19);
+        @include govuk-link-common;
+        @include govuk-link-style-default;
+        border: 0;
+        background: none;
+        padding: 0;
+        cursor: pointer;
+        margin-bottom: govuk-spacing(2);
+    }
+}

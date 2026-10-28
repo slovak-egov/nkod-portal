@@ -1,5 +1,15 @@
-import { PropsWithChildren } from 'react';
-import { Codelist, CodelistValue, Facet, RequestQuery, getCodelistFilterValue, isCodelistValueSelected, useCodelists, usePublishers } from '../client';
+import { PropsWithChildren, useEffect, useRef, useState } from 'react';
+import {
+    Codelist,
+    Publisher,
+    CodelistValue,
+    Facet,
+    RequestQuery,
+    getCodelistFilterValue,
+    isCodelistValueSelected,
+    useCodelists,
+    usePublishers
+} from '../client';
 import FormElementGroup from './FormElementGroup';
 import GridColumn from './GridColumn';
 import GridRow from './GridRow';
@@ -34,16 +44,16 @@ export type Props = {
     facets: Facet[];
 } & PropsWithChildren;
 
-function PublisherFilter(props: { facet?: Facet; selectedValues: string[]; onChange: (values: string[]) => void }) {
-    const [publishers] = usePublishers({ pageSize: -1, orderBy: 'relevance' });
+function PublisherFilter(props: { publishers: Publisher[]; facet?: Facet; selectedValues: string[]; onChange: (values: string[]) => void }) {
+    const publishers = props.publishers;
     const { t } = useTranslation();
 
-    if (publishers && publishers.items.length > 0) {
+    if (publishers.length > 0) {
         const facet = props.facet;
         const options: FilterValue[] = [];
         if (facet) {
             const valuesByKey: { [id: string]: string } = {};
-            publishers.items.forEach((v) => (valuesByKey[v.key] = v.name));
+            publishers.forEach((v) => (valuesByKey[v.key] = v.name));
 
             const sorted = Object.entries(facet.values)
                 .filter((a) => a[1] > 0)
@@ -61,7 +71,7 @@ function PublisherFilter(props: { facet?: Facet; selectedValues: string[]; onCha
                 }
             });
         } else {
-            options.push(...publishers.items.map((v) => ({ id: v.id, label: v.name })));
+            options.push(...publishers.map((v) => ({ id: v.id, label: v.name })));
         }
 
         if (options.length > 0) {
@@ -166,9 +176,134 @@ function KeywordFilter(props: { facet?: Facet; selectedValues: string[]; onChang
     return <></>;
 }
 
+type PickedFilterGroup = {
+    id: string;
+    title: string;
+    values: FilterValue[];
+};
+
+function PickedFilters(props: { groups: PickedFilterGroup[]; onRemove: (groupId: string, valueId: string) => void; onRemoveAll: () => void }) {
+    const { t } = useTranslation();
+    const groups = props.groups.filter((g) => g.values.length > 0);
+
+    return (
+        <div
+            className={
+                'idsk-search-results__content__picked-filters govuk-grid-column-full' + (groups.length === 0 ? ' idsk-search-results--empty-filters' : '')
+            }
+            data-testid="sr-picked-filters"
+        >
+            {groups.map((group, i) => (
+                <div
+                    key={group.id}
+                    className={
+                        'idsk-search-results__content__picked-filters__content-type' +
+                        (i % 2 === 0 ? ' idsk-search-results--grey' : '') +
+                        (i === groups.length - 1 ? ' idsk-search-results--border' : '')
+                    }
+                >
+                    <span className="idsk-search-results__text">{group.title}</span>
+                    {group.values.map((value) => (
+                        <button
+                            key={value.id}
+                            type="button"
+                            className="idsk-search-results__picked-content-type"
+                            aria-label={t('remove') + ': ' + group.title + ' – ' + value.label}
+                            onClick={() => props.onRemove(group.id, value.id)}
+                        >
+                            {value.label} <span aria-hidden="true">&#10005;</span>
+                        </button>
+                    ))}
+                </div>
+            ))}
+            {groups.length > 0 ? (
+                <button className="idsk-search-results__button--turn-filters-off govuk-grid-column-full" type="button" onClick={props.onRemoveAll}>
+                    {t('removeAllFilters')}
+                </button>
+            ) : null}
+        </div>
+    );
+}
+
 export default function SearchResults(props: Props) {
     const [codelists] = useCodelists(props.filters);
+    const hasPublisherFilter = props.filters.includes('publishers');
+    // page 0 skips loading when the publisher filter is not used
+    const [publishers] = usePublishers({ pageSize: -1, orderBy: 'relevance', page: hasPublisherFilter ? 1 : 0 });
     const { t } = useTranslation();
+
+    const getSelectedValues = (filterId: string) => (props.query.filters ? (props.query.filters[filterId] ?? []) : []);
+    const setSelectedValues = (filterId: string, values: string[]) =>
+        props.setQueryParameters({
+            filters: {
+                ...props.query.filters,
+                [filterId]: values
+            },
+            page: 1
+        });
+
+    const pickedFilterGroups: PickedFilterGroup[] = props.filters.map((filterId) => {
+        const selectedValues = getSelectedValues(filterId);
+        let title = filterId;
+        let getLabel = (id: string) => id;
+        switch (filterId) {
+            case 'publishers':
+                title = t('publishers');
+                getLabel = (id) => publishers?.items.find((p) => p.key === id || p.id === id)?.name ?? id;
+                break;
+            case 'keywords':
+                title = t('keywords');
+                break;
+            default:
+                const codelist = codelists.find((c) => c.id === filterId);
+                if (codelist) {
+                    title = codelist.label;
+                    getLabel = (id) => codelist.values.find((v) => v.id === id)?.label ?? id;
+                }
+        }
+        return { id: filterId, title: title, values: selectedValues.map((id) => ({ id: id, label: getLabel(id) })) };
+    });
+
+    const pickedFiltersCount = pickedFilterGroups.reduce((sum, g) => sum + g.values.length, 0);
+
+    const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+    const mobileFiltersButton = useRef<HTMLButtonElement>(null);
+    const mobileFiltersHeading = useRef<HTMLHeadingElement>(null);
+
+    const closeMobileFilters = () => {
+        setMobileFiltersOpen(false);
+        mobileFiltersButton.current?.focus();
+    };
+
+    useEffect(() => {
+        if (!mobileFiltersOpen) {
+            return;
+        }
+
+        mobileFiltersHeading.current?.focus();
+        document.body.style.overflow = 'hidden';
+
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setMobileFiltersOpen(false);
+            }
+        };
+        // overlay is mobile only, close it when the layout switches to tablet/desktop
+        const desktopQuery = window.matchMedia('(min-width: 40.0625em)');
+        const onDesktopChange = () => {
+            if (desktopQuery.matches) {
+                setMobileFiltersOpen(false);
+            }
+        };
+        document.addEventListener('keydown', onKeyDown);
+        desktopQuery.addEventListener('change', onDesktopChange);
+
+        return () => {
+            document.body.style.overflow = '';
+            document.removeEventListener('keydown', onKeyDown);
+            desktopQuery.removeEventListener('change', onDesktopChange);
+        };
+    }, [mobileFiltersOpen]);
 
     const totalCount = props.totalCount ?? 0;
     let pageSize = props.query.pageSize ?? 10;
@@ -183,17 +318,6 @@ export default function SearchResults(props: Props) {
                 <PageHeader>{props.header}</PageHeader>
             </div>
 
-            <div className="idsk-search-results__filter-header-panel govuk-grid-column-full idsk-search-results--invisible idsk-search-results--visible__mobile--inline">
-                <div className="govuk-heading-xl idsk-search-results--half-width">
-                    <span>{t('filters')}</span>
-                </div>
-                <div className="idsk-search-results--half-width">
-                    <button className="idsk-search-results__button--back-to-results" type="button">
-                        {t('backToResults')}
-                    </button>
-                </div>
-            </div>
-
             <GridRow>
                 <GridColumn widthUnits={1} totalUnits={4}>
                     <span className="idsk-intro-block__search__span idsk-search-results--invisible__mobile">{t('search')} </span>
@@ -206,87 +330,102 @@ export default function SearchResults(props: Props) {
                         />
                     </div>
 
-                    {props.orderOptions.length > 0 ? (
-                        <div className="idsk-search-results--order__dropdown">
-                            <FormElementGroup
-                                label={t('orderBy')}
-                                element={(id) => (
-                                    <SelectElementItems<OrderOption>
-                                        id={id}
-                                        data-testid="sr-order"
-                                        options={props.orderOptions}
-                                        renderOption={(e) => e.name}
-                                        getValue={(e) => e.value}
-                                        selectedValue={props.query.orderBy ?? props.orderOptions[0].value}
-                                        onChange={(o) => props.setQueryParameters({ orderBy: o, page: 1 })}
-                                    />
-                                )}
-                            />
+                    <div
+                        id="sr-filters-panel"
+                        className={'nkod-search-filters' + (mobileFiltersOpen ? ' nkod-search-filters--open' : '')}
+                        data-testid="sr-filters-panel"
+                        {...(mobileFiltersOpen ? { role: 'dialog', 'aria-modal': true, 'aria-labelledby': 'sr-filters-heading' } : {})}
+                    >
+                        <div className="nkod-search-filters__mobile-header">
+                            <h2 className="govuk-heading-l" id="sr-filters-heading" ref={mobileFiltersHeading} tabIndex={-1}>
+                                {t('filters')}
+                            </h2>
+                            <button type="button" className="nkod-search-filters__close" onClick={closeMobileFilters}>
+                                {t('backToResults')}
+                            </button>
                         </div>
-                    ) : null}
 
-                    {props.filters.map((codelistId) => {
-                        switch (codelistId) {
-                            case 'publishers':
-                                return (
-                                    <PublisherFilter
-                                        key={codelistId}
-                                        facet={props.facets.find((f) => f.id === codelistId)}
-                                        selectedValues={props.query.filters ? (props.query.filters[codelistId] ?? []) : []}
-                                        onChange={(v) =>
-                                            props.setQueryParameters({
-                                                filters: {
-                                                    ...props.query.filters,
-                                                    [codelistId]: v
-                                                },
-                                                page: 1
-                                            })
-                                        }
+                        <div className="nkod-search-filters__body">
+                            {props.orderOptions.length > 0 ? (
+                                <div className="idsk-search-results--order__dropdown">
+                                    <FormElementGroup
+                                        label={t('orderBy')}
+                                        element={(id) => (
+                                            <SelectElementItems<OrderOption>
+                                                id={id}
+                                                data-testid="sr-order"
+                                                options={props.orderOptions}
+                                                renderOption={(e) => e.name}
+                                                getValue={(e) => e.value}
+                                                selectedValue={props.query.orderBy ?? props.orderOptions[0].value}
+                                                onChange={(o) => props.setQueryParameters({ orderBy: o, page: 1 })}
+                                            />
+                                        )}
                                     />
-                                );
-                            case 'keywords':
-                                return (
-                                    <KeywordFilter
-                                        key={codelistId}
-                                        facet={props.facets.find((f) => f.id === codelistId)}
-                                        selectedValues={props.query.filters ? (props.query.filters[codelistId] ?? []) : []}
-                                        onChange={(v) =>
-                                            props.setQueryParameters({
-                                                filters: {
-                                                    ...props.query.filters,
-                                                    [codelistId]: v
-                                                },
-                                                page: 1
-                                            })
+                                </div>
+                            ) : null}
+
+                            {props.filters.map((codelistId) => {
+                                switch (codelistId) {
+                                    case 'publishers':
+                                        return (
+                                            <PublisherFilter
+                                                publishers={publishers?.items ?? []}
+                                                key={codelistId}
+                                                facet={props.facets.find((f) => f.id === codelistId)}
+                                                selectedValues={getSelectedValues(codelistId)}
+                                                onChange={(v) => setSelectedValues(codelistId, v)}
+                                            />
+                                        );
+                                    case 'keywords':
+                                        return (
+                                            <KeywordFilter
+                                                key={codelistId}
+                                                facet={props.facets.find((f) => f.id === codelistId)}
+                                                selectedValues={getSelectedValues(codelistId)}
+                                                onChange={(v) => setSelectedValues(codelistId, v)}
+                                            />
+                                        );
+                                    default:
+                                        const codelist = codelists.find((c) => c.id === codelistId);
+                                        if (codelist) {
+                                            return (
+                                                <CodelistFilter
+                                                    codelist={codelist}
+                                                    facet={props.facets.find((f) => f.id === codelistId)}
+                                                    key={codelistId}
+                                                    selectedValues={getSelectedValues(codelistId)}
+                                                    onChange={(v) => setSelectedValues(codelistId, v)}
+                                                />
+                                            );
                                         }
-                                    />
-                                );
-                            default:
-                                const codelist = codelists.find((c) => c.id === codelistId);
-                                if (codelist) {
-                                    return (
-                                        <CodelistFilter
-                                            codelist={codelist}
-                                            facet={props.facets.find((f) => f.id === codelistId)}
-                                            key={codelistId}
-                                            selectedValues={props.query.filters ? (props.query.filters[codelistId] ?? []) : []}
-                                            onChange={(v) =>
-                                                props.setQueryParameters({
-                                                    filters: {
-                                                        ...props.query.filters,
-                                                        [codelistId]: v
-                                                    },
-                                                    page: 1
-                                                })
-                                            }
-                                        />
-                                    );
                                 }
-                        }
-                        return null;
-                    })}
+                                return null;
+                            })}
+                        </div>
+
+                        <div className="nkod-search-filters__mobile-footer">
+                            <button type="button" className="govuk-button" data-testid="sr-filters-show-results" onClick={closeMobileFilters}>
+                                {t('show')} {props.loading ? null : <ResultsCount count={totalCount} />}
+                            </button>
+                        </div>
+                    </div>
                 </GridColumn>
                 <GridColumn widthUnits={3} totalUnits={4} className="idsk-search-results__content">
+                    <div className="nkod-search-filters__open">
+                        <button
+                            type="button"
+                            className="govuk-button govuk-button--secondary"
+                            ref={mobileFiltersButton}
+                            aria-controls="sr-filters-panel"
+                            aria-expanded={mobileFiltersOpen}
+                            data-testid="sr-filters-open"
+                            onClick={() => setMobileFiltersOpen(true)}
+                        >
+                            {t('filterAction')}
+                            {pickedFiltersCount > 0 ? ` (${pickedFiltersCount})` : null}
+                        </button>
+                    </div>
                     {props.loading ? (
                         <Loading />
                     ) : props.error !== null ? (
@@ -300,8 +439,6 @@ export default function SearchResults(props: Props) {
                             </GridColumn>
 
                             <GridColumn widthUnits={2} totalUnits={4} className="idsk-search-results__filter-panel--mobile govuk-clearfix">
-                                {/* <button className="idsk-search-results__filters__button" title="Filtre">{t('filters')}
-                </button>                 */}
                                 <div className="idsk-search-results__per-page">
                                     <span>{t('resultsOnPage')}</span>
                                     <div className="govuk-form-group">
@@ -333,70 +470,16 @@ export default function SearchResults(props: Props) {
                                 />
                             </div>
 
-                            <div className="idsk-search-results__page-number--mobile govuk-grid-column-full">
-                                {props.query.page > 1 ? (
-                                    <button
-                                        type="button"
-                                        className="idsk-search-results__button--back__mobile"
-                                        onClick={() => props.setQueryParameters({ page: props.query.page - 1 })}
-                                    >
-                                        <svg width="20" height="15" viewBox="0 0 20 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path
-                                                d="M7.44417 14.6753C7.84229 14.2311 7.84229 13.5134 7.44417 13.0691L3.49368 8.63774H18.9792C19.5406 8.63774 20 8.12512 20 7.49858C20 6.87203 19.5406 6.35941 18.9792 6.35941H3.49368L7.45438 1.93943C7.85249 1.49516 7.85249 0.777482 7.45438 0.333207C7.05627 -0.111069 6.41317 -0.111069 6.01506 0.333207L0.298584 6.70116C-0.0995279 7.14543 -0.0995279 7.86311 0.298584 8.30739L6.00485 14.6753C6.40296 15.1082 7.05627 15.1082 7.44417 14.6753Z"
-                                                fill="#0065B3"
-                                            />
-                                        </svg>
-                                    </button>
-                                ) : null}
-                                <span className="idsk-search-results__page-number__mobile"></span>
-                                {totalPages > props.query.page ? (
-                                    <button
-                                        type="button"
-                                        className="idsk-search-results__button--forward__mobile"
-                                        onClick={() => props.setQueryParameters({ page: props.query.page + 1 })}
-                                    >
-                                        <svg width="20" height="15" viewBox="0 0 20 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path
-                                                d="M12.5558 0.324663C12.1577 0.768939 12.1577 1.48662 12.5558 1.93089L16.5063 6.36226L1.0208 6.36226C0.45936 6.36226 1.90735e-06 6.87488 1.90735e-06 7.50142C1.90735e-06 8.12797 0.45936 8.64059 1.0208 8.64059L16.5063 8.64059L12.5456 13.0606C12.1475 13.5048 12.1475 14.2225 12.5456 14.6668C12.9437 15.1111 13.5868 15.1111 13.9849 14.6668L19.7014 8.29884C20.0995 7.85457 20.0995 7.13689 19.7014 6.69261L13.9952 0.324663C13.597 -0.108221 12.9437 -0.108221 12.5558 0.324663Z"
-                                                fill="#0065B3"
-                                            />
-                                        </svg>
-                                    </button>
-                                ) : null}
-                            </div>
-
-                            <div className="idsk-search-results__content__picked-filters govuk-grid-column-full idsk-search-results--invisible__mobile">
-                                {props.filters.map((codelistId) => {
-                                    const codelist = codelists.find((c) => c.id === codelistId);
-                                    if (codelist) {
-                                        const values = codelist && props.query.filters ? (props.query.filters[codelist.id] ?? []) : [];
-                                        if (values.length > 0) {
-                                            return (
-                                                <div
-                                                    className="idsk-search-results__content__picked-filters__topics idsk-search-results--invisible"
-                                                    key={codelistId}
-                                                >
-                                                    <span className="idsk-search-results__text">{codelist.label}</span>
-                                                </div>
-                                            );
-                                        }
-                                    }
-                                    return null;
-                                })}
-                                <button
-                                    className="idsk-search-results__button--turn-filters-off govuk-grid-column-full idsk-search-results--invisible"
-                                    type="button"
-                                >
-                                    {t('removeAllFilters')}
-                                </button>
-                            </div>
-
-                            <div className="govuk-grid-column-full idsk-search-results__show-results__button idsk-search-results--invisible">
-                                <button className="govuk-button idsk-search-results__button-show-results" type="button">
-                                    {t('show')}
-                                    <ResultsCount count={props.totalCount} />
-                                </button>
-                            </div>
+                            <PickedFilters
+                                groups={pickedFilterGroups}
+                                onRemove={(filterId, valueId) =>
+                                    setSelectedValues(
+                                        filterId,
+                                        getSelectedValues(filterId).filter((v) => v !== valueId)
+                                    )
+                                }
+                                onRemoveAll={() => props.setQueryParameters({ filters: {}, page: 1 })}
+                            />
 
                             <div className="idsk-search-results__content__all">
                                 <div className="idsk-search-results__card govuk-grid-column-full">
