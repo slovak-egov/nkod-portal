@@ -174,12 +174,13 @@ function PickedFilters(props: { groups: PickedFilterGroup[]; onRemove: (groupId:
     const { t } = useTranslation();
     const groups = props.groups.filter((g) => g.values.length > 0);
 
-    if (groups.length === 0) {
-        return null;
-    }
-
     return (
-        <div className="idsk-search-results__content__picked-filters govuk-grid-column-full" data-testid="sr-picked-filters">
+        <div
+            className={
+                'idsk-search-results__content__picked-filters govuk-grid-column-full' + (groups.length === 0 ? ' idsk-search-results--empty-filters' : '')
+            }
+            data-testid="sr-picked-filters"
+        >
             {groups.map((group, i) => (
                 <div
                     key={group.id}
@@ -203,9 +204,11 @@ function PickedFilters(props: { groups: PickedFilterGroup[]; onRemove: (groupId:
                     ))}
                 </div>
             ))}
-            <button className="idsk-search-results__button--turn-filters-off govuk-grid-column-full" type="button" onClick={props.onRemoveAll}>
-                {t('removeAllFilters')}
-            </button>
+            {groups.length > 0 ? (
+                <button className="idsk-search-results__button--turn-filters-off govuk-grid-column-full" type="button" onClick={props.onRemoveAll}>
+                    {t('removeAllFilters')}
+                </button>
+            ) : null}
         </div>
     );
 }

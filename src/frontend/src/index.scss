@@ -202,6 +202,14 @@ body {
             float: none;
         }
 
+        .idsk-search-results--order .govuk-form-group {
+            border-bottom: 2px solid govuk-colour('black');
+        }
+
+        .idsk-search-results--empty-filters {
+            display: none;
+        }
+
         // previous/next links do not fit on one line, give each half of the width and let the text wrap
         .idsk-search-results__content__page-changer {
             display: flex;
