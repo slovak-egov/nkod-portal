@@ -1,6 +1,6 @@
-import { useContext, useMemo } from 'react';
+import { useContext, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LanguageOptionsContext, TokenContext, doLogout, supportedLanguages, useDefaultHeaders, useUserInfo } from '../client';
 import Button from './Button';
 import IdSkModule from './IdSkModule';
@@ -17,8 +17,19 @@ export default function Header() {
     const headers = useDefaultHeaders();
 
     const navigate = useNavigate();
+    const location = useLocation();
     const { t, i18n } = useTranslation();
     const l = useContext(LanguageOptionsContext);
+
+    const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+    // IdSK prepína mobilné menu iba klikom na tlačidlo, pri SPA navigácii ho preto treba zavrieť rovnakou cestou
+    useEffect(() => {
+        const menuButton = menuButtonRef.current;
+        if (menuButton?.classList.contains('idsk-header-web__main-headline-menu-button--active')) {
+            menuButton.click();
+        }
+    }, [location]);
 
     const menu: MenuItem[] = [
         {
@@ -208,6 +219,7 @@ export default function Header() {
                                             <h2 className="govuk-heading-m">data.slovensko.sk</h2>
                                         </Link>
                                         <button
+                                            ref={menuButtonRef}
                                             className="idsk-button idsk-header-web__main-headline-menu-button"
                                             aria-label={t('expandMenu')}
                                             aria-expanded="false"
