@@ -535,9 +535,8 @@ export function useEntities<T>(url: string, initialQuery?: Partial<RequestQuery>
         ...initialQuery
     }));
 
-    const [localQuery, setLocalQuery] = useState<RequestQuery>(() =>
-        searchParams.has(urlQueryTextParam) ? { ...defaultQuery, queryText: searchParams.get(urlQueryTextParam)! } : defaultQuery
-    );
+    // URL is read only with syncWithUrl, other lists on the same page (e.g. options of filters) must not depend on it
+    const [localQuery, setLocalQuery] = useState<RequestQuery>(defaultQuery);
 
     const urlQuery = useMemo(
         () => (syncWithUrl ? { ...readQueryFromUrl(searchParams, defaultQuery), language: language.id } : null),
@@ -662,20 +661,7 @@ export function useLocalCatalog() {
 }
 
 export function useDatasets(initialQuery?: Partial<RequestQuery>, syncWithUrl: boolean = false) {
-    let defaultParams: Partial<RequestQuery> = { ...initialQuery };
-
-    const [searchParams] = useSearchParams();
-    if (!syncWithUrl && searchParams.has('publisher')) {
-        defaultParams = {
-            ...defaultParams,
-            filters: {
-                ...defaultParams.filters,
-                publishers: [searchParams.get('publisher')!]
-            }
-        };
-    }
-
-    return useEntities<Dataset>('datasets/search', { orderBy: 'modified', ...defaultParams }, syncWithUrl);
+    return useEntities<Dataset>('datasets/search', { orderBy: 'modified', ...initialQuery }, syncWithUrl);
 }
 
 export function useLocalCatalogs(initialQuery?: Partial<RequestQuery>, syncWithUrl: boolean = false) {

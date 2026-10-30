@@ -366,10 +366,7 @@ FileStorageQuery MapQuery(AbstractQuery query, string language, bool allowAll = 
 
 async Task<FileStorageResponse> GetStorageResponse(AbstractQuery query, string language, Func<FileStorageQuery, FileStorageQuery> storageQueryDecorator, IDocumentStorageClient client, ICodelistProviderClient codelistProviderClient, bool allowAll = false)
 {
-    if (!await CodelistFilterResolver.ResolveShortIds(query.Filters, codelistProviderClient).ConfigureAwait(false))
-    {
-        return new FileStorageResponse(new List<FileState>(), 0, new List<Facet>());
-    }
+    await CodelistFilterResolver.ResolveShortIds(query.Filters, codelistProviderClient).ConfigureAwait(false);
 
     FileStorageQuery? storageQuery = MapQuery(query, language, allowAll);
 
@@ -466,10 +463,7 @@ app.MapPost("/publishers/search", async ([FromBody] PublisherQuery query, [FromS
     {
         string language = query.Language ?? "sk";
 
-        if (!await CodelistFilterResolver.ResolveShortIds(query.Filters, codelistProviderClient).ConfigureAwait(false))
-        {
-            return Results.Ok(new AbstractResponse<PublisherView>());
-        }
+        await CodelistFilterResolver.ResolveShortIds(query.Filters, codelistProviderClient).ConfigureAwait(false);
 
         FileStorageQuery groupQuery = MapQuery(query, language, true);
 

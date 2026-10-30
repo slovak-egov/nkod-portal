@@ -71,6 +71,28 @@ namespace Frontend.Test
         }
 
         [TestMethod]
+        public async Task FilteringShouldNotBeOffered()
+        {
+            string path = fixture.GetStoragePath();
+
+            CreatePublisher(fixture, "Test", true);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            f.CreateDefaultClient();
+
+            await Page.OpenPublisherSearch();
+
+            Assert.AreEqual("1 výsledok", await Page.GetSearchResultsCount());
+            Assert.AreEqual(0, await Page.GetByTestId("sr-filters-open").CountAsync());
+            Assert.AreEqual(0, await Page.GetByTestId("sr-picked-filters").CountAsync());
+
+            // Dataset search has filters, so the button is available there
+            await Page.OpenDatasetSearch();
+            Assert.AreEqual(1, await Page.GetByTestId("sr-filters-open").CountAsync());
+        }
+
+        [TestMethod]
         public async Task ResultShouldRespectQuery()
         {
             string path = fixture.GetStoragePath();

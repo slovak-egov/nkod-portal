@@ -19,12 +19,12 @@ namespace WebApi
         };
 
         // Codelist filter values which are not IRIs (e.g. short ids) are translated by the codelist provider to IRIs of codelist items,
-        // so only IRIs are passed to the storage. Returns false when some value can not be translated, so the result is empty.
-        public static async Task<bool> ResolveShortIds(Dictionary<string, string[]>? filters, ICodelistProviderClient codelistProviderClient)
+        // so only IRIs are passed to the storage. Values which can not be translated are ignored, when no value remains the filter is not applied.
+        public static async Task ResolveShortIds(Dictionary<string, string[]>? filters, ICodelistProviderClient codelistProviderClient)
         {
             if (filters is null)
             {
-                return true;
+                return;
             }
 
             foreach (string key in filters.Keys.ToList())
@@ -35,29 +35,28 @@ namespace WebApi
                     continue;
                 }
 
-                string[] resolved = new string[values.Length];
-                for (int i = 0; i < values.Length; i++)
+                List<string> resolved = new List<string>(values.Length);
+                foreach (string value in values)
                 {
-                    string value = values[i];
                     if (value is null)
                     {
-                        return false;
+                        continue;
                     }
-                    if (!IsIri(value))
+                    if (IsIri(value))
+                    {
+                        resolved.Add(value);
+                    }
+                    else
                     {
                         CodelistItem? item = await codelistProviderClient.GetCodelistItem(key, value).ConfigureAwait(false);
-                        if (item is null)
+                        if (item is not null)
                         {
-                            return false;
+                            resolved.Add(item.Id);
                         }
-                        value = item.Id;
                     }
-                    resolved[i] = value;
                 }
-                filters[key] = resolved;
+                filters[key] = resolved.ToArray();
             }
-
-            return true;
         }
 
         private static bool IsIri(string? value) => value is not null && Uri.IsWellFormedUriString(value, UriKind.Absolute);

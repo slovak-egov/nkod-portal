@@ -446,6 +446,79 @@ namespace Frontend.Test
         }
 
         [TestMethod]
+        public async Task PublisherFilterShouldIgnoreQueryFromUrl()
+        {
+            string path = fixture.GetStoragePath();
+
+            // Search text is not contained in names of publishers
+            string publisher1 = PublisherId + "1";
+            string publisher2 = PublisherId + "2";
+            fixture.CreatePublisher(publisher1, true, "Dopravny podnik");
+            fixture.CreatePublisher(publisher2, true, "Mestsky urad");
+            CreateDatasetAndDistribution(fixture, "Test zastavky", true, publisher: publisher1);
+            CreateDatasetAndDistribution(fixture, "Test linky", true, publisher: publisher2);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            f.CreateDefaultClient();
+
+            await Page.RunAndWaitForRequests(async () =>
+            {
+                await Page.GotoAsync($"http://localhost:6001/datasety?query=Test&publisher={HttpUtility.UrlEncode(publisher1)}");
+            }, new List<string> { "datasets/search", "publishers/search" });
+
+            Assert.AreEqual("1 výsledok", await Page.GetSearchResultsCount());
+
+            IElementHandle? filter = await Page.GetTestElement("sr-filter-publishers");
+            Assert.IsNotNull(filter);
+            IReadOnlyList<IElementHandle> checkBoxes = await filter.QuerySelectorAllAsync("input[type='checkbox']");
+            Assert.AreEqual(2, checkBoxes.Count);
+            Assert.AreEqual("Dopravny podnik (1)", await Page.GetLabel(checkBoxes[0]));
+            Assert.AreEqual("Mestsky urad (1)", await Page.GetLabel(checkBoxes[1]));
+            Assert.IsTrue(await checkBoxes[0].IsCheckedAsync());
+            Assert.IsFalse(await checkBoxes[1].IsCheckedAsync());
+
+            StringAssert.Contains(await Page.GetByTestId("sr-picked-filters").TextContentAsync(), "Dopravny podnik");
+        }
+
+        [TestMethod]
+        public async Task FiltersShouldBeShownInMobileOverlay()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreatePublisher(PublisherId, true);
+            CreateDatasetAndDistribution(fixture, "Test", true);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            f.CreateDefaultClient();
+
+            // Menu is collapsed on mobile, so the search is opened directly
+            await Page.SetViewportSizeAsync(375, 800);
+            await Page.RunAndWaitForRequests(async () =>
+            {
+                await Page.GotoAsync("http://localhost:6001/datasety");
+            }, new List<string> { "datasets/search", "publishers/search" });
+
+            ILocator panel = Page.GetByTestId("sr-filters-panel");
+            ILocator publisherFilter = Page.GetByTestId("sr-filter-publishers");
+            Assert.IsFalse(await panel.IsVisibleAsync());
+
+            await Page.GetByTestId("sr-filters-open").ClickAsync();
+            Assert.IsTrue(await panel.IsVisibleAsync());
+
+            // Filters are shown after the overlay is painted
+            await publisherFilter.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+
+            await Page.GetByTestId("sr-filters-show-results").ClickAsync();
+            Assert.IsFalse(await panel.IsVisibleAsync());
+
+            // Filters are shown again when the overlay is opened again
+            await Page.GetByTestId("sr-filters-open").ClickAsync();
+            await publisherFilter.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        }
+
+        [TestMethod]
         public async Task BackFromDetailShouldRestoreSearch()
         {
             string path = fixture.GetStoragePath();

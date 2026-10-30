@@ -73,10 +73,20 @@ namespace CodelistProviderClient
             throw new Exception("Invalid response");
         }
 
+        // Item is verified by the codelist provider with one request, codelists may be too large to download for a single value
         public async Task<CodelistItem?> GetCodelistItem(string codelistId, string itemId)
         {
-            Codelist? codelist = await GetCodelist(codelistId).ConfigureAwait(false);
-            return codelist?.GetItem(itemId);
+            HttpClient client = CreateClient();
+            using HttpResponseMessage response = await client.GetAsync($"codelists/item?key={HttpUtility.UrlEncode(codelistId)}&id={HttpUtility.UrlEncode(itemId)}");
+            if (response.IsSuccessStatusCode)
+            {
+                return JsonConvert.DeserializeObject<CodelistItem>(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+            throw new Exception("Invalid response");
         }
 
         public async Task<bool> UpdateCodelist(Stream stream)

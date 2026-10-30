@@ -175,6 +175,16 @@ body {
     display: none;
 }
 
+.idsk-search-results__link-panel {
+    height: auto;
+}
+
+// Filters may contain thousands of values (e.g. keywords), only values scrolled into view of the filter lists are laid out
+.nkod-search-filters .govuk-checkboxes__item {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 40px;
+}
+
 @include govuk-media-query($until: tablet) {
     // ID-SK pulls the search results module to the screen edges (margin: 0 -15px), keep the page gutter instead
     .idsk-search-results {
@@ -238,6 +248,18 @@ body {
                 flex: 1 0 100%;
             }
         }
+
+        .idsk-search-results__filter.idsk-search-results-filter__filter-panel {
+            margin-bottom: 20px;
+        }
+
+        .idsk-search-results__link-panel-button {
+            font-size: 20px;
+        }
+
+        .idsk-search-results__link-panel-button::before {
+            top: 5px !important;
+        }
     }
 
     .nkod-search-filters__open {
@@ -297,6 +319,16 @@ body {
             overscroll-behavior: contain;
             -webkit-overflow-scrolling: touch;
             padding: govuk-spacing(4) govuk-spacing(3) govuk-spacing(3);
+        }
+
+        // until the overlay is painted the filters are not laid out at all, the loading message takes their place
+        &.nkod-search-filters--opening .nkod-search-filters__body {
+            display: none;
+        }
+
+        .nkod-search-filters__loading {
+            flex: 1 1 auto;
+            padding: govuk-spacing(4) govuk-spacing(3) 0;
         }
 
         .nkod-search-filters__mobile-footer {

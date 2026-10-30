@@ -84,6 +84,20 @@ app.MapGet("/codelists", async (InternalCodelistProvider provider) =>
     return await provider.GetCodelists();
 });
 
+// Item is found by its IRI or by its short id, so the whole codelist does not need to be downloaded to verify a single value
+app.MapGet("/codelists/item", async (InternalCodelistProvider provider, string key, string id) =>
+{
+    CodelistItem? item = await provider.GetCodelistItem(key, id);
+    if (item is not null)
+    {
+        return Results.Ok(item);
+    }
+    else
+    {
+        return Results.NotFound();
+    }
+});
+
 app.MapGet("/codelists/{id}", async (InternalCodelistProvider provider, string? id) =>
 {
     if (id is not null)

@@ -280,15 +280,18 @@ namespace WebApi.Test
             result = await client.SearchDatasets(JsonContent.Create(new { Filters = new Dictionary<string, string[]> { { DcatDataset.TypeCodelist, new[] { "1", "http://data.gov.sk/2" } } } }));
             Assert.Equal(new[] { id3, id1 }, result.Items.Select(i => i.Id));
 
-            // Unknown short id gives an empty result
+            // Unknown short id is ignored
             result = await client.SearchDatasets(JsonContent.Create(new { Filters = new Dictionary<string, string[]> { { DcatDataset.TypeCodelist, new[] { "1", "not-existing" } } } }));
-            Assert.Equal(0, result.TotalCount);
-            Assert.Empty(result.Items);
+            Assert.Equal(new[] { id1 }, result.Items.Select(i => i.Id));
 
-            // Value which is neither IRI nor short id is not passed to the storage
+            // Value which is neither IRI nor short id is ignored as well
             result = await client.SearchDatasets(JsonContent.Create(new { Filters = new Dictionary<string, string[]> { { DcatDataset.TypeCodelist, new[] { "1", "not a short id" } } } }));
-            Assert.Equal(0, result.TotalCount);
-            Assert.Empty(result.Items);
+            Assert.Equal(new[] { id1 }, result.Items.Select(i => i.Id));
+
+            // When only unknown values are used, the filter is not applied
+            result = await client.SearchDatasets(JsonContent.Create(new { Filters = new Dictionary<string, string[]> { { DcatDataset.TypeCodelist, new[] { "not-existing" } } } }));
+            Assert.Equal(3, result.TotalCount);
+            Assert.Equivalent(new[] { id1, id2, id3 }, result.Items.Select(i => i.Id));
         }
 
         [Fact]
