@@ -1,0 +1,29 @@
+$border-bottom-width: govuk-spacing(2);
+
+.idsk-cookie-banner {
+    @include govuk-font($size: 16);
+
+    padding-top: govuk-spacing(4);
+    border-bottom: $border-bottom-width solid transparent;
+    background-color: govuk-colour('grey-4');
+
+    .idsk-button-group .idsk-button {
+        margin-bottom: 0;
+    }
+}
+
+.idsk-cookie-banner[hidden] {
+    display: none;
+}
+
+.idsk-cookie-banner__message {
+    margin-bottom: -$border-bottom-width;
+
+    &[hidden] {
+        display: none;
+    }
+
+    &:focus {
+        outline: none;
+    }
+}

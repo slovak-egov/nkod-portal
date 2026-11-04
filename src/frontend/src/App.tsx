@@ -57,12 +57,15 @@ import PublisherHarvestationDetail from './pages/monitoring/PublisherHarvestatio
 import MonitoringSettingsUser from './pages/MonitoringSettingsUser';
 import PublisherDataQualityDetail from './pages/quality/PublisherDataQualityDetail';
 import PublishersDataQuality from './pages/quality/PublishersDataQuality';
+import Cookies from './pages/Cookies';
+import PersonalDataProtection, { personalDataProtectionPath } from './pages/PersonalDataProtection';
+import CookiesProcessing from './pages/CookiesProcessing';
+import CookieBanner from './components/CookieBanner';
+import { cookiesProcessingPath } from './cookies';
 
 type Props = {
     extenalToken: TokenResult | null;
 };
-
-const matomoUrl = process.env.REACT_APP_MATOMO_URL;
 
 function AppNavigator(props: Props) {
     const ctx = useContext(TokenContext);
@@ -213,6 +216,7 @@ function App(props: Props) {
                 }}
             >
                 <BrowserRouter>
+                    <CookieBanner />
                     {window.location.hostname !== 'data.slovensko.sk' ? (
                         <Alert type="warning" style={{ margin: 0, padding: '20px 0' }}>
                             Nachádzate sa na TEST verzii portálu data.slovensko.sk.
@@ -318,6 +322,9 @@ function App(props: Props) {
                                     <Route path="/potvrdenie-registracie" Component={ActivateUser} />
                                     <Route path="/zabudnute-heslo" Component={ForgottenPassword} />
                                     <Route path="/obnova-hesla" Component={ForgottenPasswordActivation} />
+                                    <Route path="/cookies" Component={Cookies} />
+                                    <Route path={personalDataProtectionPath} Component={PersonalDataProtection} />
+                                    <Route path={cookiesProcessingPath} Component={CookiesProcessing} />
 
                                     <Route path="/kvalita-metadat" Component={PublishersDataQuality} />
                                     <Route path="/kvalita-metadat/:id" Component={PublisherDataQualityDetail} />

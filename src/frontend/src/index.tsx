@@ -4,6 +4,7 @@ import reportWebVitals from './reportWebVitals';
 import './index.scss';
 import { TokenResult } from './client';
 import './i18n';
+import { CookieConsentProvider } from './cookies';
 
 declare let externalToken: TokenResult|null;
 
@@ -15,7 +16,9 @@ const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
-  <App extenalToken={externalToken} />
+  <CookieConsentProvider>
+    <App extenalToken={externalToken} />
+  </CookieConsentProvider>
 );
 
 // If you want to start measuring performance in your app, pass a function
