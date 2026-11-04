@@ -1,31 +1,38 @@
-export default function CookiesAccepted() {
-    return (
-        <>
-            <form method="POST">
-                <div className="idsk-cookie-banner " data-nosnippet role="region" aria-label="Cookies na [názov stránky/služby]">
-                    <div className="idsk-cookie-banner__message idsk-cookie-banner__example govuk-width-container">
-                        <div className="govuk-grid-row">
-                            <div className="govuk-grid-column-two-thirds">
-                                <div className="idsk-cookie-banner__content">
-                                    <p>
-                                        Akceptovali ste dodatočné súbory cookies. Túto voľbu môžete kedykoľvek zmeniť v{' '}
-                                        <a className="govuk-link" href="#" title="nastaveniach">
-                                            nastaveniach
-                                        </a>
-                                        .
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+import { useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { cookiesSettingsPath, useCookieConsent } from '../cookies';
 
-                        <div className="idsk-button-group">
-                            <a href="#" role="button" draggable="false" className="idsk-button" data-module="idsk-button">
-                                Skryť túto správu
-                            </a>
+export default function CookiesAccepted() {
+    const { hideConfirmation } = useCookieConsent();
+    const messageRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        messageRef.current?.focus();
+    }, []);
+
+    return (
+        <div className="idsk-cookie-banner" data-nosnippet role="region" aria-label="Cookies na stránke Národného katalógu otvorených dát">
+            <div className="idsk-cookie-banner__message govuk-width-container" role="alert" tabIndex={-1} ref={messageRef}>
+                <div className="govuk-grid-row">
+                    <div className="govuk-grid-column-two-thirds">
+                        <div className="idsk-cookie-banner__content">
+                            <p>
+                                Prijali ste ukladanie analytických cookie súborov. Túto voľbu môžete kedykoľvek zmeniť v{' '}
+                                <Link className="govuk-link" to={cookiesSettingsPath} title="nastaveniach">
+                                    nastaveniach
+                                </Link>
+                                .
+                            </p>
                         </div>
                     </div>
                 </div>
-            </form>
-        </>
+
+                <div className="idsk-button-group">
+                    <button type="button" className="idsk-button" data-module="idsk-button" onClick={hideConfirmation}>
+                        Skryť túto správu
+                    </button>
+                </div>
+            </div>
+        </div>
     );
 }

@@ -56,15 +56,14 @@ import CatalogHarvestations from './pages/monitoring/CatalogHarvestations';
 import PublisherHarvestationDetail from './pages/monitoring/PublisherHarvestationDetail';
 import MonitoringSettingsUser from './pages/MonitoringSettingsUser';
 import Cookies from './pages/Cookies';
-import CookiesAccepted from './components/CookiesAccepted';
-import CookiesAccept from './components/CookiesAccept';
-import CookiesNotAccepted from './components/CookiesNotAccepted';
+import PersonalDataProtection, { personalDataProtectionPath } from './pages/PersonalDataProtection';
+import CookiesProcessing from './pages/CookiesProcessing';
+import CookieBanner from './components/CookieBanner';
+import { cookiesProcessingPath } from './cookies';
 
 type Props = {
     extenalToken: TokenResult | null;
 };
-
-const matomoUrl = process.env.REACT_APP_MATOMO_URL;
 
 function AppNavigator(props: Props) {
     const ctx = useContext(TokenContext);
@@ -183,21 +182,6 @@ function App(props: Props) {
         load();
     }, [headers]);
 
-    useEffect(() => {
-        if (matomoUrl) {
-            var _mtm = [];
-            _mtm.push({ 'mtm.startTime': new Date().getTime(), event: 'mtm.Start' });
-            (function () {
-                var d = document,
-                    g = d.createElement('script'),
-                    s = d.getElementsByTagName('script')[0];
-                g.async = true;
-                g.src = matomoUrl;
-                s.parentNode?.insertBefore(g, s);
-            })();
-        }
-    }, []);
-
     return (
         <TokenContext.Provider
             value={{
@@ -215,7 +199,7 @@ function App(props: Props) {
                 }}
             >
                 <BrowserRouter>
-                    <CookiesNotAccepted />
+                    <CookieBanner />
                     {window.location.hostname !== 'data.slovensko.sk' ? (
                         <Alert type="warning" style={{ margin: 0, padding: '20px 0' }}>
                             Nachádzate sa na TEST verzii portálu data.slovensko.sk.
@@ -322,6 +306,8 @@ function App(props: Props) {
                                     <Route path="/zabudnute-heslo" Component={ForgottenPassword} />
                                     <Route path="/obnova-hesla" Component={ForgottenPasswordActivation} />
                                     <Route path="/cookies" Component={Cookies} />
+                                    <Route path={personalDataProtectionPath} Component={PersonalDataProtection} />
+                                    <Route path={cookiesProcessingPath} Component={CookiesProcessing} />
 
                                     <Route path="*" Component={NotFound} />
                                 </Routes>

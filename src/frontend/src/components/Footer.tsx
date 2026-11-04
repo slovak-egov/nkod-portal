@@ -1,5 +1,8 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { useUserInfo } from '../client';
+import { cookiesProcessingPath, cookiesSettingsPath } from '../cookies';
+import { personalDataProtectionPath } from '../pages/PersonalDataProtection';
 
 export function Footer() {
     const { t } = useTranslation();
@@ -30,20 +33,15 @@ export function Footer() {
                                         >
                                             {t('technicalSupport')}
                                         </a>{' '}
-                                        <a
-                                            className="govuk-link"
-                                            style={{ marginLeft: '1em' }}
-                                            href="https://slovak-egov.atlassian.net/wiki/spaces/opendata/pages/20056044/Podpora+pre+data.slovensko.sk"
-                                        >
+                                        <Link className="govuk-link" style={{ marginLeft: '1em' }} to={personalDataProtectionPath}>
+                                            Ochrana osobných údajov
+                                        </Link>
+                                        <Link className="govuk-link" style={{ marginLeft: '1em' }} to={cookiesProcessingPath}>
                                             Spracúvanie cookies
-                                        </a>
-                                        <a
-                                            className="govuk-link"
-                                            style={{ marginLeft: '1em' }}
-                                            href="https://slovak-egov.atlassian.net/wiki/spaces/opendata/pages/20056044/Podpora+pre+data.slovensko.sk"
-                                        >
+                                        </Link>
+                                        <Link className="govuk-link" style={{ marginLeft: '1em' }} to={cookiesSettingsPath}>
                                             Nastavenia cookies
-                                        </a>
+                                        </Link>
                                     </p>
                                     {userInfo ? (
                                         <p>
