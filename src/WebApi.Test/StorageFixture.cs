@@ -118,7 +118,7 @@ namespace WebApi.Test
         }
 
         public Guid CreateDistrbution(FileState datasetState, Uri? authorsWorkType, Uri? originalDatabaseType, Uri? databaseProtectedBySpecialRightsType, Uri? personalDataContainmentType,
-            Uri? downloadUri, Uri? accessUri, Uri? format, Uri? mediaType, Uri? conformsTo = null, Uri? compressFormat = null, Uri? packageFormat = null, string? title = null, string? titleEn = null, Uri? accessService = null, Uri? language = null)
+            Uri? downloadUri, Uri? accessUri, Uri? format, Uri? mediaType, Uri? conformsTo = null, Uri? compressFormat = null, Uri? packageFormat = null, string? title = null, string? titleEn = null, Uri? accessService = null, Uri? language = null, Uri? dataServiceEndpoint = null)
         {
             DcatDistribution distribution = DcatDistribution.Create(datasetState.Metadata.Id);
 
@@ -130,6 +130,12 @@ namespace WebApi.Test
             distribution.ConformsTo = conformsTo;
             distribution.CompressFormat = compressFormat;
             distribution.PackageFormat = packageFormat;
+
+            if (dataServiceEndpoint is not null)
+            {
+                DcatDataService dataService = distribution.GetOrCreateDataSerice();
+                dataService.EndpointUrl = dataServiceEndpoint;
+            }
 
             LanguageDependedTexts titles = new LanguageDependedTexts();
             if (title is not null)

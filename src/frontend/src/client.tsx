@@ -450,6 +450,7 @@ const urlFilterPrefix = 'f.';
 const urlFilterAliases: { [filterKey: string]: string } = {
     publishers: 'publisher',
     keywords: 'keyword',
+    distributionType: 'distributionType',
     [knownCodelists.dataset.type]: 'type',
     [knownCodelists.dataset.theme]: 'theme',
     [knownCodelists.dataset.accrualPeriodicity]: 'frequency',

@@ -457,5 +457,8 @@
     "dataService": "Dátová služba",
     "relation": "Súvisiaci zdroj",
     "mapView": "Zobrazenie na mape",
-    "map": "Mapa"
+    "map": "Mapa",
+    "distributionType": "Typ distribúcie",
+    "distributionTypeDataService": "Dátová služba",
+    "distributionTypeDownloadFile": "Súbor na stiahnutie"
 }

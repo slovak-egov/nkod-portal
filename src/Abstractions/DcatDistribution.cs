@@ -28,6 +28,12 @@ namespace NkodSk.Abstractions
 
         public const string MediaTypeCodelist = "http://www.iana.org/assignments/media-types";
 
+        public const string DistributionTypeKey = "distributionType";
+
+        public const string DistributionTypeDataService = "dataService";
+
+        public const string DistributionTypeDownloadFile = "downloadFile";
+
         private Guid? createdId;
 
         public DcatDistribution(IGraph graph, IUriNode node) : base(graph, node)
@@ -160,6 +166,8 @@ namespace NkodSk.Abstractions
             }
         }
 
+        public string DistributionType => AccessService is not null ? DistributionTypeDataService : DistributionTypeDownloadFile;
+
         public DcatDataService GetOrCreateDataSerice()
         {
             DcatDataService? dataService = DataService;
@@ -233,6 +241,7 @@ namespace NkodSk.Abstractions
                 metadata.AdditionalValues.Remove(FormatCodelist);
                 metadata.AdditionalValues.Remove(LicenseCodelist);
                 metadata.AdditionalValues.Remove(PersonalDataContainmentTypeCodelist);
+                metadata.AdditionalValues.Remove(DistributionTypeKey);
             }
             return metadata;
         }
@@ -275,6 +284,12 @@ namespace NkodSk.Abstractions
             string[] personalDatasAsArray = personalDatas.ToArray();
             Array.Sort(personalDatasAsArray);
             values[PersonalDataContainmentTypeCodelist] = personalDatasAsArray;
+
+            HashSet<string> distributionTypes = values.ContainsKey(DistributionTypeKey) ? new HashSet<string>(values[DistributionTypeKey]) : new HashSet<string>();
+            distributionTypes.Add(DistributionType);
+            string[] distributionTypesAsArray = distributionTypes.ToArray();
+            Array.Sort(distributionTypesAsArray);
+            values[DistributionTypeKey] = distributionTypesAsArray;
 
             return metadata with { AdditionalValues = values };
         }

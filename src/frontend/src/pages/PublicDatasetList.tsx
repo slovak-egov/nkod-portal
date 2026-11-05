@@ -18,6 +18,7 @@ const codelistsKeys = [
     'https://data.gov.sk/set/codelist/dataset-type',
     'http://publications.europa.eu/resource/authority/data-theme',
     'http://publications.europa.eu/resource/authority/file-type',
+    'distributionType',
     'http://publications.europa.eu/resource/authority/frequency',
     'keywords',
     knownCodelists.distribution.license,

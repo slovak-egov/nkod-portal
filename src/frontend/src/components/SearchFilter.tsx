@@ -3,6 +3,7 @@ import { ReactNode, useCallback } from "react";
 
 import Checkbox from "./Checkbox";
 import IdSkModule from "./IdSkModule";
+import { useTranslation } from "react-i18next";
 
 type Props<T> =
 {
@@ -16,8 +17,9 @@ type Props<T> =
     dataTestId: string;
 }
 
-export default function SearchFilter<T>(props: Props<T>) 
+export default function SearchFilter<T>(props: Props<T>)
 {
+    const { t } = useTranslation();
     const selectedItems = props.selectedItems;
     const selectedValues = selectedItems.map(props.getValue);
     const onSelectionChange = props.onSelectionChange;
@@ -33,7 +35,9 @@ export default function SearchFilter<T>(props: Props<T>)
                     <span className="idsk-search-results__link-panel__title">
                         {props.title}
                     </span>
-                    <span className="idsk-search-results__link-panel--span"></span>
+                    <span className="idsk-search-results__link-panel--span">
+                        {selectedValues.length > 0 ? t('selectedCount', { count: selectedValues.length }) : ''}
+                    </span>
                 </button>
                 <div className="idsk-search-results__list">
                     <div className="idsk-option-select-filter ">

@@ -812,6 +812,258 @@ namespace WebApi.Test
             Assert.Equal(metadata.AdditionalValues?["key"], newMetadata.AdditionalValues?["key"]);
         }
 
+        private static string[] GetDistributionTypes(FileMetadata metadata)
+        {
+            return metadata.AdditionalValues?.GetValueOrDefault(DcatDistribution.DistributionTypeKey, Array.Empty<string>()) ?? Array.Empty<string>();
+        }
+
+        [Fact]
+        public async Task TestCreateShouldAddDistributionTypeToDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+
+            fixture.CreatePublisher("Ministerstvo hospodárstva SR", PublisherId);
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            Assert.Empty(GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+
+            using (JsonContent requestContent = JsonContent.Create(CreateInput(datasetId)))
+            {
+                using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            }
+
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDownloadFile }, GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+
+            using (JsonContent requestContent = JsonContent.Create(CreateDataServiceInput(datasetId)))
+            {
+                using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            }
+
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDataService, DcatDistribution.DistributionTypeDownloadFile }, GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+        }
+
+        [Fact]
+        public async Task TestCreateDataServiceShouldAddDistributionTypeToDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+
+            fixture.CreatePublisher("Ministerstvo hospodárstva SR", PublisherId);
+            Guid datasetId = fixture.CreateDataset("Test", PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            using JsonContent requestContent = JsonContent.Create(CreateDataServiceInput(datasetId));
+            using HttpResponseMessage response = await client.PostAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDataService }, GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+        }
+
+        [Fact]
+        public async Task TestEditShouldChangeDistributionTypeInDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDownloadFile }, GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+
+            DistributionInput input = CreateDataServiceInput(datasetId);
+            input.Id = distributions[0].ToString();
+            using (JsonContent requestContent = JsonContent.Create(input))
+            {
+                using HttpResponseMessage response = await client.PutAsync("/distributions", requestContent);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            }
+
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDataService }, GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+
+            input = CreateInput(datasetId);
+            input.Id = distributions[0].ToString();
+            using (JsonContent requestContent = JsonContent.Create(input))
+            {
+                using HttpResponseMessage response = await client.PutAsync("/distributions", requestContent);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            }
+
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDownloadFile }, GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+        }
+
+        [Fact]
+        public async Task TestDeleteShouldRemoveDistributionTypeInDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDownloadFile }, GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+            using HttpResponseMessage response = await client.DeleteAsync($"/distributions?id={HttpUtility.UrlEncode(distributions[0].ToString())}");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            Assert.Empty(GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+        }
+
+        private static async Task<string> SaveDistribution(HttpClient client, DistributionInput input)
+        {
+            using JsonContent requestContent = JsonContent.Create(input);
+            using HttpResponseMessage response = input.Id is null ? await client.PostAsync("/distributions", requestContent) : await client.PutAsync("/distributions", requestContent);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            SaveResult? result = JsonConvert.DeserializeObject<SaveResult>(await response.Content.ReadAsStringAsync());
+            Assert.NotNull(result);
+            Assert.True(result.Success);
+            Assert.False(string.IsNullOrEmpty(result.Id));
+            return result.Id;
+        }
+
+        private static async Task DeleteDistribution(HttpClient client, string id)
+        {
+            using HttpResponseMessage response = await client.DeleteAsync($"/distributions?id={HttpUtility.UrlEncode(id)}");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task TestDeleteShouldKeepRemainingDistributionTypeInDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+
+            string dataServiceId = await SaveDistribution(client, CreateDataServiceInput(datasetId));
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDataService, DcatDistribution.DistributionTypeDownloadFile }, GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+
+            await DeleteDistribution(client, dataServiceId);
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDownloadFile }, GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+
+            dataServiceId = await SaveDistribution(client, CreateDataServiceInput(datasetId));
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDataService, DcatDistribution.DistributionTypeDownloadFile }, GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+
+            await DeleteDistribution(client, distributions[0].ToString());
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDataService }, GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+
+            await DeleteDistribution(client, dataServiceId);
+            Assert.Empty(GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+        }
+
+        [Fact]
+        public async Task TestEditOneOfDistributionsShouldUpdateDistributionTypeInDataset()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+
+            string secondId = await SaveDistribution(client, CreateInput(datasetId));
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDownloadFile }, GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+
+            DistributionInput input = CreateDataServiceInput(datasetId);
+            input.Id = secondId;
+            await SaveDistribution(client, input);
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDataService, DcatDistribution.DistributionTypeDownloadFile }, GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+
+            input = CreateDataServiceInput(datasetId);
+            input.Id = distributions[0].ToString();
+            await SaveDistribution(client, input);
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDataService }, GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+
+            input = CreateInput(datasetId);
+            input.Id = secondId;
+            await SaveDistribution(client, input);
+            Assert.Equal(new[] { DcatDistribution.DistributionTypeDataService, DcatDistribution.DistributionTypeDownloadFile }, GetDistributionTypes(storage.GetFileMetadata(datasetId, accessPolicy)!));
+        }
+
+        [Fact]
+        public async Task DistributionTypeSearchShouldReflectDistributionChanges()
+        {
+            string path = fixture.GetStoragePath();
+            fixture.CreateDatasetCodelists();
+            fixture.CreateDistributionCodelists();
+            (Guid datasetId, _, Guid[] distributions) = fixture.CreateFullDataset(PublisherId);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, applicationFactory.CreateToken("PublisherAdmin", PublisherId));
+
+            async Task AssertSearch(bool expectedDataService, bool expectedDownloadFile)
+            {
+                foreach ((string type, bool expected) in new[] { (DcatDistribution.DistributionTypeDataService, expectedDataService), (DcatDistribution.DistributionTypeDownloadFile, expectedDownloadFile) })
+                {
+                    AbstractResponse<DatasetView> result = await client.SearchDatasets(JsonContent.Create(new
+                    {
+                        Filters = new Dictionary<string, string[]> { { DcatDistribution.DistributionTypeKey, new[] { type } } },
+                        RequiredFacets = new[] { DcatDistribution.DistributionTypeKey }
+                    }));
+
+                    Assert.Equal(expected ? new[] { datasetId } : Array.Empty<Guid>(), result.Items.Select(i => i.Id));
+
+                    Facet facet = Assert.Single(result.Facets!);
+                    Assert.Equal(DcatDistribution.DistributionTypeKey, facet.Id);
+                    Assert.Equal(expected ? 1 : 0, facet.Values.GetValueOrDefault(type));
+                }
+            }
+
+            await AssertSearch(false, true);
+
+            string dataServiceId = await SaveDistribution(client, CreateDataServiceInput(datasetId));
+            await AssertSearch(true, true);
+
+            DistributionInput input = CreateDataServiceInput(datasetId);
+            input.Id = distributions[0].ToString();
+            await SaveDistribution(client, input);
+            await AssertSearch(true, false);
+
+            await DeleteDistribution(client, dataServiceId);
+            await AssertSearch(true, false);
+
+            input = CreateInput(datasetId);
+            input.Id = distributions[0].ToString();
+            await SaveDistribution(client, input);
+            await AssertSearch(false, true);
+
+            await DeleteDistribution(client, distributions[0].ToString());
+            await AssertSearch(false, false);
+        }
+
         [Fact]
         public async Task TestCreateShouldAddDistrubutionToDataset()
         {

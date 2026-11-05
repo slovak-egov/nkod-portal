@@ -430,5 +430,8 @@
     "websiteAddress": "Website-Adresse",
     "websiteOwner": "Der Betreiber des Dienstes ist das Ministerium für Investitionen, regionale Entwicklung und Informatisierung der Slowakischen Republik.",
     "welcome": "wilkommen",
-    "yes": "ja"
+    "yes": "ja",
+    "distributionType": "Distributionstyp",
+    "distributionTypeDataService": "Datendienst",
+    "distributionTypeDownloadFile": "Datei zum Herunterladen"
 }
