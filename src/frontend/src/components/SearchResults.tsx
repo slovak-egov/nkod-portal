@@ -21,6 +21,7 @@ import SearchBar from './SearchBar';
 import SelectElementItems from './SelectElementItems';
 import { useTranslation } from 'react-i18next';
 import SearchFilterWithQuery from './SearchFilterWithQuery';
+import SearchFilter from './SearchFilter';
 
 type OrderOption = {
     name: string;
@@ -136,6 +137,35 @@ function CodelistFilter(props: { codelist: Codelist; facet?: Facet; selectedValu
         );
     }
     return <></>;
+}
+
+const distributionTypes = [
+    { id: 'dataService', labelKey: 'distributionTypeDataService' },
+    { id: 'downloadFile', labelKey: 'distributionTypeDownloadFile' }
+];
+
+function DistributionTypeFilter(props: { facet?: Facet; selectedValues: string[]; onChange: (values: string[]) => void }) {
+    const { t } = useTranslation();
+    const facet = props.facet;
+
+    const options: FilterValue[] = distributionTypes.map((type) => ({
+        id: type.id,
+        label: t(type.labelKey) + (facet ? ' (' + (facet.values[type.id] ?? 0) + ')' : '')
+    }));
+
+    return (
+        <SearchFilter<FilterValue>
+            key="distributionType"
+            dataTestId="sr-filter-distributionType"
+            title={t('distributionType')}
+            searchElementTitle={t('distributionType')}
+            items={options}
+            getLabel={(e) => e.label}
+            getValue={(e) => e.id}
+            selectedItems={options.filter((o) => props.selectedValues.includes(o.id))}
+            onSelectionChange={(e) => props.onChange(e.map((o) => o.id))}
+        />
+    );
 }
 
 function KeywordFilter(props: { facet?: Facet; selectedValues: string[]; onChange: (values: string[]) => void }) {
@@ -261,6 +291,13 @@ export default function SearchResults(props: Props) {
             case 'keywords':
                 title = t('keywords');
                 break;
+            case 'distributionType':
+                title = t('distributionType');
+                getLabel = (id) => {
+                    const type = distributionTypes.find((d) => d.id === id);
+                    return type ? t(type.labelKey) : id;
+                };
+                break;
             default:
                 const codelist = codelists.find((c) => c.id === filterId);
                 if (codelist) {
@@ -291,6 +328,15 @@ export default function SearchResults(props: Props) {
                     case 'keywords':
                         return (
                             <KeywordFilter
+                                key={codelistId}
+                                facet={props.facets.find((f) => f.id === codelistId)}
+                                selectedValues={getSelectedValues(codelistId)}
+                                onChange={(v) => setSelectedValues(codelistId, v)}
+                            />
+                        );
+                    case 'distributionType':
+                        return (
+                            <DistributionTypeFilter
                                 key={codelistId}
                                 facet={props.facets.find((f) => f.id === codelistId)}
                                 selectedValues={getSelectedValues(codelistId)}

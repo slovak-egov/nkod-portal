@@ -565,6 +565,173 @@ namespace Frontend.Test
         }
 
         [TestMethod]
+        public async Task ResultShouldRespectDistributionTypeFilter()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreatePublisher(PublisherId, true);
+
+            Guid d1 = CreateDatasetAndDistribution(fixture, "Test 1", true);
+            Guid d2 = CreateDatasetAndDistribution(fixture, "Test 2", true, createDataService: true);
+
+            using Storage storage = new Storage(path);
+
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            f.CreateDefaultClient();
+
+            await Page.OpenDatasetSearch();
+
+            async Task<IReadOnlyList<IElementHandle>> GetCheckBoxes()
+            {
+                IElementHandle? filter = await Page.GetTestElement("sr-filter-distributionType");
+                Assert.IsNotNull(filter);
+                Assert.AreEqual("Typ distribúcie", (await (await filter.QuerySelectorAsync(".idsk-search-results__link-panel__title"))!.TextContentAsync())?.Trim());
+
+                IReadOnlyList<IElementHandle> checkBoxes = await filter.QuerySelectorAllAsync("input[type='checkbox']");
+                Assert.AreEqual(2, checkBoxes.Count);
+                return checkBoxes;
+            }
+
+            IReadOnlyList<IElementHandle> checkBoxes = await GetCheckBoxes();
+            Assert.AreEqual("Dátová služba (1)", await Page.GetLabel(checkBoxes[0]));
+            Assert.AreEqual("Súbor na stiahnutie (1)", await Page.GetLabel(checkBoxes[1]));
+
+            async Task AssertAllResults()
+            {
+                Assert.AreEqual("2 výsledky", await Page.GetSearchResultsCount());
+                IReadOnlyList<IElementHandle> results = await Page.QuerySelectorAllAsync("[data-testid='sr-result']");
+                Assert.AreEqual(2, results.Count);
+
+                await AssertResult(results[1], d1, "Test 1", "Test Publisher");
+                await AssertResult(results[0], d2, "Test 2", "Test Publisher");
+            }
+
+            async Task AssertSingleResult(Guid id, string name)
+            {
+                Assert.AreEqual("1 výsledok", await Page.GetSearchResultsCount());
+                IReadOnlyList<IElementHandle> results = await Page.QuerySelectorAllAsync("[data-testid='sr-result']");
+                Assert.AreEqual(1, results.Count);
+                await AssertResult(results[0], id, name, "Test Publisher");
+            }
+
+            async Task CheckFilters(bool checkDataService, bool checkDownloadFile)
+            {
+                IReadOnlyList<IElementHandle> checkBoxes = await GetCheckBoxes();
+                await checkBoxes[0].SetCheckedAsync(checkDataService);
+                await checkBoxes[1].SetCheckedAsync(checkDownloadFile);
+            }
+
+            await AssertAllResults();
+
+            await Page.RunAndWaitForDatasetSearch(async () =>
+            {
+                await CheckFilters(true, false);
+            });
+            await AssertSingleResult(d2, "Test 2");
+
+            await Page.RunAndWaitForDatasetSearch(async () =>
+            {
+                await CheckFilters(true, true);
+            });
+            await AssertAllResults();
+
+            await Page.RunAndWaitForDatasetSearch(async () =>
+            {
+                await CheckFilters(false, true);
+            });
+            await AssertSingleResult(d1, "Test 1");
+
+            checkBoxes = await GetCheckBoxes();
+            Assert.IsFalse(await checkBoxes[0].IsCheckedAsync());
+            Assert.IsTrue(await checkBoxes[1].IsCheckedAsync());
+
+            await Page.RunAndWaitForDatasetSearch(async () =>
+            {
+                await CheckFilters(false, false);
+            });
+            await AssertAllResults();
+        }
+
+        [TestMethod]
+        public async Task DistributionTypeFilterShouldBeStoredInUrlAndRestored()
+        {
+            string path = fixture.GetStoragePath();
+
+            fixture.CreatePublisher(PublisherId, true);
+
+            CreateDatasetAndDistribution(fixture, "Test 1", true);
+            CreateDatasetAndDistribution(fixture, "Test 2", true, createDataService: true);
+
+            using Storage storage = new Storage(path);
+            using WebApiApplicationFactory f = new WebApiApplicationFactory(storage);
+            f.CreateDefaultClient();
+
+            async Task<IReadOnlyList<IElementHandle>> GetCheckBoxes()
+            {
+                IElementHandle? filter = await Page.GetTestElement("sr-filter-distributionType");
+                Assert.IsNotNull(filter);
+                return await filter.QuerySelectorAllAsync("input[type='checkbox']");
+            }
+
+            async Task AssertState(string resultsCount, params string[] selected)
+            {
+                Assert.AreEqual(resultsCount, await Page.GetSearchResultsCount());
+
+                Dictionary<string, string[]> parameters = Page.GetUrlParameters();
+                if (selected.Length > 0)
+                {
+                    CollectionAssert.AreEqual(selected, parameters["distributionType"]);
+                }
+                else
+                {
+                    Assert.IsFalse(parameters.ContainsKey("distributionType"));
+                }
+
+                IReadOnlyList<IElementHandle> checkBoxes = await GetCheckBoxes();
+                Assert.AreEqual(selected.Contains("dataService"), await checkBoxes[0].IsCheckedAsync());
+                Assert.AreEqual(selected.Contains("downloadFile"), await checkBoxes[1].IsCheckedAsync());
+
+                string selectedCount = selected.Length > 0 ? $"{selected.Length} vybraté" : string.Empty;
+                Assert.AreEqual(selectedCount, await Page.GetByTestId("sr-filter-distributionType").Locator(".idsk-search-results__link-panel--span").TextContentAsync());
+
+                string pickedFilters = await Page.GetByTestId("sr-picked-filters").TextContentAsync() ?? string.Empty;
+                Assert.AreEqual(selected.Length > 0, pickedFilters.Contains("Typ distribúcie"));
+                Assert.AreEqual(selected.Contains("dataService"), pickedFilters.Contains("Dátová služba"));
+                Assert.AreEqual(selected.Contains("downloadFile"), pickedFilters.Contains("Súbor na stiahnutie"));
+            }
+
+            await Page.OpenDatasetSearch();
+            await AssertState("2 výsledky");
+
+            await Page.RunAndWaitForDatasetSearch(async () => await (await GetCheckBoxes())[0].CheckAsync());
+            await AssertState("1 výsledok", "dataService");
+
+            await Page.RunAndWaitForDatasetSearch(async () => await (await GetCheckBoxes())[1].CheckAsync());
+            await AssertState("2 výsledky", "dataService", "downloadFile");
+
+            await Page.RunAndWaitForDatasetSearch(async () => await Page.GoBackAsync());
+            await AssertState("1 výsledok", "dataService");
+
+            await Page.RunAndWaitForDatasetSearch(async () => await Page.GoBackAsync());
+            await AssertState("2 výsledky");
+
+            await Page.RunAndWaitForDatasetSearch(async () => await Page.GoForwardAsync());
+            await AssertState("1 výsledok", "dataService");
+
+            await Page.RunAndWaitForRequests(async () =>
+            {
+                await Page.GotoAsync("http://localhost:6001/datasety?distributionType=downloadFile");
+            }, new List<string> { "datasets/search" });
+            await AssertState("1 výsledok", "downloadFile");
+
+            await Page.RunAndWaitForDatasetSearch(async () =>
+            {
+                await Page.GetByTestId("sr-picked-filters").Locator(".idsk-search-results__picked-content-type").ClickAsync();
+            });
+            await AssertState("2 výsledky");
+        }
+
+        [TestMethod]
         public async Task ChangeInQueryShouldResetPage()
         {
             string path = fixture.GetStoragePath();
