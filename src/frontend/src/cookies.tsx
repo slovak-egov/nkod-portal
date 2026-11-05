@@ -57,6 +57,7 @@ function writeCookiesPolicy(policy: CookiesPolicy) {
 
 const matomoUrl = process.env.REACT_APP_MATOMO_URL;
 let matomoLoaded = false;
+let analyticsAllowed = false;
 
 function getMatomoTrackers(): any[] {
     try {
@@ -67,7 +68,9 @@ function getMatomoTrackers(): any[] {
 }
 
 function enableAnalytics() {
-    if (!matomoUrl) {
+    analyticsAllowed = true;
+
+    if (!matomoUrl || window.location.hostname === 'localhost') {
         return;
     }
 
@@ -88,6 +91,12 @@ function enableAnalytics() {
     const script = document.createElement('script');
     script.async = true;
     script.src = matomoUrl;
+    script.onload = () => {
+        // Súhlas mohol byť odvolaný skôr, než sa skript stihol načítať
+        if (!analyticsAllowed) {
+            disableAnalytics();
+        }
+    };
     const firstScript = document.getElementsByTagName('script')[0];
     if (firstScript?.parentNode) {
         firstScript.parentNode.insertBefore(script, firstScript);
@@ -116,6 +125,7 @@ function deleteAnalyticsCookies() {
 }
 
 function disableAnalytics() {
+    analyticsAllowed = false;
     getMatomoTrackers().forEach((t) => {
         try {
             t.requireConsent?.();

@@ -184,21 +184,6 @@ function App(props: Props) {
         load();
     }, [headers]);
 
-    useEffect(() => {
-        if (matomoUrl && window.location.hostname !== 'localhost') {
-            var _mtm = [];
-            _mtm.push({ 'mtm.startTime': new Date().getTime(), event: 'mtm.Start' });
-            (function () {
-                var d = document,
-                    g = d.createElement('script'),
-                    s = d.getElementsByTagName('script')[0];
-                g.async = true;
-                g.src = matomoUrl;
-                s.parentNode?.insertBefore(g, s);
-            })();
-        }
-    }, []);
-
     return (
         <TokenContext.Provider
             value={{
