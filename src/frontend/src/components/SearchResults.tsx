@@ -308,8 +308,6 @@ export default function SearchResults(props: Props) {
         return { id: filterId, title: title, values: selectedValues.map((id) => ({ id: id, label: getLabel(id) })) };
     });
 
-    const pickedFiltersCount = pickedFilterGroups.reduce((sum, g) => sum + g.values.length, 0);
-
     // Filters may contain thousands of values (e.g. keywords), so they are not rendered again when only the state of the mobile overlay changes
     const filterElements = useMemo(
         () =>
@@ -505,7 +503,7 @@ export default function SearchResults(props: Props) {
                                 onClick={() => setMobileFiltersOpen(true)}
                             >
                                 {t('filterAction')}
-                                {pickedFiltersCount > 0 ? ` (${pickedFiltersCount})` : null}
+                                {props.loading || props.error !== null ? null : ` (${totalCount})`}
                             </button>
                         </div>
                     ) : null}
