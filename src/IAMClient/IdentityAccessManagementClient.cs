@@ -231,5 +231,14 @@ namespace IAMClient
             return JsonConvert.DeserializeObject<SaveResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
                 ?? throw new HttpRequestException("Invalid response");
         }
+
+        public async Task<SaveResult> NotifySuperadmins(AdminNotificationInput? input)
+        {
+            HttpClient client = CreateClient();
+            using HttpResponseMessage response = await client.PostAsync($"/notify-superadmins", JsonContent.Create(input));
+            response.EnsureSuccessStatusCode();
+            return JsonConvert.DeserializeObject<SaveResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false))
+                ?? throw new HttpRequestException("Invalid response");
+        }
     }
 }

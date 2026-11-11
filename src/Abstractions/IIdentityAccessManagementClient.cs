@@ -45,5 +45,7 @@ namespace NkodSk.Abstractions
         Task<SaveResult> ConfirmPasswordRecovery(PasswordRecoveryConfirmationInput? input);
 
         Task<SaveResult> ChangePassword(PasswordChangeInput? input);
+
+        Task<SaveResult> NotifySuperadmins(AdminNotificationInput? input);
     }
 }

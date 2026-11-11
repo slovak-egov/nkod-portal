@@ -92,6 +92,8 @@ namespace WebApi.Test
                 services.AddSingleton<ISparqlClient, TestSparqlClient>();
                 services.AddSingleton<DownloadDataQualityService>();
                 services.AddSingleton<IMonitoringSettingsClient, TestMonitoringSettingsClient>();
+                services.AddSingleton<TestSuperadminNotificationService>();
+                services.AddSingleton<ISuperadminNotificationService>(sp => sp.GetRequiredService<TestSuperadminNotificationService>());
 
                 services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
                 {

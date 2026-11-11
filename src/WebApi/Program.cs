@@ -80,6 +80,7 @@ builder.Services.AddHttpClient(IdentityAccessManagementClient.HttpClientName, c 
     c.BaseAddress = new Uri(iamClientUrl);
 }).AddHeaderPropagation();
 builder.Services.AddTransient<IIdentityAccessManagementClient, IdentityAccessManagementClient>();
+builder.Services.AddTransient<ISuperadminNotificationService>(sp => new SuperadminNotificationService(sp.GetRequiredService<IHttpClientFactory>(), builder.Configuration["HarvesterAuthToken"] ?? string.Empty));
 
 builder.Services.AddHttpClient(MonitoringSettingsClient.MonitoringSettingsClient.HttpClientName, c =>
 {
@@ -2093,7 +2094,7 @@ app.MapDelete("/users", [Authorize] async ([FromQuery] string? id, [FromServices
     return Results.NotFound();
 });
 
-app.MapPost("/registration", [Authorize] async ([FromServices] IDocumentStorageClient documentStorageClient, RegistrationInput? input, ClaimsPrincipal user, [FromServices] ICodelistProviderClient codelistProviderClient, [FromServices] TelemetryClient? telemetryClient) =>
+app.MapPost("/registration", [Authorize] async ([FromServices] IDocumentStorageClient documentStorageClient, RegistrationInput? input, ClaimsPrincipal user, [FromServices] ICodelistProviderClient codelistProviderClient, [FromServices] ISuperadminNotificationService superadminNotificationService, [FromServices] TelemetryClient? telemetryClient) =>
 {
     string? publisherId = user?.Claims.FirstOrDefault(c => c.Type == "Publisher")?.Value;
     if (string.IsNullOrEmpty(publisherId) || !Uri.TryCreate(publisherId, UriKind.Absolute, out Uri? publisher) || publisher == null)
@@ -2124,12 +2125,29 @@ app.MapPost("/registration", [Authorize] async ([FromServices] IDocumentStorageC
                     await documentStorageClient.InsertFile(publisherRdf.ToString(), false, metadata).ConfigureAwait(false);
                     result.Id = metadata.Id.ToString();
                     result.Success = true;
+
+                    try
+                    {
+                        string text = "Dobrý deň,<br>" +
+                            "na portáli data.slovensko.sk bola vytvorená nová registrácia poskytovateľa dát, ktorá čaká na schválenie.<br><br>" +
+                            "Názov: " + HttpUtility.HtmlEncode(companyName) + "<br>" +
+                            "Identifikátor: " + HttpUtility.HtmlEncode(publisherId) + "<br>" +
+                            "Webové sídlo: " + HttpUtility.HtmlEncode(input.Website) + "<br>" +
+                            "E-mail: " + HttpUtility.HtmlEncode(input.Email) + "<br>" +
+                            "Telefón: " + HttpUtility.HtmlEncode(input.Phone);
+
+                        await superadminNotificationService.Notify("Nová registrácia poskytovateľa dát", text).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        telemetryClient?.TrackException(e);
+                    }
                 }
                 else
                 {
                     result.Errors ??= new Dictionary<string, string>();
                     result.Errors["generic"] = "Zastupovaný poskytovateľ dát už má vytvorenú registráciu";
-                }                
+                }
             }
             else
             {
