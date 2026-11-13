@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matomo
+  namespace: nodc
+  labels:
+    role: matomo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: matomo
+  template:
+    metadata:
+      labels:
+        role: matomo
+    spec:
+      volumes:
+        - name: matomo
+          persistentVolumeClaim:
+            claimName: matomo-storage-app
+      containers:
+        - name: matomo
+          image: docker.io/library/matomo
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          env:
+            - name: MATOMO_DATABASE_HOST
+              value: matomo-db
+            - name: MATOMO_DATABASE_USERNAME
+              value: root
+            - name: MATOMO_DATABASE_DBNAME
+              value: matomo
+          volumeMounts:
+            - name: matomo
+              mountPath: /var/www/html
+          imagePullPolicy: Always
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

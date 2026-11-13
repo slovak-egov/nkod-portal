@@ -1,2 +1,0 @@
-./undeploy.sh
-./deploy.sh

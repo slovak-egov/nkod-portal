@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iamdb
+  namespace: nodc
+  labels:
+    role: iamdb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: iamdb
+  template:
+    metadata:
+      labels:
+        role: iamdb
+    spec:
+      volumes:
+        - name: iamdb-pvc
+          persistentVolumeClaim:
+            claimName: iamdb-pvc
+      containers:
+        - name: iamdb
+          image: docker.io/library/mysql:8.1
+          ports:
+            - name: mysql
+              containerPort: 3306
+              protocol: TCP
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: MysqlPassword
+            - name: MYSQL_DATABASE
+              value: nkod
+          volumeMounts:
+            - name: iamdb-pvc
+              mountPath: /var/lib/mysql
+          imagePullPolicy: Always
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: oci-registry-secret

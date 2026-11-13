@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notificationservice
+  namespace: nodc
+  labels:
+    role: notificationservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: notificationservice
+  template:
+    metadata:
+      labels:
+        role: notificationservice
+    spec:
+      containers:
+        - name: notificationservice
+          image: fra.ocir.io/frcivyrwah5e/wpnkod-notificationservice
+          ports:
+            - name: api
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: EmailOptions__Host
+              value: smtp.email.eu-frankfurt-1.oci.oraclecloud.com
+            - name: EmailOptions__Port
+              value: "587"
+            - name: EmailOptions__Username
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: EmailOptionsUser
+            - name: EmailOptions__Password
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: EmailOptionsPassword
+            - name: EmailOptions__FromAddress
+              value: podpora@data.slovensko.sk
+            - name: FrontendUrl
+              value: https://data.slovensko.sk/
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: MysqlConnectionStringNotificationService
+          imagePullPolicy: Always
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: oci-registry-secret

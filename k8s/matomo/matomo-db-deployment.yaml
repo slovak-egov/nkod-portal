@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matomo-db
+  namespace: nodc
+  labels:
+    role: matomo-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: matomo-db
+  template:
+    metadata:
+      labels:
+        role: matomo-db
+    spec:
+      volumes:
+        - name: matomo
+          persistentVolumeClaim:
+            claimName: matomo-storage
+      containers:
+        - name: matomo-db
+          image: docker.io/library/mysql:8.4
+          ports:
+            - name: mysql
+              containerPort: 3306
+              protocol: TCP
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: MysqlPassword
+            - name: MYSQL_DATABASE
+              value: matomo
+          volumeMounts:
+            - name: matomo
+              mountPath: /var/lib/mysql
+          imagePullPolicy: Always
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: oci-registry-secret

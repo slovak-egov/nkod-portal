@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: documentstorage
+  namespace: nodc
+  labels:
+    app.kubernetes.io/component: documentstorage
+    app.kubernetes.io/name: nodc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: documentstorage
+      app.kubernetes.io/name: nodc
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: documentstorage
+        app.kubernetes.io/name: nodc
+    spec:
+      volumes:
+        - name: storage-pvc
+          persistentVolumeClaim:
+            claimName: storage-pvc-final
+      containers:
+        - name: documentstorage
+          image: fra.ocir.io/frcivyrwah5e/wpnkod-documentstorage:latest
+          ports:
+            - name: api
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: Jwt__Issuer
+              value: https://data.slovensko.sk/
+            - name: Jwt__Audience
+              value: https://data.slovensko.sk/
+            - name: StoragePath
+              value: /data
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: JwtPublicKey
+            - name: CmsServer
+              value: http://cms
+          volumeMounts:
+            - name: storage-pvc
+              mountPath: /data
+          imagePullPolicy: Always
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: oci-registry-secret

@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: codelistprovider
+  namespace: nodc
+  labels:
+    role: codelistprovider
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: codelistprovider
+  template:
+    metadata:
+      labels:
+        role: codelistprovider
+    spec:
+      containers:
+        - name: codelistprovider
+          image: fra.ocir.io/frcivyrwah5e/wpnkod-codelistprovider:latest
+          ports:
+            - name: api
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: Jwt__Issuer
+              value: https://data.slovensko.sk/
+            - name: Jwt__Audience
+              value: https://data.slovensko.sk/
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: JwtPublicKey
+            - name: DocumentStorageUrl
+              value: http://documentstorage:6002
+          imagePullPolicy: Always
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: oci-registry-secret
+      schedulerName: default-scheduler

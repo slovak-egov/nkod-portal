@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notificationservice-db
+  namespace: nodc
+  labels:
+    role: notificationservice-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: notificationservice-db
+  template:
+    metadata:
+      labels:
+        role: notificationservice-db
+    spec:
+      volumes:
+        - name: pvc
+          persistentVolumeClaim:
+            claimName: notificationservice-storage
+      containers:
+        - name: notificationservice-db
+          image: docker.io/library/mysql:8.1
+          ports:
+            - name: mysql
+              containerPort: 3306
+              protocol: TCP
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: MysqlPassword
+            - name: MYSQL_DATABASE
+              value: nkod
+          volumeMounts:
+            - name: pvc
+              mountPath: /var/lib/mysql
+          imagePullPolicy: Always
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: oci-registry-secret

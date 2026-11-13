@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cms
+  namespace: nodc
+  labels:
+    role: cms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: cms
+  template:
+    metadata:
+      labels:
+        role: cms
+    spec:
+      volumes:
+        - name: cms-storage
+          persistentVolumeClaim:
+            claimName: cms-storage
+      containers:
+        - name: cms
+          image: fra.ocir.io/frcivyrwah5e/wpnkod-cms:latest
+          ports:
+            - name: api
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: Authentication__Issuer
+              value: https://data.slovensko.sk/
+            - name: Authentication__Audience
+              value: https://data.slovensko.sk/
+            - name: Authentication__SecretForKey
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: JwtPublicKey
+            - name: ConnectionStrings__piranha
+              value: Data Source=/cms/piranha.db
+            - name: NotificationService
+              value: http://notificationservice/
+            - name: FrontendUrl
+              value: https://data.slovensko.sk
+            - name: DocumentStorageUrl
+              value: http://documentstorage:6002/
+          volumeMounts:
+            - name: cms-storage
+              mountPath: /cms
+          imagePullPolicy: Always
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: oci-registry-secret

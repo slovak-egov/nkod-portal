@@ -1,0 +1,101 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: wpnkod-monitoring-check
+  namespace: nodc
+  labels:
+    role: monitoring-check
+spec:
+  schedule: "*/30 * * * *"
+  concurrencyPolicy: Forbid
+  suspend: false
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          volumes:
+            - name: nodc-executor-volume
+              persistentVolumeClaim:
+                claimName: nodc-linkedpipes-executor-pvc
+            - name: nodc-linkedpipes-volume
+              persistentVolumeClaim:
+                claimName: nodc-linkedpipes-storage-pvc
+            - name: storage
+              persistentVolumeClaim:
+                claimName: monitoring-storage
+          initContainers:
+            - name: set-storage-ownership
+              image: ubuntu:24.04
+              command:
+                - chown
+                - "1654:1654"
+                - /data/
+              resources: {}
+              volumeMounts:
+                - name: storage
+                  mountPath: /data/
+              imagePullPolicy: IfNotPresent
+          containers:
+            - name: wpnkod-monitoring-check
+              image: fra.ocir.io/frcivyrwah5e/wpnkod-monitoring-check
+              env:
+                - name: STORAGE_REPOSITORY
+                  valueFrom:
+                    configMapKeyRef:
+                      name: nodc-configuration
+                      key: manager.pipelineRepository
+                - name: APP_ExecutorLogsPath
+                  value: /data/executor/executor/data/
+                - name: APP_PipelinesPath
+                  value: /data/storage/storage/pipelines/
+                - name: APP_OutputPath
+                  value: /data/output/
+                - name: APP_GraphDbUserName
+                  value: lp-etl
+                - name: APP_GraphdbPassword
+                  valueFrom:
+                    secretKeyRef:
+                      name: nodc-secret
+                      key: graphdb.password
+                      optional: false
+                - name: APP_GraphDbUrl
+                  value: >-
+                    http://nodc-graphdb:7200/repositories/nodc/rdf-graphs/service
+                - name: APP_IAMUrl
+                  value: http://iam:6004
+                - name: APP_MonitoringSettingsUrl
+                  value: http://monitoring-settings
+                - name: APP_HarvesterAuth
+                  valueFrom:
+                    secretKeyRef:
+                      name: nkod-secrets
+                      key: HarvesterAuthToken
+                - name: APP_EmailOptions__Host
+                  value: smtp.email.eu-frankfurt-1.oci.oraclecloud.com
+                - name: APP_EmailOptions__Port
+                  value: "587"
+                - name: APP_EmailOptions__Username
+                  valueFrom:
+                    secretKeyRef:
+                      name: nkod-secrets
+                      key: EmailOptionsUser
+                - name: APP_EmailOptions__Password
+                  valueFrom:
+                    secretKeyRef:
+                      name: nkod-secrets
+                      key: EmailOptionsPassword
+                - name: APP_EmailOptions__FromAddress
+                  value: podpora@data.slovensko.sk
+              volumeMounts:
+                - name: nodc-executor-volume
+                  mountPath: /data/executor/
+                - name: nodc-linkedpipes-volume
+                  mountPath: /data/storage/
+                - name: storage
+                  mountPath: /data/output/
+              imagePullPolicy: Always
+          restartPolicy: Never
+          dnsPolicy: ClusterFirst
+          imagePullSecrets:
+            - name: oci-registry-secret

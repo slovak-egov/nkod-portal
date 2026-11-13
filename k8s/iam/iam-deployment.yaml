@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iam
+  namespace: nodc
+  labels:
+    role: iam
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: iam
+  template:
+    metadata:
+      labels:
+        role: iam
+    spec:
+      containers:
+        - name: iam
+          image: fra.ocir.io/frcivyrwah5e/wpnkod-iam:latest
+          ports:
+            - name: api
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: Jwt__Issuer
+              value: https://data.slovensko.sk/
+            - name: Jwt__Audience
+              value: https://data.slovensko.sk/
+            - name: AccessTokenValidInMinutes
+              value: "20"
+            - name: RefreshTokenValidInMinutes
+              value: "10000"
+            - name: AccessTokenKeyPassword
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: AccessTokenKeyPassword
+            - name: AccessTokenKeyFile
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: AccessTokenKey
+            - name: Saml2__EntityId
+              value: https://data.slovensko.sk
+            - name: Saml2__IdPMetadata
+              value: https://prihlasenie.slovensko.sk/oamfed/idp/metadata
+            - name: Saml2__SignatureAlgorithm
+              value: http://www.w3.org/2001/04/xmldsig-more#rsa-sha256
+            - name: Saml2__Issuer
+              value: https://prihlasenie.slovensko.sk/oam/fed
+            - name: Saml2__SigningCertificateFile
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: SigningCertificateFile
+            - name: Saml2__SigningCertificatePassword
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: SigningCertificatePassword
+            - name: Saml2__DecryptionCertificateFile
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: DecryptionCertificateFile
+            - name: Saml2__DecryptionCertificatePassword
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: DecryptionCertificatePassword
+            - name: Saml2__CertificateValidationMode
+              value:
+            - name: Saml2__RevocationMode
+              value:
+            - name: Saml2__ReturnUrl
+              value: https://data.slovensko.sk/saml/consume
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: MysqlConnectionString
+            - name: HarvesterAuth
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: HarvesterAuthToken
+            - name: EmailOptions__Host
+              value: smtp.email.eu-frankfurt-1.oci.oraclecloud.com
+            - name: EmailOptions__Port
+              value: "587"
+            - name: EmailOptions__Username
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: EmailOptionsUser
+            - name: EmailOptions__Password
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: EmailOptionsPassword
+            - name: EmailOptions__FromAddress
+              value: podpora@data.slovensko.sk
+            - name: FrontendUrl
+              value: https://data.slovensko.sk/
+            - name: Authentication__Google__ClientId
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: GoogleClientId
+            - name: Authentication__Google__ClientSecret
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: GoogleClientSecret
+          imagePullPolicy: Always
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: oci-registry-secret

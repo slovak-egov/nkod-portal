@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitoring-settings
+  namespace: nodc
+  labels:
+    role: monitoring-settings
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: monitoring-settings
+  template:
+    metadata:
+      labels:
+        role: monitoring-settings
+    spec:
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: monitoring-settings-storage
+      initContainers:
+        - name: set-storage-ownership
+          image: ubuntu:24.04
+          command:
+            - chown
+            - "1654:1654"
+            - /data/
+          volumeMounts:
+            - name: storage
+              mountPath: /data/
+          imagePullPolicy: IfNotPresent
+      containers:
+        - name: monitoring-settings
+          image: fra.ocir.io/frcivyrwah5e/wpnkod-monitoring-settings:latest
+          ports:
+            - name: api
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: Jwt__Issuer
+              value: https://data.slovensko.sk/
+            - name: Jwt__Audience
+              value: https://data.slovensko.sk/
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: nkod-secrets
+                  key: JwtPublicKey
+            - name: StoragePath
+              value: /data
+          volumeMounts:
+            - name: storage
+              mountPath: /data/
+          imagePullPolicy: Always
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: oci-registry-secret
