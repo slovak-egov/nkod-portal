@@ -1118,6 +1118,94 @@ namespace WebApi.Test
         }
 
         [Fact]
+        public async Task DereferenceByDatasetUriShouldBeRedirectedToMetadataId()
+        {
+            string path = fixture.GetStoragePath();
+
+            Guid oldId = Guid.NewGuid();
+            Uri uri = new Uri($"https://data.gov.sk/set/{oldId}");
+
+            IGraph graph = new VDS.RDF.Graph();
+            RdfDocument.AddDefaultNamespaces(graph);
+            IUriNode subject = graph.CreateUriNode(uri);
+            IUriNode rdfTypeNode = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode targetTypeNode = graph.CreateUriNode("dcat:Dataset");
+            graph.Assert(subject, rdfTypeNode, targetTypeNode);
+            DcatDataset dataset = new DcatDataset(graph, subject);
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = dataset.UpdateMetadata(true, null);
+            storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            using HttpResponseMessage response = await client.GetAsync("/datasety/" + oldId);
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.NotNull(response.Headers.Location);
+            Assert.Equal("/datasety/" + metadata.Id.ToString(), response.Headers.Location.OriginalString);
+        }
+
+        [Fact]
+        public async Task DereferenceBySetAndIdShouldBeRedirectedToMetadataId()
+        {
+            string path = fixture.GetStoragePath();
+
+            Guid oldId = Guid.NewGuid();
+            Uri uri = new Uri($"https://data.gov.sk/set/{oldId}");
+
+            IGraph graph = new VDS.RDF.Graph();
+            RdfDocument.AddDefaultNamespaces(graph);
+            IUriNode subject = graph.CreateUriNode(uri);
+            IUriNode rdfTypeNode = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode targetTypeNode = graph.CreateUriNode("dcat:Dataset");
+            graph.Assert(subject, rdfTypeNode, targetTypeNode);
+            DcatDataset dataset = new DcatDataset(graph, subject);
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = dataset.UpdateMetadata(true, null);
+            storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            using HttpResponseMessage response = await client.GetAsync("/set/" + metadata.Id);
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.NotNull(response.Headers.Location);
+            Assert.Equal("/datasety/" + metadata.Id.ToString(), response.Headers.Location.OriginalString);
+        }
+
+        [Fact]
+        public async Task DereferenceByDatasetUriShouldBeNotRedirectedIfIdIsValid()
+        {
+            string path = fixture.GetStoragePath();
+
+            Guid oldId = Guid.NewGuid();
+            Uri uri = new Uri($"https://data.gov.sk/set/{oldId}");
+
+            IGraph graph = new VDS.RDF.Graph();
+            RdfDocument.AddDefaultNamespaces(graph);
+            IUriNode subject = graph.CreateUriNode(uri);
+            IUriNode rdfTypeNode = graph.CreateUriNode(new Uri(RdfSpecsHelper.RdfType));
+            IUriNode targetTypeNode = graph.CreateUriNode("dcat:Dataset");
+            graph.Assert(subject, rdfTypeNode, targetTypeNode);
+            DcatDataset dataset = new DcatDataset(graph, subject);
+
+            using Storage storage = new Storage(path);
+
+            FileMetadata metadata = dataset.UpdateMetadata(true, null);
+            storage.InsertFile(dataset.ToString(), metadata, false, new AllAccessFilePolicy());
+
+            using WebApiApplicationFactory applicationFactory = new WebApiApplicationFactory(storage);
+            using HttpClient client = applicationFactory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            using HttpResponseMessage response = await client.GetAsync("/datasety/" + metadata.Id);
+
+            Assert.NotEqual(HttpStatusCode.Redirect, response.StatusCode);
+        }
+
+        [Fact]
         public async Task DereferenceByDatasetUriShouldBeRedirected2()
         {
             string path = fixture.GetStoragePath();
