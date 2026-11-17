@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { Link } from 'react-router-dom';
+import { Link, Location, useLocation } from 'react-router-dom';
 
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useContext } from 'react';
@@ -22,6 +22,7 @@ import { schema } from './schemas/LoginSchema';
 
 export default function Login() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { t } = useTranslation();
     const yupSchema = buildYup(schema, useSchemaConfig(schema.required));
     const tokenContext = useContext(TokenContext);
@@ -41,7 +42,8 @@ export default function Login() {
         const result: any = await loginUser(data);
         if (result?.data?.data?.token) {
             tokenContext?.setToken({ ...result?.data?.data });
-            navigate('/');
+            const from = (location.state as { from?: Location } | null)?.from;
+            navigate(from ? `${from.pathname}${from.search}${from.hash}` : '/', { replace: Boolean(from) });
         }
     };
 
