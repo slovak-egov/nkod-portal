@@ -8,6 +8,7 @@ import { knownCodelists, OrderOption, useDatasets, useDocumentTitle } from '../c
 import SearchResults from '../components/SearchResults';
 import { useTranslation } from 'react-i18next';
 import multiIcon from '../icons/multi.png';
+import globeIcon from '../icons/globe-icon.svg';
 import DataWarningIcon from '../components/DataWarningIcon';
 import LikeButton from '../components/LikeButton';
 import CommentButton from '../components/CommentButton';
@@ -27,10 +28,13 @@ const codelistsKeys = [
 ];
 
 export default function PublicDatasetList() {
-    const [datasets, query, setQueryParameters, loading, error] = useDatasets({
-        requiredFacets: codelistsKeys,
-        orderBy: 'relevance'
-    }, true);
+    const [datasets, query, setQueryParameters, loading, error] = useDatasets(
+        {
+            requiredFacets: codelistsKeys,
+            orderBy: 'relevance'
+        },
+        true
+    );
 
     const [datasetsCms] = useCmsDatasets();
     const cmsCounts = (datasetUri: string) => {
@@ -83,6 +87,13 @@ export default function PublicDatasetList() {
                                                         />
                                                     ) : null}
                                                     <DataWarningIcon dataset={c} />
+                                                    {c.mapEmbedUrl ? (
+                                                        <img
+                                                            src={globeIcon}
+                                                            alt={t('mapEmbed')}
+                                                            style={{ marginLeft: '5px', width: 'auto', height: '20px', verticalAlign: 'middle' }}
+                                                        />
+                                                    ) : null}
                                                 </Link>
                                             </GridColumn>
                                             <GridColumn widthUnits={1} totalUnits={4} flexEnd>
