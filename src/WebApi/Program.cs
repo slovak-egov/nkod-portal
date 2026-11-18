@@ -2947,7 +2947,8 @@ app.Use(async (context, next) =>
 {
     if (context.GetEndpoint() is null)
     {
-        string path = context.Request.Path.Value ?? string.Empty;
+        string oldPath = context.Request.Path.Value ?? string.Empty;
+        string path = oldPath;
 
         string[] prefixes = new[] { "/set/", "/dataset/", "/datasety/" };
 
@@ -2979,15 +2980,21 @@ app.Use(async (context, next) =>
                 FileStorageResponse response = await client.GetFileStates(query);
                 if (response.Files.Count >= 1)
                 {
+                    string? redirectUrl = null;
+
                     FileState state = response.Files[0];
                     if (state.Metadata.Type == FileType.DatasetRegistration)
                     {
-                        context.Response.Redirect($"/datasety/{state.Metadata.Id}");
-                        return true;
+                        redirectUrl = $"/datasety/{state.Metadata.Id}";
                     }
                     else if (state.Metadata.Type == FileType.DistributionRegistration && state.Metadata.ParentFile.HasValue)
                     {
-                        context.Response.Redirect($"/datasety/{state.Metadata.ParentFile.Value}");
+                        redirectUrl = $"/datasety/{state.Metadata.ParentFile.Value}";
+                    }
+
+                    if (!string.IsNullOrEmpty(redirectUrl) && oldPath != redirectUrl)
+                    {
+                        context.Response.Redirect(redirectUrl);
                         return true;
                     }
                 }
@@ -3012,11 +3019,28 @@ app.Use(async (context, next) =>
                 });
             }
 
+            Task<bool> TryFindById(Guid id)
+            {
+                return TryFindByQuery(q =>
+                {
+                    q.OnlyIds = new List<Guid> { id };
+                });
+            }
+
             bool result;
 
-            if (prefix == "/set/")
+            if (prefix == "/set/" || prefix == "/datasety/")
             {
                 result = await TryFindByKey(BuildUri("/set/"));
+                if (result)
+                {
+                    return;
+                }
+            }
+
+            if (prefix == "/set/" && Guid.TryParse(path, out Guid detectedId))
+            {
+                result = await TryFindById(detectedId);
                 if (result)
                 {
                     return;

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { LiteralColumn, UriColumn } from '../monitoring/types';
 import SparqlEnabledTable from '../monitoring/SparqlEnabledTable';
 import TableFilters from '../../components/TableFilters';
+import { Link } from 'react-router-dom';
 
 type Props = {
     publisherId: string;
@@ -135,7 +136,20 @@ export default function PublisherDatasets({ publisherId }: Props) {
                 columns={[
                     {
                         header: 'Názov datasetu',
-                        value: (row) => <span>{row.name?.value}</span>,
+                        value: (row) => {
+                            let linkTo = row.dataset?.value;
+                            const url = row.dataset?.value ? new URL(row.dataset?.value) : null;
+                            if (url && url.hostname === 'data.gov.sk') {
+                                linkTo = url.pathname;
+                            }
+                            return linkTo ? (
+                                <a href={linkTo} className="idsk-card-title govuk-link">
+                                    {row.name?.value}
+                                </a>
+                            ) : (
+                                <span>{row.name?.value}</span>
+                            );
+                        },
                         sortProperty: '?name'
                     },
                     {
