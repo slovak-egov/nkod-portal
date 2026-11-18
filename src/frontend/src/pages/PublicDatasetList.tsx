@@ -83,7 +83,7 @@ export default function PublicDatasetList() {
                                                         <img
                                                             src={multiIcon}
                                                             alt={t('dataSerie')}
-                                                            style={{ marginLeft: '5px', width: 'auto', height: '20px' }}
+                                                            style={{ marginLeft: '5px', width: 'auto', height: '20px', verticalAlign: 'middle' }}
                                                         />
                                                     ) : null}
                                                     <DataWarningIcon dataset={c} />
