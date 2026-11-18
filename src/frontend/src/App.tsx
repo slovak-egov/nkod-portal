@@ -1,5 +1,5 @@
 import { AxiosResponse, RawAxiosRequestHeaders } from 'axios';
-import { useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { Language, LanguageOptionsContext, TokenContext, TokenResult, UserInfo, sendPost, supportedLanguages, useUserInfo } from './client';
 import { Footer } from './components/Footer';
@@ -35,6 +35,7 @@ import Invitation from './pages/Invitation';
 import Login from './pages/Login';
 import LoginInProgress from './pages/LoginInProgress';
 import NotFound from './pages/NotFound';
+import RequireLogin from './components/RequireLogin';
 import Profile from './pages/Profile';
 import PublicDatasetList from './pages/PublicDatasetList';
 import PublicLocalCatalogList from './pages/PublicLocalCatalogList';
@@ -105,19 +106,10 @@ const defaultHeaders: RawAxiosRequestHeaders = {};
 function App(props: Props) {
     const [token, setToken] = useState(props.extenalToken);
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-    const [headers, setHeaders] = useState<RawAxiosRequestHeaders>(defaultHeaders);
-    const [userInfoIsLoading, setUserInfoIsLoading] = useState<boolean>(true);
+    const headers = useMemo<RawAxiosRequestHeaders>(() => (token ? { Authorization: `Bearer ${token.token}` } : defaultHeaders), [token]);
+    const [userInfoHeaders, setUserInfoHeaders] = useState<RawAxiosRequestHeaders | null>(null);
+    const userInfoIsLoading = userInfoHeaders !== headers;
     const [language, setLanguage] = useState<Language>(supportedLanguages[0]);
-
-    useEffect(() => {
-        if (token) {
-            setHeaders({
-                Authorization: `Bearer ${token.token}`
-            });
-        } else {
-            setHeaders(defaultHeaders);
-        }
-    }, [token]);
 
     const refreshToken = useCallback(
         async function () {
@@ -163,25 +155,28 @@ function App(props: Props) {
     }, [token, refreshToken]);
 
     useEffect(() => {
+        let active = true;
+
         async function load() {
+            let info: UserInfo | null = null;
             try {
-                if (!headers['Authorization']) {
-                    setUserInfo(null);
-                    setUserInfoIsLoading(false);
-                    return;
+                if (headers['Authorization']) {
+                    info = (await sendPost('user-info', {}, headers)).data;
                 }
-
-                setUserInfoIsLoading(true);
-
-                setUserInfo((await sendPost('user-info', {}, headers)).data);
             } catch (err) {
-                setUserInfo(null);
-            } finally {
-                setUserInfoIsLoading(false);
+                info = null;
+            }
+            if (active) {
+                setUserInfo(info);
+                setUserInfoHeaders(headers);
             }
         }
 
         load();
+
+        return () => {
+            active = false;
+        };
     }, [headers]);
 
     return (
@@ -275,15 +270,43 @@ function App(props: Props) {
                                     ) : null}
 
                                     <Route path="/aplikacia" Component={ApplicationList} />
-                                    <Route path="/aplikacia/:id/upravit" Component={ApplicationForm} />
+                                    <Route
+                                        path="/aplikacia/:id/upravit"
+                                        element={
+                                            <RequireLogin>
+                                                <ApplicationForm />
+                                            </RequireLogin>
+                                        }
+                                    />
                                     <Route path="/aplikacia/:id/komentare" element={<ApplicationDetail scrollToComments />} />
                                     <Route path="/aplikacia/:id" element={<ApplicationDetail />} />
-                                    <Route path="/aplikacia/pridat" Component={ApplicationForm} />
+                                    <Route
+                                        path="/aplikacia/pridat"
+                                        element={
+                                            <RequireLogin>
+                                                <ApplicationForm />
+                                            </RequireLogin>
+                                        }
+                                    />
                                     <Route path="/podnet" Component={SuggestionList} />
-                                    <Route path="/podnet/:id/upravit" element={<SuggestionForm />} />
+                                    <Route
+                                        path="/podnet/:id/upravit"
+                                        element={
+                                            <RequireLogin>
+                                                <SuggestionForm />
+                                            </RequireLogin>
+                                        }
+                                    />
                                     <Route path="/podnet/:id/komentare" element={<SuggestionDetail scrollToComments />} />
                                     <Route path="/podnet/:id" element={<SuggestionDetail />} />
-                                    <Route path="/podnet/pridat" Component={SuggestionForm} />
+                                    <Route
+                                        path="/podnet/pridat"
+                                        element={
+                                            <RequireLogin>
+                                                <SuggestionForm />
+                                            </RequireLogin>
+                                        }
+                                    />
 
                                     <Route path="/harvestacie" Component={Harvestations} />
                                     <Route path="/harvestacie/detail/:id" Component={HarvestationDetail} />
